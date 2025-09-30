@@ -1,0 +1,22 @@
+{
+    "asce": [
+        { "key": "wind", "href": "asce/wind.html", "text": "Wind" },
+        { "key": "snow", "href": "asce/snow.html", "text": "Snow" },
+        { "key": "rain", "href": "asce/rain.html", "text": "Rain" },
+        { "key": "combos", "href": "asce/combos.html", "text": "Combinations" }
+    ],
+    "aisc": [
+        { "key": "steel-check", "href": "aisc/steel check.html", "text": "Steel Check" },
+        { "key": "base-plate", "href": "aisc/base plate.html", "text": "Base Plate" },
+        { "key": "splice", "href": "aisc/splice.html", "text": "Splice" }
+    ],
+    "nds": [
+        { "key": "wood-design", "href": "nds/nds wood design.html", "text": "Wood Design" }
+    ],
+    "nbr": [
+        { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "text": "Combinações" }
+    ],
+    "home": [
+        { "key": "home", "href": "index.html", "text": "Home" }
+    ]
+}

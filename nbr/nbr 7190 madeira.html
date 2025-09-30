@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Peças de Madeira NBR 7190</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script src="../js/template.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="nbr 7190 madeira.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main id="nbr7190-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <div class="form-section">
+                        <h2>Propriedades da Madeira (Resist. Característica)</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="fc0k" class="block text-sm">f<sub>c0,k</sub> (MPa)</label><input type="number" id="fc0k" value="25"></div>
+                            <div><label for="fvk" class="block text-sm">f<sub>v,k</sub> (MPa)</label><input type="number" id="fvk" value="4"></div>
+                            <div><label for="Ec0_ef" class="block text-sm">E<sub>c0,ef</sub> (MPa)</label><input type="number" id="Ec0_ef" value="10000"></div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Geometria</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="b" class="block text-sm">Largura (b, cm)</label><input type="number" id="b" value="5"></div>
+                            <div><label for="h" class="block text-sm">Altura (h, cm)</label><input type="number" id="h" value="15"></div>
+                            <div><label for="L" class="block text-sm">Vão (L, m)</label><input type="number" id="L" value="3"></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-section">
+                        <h2>Fatores de Modificação</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="kmod1" class="block text-sm font-medium mb-1">Classe de Carregamento (k<sub>mod,1</sub>)</label>
+                                <select id="kmod1">
+                                    <option value="0.6">Permanente</option>
+                                    <option value="0.7" selected>Longa Duração</option>
+                                    <option value="0.8">Média Duração</option>
+                                    <option value="0.9">Curta Duração</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="kmod2" class="block text-sm font-medium mb-1">Classe de Umidade (k<sub>mod,2</sub>)</label>
+                                <select id="kmod2">
+                                    <option value="1.0" selected>Classe 1 ou 2</option>
+                                    <option value="0.8">Classe 3</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Esforços Solicitantes de Cálculo</h2>
+                        <div class="space-y-4">
+                            <div><label for="Msd" class="block text-sm">Momento (M<sub>Sd</sub>, kN·m)</label><input type="number" id="Msd" value="5"></div>
+                            <div><label for="Vsd" class="block text-sm">Cortante (V<sub>Sd</sub>, kN)</label><input type="number" id="Vsd" value="5"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-1">
+                    <div class="form-section">
+                        <h2>Resumo dos Resultados</h2>
+                        <div id="summary-results-wood" class="space-y-3">
+                            <p class="text-center text-gray-500">Clique em "Verificar Peça" para ver os resultados.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center">
+                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Carregar</button>
+                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 mr-4">Salvar</button>
+                <button id="run-wood-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700">Verificar Peça</button>
+                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
+            </div>
+        </main>
+
+        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
+        <div id="results-container-wood" class="mt-10 results-container"></div>
+        <div id="footer-placeholder"></div>
+    </div>
+
+</body>
+</html>

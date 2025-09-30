@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineering Calculator Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // This script is in shared-utils.js, but needs to run early to prevent FOUC.
+        (function() {
+            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script src="js/template.js" defer></script>
+    <script src="js/shared-utils.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main>
+            <div>
+                <!-- US Codes Section -->
+                <div class="mb-12">
+                    <h2 class="text-2xl font-bold border-b-2 border-gray-200 dark:border-gray-700 pb-2 mb-6">US Codes</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- ASCE Loads Card -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                            <div class="flex items-center mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500 group-hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 18s.225-.225.45-.45m-2.7 2.7s.225-.225.45-.45m-2.7 2.7s.225-.225.45-.45m-4.5-1.5a3 3 0 01-3-3 3 3 0 013-3m3 3a3 3 0 01-3-3 3 3 0 013-3m3 3a3 3 0 01-3-3 3 3 0 013-3" /></svg>
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">ASCE 7 Load Calculators</h3>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Calculate wind, snow, and rain loads, and generate load combinations based on ASCE 7-16 and ASCE 7-22 standards.</p>
+                            <a href="asce/wind.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                                Go to Load Calculators &rarr;
+                            </a>
+                        </div>
+
+                        <!-- AISC Steel Card -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                            <div class="flex items-center mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-500 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v16h16V4H4zm4 4h8M8 12h8m-8 4h8" /></svg>
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">AISC 360 Steel Design</h3>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Perform design checks for steel sections, base plates, and beam splices according to the AISC 360 specification.</p>
+                            <a href="aisc/steel check.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                                Go to Steel Design &rarr;
+                            </a>
+                        </div>
+
+                        <!-- NDS Wood Card -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                            <div class="flex items-center mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-yellow-600 group-hover:text-yellow-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.24a2 2 0 00-1.806.547M8 4h8l-1 1v4.517a1 1 0 01-1.517.866L12 9.382l-1.483 1.001A1 1 0 019 10.517V5L8 4z" /></svg>
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">NDS Wood Design</h3>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Check wood members for flexure, shear, compression, and combined stresses based on the National Design Specification for Wood Construction.</p>
+                            <a href="nds/nds wood design.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                                Go to Wood Design &rarr;
+                            </a>
+                        </div>
+
+                        <!-- ACI Concrete Card -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                            <div class="flex items-center mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.121 15.536c-1.171 1.952-3.07 1.952-4.242 0-1.172-1.953-1.172-5.119 0-7.072 1.171-1.952 3.07-1.952 4.242 0 1.172 1.953 1.172 5.119 0 7.072z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">ACI 318 Concrete Design</h3>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Check concrete beams for flexure and shear according to the ACI 318-19 specification.</p>
+                            <a href="aci/aci 318 concrete.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                                Go to Concrete Design &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brazilian Codes (NBR) Section -->
+                <div>
+                    <h2 class="text-2xl font-bold border-b-2 border-gray-200 dark:border-gray-700 pb-2 mb-6">Códigos Brasileiros (NBR)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- NBR Combinations Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                        <div class="flex items-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-500 group-hover:text-green-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-6m-3 3h6m-6 3h6M9 7a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v2" /></svg>
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">NBR 8681 / 6118 Combinações</h3>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Gerador de combinações de ações para ELU (Estado Limite Último) e ELS (Estado Limite de Serviço) conforme as normas brasileiras.</p>
+                        <a href="nbr/comb nbr 6118.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                            Ir para Combinações NBR &rarr;
+                        </a>
+                    </div>
+                    <!-- NBR 6118 Concrete Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                        <div class="flex items-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.121 15.536c-1.171 1.952-3.07 1.952-4.242 0-1.172-1.953-1.172-5.119 0-7.072 1.171-1.952 3.07-1.952 4.242 0 1.172 1.953 1.172 5.119 0 7.072z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">NBR 6118 Concreto</h3>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Verificador de vigas de concreto armado para flexão e cisalhamento, conforme a NBR 6118:2014.</p>
+                        <a href="nbr/nbr 6118 concreto.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                            Ir para Verificador de Concreto &rarr;
+                        </a>
+                    </div>
+                    <!-- NBR 7190 Wood Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                        <div class="flex items-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-yellow-600 group-hover:text-yellow-700 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.24a2 2 0 00-1.806.547M8 4h8l-1 1v4.517a1 1 0 01-1.517.866L12 9.382l-1.483 1.001A1 1 0 019 10.517V5L8 4z" /></svg>
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">NBR 7190 Madeira</h3>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Verificador de peças de madeira para flexão, cisalhamento e deformação de acordo com a NBR 7190:1997.</p>
+                        <a href="nbr/nbr 7190 madeira.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                            Ir para Verificador de Madeira &rarr;
+                        </a>
+                    </div>
+                    <!-- NBR 8800 Steel Card -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col p-6 group">
+                        <div class="flex items-center mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-500 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v16h16V4H4zm4 4h8M8 12h8m-8 4h8" /></svg>
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white ml-3">NBR 8800 Aço</h3>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">Análise de perfis I de aço para compressão, flexão e forças combinadas, conforme a NBR 8800:2008.</p>
+                        <a href="nbr/nbr 8080 estruturas de aço.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors">
+                            Ir para Verificador de Aço &rarr;
+                        </a>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="footer-placeholder"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            injectHeader({
+                activePage: 'home',
+                pageTitle: 'Engineering Calculator Hub',
+                headerPlaceholderId: 'header-placeholder'
+            });
+
+            initializeSharedUI();
+            injectFooter({
+                footerPlaceholderId: 'footer-placeholder'
+            });
+        });
+    </script>
+
+</body>
+</html>

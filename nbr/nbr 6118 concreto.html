@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Viga de Concreto NBR 6118</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script src="../js/template.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="nbr 6118 concreto.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main id="nbr-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <div class="form-section">
+                        <h2>Propriedades dos Materiais</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="fck" class="block text-sm font-medium mb-1">Resist. do Concreto (f<sub>ck</sub>, MPa)</label>
+                                <input type="number" id="fck" value="25">
+                            </div>
+                            <div>
+                                <label for="fyk" class="block text-sm font-medium mb-1">Resist. do Aço (f<sub>yk</sub>, MPa)</label>
+                                <input type="number" id="fyk" value="500">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Geometria da Viga</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="bw" class="block text-sm">Largura (b<sub>w</sub>, cm)</label><input type="number" id="bw" value="20"></div>
+                            <div><label for="h" class="block text-sm">Altura (h, cm)</label><input type="number" id="h" value="50"></div>
+                            <div><label for="c" class="block text-sm">Cobrimento (c, cm)</label><input type="number" id="c" value="3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="form-section">
+                        <h2>Armadura de Flexão</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="num_barras" class="block text-sm">N° de Barras</label><input type="number" id="num_barras" value="3"></div>
+                            <div><label for="diam_barra" class="block text-sm">Diâmetro (mm)</label><input type="number" id="diam_barra" value="16"></div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Armadura de Cisalhamento</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="diam_estribo" class="block text-sm">Diâmetro (mm)</label><input type="number" id="diam_estribo" value="6.3"></div>
+                            <div><label for="pernas_estribo" class="block text-sm">N° de Ramos</label><input type="number" id="pernas_estribo" value="2"></div>
+                            <div><label for="s_estribo" class="block text-sm">Espaçamento (s, cm)</label><input type="number" id="s_estribo" value="15"></div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Esforços de Cálculo (ELU)</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="Msd" class="block text-sm font-medium mb-1">Momento (M<sub>Sd</sub>, kN·m)</label>
+                                <input type="number" id="Msd" value="100">
+                            </div>
+                            <div>
+                                <label for="Vsd" class="block text-sm font-medium mb-1">Cortante (V<sub>Sd</sub>, kN)</label>
+                                <input type="number" id="Vsd" value="80">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="form-section">
+                        <h2>Resumo dos Resultados</h2>
+                        <div id="summary-results" class="space-y-3">
+                            <p class="text-center text-gray-500">Clique em "Verificar" para ver os resultados.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center">
+                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Carregar</button>
+                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 mr-4">Salvar</button>
+                <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700">Verificar</button>
+                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
+            </div>
+        </main>
+
+        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
+        <div id="results-container" class="mt-10 results-container"></div>
+    </div>
+    <div id="footer-placeholder"></div>
+</body>
+</html>
