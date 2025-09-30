@@ -73,7 +73,7 @@ async function injectHeader(options) {
     `).join('');
 
     // Only render the sub-navigation container if there are links to show.
-    const subNavContainerHtml = currentNavLinks.length > 0 ? `
+    const subNavContainerHtml = currentSubNavSet.length > 0 ? `
         <!-- Sub Navigation (within a code family) -->
         <div id="nav-links-container" class="relative flex flex-wrap justify-center gap-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
             ${subNavHtml}
