@@ -819,7 +819,7 @@ function createCalculationHandler(config) { // This is the function being called
             await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
 
             saveInputsToLocalStorage(storageKey, inputs);
-            renderFunction(calculationResult);
+            renderFunction(calculationResult, inputs);
             showFeedback('Calculation complete!', false, feedbackElId);
         }
 

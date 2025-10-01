@@ -18,6 +18,7 @@
     <script src="../js/template.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
+    <script src="aisc-database.js" defer></script>
     <script src="splice.js" defer></script>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
@@ -58,6 +59,33 @@
                                     Deformation at bolt holes is a design consideration?
                                 </label>
                             </div>
+                            <div class="col-span-2">
+                                <label for="hole_calc_method" class="flex items-center text-sm font-medium">
+                                    Hole Sizing Method:
+                                    <select id="hole_calc_method" class="ml-2">
+                                        <option value="table" selected>AISC Table J3.3 (Exact)</option>
+                                        <option value="rule">Simple Rule (d+1/16 or d+1/8)</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="col-span-2">
+                                <label for="optimize_bolts_check" class="flex items-center text-sm font-medium">
+                                    <input type="checkbox" id="optimize_bolts_check" class="h-4 w-4 rounded mr-2"
+                                           data-ui-toggle-controller
+                                           data-ui-toggle-target="#Nc_fp, #Nr_fp, #Nc_wp, #Nr_wp"
+                                           data-ui-toggle-type="disable">
+                                    Optimize number of bolts?
+                                </label>
+                            </div>
+                            <div class="col-span-2">
+                                <label for="optimize_diameter_check" class="flex items-center text-sm font-medium">
+                                    <input type="checkbox" id="optimize_diameter_check" class="h-4 w-4 rounded mr-2"
+                                           data-ui-toggle-controller
+                                           data-ui-toggle-target="#D_fp, #D_wp"
+                                           data-ui-toggle-type="disable">
+                                    Optimize bolt diameter?
+                                </label>
+                            </div>
                         </div>
                     </div>
                     <div class="form-section">
@@ -67,8 +95,14 @@
                             <div><label for="member_bf" class="block text-sm">Flange (bf)</label><input type="number" id="member_bf" value="7.5"></div>
                             <div><label for="member_tf" class="block text-sm">Flange (tf)</label><input type="number" id="member_tf" value="0.57"></div>
                             <div><label for="member_tw" class="block text-sm">Web (tw)</label><input type="number" id="member_tw" value="0.355"></div>
-                            <div><label for="member_Fy" class="block text-sm">Fy</label><input type="number" id="member_Fy" value="50"></div>
-                            <div><label for="member_Fu" class="block text-sm">Fu</label><input type="number" id="member_Fu" value="65"></div>
+                            <div class="col-span-2">
+                                <label for="member_material" class="block text-sm">Material</label>
+                                <select id="member_material" data-fy-target="member_Fy" data-fu-target="member_Fu">
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                                <input type="hidden" id="member_Fy" value="50">
+                                <input type="hidden" id="member_Fu" value="65">
+                            </div>
                             <div><label for="member_Zx" class="block text-sm">Zx</label><input type="number" id="member_Zx" value="101"></div>
                             <div><label for="member_Sx" class="block text-sm">Sx</label><input type="number" id="member_Sx" value="88.9"></div>
                         </div>
@@ -103,8 +137,14 @@
                                 <div><label for="H_fp" class="block text-sm">Width (H)</label><input type="number" id="H_fp" value="9"></div>
                                 <div><label for="t_fp" class="block text-sm">Thick (t)</label><input type="number" id="t_fp" value="0.5"></div>
                                 <div><label for="L_fp" class="block text-sm">Total Length (L)</label><input type="number" id="L_fp" value="18"></div>
-                                <div><label for="flange_plate_Fy" class="block text-sm">Fy</label><input type="number" id="flange_plate_Fy" value="36"></div>
-                                <div class="col-span-2"><label for="flange_plate_Fu" class="block text-sm">Fu</label><input type="number" id="flange_plate_Fu" value="58"></div>
+                                <div class="col-span-2">
+                                    <label for="flange_plate_material" class="block text-sm">Material</label>
+                                    <select id="flange_plate_material" data-fy-target="flange_plate_Fy" data-fu-target="flange_plate_Fu">
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                    <input type="hidden" id="flange_plate_Fy" value="36">
+                                    <input type="hidden" id="flange_plate_Fu" value="58">
+                                </div>
                             </div>
                         </div>
                         <div id="inner-flange-inputs" class="mt-4 pt-4 border-t dark:border-gray-600">
@@ -113,8 +153,14 @@
                                 <div><label for="H_fp_inner" class="block text-sm">Width (H)</label><input type="number" id="H_fp_inner" value="6"></div>
                                 <div><label for="t_fp_inner" class="block text-sm">Thick (t)</label><input type="number" id="t_fp_inner" value="0.5"></div>
                                 <div><label for="L_fp_inner" class="block text-sm">Total Length (L)</label><input type="number" id="L_fp_inner" value="18"></div>
-                                <div><label for="flange_plate_Fy_inner" class="block text-sm">Fy</label><input type="number" id="flange_plate_Fy_inner" value="36"></div>
-                                <div class="col-span-2"><label for="flange_plate_Fu_inner" class="block text-sm">Fu</label><input type="number" id="flange_plate_Fu_inner" value="58"></div>
+                                <div class="col-span-2">
+                                    <label for="flange_plate_material_inner" class="block text-sm">Material</label>
+                                    <select id="flange_plate_material_inner" data-fy-target="flange_plate_Fy_inner" data-fu-target="flange_plate_Fu_inner">
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                    <input type="hidden" id="flange_plate_Fy_inner" value="36">
+                                    <input type="hidden" id="flange_plate_Fu_inner" value="58">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -124,7 +170,9 @@
                             <div><label for="D_fp" class="block text-sm">Diameter</label><input type="number" id="D_fp" value="0.875"></div>
                             <div>
                                 <label for="bolt_grade_fp" class="block text-sm">Grade</label>
-                                <select id="bolt_grade_fp"><option>A325</option><option>A490</option></select>
+                                <select id="bolt_grade_fp">
+                                    <!-- Options will be populated by JS -->
+                                </select>
                             </div>
                             <div class="col-span-2">
                                 <label for="threads_included_fp" class="flex items-center text-sm font-medium">
@@ -155,8 +203,14 @@
                             <div><label for="H_wp" class="block text-sm">Height (H)</label><input type="number" id="H_wp" value="12"></div>
                             <div><label for="t_wp" class="block text-sm">Thick (t)</label><input type="number" id="t_wp" value="0.375"></div>
                             <div><label for="L_wp" class="block text-sm">Total Length (L)</label><input type="number" id="L_wp" value="12"></div>
-                            <div><label for="web_plate_Fy" class="block text-sm">Fy</label><input type="number" id="web_plate_Fy" value="36"></div>
-                            <div class="col-span-2"><label for="web_plate_Fu" class="block text-sm">Fu</label><input type="number" id="web_plate_Fu" value="58"></div>
+                            <div class="col-span-2">
+                                <label for="web_plate_material" class="block text-sm">Material</label>
+                                <select id="web_plate_material" data-fy-target="web_plate_Fy" data-fu-target="web_plate_Fu">
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                                <input type="hidden" id="web_plate_Fy" value="36">
+                                <input type="hidden" id="web_plate_Fu" value="58">
+                            </div>
                         </div>
                     </div>
                     <div class="form-section">
@@ -165,7 +219,9 @@
                             <div><label for="D_wp" class="block text-sm">Diameter</label><input type="number" id="D_wp" value="0.875"></div>
                             <div>
                                 <label for="bolt_grade_wp" class="block text-sm">Grade</label>
-                                <select id="bolt_grade_wp"><option>A325</option><option>A490</option></select>
+                                <select id="bolt_grade_wp">
+                                    <!-- Options will be populated by JS -->
+                                </select>
                             </div>
                             <div class="col-span-2">
                                 <label for="threads_included_wp" class="flex items-center text-sm font-medium">

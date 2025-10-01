@@ -61,7 +61,13 @@
                     <div class="form-section">
                         <h2>Material Properties</h2>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label for="base_plate_Fy" class="block text-sm">Plate Fy</label><input type="number" id="base_plate_Fy" value="36"></div>
+                            <div class="col-span-2">
+                                <label for="base_plate_material" class="block text-sm">Plate Material</label>
+                                <select id="base_plate_material" data-fy-target="base_plate_Fy">
+                                    <!-- Options will be populated by JS -->
+                                </select>
+                                <input type="hidden" id="base_plate_Fy" value="36">
+                            </div>
                             <div><label for="concrete_fc" class="block text-sm">Concrete f'c</label><input type="number" id="concrete_fc" value="4"></div>
                             <div><label for="anchor_bolt_Fut" class="block text-sm">Bolt Fut</label><input type="number" id="anchor_bolt_Fut" value="58"></div>
                             <div><label for="anchor_bolt_Fnv" class="block text-sm">Bolt Fnv</label><input type="number" id="anchor_bolt_Fnv" value="22"></div>

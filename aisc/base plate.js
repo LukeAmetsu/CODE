@@ -1,6 +1,6 @@
 const basePlateInputIds = [
-    'design_method', 'design_code', 'unit_system', 'base_plate_Fy', 'concrete_fc',
-    'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_Fexx', 'base_plate_length_N',
+    'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy',
+    'concrete_fc', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_Fexx', 'base_plate_length_N',
     'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
     'anchor_embedment_hef', 'num_bolts_total', 'num_bolts_tension_row',
@@ -181,6 +181,26 @@ function renderResults(results) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    function populateMaterialDropdowns() {
+        const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
+            `<option value="${grade}">${grade}</option>`
+        ).join('');
+
+        const select = document.getElementById('base_plate_material');
+        if (select) {
+            select.innerHTML = gradeOptions;
+            select.value = 'A36'; // Default for base plates
+            select.addEventListener('change', (e) => {
+                const grade = AISC_SPEC.getSteelGrade(e.target.value);
+                if (grade) {
+                    document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
+                }
+            });
+            select.dispatchEvent(new Event('change')); // Trigger initial population
+        }
+    }
+
     const handleRunBasePlateCheck = createCalculationHandler({
         inputIds: basePlateInputIds,
         storageKey: 'baseplate-inputs',
@@ -199,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         footerPlaceholderId: 'footer-placeholder'
     });
     initializeSharedUI();
+    populateMaterialDropdowns();
 
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunBasePlateCheck);
     const handleSaveInputs = createSaveInputsHandler(basePlateInputIds, 'baseplate-inputs.txt');

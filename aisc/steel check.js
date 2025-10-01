@@ -1,5 +1,5 @@
 const steelCheckInputIds = [
-    'design_method', 'aisc_standard', 'unit_system', 'Fy', 'Fu', 'E', 'section_type',
+    'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E', 'section_type',
     'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
     'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input'
@@ -15,6 +15,26 @@ document.addEventListener('DOMContentLoaded', () => {
         footerPlaceholderId: 'footer-placeholder'
     });
     initializeSharedUI();
+
+    function populateMaterialDropdowns() {
+        const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
+            `<option value="${grade}">${grade}</option>`
+        ).join('');
+
+        const select = document.getElementById('steel_material');
+        if (select) {
+            select.innerHTML = gradeOptions;
+            select.value = 'A992'; // Set a default value
+            select.addEventListener('change', (e) => {
+                const grade = AISC_SPEC.getSteelGrade(e.target.value);
+                if (grade) {
+                    document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
+                    document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
+                }
+            });
+            select.dispatchEvent(new Event('change')); // Trigger initial population
+        }
+    }
 
     const handleRunSteelCheck = createCalculationHandler({
         inputIds: steelCheckInputIds,
@@ -36,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('beam_spacing').addEventListener('input', calculateAndDisplayBuiltUpProperties);
     updateGeometryInputsUI(); // Initial call
     loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
+    populateMaterialDropdowns();
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);
 
     document.getElementById('steel-results-container').addEventListener('click', (event) => {
