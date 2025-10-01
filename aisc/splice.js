@@ -25,7 +25,7 @@ function drawFlangeDiagram() {
     const total_len = gap + 2 * L_fp;
     const total_h = Math.max(H_fp, member_bf);
     const scale = Math.min((W - 2 * pad) / total_len, (H - 2 * pad) / total_h);
-    if (!isFinite(scale)) return;
+    if (!isFinite(scale) || scale <= 0) return;
 
     const cx = W / 2;
     const cy = H / 2;
@@ -953,31 +953,31 @@ const inputIds = [
     'D_fp', 'bolt_grade_fp', 'threads_included_fp', 'D_wp', 'bolt_grade_wp', 'threads_included_wp',
 ];
 
-const handleRunCheck = createCalculationHandler({
-    inputIds: inputIds, // Pass the array to the handler
-    storageKey: 'splice-inputs',
-    validationRuleKey: 'splice',
-    calculatorFunction: (rawInputs) => {
-        drawFlangeDiagram();
-        drawWebDiagram();
-        const results = spliceCalculator.run(rawInputs);
-        if (results.inputs.develop_capacity_check) {
-            document.getElementById('M_load').value = (results.final_loads.M_load / 12).toFixed(2);
-            document.getElementById('V_load').value = results.final_loads.V_load.toFixed(2);
-        }
-        return results;
-    },
-    renderFunction: renderResults,
-    resultsContainerId: 'results-container',
-    buttonId: 'run-check-btn'
-});
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- Attach Event Listeners ---
     loadInputsFromLocalStorage('splice-inputs', inputIds, handleRunCheck);
 
     const handleSaveInputs = createSaveInputsHandler(inputIds, 'splice-inputs.txt', 'feedback-message');
     const handleLoadInputs = createLoadInputsHandler(inputIds, handleRunCheck, 'feedback-message');
+
+    const handleRunCheck = createCalculationHandler({
+        inputIds: inputIds, // Pass the array to the handler
+        storageKey: 'splice-inputs',
+        validationRuleKey: 'splice',
+        calculatorFunction: (rawInputs) => {
+            drawFlangeDiagram();
+            drawWebDiagram();
+            const results = spliceCalculator.run(rawInputs);
+            if (results.inputs.develop_capacity_check) {
+                document.getElementById('M_load').value = results.final_loads.M_load.toFixed(2);
+                document.getElementById('V_load').value = results.final_loads.V_load.toFixed(2);
+            }
+            return results;
+        },
+        renderFunction: renderResults,
+        resultsContainerId: 'results-container',
+        buttonId: 'run-check-btn'
+    });
 
     document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
     document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);

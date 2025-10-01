@@ -1889,7 +1889,8 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
  * Renders the Torsional Load Case section.
  */
 function renderTorsionalCase(torsional_case, inputs, units) {
-    if (!torsional_case) return '';
+    // Added more robust check to prevent crash if sub-properties are missing
+    if (!torsional_case || !torsional_case.perp_to_L || !torsional_case.perp_to_B) return '';
     const { is_imp } = units;
         const m_unit = is_imp ? 'lb-ft' : 'kN-m';
         let Mt_L = is_imp ? torsional_case.perp_to_L.Mt : torsional_case.perp_to_L.Mt / 1000;

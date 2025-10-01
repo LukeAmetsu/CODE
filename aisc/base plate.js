@@ -161,7 +161,11 @@ function renderResults(results) {
                  </tr>`;
     };
 
-    Object.entries(checks).forEach(([name, data]) => addRow(name, data));
+    // Defensively iterate to prevent crashes if a check was not performed (e.g., no tension)
+    Object.entries(checks).forEach(([name, data]) => {
+        // Only add a row if the data object for the check exists and is not empty.
+        if (data && Object.keys(data).length > 0) addRow(name, data);
+    });
 
     html += `</tbody></table></div>`;
     document.getElementById('steel-results-container').innerHTML = html;

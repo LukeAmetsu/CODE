@@ -33,42 +33,9 @@ function initializeThemeToggle() {
 }
 
 /**
- * Injects the CSS for the loading spinner into the document's head.
- * This avoids inline SVGs and keeps styles separate.
- */
-function injectSpinnerStyle() {
-    const styleId = 'spinner-style';
-    if (document.getElementById(styleId)) return; // Avoid re-injecting
-
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-        .loader-spinner {
-            display: inline-block;
-            width: 1.25rem; /* 20px */
-            height: 1.25rem; /* 20px */
-            margin-right: 0.75rem; /* 12px */
-            vertical-align: middle;
-            border: 4px solid currentColor;
-            border-right-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-/**
  * A single initialization function for all shared UI components.
  */
 function initializeSharedUI() {
-    injectSpinnerStyle();
     initializeThemeToggle();
     initializeBackToTopButton();
     initializeUiToggles();
@@ -159,7 +126,6 @@ function initializeUiToggles() {
         controller.addEventListener('change', updateUi);
         controller.addEventListener('input', updateUi);
         updateUi(); // Initial call to set the correct state on page load
-    });
     }
 }
 
@@ -232,7 +198,7 @@ function setLoadingState(isLoading, buttonId) {
     if (isLoading) {
         if (!button.dataset.originalText) button.dataset.originalText = button.innerHTML;
         button.disabled = true;
-        button.innerHTML = `<span class="flex items-center justify-center"><span class="loader-spinner"></span>Calculating...</span>`;
+        button.innerHTML = `<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Calculating...</span>`;
     } else {
         if (button.dataset.originalText) button.innerHTML = button.dataset.originalText;
         button.disabled = false;
@@ -793,7 +759,7 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete) {
  * @param {string} [config.buttonId] - Optional ID of the run button for loading state.
  * @returns {function} The generated event handler function.
  */
-function createCalculationHandler(config) {
+function createCalculationHandler(config) { // This is the function being called
     const {
         inputIds,
         storageKey,
@@ -806,7 +772,6 @@ function createCalculationHandler(config) {
         buttonId
     } = config;
 
-    // Use an async function to allow for await, making the flow clearer.
     return async function() {
         if (buttonId) setLoadingState(true, buttonId);
         showFeedback('Gathering inputs...', false, feedbackElId);
@@ -815,7 +780,7 @@ function createCalculationHandler(config) {
         
         showFeedback('Validating inputs...', false, feedbackElId);
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
-
+        
         let validation;
         if (typeof validatorFunction === 'function') {
             validation = validatorFunction(inputs);
@@ -823,6 +788,7 @@ function createCalculationHandler(config) {
             const rules = validationRules[validationRuleKey];
             validation = validateInputs(inputs, rules);
         }
+
         const resultsContainer = document.getElementById(resultsContainerId);
 
         if (validation.errors.length > 0) {
@@ -837,8 +803,7 @@ function createCalculationHandler(config) {
 
         let calculationResult;
         try {
-            // Pass validation object to calculator if it accepts more than one argument
-            calculationResult = calculatorFunction.length > 1 ? calculatorFunction(inputs, validation) : calculatorFunction(inputs);
+            calculationResult = calculatorFunction(inputs, validation);
         } catch (error) {
             console.error('An unexpected error occurred during calculation:', error);
             calculationResult = { error: `Calculation Error: ${error.message}. Check console for details.`, success: false };

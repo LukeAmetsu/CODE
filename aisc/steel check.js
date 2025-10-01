@@ -6,6 +6,14 @@ const steelCheckInputIds = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
+    injectHeader({
+        activePage: 'steel-check',
+        pageTitle: 'AISC Steel Section Design Checker',
+        headerPlaceholderId: 'header-placeholder'
+    });
+    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+    initializeSharedUI();
+
     const handleRunSteelCheck = createCalculationHandler({
         inputIds: steelCheckInputIds,
         storageKey: 'steel-check-inputs',
@@ -15,14 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainerId: 'steel-results-container',
         buttonId: 'run-steel-check-btn'
     });
-
-    injectHeader({
-        activePage: 'steel-check',
-        pageTitle: 'AISC Steel Section Design Checker',
-        headerPlaceholderId: 'header-placeholder'
-    });
-    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-    initializeSharedUI();
 
     document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(steelCheckInputIds, 'steel-check-inputs.txt'));
     document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
@@ -1040,6 +1040,8 @@ const steelChecker = (() => {
         const { Fy, E, lb_bearing, is_end_bearing, k_des } = inputs;
         const { d, tf, tw } = props;
 
+        if (lb_bearing <= 0) return { applicable: false };
+
         const phi = 0.75;
         const omega = 2.00;
         const factor = getDesignFactor(inputs.design_method, phi, omega);
@@ -1070,12 +1072,12 @@ const steelChecker = (() => {
         }
 
         const Rn = Math.min(Rn_yield, Rn_crippling);
-        const governing_state = Rn_yield < Rn_crippling ? 'Web Local Yielding (J10.2)' : 'Web Local Crippling (J10.3)';
+        const governing_limit_state = Rn_yield < Rn_crippling ? 'Web Local Yielding (J10.2)' : 'Web Local Crippling (J10.3)';
 
         return {
             phiRn_or_Rn_omega: Rn * factor, // in kips
             reference: "AISC J10.2 & J10.3",
-            governing_state,
+            governing_limit_state,
             details: { Rn_yield, Rn_crippling, N_lb, k_des }
         };
     }
@@ -1260,7 +1262,11 @@ const steelChecker = (() => {
 
         const flex_results = checkFlexure(props, inputs);
         const shear_results = checkShear(props, inputs);
-        const web_crippling_results = checkWebCrippling(props, inputs);
+        
+        // Only include web crippling results if the check is applicable
+        const web_crippling_check = checkWebCrippling(props, inputs);
+        const web_crippling_results = web_crippling_check.applicable ? web_crippling_check : {};
+
         const combined_stress_H33 = checkCombinedStressH33(props, inputs, torsion_results);
         const shear_torsion_interaction = checkShearTorsionInteraction(props, inputs, shear_results, torsion_results);
 
@@ -1303,6 +1309,137 @@ const steelChecker = (() => {
     return { run };
 })(); // steelChecker
 
+function generateSteelCheckBreakdownHtml(name, data, inputs) {
+    const { check, details, reference, slenderness, governing_limit_state } = data;
+    if (!check && !details && !governing_limit_state) return 'Breakdown not available.';
+
+    const { design_method } = inputs;
+    let content = '';
+
+    const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
+    const phi = check?.phi || (design_method === 'LRFD' ? 0.9 : null);
+    const omega = check?.omega || (design_method === 'ASD' ? 1.67 : null);
+    const factor_val = design_method === 'LRFD' ? phi : omega;
+    const capacity_eq = design_method === 'LRFD' ? `&phi;R<sub>n</sub>` : `R<sub>n</sub> / &Omega;`;
+    const final_capacity_kips = design_method === 'LRFD' ? (check?.Rn || 0) * factor_val : (check?.Rn || 0) / factor_val;
+    const final_capacity_kipft = final_capacity_kips / 12;
+
+    const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
+
+    switch (name) {
+        case 'Axial':
+            if (data.type === 'Tension') {
+                content = format_list([
+                    `<b>Yielding (D2a):</b> Pn = Fy * Ag = ${inputs.Fy} ksi * ${data.details.yield.Ag.toFixed(2)} in² = ${(data.details.yield.Pn).toFixed(2)} kips`,
+                    `<b>Rupture (D2b):</b> Pn = Fu * Ae = ${inputs.Fu} ksi * ${data.details.rupture.Ae.toFixed(2)} in² = ${(data.details.rupture.Pn).toFixed(2)} kips`,
+                    `Governing Limit State = <b>${governing_limit_state}</b>`,
+                    `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+                ]);
+            } else { // Compression
+                content = format_list([
+                    `Slender Element Factor (Q) = <b>${check.Q.toFixed(3)}</b>`,
+                    `Governing Buckling Mode = <b>${check.buckling_mode}</b>`,
+                    `Elastic Buckling Stress (F<sub>e</sub>) = <b>${(check.Fe).toFixed(2)} ksi</b>`,
+                    `Critical Buckling Stress (F<sub>cr</sub>) = <b>${(check.Fcr).toFixed(2)} ksi</b>`,
+                    `Nominal Capacity (P<sub>n</sub> = F<sub>cr</sub> * A<sub>g</sub>) = ${check.Fcr.toFixed(2)} ksi * ${data.properties.Ag.toFixed(2)} in² = <b>${check.Pn.toFixed(2)} kips</b>`,
+                    `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+                ]);
+            }
+            break;
+
+        case 'Flexure (Major)':
+            const f_sl = slenderness;
+            content = format_list([
+                `Flange Slenderness (λ<sub>f</sub>) = <b>${f_sl.lambda_f.toFixed(2)}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_f.toFixed(2)}, λ<sub>r</sub>=${f_sl.lambda_r_f.toFixed(2)})`,
+                `Web Slenderness (λ<sub>w</sub>) = <b>${f_sl.lambda_w ? f_sl.lambda_w.toFixed(2) : 'N/A'}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_w ? f_sl.lambda_p_w.toFixed(2) : 'N/A'}, λ<sub>r</sub>=${f_sl.lambda_r_w ? f_sl.lambda_r_w.toFixed(2) : 'N/A'})`,
+                `Unbraced Length (L<sub>b</sub>) = <b>${check.Lb.toFixed(2)} in</b>`,
+                `LTB Limiting Lengths: L<sub>p</sub> = <b>${check.Lp.toFixed(2)} in</b>, L<sub>r</sub> = <b>${check.Lr.toFixed(2)} in</b>`,
+                `Nominal Capacity (M<sub>n</sub>) = <b>${(check.Mn).toFixed(2)} kip-in</b> = <b>${(check.Mn / 12).toFixed(2)} kip-ft</b>`,
+                (check.Rpg < 1.0 ? `Web Plastification Factor (Rpg) = <b>${check.Rpg.toFixed(3)}</b> (due to slender web)` : ''),
+                `Governing Limit State = <b>${governing_limit_state || 'N/A'}</b>`,
+                `Design Capacity (${capacity_eq.replace('R', 'M')}) = <b>${final_capacity_kipft.toFixed(2)} kip-ft</b>`
+            ].filter(Boolean));
+            break;
+
+        case 'Shear':
+            content = format_list([
+                `Web Slenderness (h/t<sub>w</sub>) = <b>${check.h_tw.toFixed(2)}</b>`,
+                `Web Shear Coefficient (C<sub>v</sub>) = <b>${check.Cv.toFixed(3)}</b>`,
+                `Nominal Capacity (V<sub>n</sub> = 0.6*F<sub>y</sub>*A<sub>w</sub>*C<sub>v</sub>) = 0.6 * ${inputs.Fy} * ${(data.properties.d * data.properties.tw).toFixed(2)} * ${check.Cv.toFixed(3)} = <b>${check.Vn.toFixed(2)} kips</b>`,
+                `Governing Limit State = <b>${governing_limit_state || 'N/A'}</b>`,
+                `Design Capacity (${capacity_eq.replace('R', 'V')}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+            ]);
+            break;
+
+        case 'Combined Forces':
+            // Add a guard clause to prevent crash if interaction check didn't run
+            if (!details) return 'Breakdown not available (no combined forces to check).';
+
+            content = format_list([
+                `Reference: <b>${reference}</b>`,
+                (details && details.B1x ? `Moment Amplification Factor (B1x) = <b>${details.B1x.toFixed(3)}</b>` : ''),
+                (details && details.B1y ? `Moment Amplification Factor (B1y) = <b>${details.B1y.toFixed(3)}</b>` : ''),
+                `Equation: ${check.equation === 'H1-1a' ? 'P<sub>r</sub>/P<sub>c</sub> + 8/9 * (M<sub>rx</sub>/M<sub>cx</sub> + M<sub>ry</sub>/M<sub>cy</sub>)' : 'P<sub>r</sub>/(2*P<sub>c</sub>) + (M<sub>rx</sub>/M<sub>cx</sub> + M<sub>ry</sub>/M<sub>cy</sub>)'}`,
+                `<li class="mt-2 text-sm text-gray-600 dark:text-gray-400"><em>Note: This check does not include interaction with shear. Shear interaction is checked separately where applicable per AISC Chapter H.</em></li>`
+            ].filter(Boolean));
+            break;
+
+        case 'Torsion':
+            // Add a guard clause to prevent crash if torsion check didn't run
+            if (!details) return 'Breakdown not available (no torsion to check).';
+
+            content = format_list([
+                `Reference: <b>${reference}</b>`,
+                (details.sigma_w > 0 ? `Max Warping Normal Stress (σ<sub>w</sub>) = <b>${details.sigma_w.toFixed(2)} ksi</b>` : ''),
+                `Governing Limit State: <b>${governing_limit_state}</b>`,
+                `Design Capacity (${capacity_eq.replace('R', 'T')}) = <b>${(final_capacity_kips).toFixed(2)} kip-in</b>`
+            ].filter(Boolean));
+            break;
+
+        case 'Web Crippling':
+            // Add a guard clause to prevent crash if web crippling check didn't run
+            if (!details) return 'Breakdown not available (no bearing length provided).';
+
+            content = format_list([
+                `Reference: <b>${reference}</b>`,
+                `Web Local Yielding Capacity (R<sub>n</sub>) = <b>${details.Rn_yield.toFixed(2)} kips</b>`,
+                `Web Local Crippling Capacity (R<sub>n</sub>) = <b>${details.Rn_crippling.toFixed(2)} kips</b>`,
+                `Governing Limit State = <b>${governing_limit_state}</b>`,
+                `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+            ]);
+            break;
+
+        case 'Deflection':
+            content = format_list([
+                `Reference: <b>Serviceability Requirement</b>`,
+                `Actual Deflection = <b>${details.actual.toFixed(3)} in</b>`,
+                `Allowable Deflection (L / ${inputs.deflection_limit}) = <b>${details.allowable.toFixed(3)} in</b>`
+            ]);
+            break;
+
+        case 'Combined Shear + Torsion':
+            content = format_list([
+                `Reference: <b>${reference}</b>`,
+                `Interaction Ratio = <b>${check.ratio.toFixed(3)}</b>`
+            ]);
+            break;
+
+        case 'Combined Stresses (H3.3)':
+             content = format_list([
+                `Reference: <b>${reference}</b>`,
+                `Total Required Normal Stress (f<sub>a</sub>+f<sub>b</sub>+σ<sub>w</sub>) = <b>${details.total_normal_stress.toFixed(2)} ksi</b>`,
+                `Total Required Shear Stress (f<sub>v</sub>+τ<sub>sv</sub>) = <b>${details.total_shear_stress.toFixed(2)} ksi</b>`,
+                `Design Stress Capacity = <b>${details.capacity.toFixed(2)} ksi</b>`,
+                `Interaction Ratio = <b>${check.ratio.toFixed(3)}</b>`
+            ]);
+            break;
+
+        default:
+            content = 'Breakdown not available for this check.';
+    }
+    return `<h4 class="font-semibold">${name} (${reference || 'N/A'})</h4>${content}`;
+}
+
 function renderSteelResults(results) {
     const resultsContainer = document.getElementById('steel-results-container');
 
@@ -1320,29 +1457,12 @@ function renderSteelResults(results) {
     const { inputs, properties, warnings, flexure, flexure_y, axial, shear, web_crippling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
     const method = inputs.design_method;
     const Pu = Math.abs(inputs.Pu_or_Pa);
-    const Mux = inputs.Mux_or_Max;
-    const Vu = inputs.Vu_or_Va;
-
-    const axial_cap = axial.phiPn_or_Pn_omega || 0;
-    const flex_cap = flexure.phiMn_or_Mn_omega;
-    const shear_cap = shear.phiVn_or_Vn_omega;
-    const torsion_cap = torsion.phiTn_or_Tn_omega || 0;
-
-    const axial_ratio = axial_cap > 0 ? Pu / axial_cap : Infinity;
-    const flex_ratio = flex_cap > 0 ? Mux / flex_cap : Infinity;
-    const shear_ratio = shear_cap > 0 ? Vu / shear_cap : Infinity;
-    const torsion_ratio = torsion_cap > 0 ? Math.abs(inputs.Tu_or_Ta) / torsion_cap : Infinity;
-    const deflection_ratio = deflection.ratio || Infinity;
-
-    const getStatus = (ratio) => ratio <= 1.0 ? `<td class="pass">Pass</td>` : `<td class="fail">Fail</td>`;
-
-    const f_sl = flexure.slenderness;
-    const cap_prefix = method === 'LRFD' ? 'φ' : '1/Ω * ';
-    resultsContainer.innerHTML = `
+    
+    let html = `
         ${(results.errors && results.errors.length > 0) ? `
             <!-- This block is now handled at the top of the function -->
         ` : `
-        ${(warnings && warnings.length > 0) ? `
+        ${(warnings && warnings.length > 0) ? ` 
             <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
                 <p class="font-bold">Input Warnings:</p>
                 <ul class="list-disc list-inside mt-2">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
@@ -1351,7 +1471,7 @@ function renderSteelResults(results) {
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
             <div class="flex justify-end gap-2 -mt-2 -mr-2">
                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
+                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
             </div>
             <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
                 <strong>Disclaimer:</strong> This tool provides preliminary design checks based on AISC ${inputs.aisc_standard}. 
@@ -1359,11 +1479,10 @@ function renderSteelResults(results) {
                 Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
             </div>
             <div"flex justify-between items-center">
-                <h2 class="report-header text-center flex-grow">Steel Check Results (${inputs.aisc_standard})</h2>
-                <button data-copy-target-id="steel-check-summary" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Summary</button>
+                <h2 class="report-header text-center flex-grow !mt-4">Steel Check Results (${inputs.aisc_standard})</h2>
             </div>
             <table>
-                <caption>Calculated Section Properties</caption>
+                <caption class="report-caption">Calculated Section Properties</caption>
                 <tbody>
                     <tr>
                         <td>Radius of Gyration (r<sub>y</sub>)</td><td>${properties.ry.toFixed(2)} in</td>
@@ -1395,7 +1514,7 @@ function renderSteelResults(results) {
                 </tbody>
             </table>
             <table>
-                <caption>Applied Loads Summary</caption>
+                <caption class="report-caption">Applied Loads Summary</caption>
                 <tbody>
                     <tr><td>Axial Load (${method === 'LRFD' ? 'P<sub>u</sub>' : 'P<sub>a</sub>'})</td><td>${inputs.Pu_or_Pa} kips</td></tr>
                     <tr><td>Major Moment (${method === 'LRFD' ? 'M<sub>ux</sub>' : 'M<sub>ax</sub>'})</td><td>${inputs.Mux_or_Max} kip-ft</td></tr>
@@ -1408,208 +1527,62 @@ function renderSteelResults(results) {
                     ` : ''}
                 </tbody>
             </table>
-            <table id="steel-check-summary" class="report-section-copyable">
-                <caption>Summary of Design Checks (${method})</caption>
-                <thead>
-                    <tr>
-                        <th>Check</th>
-                        <th>Required<br>(${method === 'LRFD' ? 'Pu, Mu, Vu' : 'Pa, Ma, Va'})</th>
-                        <th>Capacity<br>(${method === 'LRFD' ? 'φPn, φMn, φVn' : 'Pn/Ω, Mn/Ω, Vn/Ω'})</th>
-                        <th>Ratio</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
+            <table id="steel-check-summary" class="report-section-copyable mt-6">
+                <caption class="report-caption">Summary of Design Checks (${method})</caption>
+                <thead><tr><th class="w-2/5">Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
                 <tbody>
-                    ${axial.type ? `
-                    <tr>
-                        <td>${axial.type}</td>
-                        <td>${Pu.toFixed(2)} kips</td>
-                        <td>${axial_cap.toFixed(2)} kips</td>
-                        <td>${axial_ratio.toFixed(3)}</td>
-                        ${getStatus(axial_ratio)}
-                    </tr>
-                    <tr id="axial-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            ${axial.type === 'Compression' ? `
-                                <h4>Compression Breakdown (${axial.reference})</h4>
-                                <ul>
-                                    <li>Slender Element Factor (Q) = <b>${axial.Q.toFixed(3)}</b></li>
-                                    <li>Governing Buckling Mode = <b>${axial.buckling_mode}</b></li>
-                                    <li>Elastic Buckling Stress (F<sub>e</sub>) = <b>${(axial.Fe).toFixed(2)} ksi</b></li>
-                                    <li>Critical Buckling Stress (F<sub>cr</sub>) = <b>${(axial.Fcr).toFixed(2)} ksi</b></li>
-                                    <li>Nominal Capacity (P<sub>n</sub> = F<sub>cr</sub> * A<sub>g</sub>) = ${axial.Fcr.toFixed(2)} ksi * ${properties.Ag.toFixed(2)} in² = <b>${axial.Pn.toFixed(2)} kips</b></li>
-                                    <li>Design Capacity (${cap_prefix}P<sub>n</sub>) = <b>${axial_cap.toFixed(2)} kips</b></li>
-                                </ul>
-                            ` : ''}
-                            ${axial.type === 'Tension' ? `
-                                <h4>Tension Breakdown (${axial.reference})</h4>
-                                <ul>
-                                    <li><b>Yielding (D2a):</b> Pn = Fy * Ag = ${inputs.Fy} ksi * ${properties.Ag.toFixed(2)} in² = ${(axial.details.yield.Pn).toFixed(2)} kips</li>
-                                    <li><b>Rupture (D2b):</b> Pn = Fu * Ae = ${inputs.Fu} ksi * ${axial.details.rupture.Ae.toFixed(2)} in² = ${(axial.details.rupture.Pn).toFixed(2)} kips</li>
-                                    <li>Governing Limit State = <b>${axial.governing_limit_state}</b></li>
-                                    <li>Design Capacity (${cap_prefix}P<sub>n</sub>) = <b>${axial_cap.toFixed(2)} kips</b></li>
-                                </ul>
-                            ` : ''}
-                        </div></td>
-                    </tr>
-                    ` : ''}
-                    <tr>
-                        <td>Flexure</td>
-                        <td>${Mux.toFixed(2)} kip-ft</td>
-                        <td>${flex_cap.toFixed(2)} kip-ft</td>
-                        <td>${flex_ratio.toFixed(3)}</td>
-                        ${getStatus(flex_ratio)}
-                    </tr>
-                    <tr id="flex-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Flexure Breakdown (${flexure.reference})</h4>
-                            <ul>
-                                <li>Flange Slenderness (λ<sub>f</sub>) = <b>${f_sl.lambda_f.toFixed(2)}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_f.toFixed(2)}, λ<sub>r</sub>=${f_sl.lambda_r_f.toFixed(2)})</li>
-                                <li>Web Slenderness (λ<sub>w</sub>) = <b>${f_sl.lambda_w ? f_sl.lambda_w.toFixed(2) : 'N/A'}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_w ? f_sl.lambda_p_w.toFixed(2) : 'N/A'}, λ<sub>r</sub>=${f_sl.lambda_r_w ? f_sl.lambda_r_w.toFixed(2) : 'N/A'})</li>
-                                <li>Unbraced Length (L<sub>b</sub>) = <b>${flexure.Lb.toFixed(2)} in</b></li>
-                                <li>LTB Limiting Lengths: L<sub>p</sub> = <b>${flexure.Lp.toFixed(2)} in</b>, L<sub>r</sub> = <b>${flexure.Lr.toFixed(2)} in</b></li>
-                                <li>Nominal Capacity (M<sub>n</sub>) = <b>${(flexure.Mn).toFixed(2)} kip-in</b> = <b>${(flexure.Mn / 12).toFixed(2)} kip-ft</b></li>
-                                ${flexure.Rpg < 1.0 ? `<li>Web Plastification Factor (Rpg) = <b>${flexure.Rpg.toFixed(3)}</b> (due to slender web)</li>` : ''}
-                                <li>Governing Limit State = <b>${flexure.governing_limit_state || 'N/A'}</b></li>
-                                <li>Design Capacity (${cap_prefix}M<sub>n</sub>) = <b>${flex_cap.toFixed(2)} kip-ft</b></li>
-                            </ul>
-                        </div></td>
-                    </tr>
-                    <tr>
-                        <td>Shear</td>
-                        <td>${Vu.toFixed(2)} kips</td>
-                        <td>${shear_cap.toFixed(2)} kips</td>
-                        <td>${shear_ratio.toFixed(3)}</td>
-                        ${getStatus(shear_ratio)}
-                    </tr>
-                    <tr id="shear-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Shear Breakdown (${shear.reference})</h4>
-                            <ul>
-                                <li>Web Slenderness (h/t<sub>w</sub>) = <b>${shear.h_tw.toFixed(2)}</b></li>
-                                <li>Web Shear Coefficient (C<sub>v</sub>) = <b>${shear.Cv.toFixed(3)}</b></li>
-                                <li>Nominal Capacity (V<sub>n</sub> = 0.6*F<sub>y</sub>*A<sub>w</sub>*C<sub>v</sub>) = 0.6 * ${inputs.Fy} * ${(properties.d * properties.tw).toFixed(2)} * ${shear.Cv.toFixed(3)} = <b>${shear.Vn.toFixed(2)} kips</b></li>
-                                <li>Governing Limit State = <b>${shear.governing_limit_state || 'N/A'}</b></li>
-                                <li>Design Capacity (${cap_prefix}V<sub>n</sub>) = <b>${shear_cap.toFixed(2)} kips</b></li>
-                            </ul>
-                        </div></td>
-                    </tr>
-                    ${interaction.ratio ? `
-                    <tr>
-                        <td>Combined Forces (${interaction.equation})</td>
-                        <td colspan="2">Interaction Equation</td>
-                        <td>${interaction.ratio.toFixed(3)}</td>
-                        ${getStatus(interaction.ratio)}
-                    </tr>
-                    <tr id="interaction-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Combined Axial + Flexure Breakdown (${interaction.reference})</h4>
-                            <ul>
-                                ${interaction.details && interaction.details.B1x ? `<li>Moment Amplification Factor (B1x) = <b>${interaction.details.B1x.toFixed(3)}</b></li>` : ''}
-                                ${interaction.details && interaction.details.B1y ? `<li>Moment Amplification Factor (B1y) = <b>${interaction.details.B1y.toFixed(3)}</b></li>` : ''}
-                                <li>Equation: ${interaction.equation === 'H1-1a' ? 'P<sub>r</sub>/P<sub>c</sub> + 8/9 * (M<sub>rx</sub>/M<sub>cx</sub> + M<sub>ry</sub>/M<sub>cy</sub>)' : 'P<sub>r</sub>/(2*P<sub>c</sub>) + (M<sub>rx</sub>/M<sub>cx</sub> + M<sub>ry</sub>/M<sub>cy</sub>)'}</li>
-                                <li class="mt-2 text-sm text-gray-600 dark:text-gray-400"><em>Note: This check does not include interaction with shear. Shear interaction is checked separately where applicable per AISC Chapter H.</em></li>
-                            </ul>
-                        </div></td>
-                    </tr>
-                    ` : ''}
-                    ${torsion.applicable ? `
-                    <tr class="border-t dark:border-gray-700">
-                        <td>Torsion</td>
-                        <td>${Math.abs(inputs.Tu_or_Ta).toFixed(2)} kip-in</td>
-                        <td>${torsion_cap > 0 ? torsion_cap.toFixed(2) + ' kip-in' : 'See Interaction'}</td>
-                        <td>${torsion_cap > 0 ? torsion_ratio.toFixed(3) : 'N/A'}</td>
-                        ${torsion_cap > 0 ? getStatus(torsion_ratio) : '<td>-</td>'}
-                    </tr>
-                    <tr id="torsion-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Torsion Breakdown (${torsion.reference})</h4>
-                            <ul>
-                                ${torsion.details.sigma_w > 0 ? `<li>Max Warping Normal Stress (σ<sub>w</sub>) = <b>${torsion.details.sigma_w.toFixed(2)} ksi</b></li>` : ''}
-                                <li>Governing Limit State: <b>${torsion.governing_limit_state}</b></li>
-                                <li>Design Capacity (${cap_prefix}Tn) = <b>${torsion_cap.toFixed(2)} kip-in</b></li>
-                            </ul>
-                        </div></td>
-                    </tr>` : ''}
-                    ${shear_torsion_interaction.applicable ? `
-                    <tr class="border-t dark:border-gray-700">
-                        <td>Combined Shear + Torsion</td>
-                        <td colspan="2">Interaction Equation (${shear_torsion_interaction.reference})</td>
-                        <td>${(shear_torsion_interaction.ratio).toFixed(3)}</td>
-                        ${getStatus(shear_torsion_interaction.ratio)}
-                    </tr>
-                    ` : ''}
-                    ${combined_stress_H33.applicable ? `
-                    <tr class="border-t dark:border-gray-700">
-                        <td>Combined Stresses (H3.3)</td>
-                        <td colspan="2">Von Mises Stress Check</td>
-                        <td>${(combined_stress_H33.ratio).toFixed(3)}</td>
-                        ${getStatus(combined_stress_H33.ratio)}
-                    </tr>
-                    <tr id="h33-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Combined Stress Breakdown (AISC H3.3)</h4>
-                            <ul>
-                                <li>Total Required Normal Stress (f<sub>a</sub>+f<sub>b</sub>+σ<sub>w</sub>) = <b>${combined_stress_H33.details.total_normal_stress.toFixed(2)} ksi</b></li>
-                                <li>Total Required Shear Stress (f<sub>v</sub>+τ<sub>sv</sub>) = <b>${combined_stress_H33.details.total_shear_stress.toFixed(2)} ksi</b></li>
-                                <li>Design Stress Capacity = <b>${combined_stress_H33.details.capacity.toFixed(2)} ksi</b></li>
-                            </ul>
-                        </div></td>
-                    </tr>
-                    ` : ''}
-                    ${inputs.lb_bearing > 0 ? `
-                    <tr class="border-t dark:border-gray-700">
-                        <td>Web Crippling</td>
-                        <td>${Vu.toFixed(2)} kips</td>
-                        <td>${web_crippling.phiRn_or_Rn_omega.toFixed(2)} kips</td>
-                        <td>${(Vu / web_crippling.phiRn_or_Rn_omega).toFixed(3)}</td>
-                        ${getStatus(Vu / web_crippling.phiRn_or_Rn_omega)}
-                    </tr>
-                    <tr id="crippling-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Web Crippling & Yielding Breakdown (${web_crippling.reference})</h4>
-                            <ul>
-                                <li>Web Local Yielding Capacity (R<sub>n</sub>) = <b>${web_crippling.details.Rn_yield.toFixed(2)} kips</b></li>
-                                <li>Web Local Crippling Capacity (R<sub>n</sub>) = <b>${web_crippling.details.Rn_crippling.toFixed(2)} kips</b></li>
-                                <li>Governing Limit State = <b>${web_crippling.governing_state}</b></li>
-                                <li>Design Capacity (${cap_prefix}R<sub>n</sub>) = <b>${web_crippling.phiRn_or_Rn_omega.toFixed(2)} kips</b></li>
-                            </ul>
-                        </div></td>
-                    </tr>` : ''}
                 </tbody>
             </table>
-            ${deflection.actual ? `
-            <table>
-                <caption>Serviceability Checks</caption>
-                <thead>
-                    <tr>
-                        <th>Check</th>
-                        <th>Actual</th>
-                        <th>Allowable</th>
-                        <th>Ratio</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Deflection</td>
-                        <td>${deflection.actual.toFixed(3)} in</td>
-                        <td>${deflection.allowable.toFixed(3)} in (L/${inputs.deflection_limit})</td>
-                        <td>${deflection.ratio.toFixed(3)}</td>
-                        ${getStatus(deflection.ratio)}
-                    </tr>
-                    <tr id="deflection-details" class="details-row">
-                        <td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <h4>Deflection Breakdown (Serviceability)</h4>
-                            <ul>
-                                <li>Actual Deflection = <b>${deflection.actual.toFixed(3)} in</b></li>
-                                <li>Allowable Deflection (L / ${inputs.deflection_limit}) = <b>${deflection.allowable.toFixed(3)} in</b></li>
-                            </ul>
-                        </div></td>
-                    </tr>
-                </tbody>
-            </table>
-            ` : ''}
         </div>`}
     `;
+
+    // --- Dynamically build and inject the results table ---
+    const checks = {
+        'Axial': { demand: Pu, capacity: axial.phiPn_or_Pn_omega, unit: 'kips', data: { ...axial, properties, reference: axial.reference } },
+        'Flexure (Major)': { demand: inputs.Mux_or_Max, capacity: flexure.phiMn_or_Mn_omega, unit: 'kip-ft', data: { ...flexure, check: flexure, reference: flexure.reference, slenderness: flexure.slenderness } },
+        'Shear': { demand: inputs.Vu_or_Va, capacity: shear.phiVn_or_Vn_omega, unit: 'kips', data: { ...shear, check: shear, properties, reference: shear.reference } },
+        'Combined Forces': { demand: interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...interaction, check: interaction } },
+        'Torsion': { demand: Math.abs(inputs.Tu_or_Ta), capacity: torsion.phiTn_or_Tn_omega, unit: 'kip-in', data: { ...torsion, check: torsion } },
+        'Combined Shear + Torsion': { demand: shear_torsion_interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...shear_torsion_interaction, check: shear_torsion_interaction } },
+        'Combined Stresses (H3.3)': { demand: combined_stress_H33.ratio, capacity: 1.0, unit: 'ratio', data: { ...combined_stress_H33, check: combined_stress_H33 } },
+        'Web Crippling': { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling } },
+        'Deflection': { demand: deflection.actual, capacity: deflection.allowable, unit: 'in', data: { ...deflection, check: deflection, details: deflection } }
+    };
+
+    const tableBody = document.createElement('tbody');
+    let checkCounter = 0;
+
+    for (const [name, checkData] of Object.entries(checks)) {
+        if (checkData.demand === 0 && name !== 'Deflection') continue; // Skip checks with no demand
+        if (!checkData.capacity && name !== 'Combined Forces' && name !== 'Combined Shear + Torsion' && name !== 'Combined Stresses (H3.3)') continue;
+
+        checkCounter++;
+        const detailId = `details-${checkCounter}`;
+        const isInteraction = name.includes('Combined') || name === 'Deflection';
+        const ratio = isInteraction ? checkData.demand : (checkData.capacity > 0 ? checkData.demand / checkData.capacity : Infinity);
+        
+        // Defensively handle potentially undefined values before calling .toFixed()
+        const demand_val = checkData.demand || 0;
+        const capacity_val = checkData.capacity || 0;
+        const ratio_val = ratio || 0;
+        const status = ratio_val <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
+        const breakdownHtml = generateSteelCheckBreakdownHtml(name, checkData.data, inputs);
+
+        const rowHtml = `
+            <tr class="border-t dark:border-gray-700">
+                <td>${name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
+                <td>${demand_val.toFixed(2)} ${checkData.unit}</td>
+                <td>${capacity_val.toFixed(2)} ${checkData.unit}</td>
+                <td>${ratio_val.toFixed(3)}</td>
+                <td>${status}</td>
+            </tr>
+            <tr id="${detailId}" class="details-row">
+                <td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td>
+            </tr>`;
+        tableBody.insertAdjacentHTML('beforeend', rowHtml);
+    }
+
+    resultsContainer.innerHTML = html;
+    const tableElement = resultsContainer.querySelector('#steel-check-summary');
+    if (tableElement) tableElement.appendChild(tableBody);
 }

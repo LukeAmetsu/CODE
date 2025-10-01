@@ -63,6 +63,7 @@ const validationRules = {
         'bf': { min: 0.001, required: true, label: 'Width/Flange Width' },
         'tf': { min: 0.001, required: true, label: 'Thickness/Flange Thickness' },
         'Lb_input': { min: 0, required: true, label: 'Unbraced Length (Lb)' },
+        'actual_deflection_input': { min: 0, required: false, label: 'Actual Deflection' }
     },
     splice: {
         'member_d': { min: 1, required: true, label: 'Member Depth' },

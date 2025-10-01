@@ -211,19 +211,18 @@
         <div id="footer-placeholder"></div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            injectHeader({
-                activePage: 'splice',
-                pageTitle: 'AISC Splice Connection Checker',
-                headerPlaceholderId: 'header-placeholder'
-            });
-            injectFooter({
-                footerPlaceholderId: 'footer-placeholder'
-            });
-            initializeSharedUI();
-        });
-    </script>
-
 </body>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        injectHeader({
+            activePage: 'splice',
+            pageTitle: 'AISC Splice Connection Checker',
+            headerPlaceholderId: 'header-placeholder'
+        });
+        injectFooter({
+            footerPlaceholderId: 'footer-placeholder'
+        });
+        initializeSharedUI();
+    });
+</script>
 </html>

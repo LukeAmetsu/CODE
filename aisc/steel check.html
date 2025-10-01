@@ -14,10 +14,6 @@
             document.documentElement.classList.toggle('dark', isDark);
         })();
     </script>
-    <script src="../js/template.js" defer></script>
-    <script src="../js/shared-utils.js" defer></script>
-    <script src="../js/validation-rules.js" defer></script>
-    <script src="steel check.js" defer></script>
     <link rel="stylesheet" href="../styles.min.css">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
@@ -27,11 +23,12 @@
 
         <main id="steel-calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Column 1: Design & Material -->
-                <div>
+                
+                <!-- Column 1: Design, Material, and Loads -->
+                <div class="space-y-6">
                     <div class="form-section">
-                    <h2>Design Parameters</h2>
-                        <div class="space-y-4">
+                        <h2>Design Parameters</h2>
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="design_method" class="block text-sm font-medium mb-1">Design Method</label>
                                 <select id="design_method">
@@ -46,7 +43,7 @@
                                     <option value="360-16">AISC 360-16</option>
                                 </select>
                             </div>
-                            <div>
+                            <div class="col-span-2">
                                 <label for="unit_system" class="block text-sm font-medium mb-1">Unit System</label>
                                 <select id="unit_system">
                                     <option value="imperial" selected>Imperial (ksi, in, ft)</option>
@@ -56,28 +53,56 @@
                         </div>
                     </div>
                     <div class="form-section">
-                    <h2>Material Properties</h2>
-                        <div class="space-y-4">
+                        <h2>Material Properties</h2>
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="Fy" class="block text-sm font-medium mb-1">Yield Strength (Fy)</label>
+                                <label for="Fy" class="block text-sm font-medium mb-1">Yield (Fy)</label>
                                 <input type="number" id="Fy" value="50">
                             </div>
                             <div>
-                                <label for="Fu" class="block text-sm font-medium mb-1">Ultimate Strength (Fu)</label>
+                                <label for="Fu" class="block text-sm font-medium mb-1">Ultimate (Fu)</label>
                                 <input type="number" id="Fu" value="65">
                             </div>
-                            <div>
+                            <div class="col-span-2">
                                 <label for="E" class="block text-sm font-medium mb-1">Modulus of Elasticity (E)</label>
                                 <input type="number" id="E" value="29000">
                             </div>
                         </div>
                     </div>
-                </div>
-                <div>
                     <div class="form-section">
-                    <h2>Section Type & Geometry</h2>
-                        <div class="space-y-4">
+                        <h2>Applied Loads</h2>
+                        <p class="text-xs mb-2">Use negative for compression. Units: kips, kip-ft, kip-in.</p>
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
+                                <label for="Pu_or_Pa" class="block text-sm font-medium mb-1">Axial</label>
+                                <input type="number" id="Pu_or_Pa" value="0">
+                            </div>
+                            <div>
+                                <label for="Vu_or_Va" class="block text-sm font-medium mb-1">Shear</label>
+                                <input type="number" id="Vu_or_Va" value="35">
+                            </div>
+                            <div>
+                                <label for="Mux_or_Max" class="block text-sm font-medium mb-1">Moment (Major)</label>
+                                <input type="number" id="Mux_or_Max" value="350">
+                            </div>
+                            <div>
+                                <label for="Muy_or_May" class="block text-sm font-medium mb-1">Moment (Minor)</label>
+                                <input type="number" id="Muy_or_May" value="0">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="Tu_or_Ta" class="block text-sm font-medium mb-1">Torsion (kip-in)</label>
+                                <input type="number" id="Tu_or_Ta" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Section & Geometry -->
+                <div class="space-y-6">
+                    <div class="form-section">
+                        <h2>Section Type & Geometry</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
                                 <label for="section_type" class="block text-sm font-medium mb-1">Section Type</label>
                                 <select id="section_type">
                                     <option value="I-Shape" selected>I-Shape</option>
@@ -85,6 +110,7 @@
                                     <option value="HSS-round">Round HSS</option>
                                     <option value="channel">Channel</option>
                                     <option value="angle">Angle</option>
+                                    <option value="Manual Input">Manual Input</option>
                                 </select>
                             </div>
                             <div id="d-input-container">
@@ -106,34 +132,38 @@
                         </div>
                     </div>
                     <div class="form-section">
-                    <h2>Bracing</h2>
-                        <div class="grid grid-cols-2 gap-2">
+                        <h2>Bracing & Stability</h2>
+                        <div class="grid grid-cols-2 gap-4">
                              <div>
                                 <label for="Lb_input" class="block text-sm font-medium mb-1">Unbraced Length (Lb)</label>
                                 <input type="number" id="Lb_input" value="20">
                             </div>
                              <div>
-                                <label for="K" class="block text-sm font-medium mb-1">Effective Length Factor (K)</label>
+                                <label for="K" class="block text-sm font-medium mb-1">Effective Length (K)</label>
                                 <input type="number" id="K" value="1.0">
                             </div>
                              <div>
                                 <label for="Cb" class="block text-sm font-medium mb-1">LTB Factor (Cb)</label>
                                 <input type="number" id="Cb" value="1.0">
                             </div>
-                            <div class="relative">
-                                <label for="Cm" class="block text-sm font-medium mb-1">Moment Gradient Factor (Cm)</label>
+                            <div>
+                                <label for="Cm" class="block text-sm font-medium mb-1">Moment Gradient (Cm)</label>
                                 <input type="number" id="Cm" value="1.0">
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">For members without transverse loads, Cm = 0.6 - 0.4(M1/M2). For transverse loads, Cm = 1.0 (conservative).</p>
                             </div>
-                             <div class="col-span-2 border-t dark:border-gray-700 pt-4">
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Web Local Strength</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                             <div>
                                 <label for="lb_bearing" class="block text-sm font-medium mb-1">Bearing Length (lb)</label>
                                 <input type="number" id="lb_bearing" value="4">
                             </div>
                             <div>
-                                <label for="k_des" class="block text-sm font-medium mb-1">Design Web Thick (k<sub>des</sub>)</label>
+                                <label for="k_des" class="block text-sm font-medium mb-1">k&lt;sub&gt;des&lt;/sub&gt;</label>
                                 <input type="number" id="k_des" value="1.18">
                             </div>
-                             <div>
+                             <div class="col-span-2">
                                 <label for="is_end_bearing" class="block text-sm font-medium mb-1">Bearing Location</label>
                                 <select id="is_end_bearing">
                                     <option value="true" selected>End of Member</option>
@@ -145,47 +175,19 @@
                 </div>
 
                 <!-- Column 3: Serviceability & Advanced -->
-                <div>
+                <div class="space-y-6">
                     <div class="form-section">
-                        <h2>Applied Loads</h2>
-                        <p class="text-xs  mb-2">Use negative for compression. Units: kips, kip-ft, kip-in.</p>
-                            <div class="space-y-4">
-                                <div>
-                                    <label for="Pu_or_Pa" class="block text-sm font-medium mb-1">Axial (Pu / Pa)</label>
-                                    <input type="number" id="Pu_or_Pa" value="0">
-                                </div>
-                                <div>
-                                    <label for="Mux_or_Max" class="block text-sm font-medium mb-1">Moment, Major (Mux / Max)</label>
-                                    <input type="number" id="Mux_or_Max" value="350">
-                                </div>
-                                <div>
-                                    <label for="Muy_or_May" class="block text-sm font-medium mb-1">Moment, Minor (Muy / May)</label>
-                                    <input type="number" id="Muy_or_May" value="0">
-                                </div>
-                                <div>
-                                    <label for="Vu_or_Va" class="block text-sm font-medium mb-1">Shear (Vu / Va)</label>
-                                    <input type="number" id="Vu_or_Va" value="35">
-                                </div>
-                                 <div>
-                                    <label for="Tu_or_Ta" class="block text-sm font-medium mb-1">Torsion (Tu / Ta, kip-in)</label>
-                                    <input type="number" id="Tu_or_Ta" value="0">
-                                </div>
-                            </div>
-                    </div>
-                    <div class="form-section">
-                    <h2>Serviceability (Deflection)</h2>
-                        <div class="space-y-4">
-                            <div><label for="deflection_span" class="block text-sm">Span for Deflection (ft)</label><input type="number" id="deflection_span" value="32"></div>
-                            <div><label for="deflection_limit" class="block text-sm">Deflection Limit (e.g., 240 for L/240)</label><input type="number" id="deflection_limit" value="240"></div>
-                            <div><label for="actual_deflection_input" class="block text-sm">Actual Deflection (in)</label><input type="number" id="actual_deflection_input" value="1.2"></div>
+                        <h2>Serviceability (Deflection)</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="deflection_span" class="block text-sm">Span (ft)</label><input type="number" id="deflection_span" value="32"></div>
+                            <div><label for="deflection_limit" class="block text-sm">Limit (L/X)</label><input type="number" id="deflection_limit" value="240"></div>
+                            <div class="col-span-2"><label for="actual_deflection_input" class="block text-sm">Actual Deflection (in)</label><input type="number" id="actual_deflection_input" value="1.2"></div>
                         </div>
                     </div>
                     <div class="form-section">
-                    <h2>Manual Properties</h2>
-                    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md my-2 text-sm dark:bg-yellow-900/50 dark:text-yellow-300">
-                        <strong>Warning:</strong> This section is for single, non-composite members. Do not multiply properties for built-up sections (e.g., multiple beams side-by-side). This is unconservative. Analyze each component individually with its share of the load.
-                    </div>
-                         <div class="grid grid-cols-2 gap-4">
+                        <h2>Manual Properties</h2>
+                        <p class="text-xs mb-2">Overrides calculated geometry. Use with caution.</p>
+                         <div class="grid grid-cols-2 gap-x-4 gap-y-2">
                             <div><label for="Ag_manual" class="block text-sm">Ag</label><input type="number" id="Ag_manual" value="34.7"></div>
                             <div><label for="I_manual" class="block text-sm">Ix</label><input type="number" id="I_manual" value="5870"></div>
                             <div><label for="Sx_manual" class="block text-sm">Sx</label><input type="number" id="Sx_manual" value="357"></div>
@@ -194,8 +196,6 @@
                             <div><label for="rts_manual" class="block text-sm">rts</label><input type="number" id="rts_manual" value="2.89"></div>
                              <div><label for="J_manual" class="block text-sm">J</label><input type="number" id="J_manual" value="6.06"></div>
                             <div><label for="Cw_manual" class="block text-sm">Cw</label><input type="number" id="Cw_manual" value="48300"></div>
-                         </div>
-                         <div class="grid grid-cols-3 gap-4 mt-4 border-t pt-4 dark:border-gray-600">
                             <div><label for="Iy_manual" class="block text-sm">Iy</label><input type="number" id="Iy_manual" value="232"></div>
                             <div><label for="Sy_manual" class="block text-sm">Sy</label><input type="number" id="Sy_manual" value="40.4"></div>
                             <div><label for="Zy_manual" class="block text-sm">Zy</label><input type="number" id="Zy_manual" value="61.7"></div>
@@ -203,39 +203,38 @@
                     </div>
                     <div class="form-section">
                         <h2>Built-Up Section Calculator</h2>
-                        <p class="text-xs mb-2">Calculates properties for multiple identical sections placed side-by-side. Uses the single section properties defined above.</p>
-                        <div class="grid grid-cols-2 gap-2">
+                        <p class="text-xs mb-2">Calculates properties for multiple identical sections placed side-by-side.</p>
+                        <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="num_beams" class="block text-sm font-medium mb-1">Number of Beams (n)</label>
+                                <label for="num_beams" class="block text-sm font-medium mb-1">Number of Beams</label>
                                 <input type="number" id="num_beams" value="1" min="1" step="1">
                             </div>
                             <div>
-                                <label for="beam_spacing" class="block text-sm font-medium mb-1">Spacing (s, in)</label>
+                                <label for="beam_spacing" class="block text-sm font-medium mb-1">Spacing (in)</label>
                                 <input type="number" id="beam_spacing" value="12">
                             </div>
                         </div>
-                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md my-3 text-sm dark:bg-yellow-900/50 dark:text-yellow-300">
-                            <strong>Note:</strong> The main analysis below is for a <strong>single member</strong>. For a built-up section, analyze one beam with its share of the total load and ensure adequate interconnection per AISC Chapter E6.
-                        </div>
-                        <div id="built-up-results" class="mt-4"></div>
+                        <div id="built-up-results" class="mt-4 text-sm"></div>
                     </div>
                 </div>
-                
             </div>
+            
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
                 <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
                 <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save Inputs</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
+                <input type="file" id="file-input" class="hidden" accept=".txt">
                 <button id="run-steel-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Steel Check</button>
             </div>
         </main>
 
+        <div id="feedback-message" class="text-center mt-4 text-sm h-5"></div>
         <div id="steel-results-container" class="mt-10 results-container"></div>
-        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
-
-        <div id="footer-placeholder"></div>
+        <div id="footer-placeholder" class="mt-12"></div>
     </div>
-    
+    <script src="../js/template.js"></script>
+    <script src="../js/shared-utils.js"></script>
+    <script src="../js/validation-rules.js"></script>
+    <script src="steel check.js"></script>
 </body>
 </html>
