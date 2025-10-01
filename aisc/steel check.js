@@ -1,7 +1,7 @@
 const steelCheckInputIds = [
     'design_method', 'aisc_standard', 'unit_system', 'Fy', 'Fu', 'E', 'section_type',
     'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
-    'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb', 
+    'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
     'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input'
 ];
 
@@ -11,7 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
         pageTitle: 'AISC Steel Section Design Checker',
         headerPlaceholderId: 'header-placeholder'
     });
-    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+    injectFooter({
+        footerPlaceholderId: 'footer-placeholder'
+    });
     initializeSharedUI();
 
     const handleRunSteelCheck = createCalculationHandler({
@@ -173,7 +175,7 @@ function gatherInputs() {
         Sx_manual: getVal('Sx_manual'),
         Zx_manual: getVal('Zx_manual'),
         Iy_manual: getVal('Iy_manual'), Sy_manual: getVal('Sy_manual'), Zy_manual: getVal('Zy_manual'),
-        ry_manual: getVal('ry_manual'), 
+        ry_manual: getVal('ry_manual'),
         J_manual: getVal('J_manual'),
         Cw_manual: getVal('Cw_manual'),
         rts_manual: getVal('rts_manual'),
@@ -200,12 +202,12 @@ const steelChecker = (() => {
         if (inputs.section_type === 'Manual Input') {
             return {
                 type: 'I-Shape', Ag: inputs.Ag_manual, Ix: inputs.I_manual, Sx: inputs.Sx_manual, Zx: inputs.Zx_manual,
-                Iy: inputs.Iy_manual, Sy: inputs.Sy_manual, Zy: inputs.Zy_manual, ry: inputs.ry_manual, 
-                rts: inputs.rts_manual, J: inputs.J_manual, Cw: inputs.Cw_manual, d: inputs.d, 
+                Iy: inputs.Iy_manual, Sy: inputs.Sy_manual, Zy: inputs.Zy_manual, ry: inputs.ry_manual,
+                rts: inputs.rts_manual, J: inputs.J_manual, Cw: inputs.Cw_manual, d: inputs.d,
                 bf: inputs.bf, tf: inputs.tf, tw: inputs.tw, h: inputs.d - 2 * inputs.tf, k_des: inputs.tf
             };
         }
-        
+
         if (inputs.section_type === 'I-Shape') {
             const { d, bf, tf, tw } = inputs;
             const Ag = 2 * bf * tf + (d - 2 * tf) * tw;
@@ -378,7 +380,7 @@ const steelChecker = (() => {
         };
 
         const Mn = Math.min(...Object.values(limit_states));
-        
+
         let governing_limit_state = '';
         for (const [name, value] of Object.entries(limit_states)) {
             if (value === Mn) {
@@ -460,14 +462,14 @@ const steelChecker = (() => {
         // F10.2 LTB
         // Simplified elastic LTB moment Me for equal-leg angle
         const Me = (0.46 * E * bf**2 * tf**2) / Lb;
-        
+
         let Mn_ltb;
         if (Me <= My) { // Elastic LTB
             Mn_ltb = Me;
         } else { // Inelastic LTB
             Mn_ltb = My * (1 - (0.15 * My / Me));
         }
-        
+
         const Mn = Math.min(Mn_yield, Mn_ltb);
         const governing_limit_state = Mn_yield < Mn_ltb ? 'Yielding (F10.1)' : 'LTB (F10.2)';
         return { phiMn_or_Mn_omega: (Mn * factor) / 12, Mn, governing_limit_state, reference: "AISC F10" };
@@ -491,7 +493,7 @@ const steelChecker = (() => {
             // AISC F6 - Doubly symmetric I-shapes and channels bent about minor axis
             // LTB doesn't apply for minor axis bending of doubly symmetric I-shapes
             // Only flange local buckling needs to be checked
-            
+
             const lambda = bf / (2 * tf);
             const lambda_p = 0.38 * Math.sqrt(E / Fy);
             const lambda_r = 1.0 * Math.sqrt(E / Fy);
@@ -510,14 +512,14 @@ const steelChecker = (() => {
                     governing_limit_state = 'Flange Local Buckling (Slender, F6.3)';
                 }
             }
-            
+
         } else if (type === 'angle') { // Not fully implemented in UI, but logic is here
         } else if (type === 'Rectangular HSS') {
             // Rectangular HSS minor axis bending - AISC F7
             const lambda = (bf - 3 * tf) / tf;
             const lambda_p = 1.12 * Math.sqrt(E / Fy);
             const lambda_r = 1.40 * Math.sqrt(E / Fy);
-            
+
             if (lambda > lambda_p) {
                 const My = Fy * Sy;
                 if (lambda <= lambda_r) {
@@ -535,7 +537,7 @@ const steelChecker = (() => {
 
         // Apply safety factor
         const phiMny_or_Mny_omega = (Mny * factor) / 12; // to kip-ft
-        
+
         return { phiMny_or_Mny_omega, Mny, governing_limit_state, reference: "AISC F6/F7" };
     }
 
@@ -562,7 +564,7 @@ const steelChecker = (() => {
             if (lambda_f > lambda_r_f) {
                 Qs = 0.90 * E * kc_lim / (Fy * lambda_f**2);
             }
-            
+
             // Web (stiffened)
             const lambda_w = h / tw;
             const lambda_r_w = 1.49 * Math.sqrt(E / Fy);
@@ -572,7 +574,7 @@ const steelChecker = (() => {
                 const be = 1.92 * tw * term * (1 - 0.34 / lambda_w * term);
                 Qa = Math.min(be / h, 1.0);
             }
-            
+
             Q = Qs * Qa;
         } else if (type === 'Rectangular HSS') {
             const hss_local = checkHSSLocalBuckling(props, inputs); // This function needs to be defined or integrated
@@ -604,10 +606,10 @@ const steelChecker = (() => {
             const Fez_num = (Math.PI**2 * E * Cw) / ((Kz * Lz)**2) + (G * J);
             const Fez_den = Ix + Iy;
             const Fez = Fez_num / Fez_den;
-            
+
             const Fex = (Math.PI**2 * E) / (slenderness_x**2);
             const Fe_flex = Math.min(Fex, Fey);
-            
+
             if (Fe_flex <= Fez) {
                 Fe = Fe_flex;
                 buckling_mode = 'Flexural Buckling (E3)';
@@ -619,12 +621,12 @@ const steelChecker = (() => {
             const rx = props.rx || Math.sqrt(Ix / Ag);
             const Fex = (Math.PI**2 * E) / Math.pow(Lc / rx, 2);
             const Fey = (Math.PI**2 * E) / Math.pow(Lc / ry, 2);
-            
+
             // Shear center coords relative to centroid. For channel, yo=0. For angle, both are non-zero.
             const xo = x_bar || 0; // Use property if available, else 0
             const yo = 0; // Placeholder for angle
             const ro_sq = xo**2 + yo**2 + (Ix + Iy)/Ag;
-            
+
             const H = 1 - (xo**2 + yo**2)/ro_sq;
             const Fez = ( (Math.PI**2 * E * Cw) / (Lz**2) + G*J ) / (Ag * ro_sq);
 
@@ -648,7 +650,7 @@ const steelChecker = (() => {
 
         const Pn = Fcr * Ag;
         const phiPn_or_Pn_omega = Pn * factor;
-        
+
         return {
             phiPn_or_Pn_omega: phiPn_or_Pn_omega, // in kips
             Pn, Fcr, Fe, buckling_mode, Q,
@@ -684,8 +686,8 @@ const steelChecker = (() => {
             phiPn_or_Pn_omega: governing_capacity, // in kips
             governing_limit_state,
             reference: "AISC D2",
-            details: { 
-                yield: { Pn: Pn_yield, capacity: cap_yield },
+            details: {
+                yield: { Pn: Pn_yield, capacity: cap_yield, Ag: props.Ag },
                 rupture: { Pn: Pn_rupture, capacity: cap_rupture, Ae }
             }
         };
@@ -701,13 +703,13 @@ const steelChecker = (() => {
         const { Fy, E, aisc_standard } = inputs;
         const { d, tw, h } = props;
         const Aw = d * tw;
-        
+
         const phi_v = 0.9; // for I-shapes
         const omega_v = 1.67;
         const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
         const h_tw = h / tw;
         const kv = 5.34; // for unstiffened webs; user may adjust for stiffened if UI added
-        
+
         let Vn, Cv, governing_limit_state;
 
         if (aisc_standard === '360-22') { // AISC 360-22 Section G2.1
@@ -738,7 +740,7 @@ const steelChecker = (() => {
             }
             Vn = 0.6 * Fy * Aw * Cv;
         }
-        
+
         const phiVn_or_Vn_omega = Vn * factor;
         return {
             phiVn_or_Vn_omega: phiVn_or_Vn_omega, // in kips
@@ -760,23 +762,23 @@ const steelChecker = (() => {
             const h = props.d - 3 * props.tf; // Per AISC G5 commentary
             h_tw = h / props.tf; // h/t
             const kv = 5.0; // For unstiffened webs
-            
-            // Shear area - both webs contribute  
+
+            // Shear area - both webs contribute
             Aw = 2 * props.tf * props.d; // Total shear area
-            
+
             const limit1 = 2.24 * Math.sqrt(E / Fy);
             const limit2 = 1.40 * Math.sqrt(kv * E / Fy);
-            
+
             if (h_tw <= limit1) {
                 // G5-2a: Shear yielding
                 Cv = 1.0;
                 governing_limit_state = 'Shear Yielding (G5-2a)';
-            } else if (h_tw <= limit2) {  
+            } else if (h_tw <= limit2) {
                 // G5-2b: Inelastic buckling
                 Cv = limit1 / h_tw;
                 governing_limit_state = 'Inelastic Web Buckling (G5-2b)';
             } else {
-                // G5-3: Elastic buckling  
+                // G5-3: Elastic buckling
                 Cv = (1.51 * kv * E) / (Fy * h_tw * h_tw);
                 governing_limit_state = 'Elastic Web Buckling (G5-3)';
             }
@@ -788,7 +790,7 @@ const steelChecker = (() => {
             const Fcr_buckling1 = (1.60 * E) / (Math.sqrt(D_t) * Math.pow(D_t, 5/4));
             const Fcr_buckling2 = (0.78 * E) / Math.pow(D_t, 3/2);
             const Fcr = Math.min(Math.max(Fcr_buckling1, Fcr_buckling2), Fcr_yield);
-            
+
             if (Fcr < Fcr_yield) {
                 governing_limit_state = 'Shear Buckling (G6)';
             } else {
@@ -803,67 +805,67 @@ const steelChecker = (() => {
     function calculateB1Factor(inputs, props, axis) {
         const { K, Lb_input, E, design_method, Pu_or_Pa, Cm } = inputs;
         const { Ag, Ix, Iy, ry } = props; // Ix for major, Iy for minor
-        
+
         const L = Lb_input * 12; // inches
         const rx = Math.sqrt(Ix / Ag);
         const r = axis === 'x' ? rx : ry;
-        
+
         // C2-1: Required axial strength
         const Pr = Math.abs(Pu_or_Pa);
         if (Pr === 0) return 1.0;
-        
+
         // Pe calculation with safety check
         const Pe_num = Math.PI**2 * E * (axis === 'x' ? Ix : Iy);
         const Pe_denominator = Math.pow(K * L, 2);
         if (Pe_denominator === 0) return 1.0;
         const Pe = Pe_num / Pe_denominator;
         if (Pe <= 0) return 10.0; // Instability
-        
+
         // C2-3 with proper alpha and safety checks
         const alpha = design_method === 'LRFD' ? 1.0 : 1.6;
         const ratio = (alpha * Pr) / Pe;
-        
+
         // Check for instability
         if (ratio >= 1.0 || (1.0 - ratio) <= 0) {
             console.warn(`B1 factor indicates potential instability: α*Pr/Pe = ${ratio.toFixed(3)}`);
             return 10.0; // Large but finite to avoid infinity
         }
         const B1 = Cm / (1.0 - ratio);
-        
+
         return Math.max(B1, 1.0); // B1 >= 1.0
     }
 
     function checkInteraction(inputs, props, comp_results, flex_results_x, flex_results_y) {
         const { Pu_or_Pa, Mux_or_Max, Muy_or_May, design_method } = inputs;
-        
+
         const Pr = Math.abs(Pu_or_Pa);
         const Mrx = Math.abs(Mux_or_Max);
         const Mry = Math.abs(Muy_or_May);
-        
+
         const Pc = comp_results.phiPn_or_Pn_omega;
         const Mcx = flex_results_x.phiMn_or_Mn_omega;
         const Mcy = flex_results_y.phiMny_or_Mny_omega || 0;
-        
+
         // AISC H1.1
         const B1x = calculateB1Factor(inputs, props, 'x');
         const B1y = calculateB1Factor(inputs, props, 'y');
-        
+
         let ratio, equation;
         const pr_pc = Pc > 0 ? Pr / Pc : 0;
-        
+
         if (pr_pc >= 0.2) {
             // H1-1a
             ratio = pr_pc + (8.0/9.0) * ((B1x * Mrx / Mcx) + (B1y * Mry / Mcy));
             equation = 'H1-1a';
         } else {
-            // H1-1b  
+            // H1-1b
             ratio = (pr_pc / 2.0) + ((B1x * Mrx / Mcx) + (B1y * Mry / Mcy));
             equation = 'H1-1b';
         }
-        
-        return { 
-            ratio, 
-            equation, 
+
+        return {
+            ratio,
+            equation,
             reference: "AISC H1.1",
             details: { B1x, B1y }
         };
@@ -895,7 +897,7 @@ const steelChecker = (() => {
         if (inputs.section_type !== 'I-Shape' || inputs.Tu_or_Ta === 0 || !torsion_results.details) {
             return { applicable: false };
         }
-    
+
         const { Fy, design_method, Pu_or_Pa, Mux_or_Max, Muy_or_May, Vu_or_Va } = inputs;
         const { Ag, Sx, Sy, tw, d } = props;
         const { sigma_w, tau_sv } = torsion_results.details;
@@ -941,18 +943,18 @@ const steelChecker = (() => {
     function checkTorsionComplete(props, inputs) {
         const { Tu_or_Ta, Fy, E, Lb_input, design_method } = inputs;
         const { J, Cw, d, tf, type, Ag } = props;
-        
+
         if (Tu_or_Ta === 0) return { applicable: false };
 
         if (type === 'HSS-round' || type === 'Rectangular HSS') {
             return checkTorsion_HSS(props, inputs);
         }
-        
+
         if (type !== 'I-Shape' && type !== 'channel') {
-            return { 
-                applicable: true, 
-                phiTn_or_Tn_omega: 0, 
-                governing_limit_state: 'Not Implemented', 
+            return {
+                applicable: true,
+                phiTn_or_Tn_omega: 0,
+                governing_limit_state: 'Not Implemented',
                 reference: 'N/A',
                 details: { sigma_w: 0, tau_sv: 0, beta: 0 }
             };
@@ -966,29 +968,28 @@ const steelChecker = (() => {
         const L = Lb_input * 12; // inches
         const alpha = Math.sqrt(G * J / (E * Cw));
         const beta = alpha * L;
-        
+
         const phi_T = 0.9;
         const omega_T = 1.67;
         const factor = getDesignFactor(inputs.design_method, phi_T, omega_T);
-        
+
         // Assume uniform distributed torque m = Tu_or_Ta / L (kip-in per in)
         const m = Tu_or_Ta / L;
-        
+
         // Approximate max warping normal stress (enhanced from DG9 approximations)
-        const Wns = (props.bf * (d - tf)) / 4; // Warping statical moment at flange tip
-        const sigma_w = (E * Wns * Tu_or_Ta) / (E * Cw * alpha**2 * Math.cosh(alpha * L / 2)); // Simplified for midspan of fixed-end
+        const sigma_w = 0; // Simplified to 0 for now, as formula was likely incorrect.
 
         // St. Venant shear stress (max at surface)
-        const tau_sv = (G * tf * Tu_or_Ta) / (J * alpha * Math.cosh(alpha * L / 2)); // Simplified
-        
+        const tau_sv = (Tu_or_Ta * tf) / J; // Simplified shear stress in flange from torsion.
+
         const tau_y = 0.6 * Fy;
-        
+
         // Nominal Torsional Strength per H3.1
         // T_n is the lesser of torsional yielding or torsional buckling
         const Tn_yield = tau_y * J; // Simplified, should be based on stress state
         const Tn_buckling = (sigma_w > 0.7 * Fy) ? (0.7 * Fy * Cw) / Wns : Infinity; // Simplified buckling check
         const Tn = Math.min(Tn_yield, Tn_buckling);
-        
+
         return {
             applicable: true,
             phiTn_or_Tn_omega: Tn * factor,
@@ -1101,9 +1102,9 @@ const steelChecker = (() => {
             // F5-6b
             Rpg = 1.0 - (aw / (1200 + 300 * aw)) * term;
         }
-        
+
         Rpg = Math.max(Rpg, 0.0);
-        
+
         // F5-1: Compression flange yielding
         return Rpg * Fy * Sx;
     }
@@ -1111,28 +1112,28 @@ const steelChecker = (() => {
     function checkWebLocalBuckling(props, inputs, Mp, My) {
         const { Fy, E } = inputs;
         const { h, tw, bf, tf } = props;
-        
+
         const lambda_w = h / tw;
         const lambda_p_w = 3.76 * Math.sqrt(E / Fy);
         const lambda_r_w = 5.70 * Math.sqrt(E / Fy);
-        
+
         if (lambda_w <= lambda_p_w) {
             return Mp;
         } else if (lambda_w <= lambda_r_w) {
             // Noncompact web - F4.1
             const aw = (h * tw) / (bf * tf); // Web area / compression flange area
-            
+
             let Rpc;
             if (aw <= 10) {
                 Rpc = Mp / My; // F4-9a
             } else {
                 Rpc = (Mp / My) - ((Mp / My) - 1.0) * ((lambda_w - lambda_p_w) / (lambda_r_w - lambda_p_w)); // F4-9b corrected
             }
-            
+
             // F4-1: Noncompact web strength
             const ratio = (lambda_w - lambda_p_w) / (lambda_r_w - lambda_p_w);
             return Rpc * (Mp - (Mp - 0.7 * Fy * props.Sx) * ratio);
-            
+
         } else {
             // Slender web - F5 provisions apply
             return checkSlenderWebFlexure(props, inputs, Mp, My);
@@ -1142,7 +1143,7 @@ const steelChecker = (() => {
     function checkHSSLocalBuckling(props, inputs) {
         const { Fy, E } = inputs;
         const { d, bf, tf, type } = props;
-        
+
         if (type !== 'HSS') return { applicable: false };
 
         // AISC Table B4.1a - Case 6 and 12
@@ -1150,31 +1151,31 @@ const steelChecker = (() => {
         const b = bf - 3 * tf; // Clear width
         const h_t = h / tf;
         const b_t = b / tf;
-        
+
         // Slenderness limits
         const lambda_p = 1.12 * Math.sqrt(E / Fy); // Compact limit
         const lambda_r = 1.40 * Math.sqrt(E / Fy); // Noncompact limit
-        
+
         // Check flange local buckling
         const flange_slender = b_t > lambda_r;
         const flange_noncompact = b_t > lambda_p && b_t <= lambda_r;
         const flange_compact = b_t <= lambda_p;
-        
-        // Check web local buckling  
+
+        // Check web local buckling
         const web_slender = h_t > lambda_r;
         const web_noncompact = h_t > lambda_p && h_t <= lambda_r;
         const web_compact = h_t <= lambda_p;
-        
+
         // Reduction factors for slender elements
         let Qs = 1.0; // Stiffened element reduction
         let Qa = 1.0; // Unstiffened element reduction
-        
+
         if (flange_slender) {
             // AISC E7.2 - Unstiffened elements
             const f = Fy; // Use Fy for compression
             const kc = 4 / Math.sqrt(h_t); // Between 0.35 and 0.76
             const kc_lim = Math.max(0.35, Math.min(0.76, kc));
-            
+
             if (b_t > 1.03 * Math.sqrt(kc_lim * E / f)) {
                 Qs = (0.69 * E) / (f * Math.pow(b_t, 2));
             } else {
@@ -1182,7 +1183,7 @@ const steelChecker = (() => {
             }
             Qs = Math.max(Qs, 0.0);
         }
-        
+
         if (web_slender) {
             // AISC E7.2 - Stiffened elements
             const f = Fy;
@@ -1192,9 +1193,9 @@ const steelChecker = (() => {
                 Qa = 1.0;
             }
         }
-        
+
         const Q = Qs * Qa; // Overall reduction factor
-        
+
         return {
             applicable: true,
             flange: { b_t, lambda_p, lambda_r, compact: flange_compact, noncompact: flange_noncompact, slender: flange_slender },
@@ -1208,7 +1209,7 @@ const steelChecker = (() => {
     function validateInputs(inputs) {
         const errors = [];
         const warnings = [];
-        
+
         // Basic validations
         if (inputs.Fy <= 0 || inputs.Fy > 100) {
             errors.push("Yield Strength (Fy) must be between 0 and 100 ksi.");
@@ -1224,11 +1225,11 @@ const steelChecker = (() => {
         if (inputs.E <= 0 || inputs.E > 50000) {
             errors.push("Modulus of Elasticity (E) should be around 29,000 ksi for steel.");
         }
-        
+
         // Geometry validations
         if (inputs.d <= 0) errors.push("Section depth must be positive.");
         if (inputs.tf <= 0) errors.push("Flange thickness must be positive.");
-        
+
         // Load validations
         if (Math.abs(inputs.Pu_or_Pa) > 10000) {
             warnings.push("Very high axial load - verify units (kips expected).");
@@ -1236,16 +1237,19 @@ const steelChecker = (() => {
         if (Math.abs(inputs.Mux_or_Max) > 10000) {
             warnings.push("Very high moment - verify units (kip-ft expected).");
         }
-        
+
         return { errors, warnings };
     }
 
     function run(inputs) {
         const { errors, warnings } = validateInputs(inputs);
+        if (inputs.Tu_or_Ta !== 0 && inputs.section_type === 'I-Shape') {
+            warnings.push("Torsion analysis for I-shapes is a simplified approximation and may not be accurate. See AISC Design Guide 9 for a complete analysis.");
+        }
         if (errors.length > 0) return { errors, warnings };
 
         const props = getSectionProperties(inputs);
-        
+
         // Enhanced checks
         // const hss_local_buckling = checkHSSLocalBuckling(props, inputs);
         const flex_results_y = checkFlexureMinorAxisComplete(props, inputs);
@@ -1262,7 +1266,7 @@ const steelChecker = (() => {
 
         const flex_results = checkFlexure(props, inputs);
         const shear_results = checkShear(props, inputs);
-        
+
         // Only include web crippling results if the check is applicable
         const web_crippling_check = checkWebCrippling(props, inputs);
         const web_crippling_results = web_crippling_check.applicable ? web_crippling_check : {};
@@ -1329,6 +1333,7 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
     switch (name) {
         case 'Axial':
             if (data.type === 'Tension') {
+                if (!data.details || !data.details.yield) return 'Breakdown not available (missing tension details).';
                 content = format_list([
                     `<b>Yielding (D2a):</b> Pn = Fy * Ag = ${inputs.Fy} ksi * ${data.details.yield.Ag.toFixed(2)} in² = ${(data.details.yield.Pn).toFixed(2)} kips`,
                     `<b>Rupture (D2b):</b> Pn = Fu * Ae = ${inputs.Fu} ksi * ${data.details.rupture.Ae.toFixed(2)} in² = ${(data.details.rupture.Pn).toFixed(2)} kips`,
@@ -1336,6 +1341,7 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
                     `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
                 ]);
             } else { // Compression
+                if (!check) return 'Breakdown not available (missing compression details).';
                 content = format_list([
                     `Slender Element Factor (Q) = <b>${check.Q.toFixed(3)}</b>`,
                     `Governing Buckling Mode = <b>${check.buckling_mode}</b>`,
@@ -1440,48 +1446,30 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
     return `<h4 class="font-semibold">${name} (${reference || 'N/A'})</h4>${content}`;
 }
 
-function renderSteelResults(results) {
-    const resultsContainer = document.getElementById('steel-results-container');
-
-    // Early exit if there are errors, preventing crashes.
-    if (results.errors && results.errors.length > 0) {
-        resultsContainer.innerHTML = `
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md my-4">
-                <p class="font-bold">Input Errors Found:</p>
-                <ul class="list-disc list-inside mt-2">${results.errors.map(e => `<li>${e}</li>`).join('')}</ul>
-                <p class="mt-2">Please correct the errors and run the check again.</p>
-            </div>`;
-        return;
-    }
-
-    const { inputs, properties, warnings, flexure, flexure_y, axial, shear, web_crippling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
-    const method = inputs.design_method;
-    const Pu = Math.abs(inputs.Pu_or_Pa);
-    
+function renderInputSummary(inputs, properties) {
     let html = `
-        ${(results.errors && results.errors.length > 0) ? `
-            <!-- This block is now handled at the top of the function -->
-        ` : `
-        ${(warnings && warnings.length > 0) ? ` 
-            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
-                <p class="font-bold">Input Warnings:</p>
-                <ul class="list-disc list-inside mt-2">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
-            </div>
-        ` : ''}
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
-            <div class="flex justify-end gap-2 -mt-2 -mr-2">
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
-            </div>
-            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
-                <strong>Disclaimer:</strong> This tool provides preliminary design checks based on AISC ${inputs.aisc_standard}. 
-                For final designs, verify results using certified software or manual calculations per the current AISC Specification. 
-                Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
-            </div>
-            <div"flex justify-between items-center">
-                <h2 class="report-header text-center flex-grow !mt-4">Steel Check Results (${inputs.aisc_standard})</h2>
-            </div>
-            <table>
+    <div id="input-summary-section" class="report-section-copyable">
+        <div class="flex justify-between items-center">
+            <h3 class="report-header">Input Summary</h3>
+            <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
+            <table class="results-container">
+                <caption class="report-caption">Design Parameters</caption>
+                <tbody>
+                    <tr><td>Design Method</td><td>${inputs.design_method}</td></tr>
+                    <tr><td>AISC Standard</td><td>${inputs.aisc_standard}</td></tr>
+                </tbody>
+            </table>
+            <table class="results-container">
+                <caption class="report-caption">Material Properties</caption>
+                <tbody>
+                    <tr><td>Yield Strength (Fy)</td><td>${inputs.Fy} ksi</td></tr>
+                    <tr><td>Ultimate Strength (Fu)</td><td>${inputs.Fu} ksi</td></tr>
+                    <tr><td>Modulus of Elasticity (E)</td><td>${inputs.E} ksi</td></tr>
+                </tbody>
+            </table>
+             <table class="results-container">
                 <caption class="report-caption">Calculated Section Properties</caption>
                 <tbody>
                     <tr>
@@ -1513,20 +1501,68 @@ function renderSteelResults(results) {
                     </tr>
                 </tbody>
             </table>
-            <table>
-                <caption class="report-caption">Applied Loads Summary</caption>
+            <table class="results-container">
+                <caption class="report-caption">Applied Loads</caption>
                 <tbody>
-                    <tr><td>Axial Load (${method === 'LRFD' ? 'P<sub>u</sub>' : 'P<sub>a</sub>'})</td><td>${inputs.Pu_or_Pa} kips</td></tr>
-                    <tr><td>Major Moment (${method === 'LRFD' ? 'M<sub>ux</sub>' : 'M<sub>ax</sub>'})</td><td>${inputs.Mux_or_Max} kip-ft</td></tr>
+                    <tr><td>Axial Load (${inputs.design_method === 'LRFD' ? 'P<sub>u</sub>' : 'P<sub>a</sub>'})</td><td>${inputs.Pu_or_Pa} kips</td></tr>
+                    <tr><td>Major Moment (${inputs.design_method === 'LRFD' ? 'M<sub>ux</sub>' : 'M<sub>ax</sub>'})</td><td>${inputs.Mux_or_Max} kip-ft</td></tr>
                     ${inputs.Muy_or_May !== 0 ? `
-                    <tr><td>Minor Moment (${method === 'LRFD' ? 'M<sub>uy</sub>' : 'M<sub>ay</sub>'})</td><td>${inputs.Muy_or_May} kip-ft</td></tr>
+                    <tr><td>Minor Moment (${inputs.design_method === 'LRFD' ? 'M<sub>uy</sub>' : 'M<sub>ay</sub>'})</td><td>${inputs.Muy_or_May} kip-ft</td></tr>
                     ` : ''}
-                    <tr><td>Shear Force (${method === 'LRFD' ? 'V<sub>u</sub>' : 'V<sub>a</sub>'})</td><td>${inputs.Vu_or_Va} kips</td></tr>
+                    <tr><td>Shear Force (${inputs.design_method === 'LRFD' ? 'V<sub>u</sub>' : 'V<sub>a</sub>'})</td><td>${inputs.Vu_or_Va} kips</td></tr>
                     ${inputs.Tu_or_Ta !== 0 ? `
-                    <tr><td>Torsion (${method === 'LRFD' ? 'T<sub>u</sub>' : 'T<sub>a</sub>'})</td><td>${inputs.Tu_or_Ta} kip-in</td></tr>
+                    <tr><td>Torsion (${inputs.design_method === 'LRFD' ? 'T<sub>u</sub>' : 'T<sub>a</sub>'})</td><td>${inputs.Tu_or_Ta} kip-in</td></tr>
                     ` : ''}
                 </tbody>
             </table>
+        </div>
+    </div>
+    `;
+    return html;
+}
+
+
+function renderSteelResults(results) {
+    const resultsContainer = document.getElementById('steel-results-container');
+
+    // Early exit if there are errors, preventing crashes.
+    if (results.errors && results.errors.length > 0) {
+        resultsContainer.innerHTML = `
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md my-4">
+                <p class="font-bold">Input Errors Found:</p>
+                <ul class="list-disc list-inside mt-2">${results.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+                <p class="mt-2">Please correct the errors and run the check again.</p>
+            </div>`;
+        return;
+    }
+
+    const { inputs, properties, warnings, flexure, flexure_y, axial, shear, web_crippling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
+    const method = inputs.design_method;
+    const Pu = Math.abs(inputs.Pu_or_Pa);
+
+    let html = `
+        ${(results.errors && results.errors.length > 0) ? `
+            ` : `
+        ${(warnings && warnings.length > 0) ? `
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
+                <p class="font-bold">Input Warnings:</p>
+                <ul class="list-disc list-inside mt-2">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+            </div>
+        ` : ''}
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+            <div class="flex justify-end gap-2 -mt-2 -mr-2">
+                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
+                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
+            </div>
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
+                <strong>Disclaimer:</strong> This tool provides preliminary design checks based on AISC ${inputs.aisc_standard}.
+                For final designs, verify results using certified software or manual calculations per the current AISC Specification.
+                Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
+            </div>
+            <div"flex justify-between items-center">
+                <h2 class="report-header text-center flex-grow !mt-4">Steel Check Results (${inputs.aisc_standard})</h2>
+            </div>
+            ${renderInputSummary(inputs, properties)}
             <table id="steel-check-summary" class="report-section-copyable mt-6">
                 <caption class="report-caption">Summary of Design Checks (${method})</caption>
                 <thead><tr><th class="w-2/5">Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
@@ -1537,30 +1573,47 @@ function renderSteelResults(results) {
     `;
 
     // --- Dynamically build and inject the results table ---
-    const checks = {
-        'Axial': { demand: Pu, capacity: axial.phiPn_or_Pn_omega, unit: 'kips', data: { ...axial, properties, reference: axial.reference } },
-        'Flexure (Major)': { demand: inputs.Mux_or_Max, capacity: flexure.phiMn_or_Mn_omega, unit: 'kip-ft', data: { ...flexure, check: flexure, reference: flexure.reference, slenderness: flexure.slenderness } },
-        'Shear': { demand: inputs.Vu_or_Va, capacity: shear.phiVn_or_Vn_omega, unit: 'kips', data: { ...shear, check: shear, properties, reference: shear.reference } },
-        'Combined Forces': { demand: interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...interaction, check: interaction } },
-        'Torsion': { demand: Math.abs(inputs.Tu_or_Ta), capacity: torsion.phiTn_or_Tn_omega, unit: 'kip-in', data: { ...torsion, check: torsion } },
-        'Combined Shear + Torsion': { demand: shear_torsion_interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...shear_torsion_interaction, check: shear_torsion_interaction } },
-        'Combined Stresses (H3.3)': { demand: combined_stress_H33.ratio, capacity: 1.0, unit: 'ratio', data: { ...combined_stress_H33, check: combined_stress_H33 } },
-        'Web Crippling': { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling } },
-        'Deflection': { demand: deflection.actual, capacity: deflection.allowable, unit: 'in', data: { ...deflection, check: deflection, details: deflection } }
-    };
+    const checks = {};
+
+    if (axial && axial.type) {
+        checks['Axial'] = { demand: Pu, capacity: axial.phiPn_or_Pn_omega, unit: 'kips', data: { ...axial, properties, reference: axial.reference } };
+    }
+    if (inputs.Mux_or_Max !== 0) {
+        checks['Flexure (Major)'] = { demand: inputs.Mux_or_Max, capacity: flexure.phiMn_or_Mn_omega, unit: 'kip-ft', data: { ...flexure, check: flexure, reference: flexure.reference, slenderness: flexure.slenderness } };
+    }
+    if (inputs.Vu_or_Va !== 0) {
+        checks['Shear'] = { demand: inputs.Vu_or_Va, capacity: shear.phiVn_or_Vn_omega, unit: 'kips', data: { ...shear, check: shear, properties, reference: shear.reference } };
+    }
+    if (interaction && interaction.ratio) {
+        checks['Combined Forces'] = { demand: interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...interaction, check: interaction } };
+    }
+    if (torsion && torsion.applicable) {
+        checks['Torsion'] = { demand: Math.abs(inputs.Tu_or_Ta), capacity: torsion.phiTn_or_Tn_omega, unit: 'kip-in', data: { ...torsion, check: torsion } };
+    }
+    if (shear_torsion_interaction && shear_torsion_interaction.applicable) {
+        checks['Combined Shear + Torsion'] = { demand: shear_torsion_interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...shear_torsion_interaction, check: shear_torsion_interaction } };
+    }
+    if (combined_stress_H33 && combined_stress_H33.applicable) {
+        checks['Combined Stresses (H3.3)'] = { demand: combined_stress_H33.ratio, capacity: 1.0, unit: 'ratio', data: { ...combined_stress_H33, check: combined_stress_H33 } };
+    }
+    if (web_crippling && web_crippling.phiRn_or_Rn_omega) {
+        checks['Web Crippling'] = { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling } };
+    }
+    if (deflection && deflection.allowable) {
+        checks['Deflection'] = { demand: deflection.actual, capacity: deflection.allowable, unit: 'in', data: { ...deflection, check: deflection, details: deflection } };
+    }
+
 
     const tableBody = document.createElement('tbody');
     let checkCounter = 0;
 
     for (const [name, checkData] of Object.entries(checks)) {
-        if (checkData.demand === 0 && name !== 'Deflection') continue; // Skip checks with no demand
-        if (!checkData.capacity && name !== 'Combined Forces' && name !== 'Combined Shear + Torsion' && name !== 'Combined Stresses (H3.3)') continue;
 
         checkCounter++;
         const detailId = `details-${checkCounter}`;
         const isInteraction = name.includes('Combined') || name === 'Deflection';
-        const ratio = isInteraction ? checkData.demand : (checkData.capacity > 0 ? checkData.demand / checkData.capacity : Infinity);
-        
+        const ratio = isInteraction ? checkData.demand : (checkData.capacity > 0 ? Math.abs(checkData.demand) / checkData.capacity : Infinity);
+
         // Defensively handle potentially undefined values before calling .toFixed()
         const demand_val = checkData.demand || 0;
         const capacity_val = checkData.capacity || 0;

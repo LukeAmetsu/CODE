@@ -91,6 +91,15 @@ const basePlateCalculator = (() => {
             const Ncb = (ANc / ANco) * psi_ed_N * psi_c_N * psi_cp_N * Nb;
             checks['Anchor Concrete Breakout'] = { demand: Tu_bolt, check: { Rn: Ncb, phi: 0.65, omega: 2.31 } };
         }
+        
+        // --- 3a. Anchor Bolt Pullout (ACI 318-19 Section 17.6.3) ---
+        if (Tu_bolt > 0 && inputs.bolt_type === 'Cast-in') {
+            const Abrg = PI * (db ** 2); // Simplified: Bearing area of head, approx. 4x bolt area. Using PI*db^2 is a reasonable approximation.
+            const Np = 8 * Abrg * (fc * 1000); // Basic pullout strength in lbs
+            const psi_c_P = inputs.assume_cracked_concrete === 'true' ? 1.0 : 1.4;
+            const Npn = psi_c_P * Np / 1000; // Convert to kips
+            checks['Anchor Pullout Strength'] = { demand: Tu_bolt, check: { Rn: Npn, phi: 0.70, omega: 2.14 }, details: { Abrg, Np, psi_c_P } };
+        }
 
         // --- 4. Anchor Bolt Shear (ACI 318-19 Ch. 17) ---
         if (Vu > 0) {
