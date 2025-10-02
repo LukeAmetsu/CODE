@@ -58,6 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
     populateMaterialDropdowns();
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);
+    document.getElementById('steel-results-container').addEventListener('click', (event) => {
+        if (event.target.id === 'toggle-all-details-btn') {
+            handleToggleAllDetails(event.target, '#steel-results-container');
+        }
+    });
 
     document.getElementById('steel-results-container').addEventListener('click', (event) => {
         const button = event.target.closest('.toggle-details-btn');
@@ -72,6 +77,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (event.target.id === 'download-pdf-btn') {
             handleDownloadPdf('steel-results-container', 'Steel-Check-Report.pdf');
+        }
+    });
+});
+
+function handleToggleAllDetails(mainButton, containerSelector) {
+    const shouldShow = mainButton.dataset.state === 'hidden';
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    container.querySelectorAll('.details-row').forEach(row => {
+        row.classList.toggle('is-visible', shouldShow);
+    });
+    container.querySelectorAll('.toggle-details-btn').forEach(button => {
+        button.textContent = shouldShow ? '[Hide]' : '[Show]';
+    });
+    mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
+    mainButton.textContent = shouldShow ? 'Hide All Details' : 'Show All Details';
+    mainButton.blur();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ... (rest of the event listener)
+    document.getElementById('steel-results-container').addEventListener('click', (event) => {
+        // ... (existing event handlers)
+        if (event.target.id === 'toggle-all-details-btn') {
+            handleToggleAllDetails(event.target, '#steel-results-container');
         }
     });
 });
@@ -1571,6 +1602,7 @@ function renderSteelResults(results) {
             </div>
         ` : ''}
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+            <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
             <div class="flex justify-end gap-2 -mt-2 -mr-2">
                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
                 <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>

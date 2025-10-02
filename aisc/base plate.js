@@ -121,6 +121,7 @@ function renderResults(results) {
     const { design_method } = inputs;
 
     let html = `<div id="baseplate-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+                    <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
                     <div class="flex justify-end gap-2 -mt-2 -mr-2 print-hidden">
                         <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
                         <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Report</button>
@@ -138,10 +139,14 @@ function renderResults(results) {
                         </thead>
                         <tbody>`;
 
+    let checkCounter = 0;
     const addRow = (name, data) => {
         if (!data || !data.check) return;
+        checkCounter++;
+        const detailId = `bp-details-${checkCounter}`;
         let { demand, check } = data;
         const { Rn, phi, omega } = check;
+        const breakdownHtml = generateBasePlateBreakdownHtml(name, data, inputs);
 
         const capacity = Rn || 0;
         const design_capacity = design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
@@ -162,12 +167,13 @@ function renderResults(results) {
         const status = ratio <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
         
         html += `<tr class="border-t dark:border-gray-700">
-                    <td>${name}</td>
+                    <td>${name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                     <td>${demand_val.toFixed(2)}</td>
                     <td>${capacity_val.toFixed(2)}</td>
                     <td>${ratio.toFixed(3)}</td>
                     <td>${status}</td>
-                 </tr>`;
+                 </tr>
+                 <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td></tr>`;
     };
 
     // Defensively iterate to prevent crashes if a check was not performed (e.g., no tension)
@@ -178,6 +184,50 @@ function renderResults(results) {
 
     html += `</tbody></table></div>`;
     document.getElementById('steel-results-container').innerHTML = html;
+}
+
+function generateBasePlateBreakdownHtml(name, data, inputs) {
+    const { check, details } = data;
+    const { design_method } = inputs;
+    const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
+    const factor_val = design_method === 'LRFD' ? check.phi : check.omega;
+    const capacity_eq = design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`;
+    const final_capacity = design_method === 'LRFD' ? check.Rn * factor_val : check.Rn / factor_val;
+
+    const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
+    let content = '';
+
+    switch (name) {
+        case 'Concrete Bearing':
+            content = format_list([
+                `Max Bearing Pressure (f<sub>p,max</sub>) = <b>${details.f_p_max.toFixed(2)} ksi</b>`,
+                `Nominal Bearing Strength (P<sub>p</sub>) = 0.85 * f'c * A<sub>1</sub> = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `Design Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+            ]);
+            break;
+        case 'Plate Bending':
+            content = format_list([
+                `Cantilever distance (m) = <b>${details.m.toFixed(3)} in</b>`,
+                `Cantilever distance (n) = <b>${details.n.toFixed(3)} in</b>`,
+                `Effective cantilever length (l) = max(m, n, &lambda;n') = <b>${details.l.toFixed(3)} in</b>`,
+                `Required Thickness (t<sub>req</sub>) = l * &radic;(2*f<sub>p,max</sub> / (0.9*F<sub>y</sub>)) = <b>${check.Rn.toFixed(3)} in</b>`
+            ]);
+            break;
+        case 'Anchor Steel Tension':
+            content = format_list([
+                `Nominal Steel Strength (N<sub>sa</sub>) = A<sub>b,eff</sub> * F<sub>ut</sub> = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `Design Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+            ]);
+            break;
+        case 'Anchor Concrete Breakout':
+            content = format_list([
+                `Basic Concrete Breakout Strength (N<sub>b</sub>) = k<sub>c</sub> * &lambda;<sub>a</sub> * &radic;(f'c) * h<sub>ef</sub><sup>1.5</sup> = <b>${(check.Rn / (check.phi || 1)).toFixed(2)} kips</b> (Simplified)`,
+                `Design Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+            ]);
+            break;
+        default: return 'Breakdown not available.';
+    }
+    return `<h4 class="font-semibold">${name}</h4>${content}`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -229,6 +279,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('file-input').addEventListener('change', handleLoadInputs);
 
     document.getElementById('steel-results-container').addEventListener('click', (event) => {
+        const toggleBtn = event.target.closest('.toggle-details-btn');
+        if (toggleBtn) {
+            const detailId = toggleBtn.dataset.toggleId;
+            const row = document.getElementById(detailId);
+            if (row) {
+                row.classList.toggle('is-visible');
+                toggleBtn.textContent = row.classList.contains('is-visible') ? '[Hide]' : '[Show]';
+            }
+        }
+        if (event.target.id === 'toggle-all-details-btn') {
+            const mainButton = event.target;
+            const shouldShow = mainButton.dataset.state === 'hidden';
+            document.querySelectorAll('#steel-results-container .details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
+            document.querySelectorAll('#steel-results-container .toggle-details-btn').forEach(button => {
+                button.textContent = shouldShow ? '[Hide]' : '[Show]';
+            });
+            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
+            mainButton.textContent = shouldShow ? 'Hide All Details' : 'Show All Details';
+        }
+
+
         if (event.target.id === 'copy-report-btn') {
             handleCopyToClipboard('baseplate-report-content', 'feedback-message');
         }

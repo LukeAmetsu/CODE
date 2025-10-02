@@ -32,6 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.id === 'download-pdf-btn') {
             handleDownloadPdf('wood-report-content', 'Wood-Design-Report.pdf');
         }
+        if (event.target.id === 'toggle-all-details-btn') {
+            const mainButton = event.target;
+            const shouldShow = mainButton.dataset.state === 'hidden';
+            document.querySelectorAll('#wood-results-container .details-row').forEach(row => {
+                row.classList.toggle('is-visible', shouldShow);
+            });
+            document.querySelectorAll('#wood-results-container .toggle-details-btn').forEach(button => {
+                button.textContent = shouldShow ? '[Hide]' : '[Show]';
+            });
+            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
+            mainButton.textContent = shouldShow ? 'Hide All Details' : 'Show All Details';
+            mainButton.blur();
+        }
+
         const button = event.target.closest('.toggle-details-btn');
         if (button) {
             const detailId = button.dataset.toggleId;
@@ -198,6 +212,7 @@ function renderWoodResults(calculationOutput) {
 
     let html = `<div id="wood-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">`;
     html += `<div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2">
+                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
                 <button id="copy-summary-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm print-hidden">Copy Summary</button>
                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
                 <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>

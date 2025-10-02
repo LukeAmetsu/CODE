@@ -49,7 +49,7 @@ describe('Splice Calculator Unit Tests', () => {
         const Fnv = 68.0; // From Table J3.2 for A325-N
 
         const expected_Rn = Fnv * Ab * numPlanes; // 68.0 * 0.4418 = 30.04 kips
-        const result = checkBoltShear(grade, threadsIncl, db, numPlanes);
+        const result = checkBoltShear({ grade, threadsIncl, db, numPlanes });
 
         expect(result.Rn).toBeCloseTo(30.04, 2);
         expect(result.phi).toBe(0.75);
@@ -57,7 +57,7 @@ describe('Splice Calculator Unit Tests', () => {
 
     test('should calculate block shear correctly for a simple case', () => {
         // This would be based on an AISC worked example.
-        // const { Rn } = checkBlockShear(Anv, Agv, Ant, Fu, Fy, num_tension_rows);
+        // const { Rn } = checkBlockShear({ Anv, Agv, Ant, Fu, Fy, num_tension_rows });
         // expect(Rn).toBeCloseTo(EXPECTED_VALUE, 2);
         expect(true).toBe(true); // Placeholder
     });

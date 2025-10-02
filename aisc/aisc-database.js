@@ -88,6 +88,30 @@ const AISC_SPEC = (() => {
         1.25:   2.25,
     };
 
+    // AISC 360-16 Table J3.1: Minimum Bolt Pretension (kips)
+    const minPretensionTable = {
+        "A325": { 0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 56, 1.25: 71, 1.375: 85, 1.5: 103 },
+        "A490": { 0.5: 15, 0.625: 24, 0.75: 35, 0.875: 49, 1.0: 64, 1.125: 80, 1.25: 102, 1.375: 121, 1.5: 148 },
+        "F3148": { 0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 56, 1.25: 71, 1.375: 85, 1.5: 103 }, // Same as A325
+    };
+
+    /**
+     * Gets minimum bolt pretension (Tb) from Table J3.1.
+     * @param {string} grade - Bolt grade.
+     * @param {number} db - Bolt diameter.
+     * @returns {number} Minimum pretension in kips.
+     */
+    function getTb(grade, db) {
+        return minPretensionTable[grade]?.[db] ?? 0;
+    }
+
+    // AISC 360-16 Table J3.8: Mean Slip Coefficient
+    const slipCoefficients = {
+        'A': 0.30, // Unpainted clean mill scale
+        'B': 0.50, // Unpainted blast-cleaned
+        'C': 0.35, // Galvanized with wire brushing
+    };
+
     // Available bolt grades for UI population
     const boltGrades = {
         "A325": { name: "A325" },
@@ -120,10 +144,12 @@ const AISC_SPEC = (() => {
     return {
         getFnv,
         getFnt,
+        getTb,
         getSteelGrade,
         boltGrades, // Expose for populating dropdowns
         standardBoltDiameters, // Expose for optimizer
         structuralSteelGrades, // Expose for populating dropdowns
+        slipCoefficients, // Expose for UI and calculations
         getNominalHoleDiameter,
         minEdgeDistanceTable,
     };
