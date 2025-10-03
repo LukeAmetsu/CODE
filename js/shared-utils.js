@@ -430,6 +430,27 @@ async function convertSvgToPng(svg) {
 }
 
 /**
+ * Creates Word-compatible HTML structure with a header and basic styling.
+ * @param {string} content - The main HTML content of the report.
+ * @param {string} title - The title for the report header.
+ * @returns {string} A full HTML document string formatted for MS Word.
+ */
+function createWordCompatibleHTML(content, title) {
+    return `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>${title}</title></head>
+        <body>
+            <div style="margin-bottom: 24px; text-align: center;">
+                <p style="font-size: 16pt; font-family: 'Times New Roman', Times, serif; font-weight: bold; margin: 0;">${title}</p>
+                <p style="font-size: 12pt; font-family: 'Times New Roman', Times, serif; margin: 4px 0 0 0;">Date: ${new Date().toLocaleDateString()}</p>
+            </div>
+            <hr>
+            ${content}
+        </body>
+        </html>`;
+}
+
+/**
  * Copies the content of a given container to the clipboard, converting SVGs to images.
  * @param {string} containerId - The ID of the container with the report content.
  * @param {string} feedbackElId - The ID of the feedback element.
@@ -498,34 +519,6 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
 }
 
 /**
- * Creates Word-compatible HTML structure
- */
-function createWordCompatibleHTML(content) {
-    return `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <style>
-        body {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.15;
-            color: #000000;
-            margin: 0.5in;
-        }
-        img { max-width: 100%; height: auto; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid black; padding: 4pt 8pt; }
-    </style>
-</head>
-<body>
-    ${content}
-</body>
-</html>`;
-}
-
-/**
  * Downloads the content of a given container as a PDF file.
  * @param {string} containerId - The ID of the container with the report content.
  * @param {string} filename - The desired filename for the downloaded PDF.
@@ -575,6 +568,112 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
             pdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 0.3, { align: 'center' });
         }
     }).save();
+}
+
+/**
+ * Downloads the content of a given container as a Microsoft Word (.doc) file.
+ * It converts SVGs to PNGs and formats the HTML for Word compatibility.
+ * @param {string} containerId - The ID of the container with the report content.
+ * @param {string} filename - The desired filename for the downloaded Word file.
+ * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ */
+async function handleDownloadWord(containerId, filename, feedbackElId = 'feedback-message') {
+    const reportContainer = document.getElementById(containerId);
+    if (!reportContainer) {
+        showFeedback('Report container not found for Word export.', true, feedbackElId);
+        return;
+    }
+
+    showFeedback('Generating Word document...', false, feedbackElId);
+
+    const clone = reportContainer.cloneNode(true);
+    clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
+    clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
+
+    // Convert SVGs to PNGs
+    const svgElements = Array.from(clone.querySelectorAll('svg'));
+    if (svgElements.length > 0) {
+        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
+        await Promise.all(svgElements.map(async (svg) => {
+            try {
+                const pngImage = await convertSvgToPng(svg);
+                if (pngImage && svg.parentNode) {
+                    svg.parentNode.replaceChild(pngImage, svg);
+                }
+            } catch (error) {
+                console.warn("SVG to PNG conversion failed for Word export:", error);
+            }
+        }));
+    }
+
+    const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
+    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle);
+
+    const blob = new Blob([finalHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showFeedback('Word document download started.', false, feedbackElId);
+}
+
+/**
+ * Copies a diagram (SVG or Canvas) to the clipboard as a PNG image.
+ * @param {string} containerId - The ID of the container holding the diagram.
+ * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ */
+async function handleCopyDiagramToClipboard(containerId, feedbackElId = 'feedback-message') {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        showFeedback('Diagram container not found.', true, feedbackElId);
+        return;
+    }
+
+    const svg = container.querySelector('svg');
+    const canvas = container.querySelector('canvas');
+
+    if (!svg && !canvas) {
+        showFeedback('No SVG or Canvas found in the container to copy.', true, feedbackElId);
+        return;
+    }
+
+    showFeedback('Generating image for clipboard...', false, feedbackElId);
+
+    try {
+        let blob;
+        if (svg) {
+            // Convert SVG to a PNG blob
+            const pngImage = await convertSvgToPng(svg);
+            const canvasForSvg = document.createElement('canvas');
+            canvasForSvg.width = pngImage.width;
+            canvasForSvg.height = pngImage.height;
+            const ctx = canvasForSvg.getContext('2d');
+            ctx.drawImage(pngImage, 0, 0);
+            blob = await new Promise(resolve => canvasForSvg.toBlob(resolve, 'image/png'));
+        } else { // It's a canvas
+            // For the 3D canvas, we need to re-render to ensure it's not blank
+            if (container.renderer && container.camera && container.scene) {
+                container.renderer.render(container.scene, container.camera);
+            }
+            blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        }
+
+        if (!blob) {
+            throw new Error('Failed to create image blob.');
+        }
+
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+        ]);
+        showFeedback('Diagram copied to clipboard as an image.', false, feedbackElId);
+    } catch (err) {
+        console.error('Failed to copy diagram:', err);
+        showFeedback('Failed to copy diagram. Your browser may not support this feature.', true, feedbackElId);
+    }
 }
 /**
  * Gathers values from a list of input IDs.

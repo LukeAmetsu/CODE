@@ -136,15 +136,15 @@ const drawWebDiagram = createDiagramDrawer({
         const stf = inputs.member_tf * scale;
         const stw = inputs.member_tw * scale;
         const member_len_left = cx - sg / 2;
-        const member_len_right = W - (cx + sg / 2);
-        // Draw left member (flanges and web)
+        const member_len_right = W - (cx + sg / 2); // FIX: Corrected web drawing logic
+        // Draw left member
         svg.appendChild(createEl('rect', { x: 0, y: cy - sd / 2, width: member_len_left, height: stf, class: 'svg-member' })); // Top flange
         svg.appendChild(createEl('rect', { x: 0, y: cy + sd / 2 - stf, width: member_len_left, height: stf, class: 'svg-member' })); // Bottom flange
-        svg.appendChild(createEl('rect', { x: -cx - sg/2, y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web
-        // Draw right member (flanges and web)
+        svg.appendChild(createEl('rect', { x: cx - sg/2 - stw, y: cy - sd / 2 + stf, width: stw, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
+        // Draw right member
         svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2, width: member_len_right, height: stf, class: 'svg-member' })); // Top flange
         svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy + sd / 2 - stf, width: member_len_right, height: stf, class: 'svg-member' })); // Bottom flange
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web
+        svg.appendChild(createEl('rect', { x: cx + sg/2, y: cy - sd / 2 + stf, width: stw, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
     },
     drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
         const sH_wp = inputs.H_wp * scale;
@@ -220,7 +220,7 @@ function checkBoltBearing({ db, t_ply, Fu_ply, le, s, isEdgeBolt, deformationIsC
     const tearout_coeff = deformationIsConsideration ? 1.2 : 1.5;
     const bearing_coeff = deformationIsConsideration ? 2.4 : 3.0;
     const Lc = isEdgeBolt ? le - hole_dia / 2.0 : s - hole_dia;
-    if (Lc < 0) return { Rn: 0, phi: 0.75, omega: 2.00, Lc: 0, Rn_tearout: 0, Rn_bearing: 0 }; 
+    if (Lc < 0 || t_ply <= 0) return { Rn: 0, phi: 0.75, omega: 2.00, Lc: 0, Rn_tearout: 0, Rn_bearing: 0 }; 
 
     const Rn_tearout = tearout_coeff * Lc * t_ply * (Fu_ply || 0);
     const Rn_bearing = bearing_coeff * db * t_ply * (Fu_ply || 0);
@@ -302,9 +302,8 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     const Agv1 = num_shear_paths * L_gv * t_p;
     const Anv1 = num_shear_paths * L_nv * t_p;
     const Ant1 = L_gt * t_p; // Gross tension path at the end
-    
-    // FIX: Use Ant1 for the first tension term
-    const tension_term1 = Ubs * Fu * Ant1; 
+
+    const tension_term1 = Ubs * Fu * Ant1; // FIX: Use Ant1 for the first tension term
     const path1_rupture = (0.6 * Fu * Anv1) + tension_term1;
     const path1_yield = (0.6 * Fy * Agv1) + tension_term1;
     const Rn1 = Math.min(path1_rupture, path1_yield) || 0;
@@ -314,8 +313,7 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     const Anv2 = Anv1;
     const Ant2 = L_nt * t_p; // Net tension path between bolts
 
-    // FIX: Use Ant2 for the second tension term
-    const tension_term2 = Ubs * Fu * Ant2; 
+    const tension_term2 = Ubs * Fu * Ant2; // FIX: Use Ant2 for the second tension term
     const path2_rupture = (0.6 * Fu * Anv2) + tension_term2;
     const path2_yield = (0.6 * Fy * Agv2) + tension_term2;
     const Rn2 = Math.min(path2_rupture, path2_yield) || 0;
@@ -407,7 +405,7 @@ function checkBoltShearTensionInteraction(Tu, Vu, Fnv, grade, db, design_method)
     }
     
     F_nt_prime = Math.min(F_nt_prime, Fnt); // Per J3.9, F'nt shall not exceed Fnt
-    F_nt_prime = Math.max(0, F_nt_prime); // FIX: Ensure tensile strength is not negative
+    F_nt_prime = Math.max(0, F_nt_prime); // Ensure tensile strength is not negative
 
     const Rn = F_nt_prime * Ab; // Nominal tensile strength adjusted for shear
     return { Rn, phi: 0.75, omega: 2.00, Fnt, Fnv, Ab, fv, F_nt_prime, Tu, Vu }; // phi/omega for tension are used
@@ -511,40 +509,6 @@ function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt 
         alpha_prime = (1 / delta) * (((t_plate / tc)**2) - 1); // AISC Manual Part 9, Eq. 9-29
         alpha_prime = max(0, min(alpha_prime, 1.0)); // alpha' cannot be negative or > 1
         Q_prime = B_bolt * delta * alpha_prime * rho; // AISC Manual Part 9, Eq. 9-30
-    }
-    const T_req = B_bolt + Q_prime;
-    return { T_req, Q_prime, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
-}
-
-function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt, design_method }) {
-    // Per AISC Manual Part 9
-    // B_bolt is the required tensile force per bolt (demand)
-    if (p <= 0 || Fy_plate <= 0 || B_bolt <= 0) return { Q_prime: 0, T_req: B_bolt, tc: Infinity, alpha_prime: 0 };
-    
-    const b_prime = b - d_bolt / 2.0;
-    const a_prime = min(a + d_bolt / 2.0, 1.25 * b_prime);
-
-    if (a_prime <= 0 || b_prime < 0) return { Q_prime: 0, T_req: B_bolt, tc: Infinity, alpha_prime: 0 };
-
-    // d_hole is the nominal hole diameter per Table J3.3
-    const rho = b_prime / a_prime;
-    const delta = 1 - (d_hole / p);
-
-    if (delta < 0) return { Q_prime: Infinity, T_req: Infinity, tc: 0, alpha_prime: 0 }; // Invalid geometry
-
-    // Critical thickness tc is calculated based on the applied demand B, per AISC Eq. 9-27.
-    const tc = sqrt((4 * B_bolt * b_prime) / (p * Fy_plate));
-
-    let Q_prime = 0;
-    let alpha_prime = 0;
-    if (t_plate < tc) {
-        // alpha_prime is an intermediate variable to calculate alpha
-        alpha_prime = (1 / delta) * (((t_plate / tc)**2) - 1);
-        alpha_prime = max(0, min(alpha_prime, 1.0)); // alpha' cannot be negative or > 1
-        
-        // Per AISC Eq. 9-30, Q' = B * delta * alpha' * rho
-        // Q' is the prying force corresponding to the applied load B.
-        Q_prime = B_bolt * delta * alpha_prime * rho;
     }
     const T_req = B_bolt + Q_prime;
     return { T_req, Q_prime, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
@@ -1233,7 +1197,13 @@ function runOptimization(inputs) {
     const finalResults = runSingleCheck(finalOptimizedInputs);
     return { ...finalResults, optimizationLog };
 }
-
+/**
+ * Main calculation orchestration function.
+ * It takes raw string inputs from the DOM, converts them to numbers,
+ * handles optimization logic, and calls the appropriate check functions.
+ * @param {object} rawInputs - The inputs object gathered from the DOM.
+ * @returns {object} The complete results object.
+ */
 function run(rawInputs) {
     const inputs = { ...rawInputs };
 
@@ -1242,8 +1212,7 @@ function run(rawInputs) {
     inputs.L_fp_inner = (rawInputs.L_fp_inner || 0) / 2.0;
     inputs.L_wp = (rawInputs.L_wp || 0) / 2.0;
 
-    // --- FIX: Convert string properties to numbers ---
-    // Input values are strings; calculations need numbers for methods like .toFixed()
+    // Convert string properties from DOM to numbers for calculations
     inputs.member_Fy = parseFloat(inputs.member_Fy);
     inputs.member_Fu = parseFloat(inputs.member_Fu);
     inputs.flange_plate_Fy = parseFloat(inputs.flange_plate_Fy);
@@ -1692,43 +1661,43 @@ function renderResults(results, rawInputs) {
         `);
     };
 
-    // --- FIX: Define specific check lists for each section ---
+    // Define specific check lists for each section to render them in order.
     const flangePlateChecks = [
         'Flange Bolt Shear',
         'Flange Bolt Tension with Prying',
         'Plate Thickness for Prying',
         'Outer Plate GSY',
+        'Outer Plate Compression',
         'Outer Plate NSF',
         'Outer Plate Block Shear',
         'Outer Plate Bolt Bearing',
-        'Outer Plate Compression',
         'Inner Plate GSY',
+        'Inner Plate Compression',
         'Inner Plate NSF',
         'Inner Plate Block Shear',
-        'Inner Plate Bolt Bearing',
-        'Inner Plate Compression'
+        'Inner Plate Bolt Bearing'
     ];
 
     const webPlateChecks = [
         'Web Bolt Group Shear',
+        'Web Bolt Tension with Prying',
         'Web Plate Gross Shear Yield',
         'Web Plate Net Shear Rupture',
         'Web Plate Block Shear',
-        'Web Plate Bolt Bearing',
-        'Web Bolt Tension with Prying'
+        'Web Plate Bolt Bearing'
     ];
 
     const memberChecks = [
         'Beam Flange Tensile Rupture',
         'Beam Flange Block Shear',
+        'Beam Web Bolt Bearing',
         'Beam Flexural Rupture',
         'Beam Web Shear Yielding',
         'Beam Web Shear Rupture',
-        'Beam Web Bolt Bearing',
         'Beam Section Tensile Rupture'
     ];
 
-    // --- FIX: Render each section by iterating through the defined lists ---
+    // Render each section by iterating through the defined lists
     addStrengthRow('Flange Plate Checks', null, true);
     flangePlateChecks.forEach(name => {
         if (checks[name]) {

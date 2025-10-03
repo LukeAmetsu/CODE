@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AISC Base Plate Design Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -91,7 +94,8 @@
                                 <h2>Applied Loads</h2>
                                 <div class="space-y-4">
                                     <div><label for="axial_load_P_in" class="block text-sm">Axial (P)</label><input type="number" id="axial_load_P_in" value="-3"></div>
-                                    <div><label for="moment_M_in" class="block text-sm">Moment (M)</label><input type="number" id="moment_M_in" value="0.5"></div>
+                                    <div><label for="moment_Mx_in" class="block text-sm">Moment (Mx)</label><input type="number" id="moment_Mx_in" value="0.5"></div>
+                                    <div><label for="moment_My_in" class="block text-sm">Moment (My)</label><input type="number" id="moment_My_in" value="0"></div>
                                     <div><label for="shear_V_in" class="block text-sm">Shear (V)</label><input type="number" id="shear_V_in" value="3"></div>
                                 </div>
                             </div>
@@ -114,16 +118,27 @@
                             <div class="form-section">
                                 <h2>Geometric Properties</h2>
                                 <div class="grid grid-cols-2 gap-4">
-                                    <div><label for="base_plate_length_N" class="block text-sm">Plate N</label><input type="number" id="base_plate_length_N" value="8"></div>
-                                    <div><label for="base_plate_width_B" class="block text-sm">Plate B</label><input type="number" id="base_plate_width_B" value="8"></div>
-                                    <div><label for="provided_plate_thickness_tp" class="block text-sm">Plate t_p</label><input type="number" id="provided_plate_thickness_tp" value="0.5"></div>
+                                    <div><label for="base_plate_length_N" class="block text-sm">Plate N</label><input type="number" id="base_plate_length_N" value="8" data-validate="positive"></div>
+                                    <div><label for="base_plate_width_B" class="block text-sm">Plate B</label><input type="number" id="base_plate_width_B" value="8" data-validate="positive"></div>
+                                    <div><label for="provided_plate_thickness_tp" class="block text-sm">Plate t_p</label><input type="number" id="provided_plate_thickness_tp" value="0.5" data-validate="positive"></div>
+                                </div>
+                            </div>
+                            <div class="form-section">
+                                <h2>Concrete Pedestal</h2>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label for="pedestal_N" class="block text-sm">Pedestal N</label><input type="number" id="pedestal_N" value="24"></div>
+                                    <div><label for="pedestal_B" class="block text-sm">Pedestal B</label><input type="number" id="pedestal_B" value="24"></div>
+                                </div>
+                            </div>
+                             <div class="form-section">
+                                <h2>Column Properties</h2>
+                                <div class="grid grid-cols-2 gap-4">
                                      <div>
-                                        <label for="column_depth_d" id="label_column_dim1" class="block text-sm">Column d</label>
-                                        <input type="number" id="column_depth_d" value="3.5">
+                                        <label for="column_depth_d" id="label_column_dim1" class="block text-sm">Column d</label><input type="number" id="column_depth_d" value="3.5" data-validate="positive">
                                     </div>
                                     <div id="container_column_dim2">
                                         <label for="column_flange_width_bf" id="label_column_dim2" class="block text-sm">Column bf</label>
-                                        <input type="number" id="column_flange_width_bf" value="3.5">
+                                        <input type="number" id="column_flange_width_bf" value="3.5" data-validate="positive">
                                     </div>
                                     <div>
                                         <label for="column_type" class="block text-sm font-medium mb-1">Column Type</label>
@@ -132,19 +147,26 @@
                                             <option value="Round HSS" selected>Round HSS</option>
                                         </select>
                                     </div>
+                                    <div id="container_column_tf">
+                                        <label for="column_flange_tf" class="block text-sm">Flange Thick (t<sub>f</sub>)</label>
+                                        <input type="number" id="column_flange_tf" value="0.25">
+                                    </div>
+                                    <div id="container_column_tw">
+                                        <label for="column_web_tw" class="block text-sm">Web Thick (t<sub>w</sub>)</label>
+                                        <input type="number" id="column_web_tw" value="0.17">
+                                    </div>
                                 </div>
                             </div>
                              <div class="form-section">
                                 <h2>Anchor Bolt Properties</h2>
                                  <div class="grid grid-cols-2 gap-4">
-                                     <div><label for="anchor_bolt_diameter" class="block text-sm">Diameter</label><input type="number" id="anchor_bolt_diameter" value="0.375"></div>
-                                    <div><label for="anchor_embedment_hef" class="block text-sm">h_ef</label><input type="number" id="anchor_embedment_hef" value="2.88"></div>
-                                    <div><label for="num_bolts_total" class="block text-sm">Total Bolts</label><input type="number" id="num_bolts_total" value="4"></div>
-                                    <div><label for="num_bolts_tension_row" class="block text-sm">Tension Row</label><input type="number" id="num_bolts_tension_row" value="2"></div>
-                                    <div><label for="bolt_spacing_N" class="block text-sm">Spacing (N)</label><input type="number" id="bolt_spacing_N" value="3"></div>
-                                    <div><label for="bolt_spacing_B" class="block text-sm">Spacing (B)</label><input type="number" id="bolt_spacing_B" value="3"></div>
-                                            <div><label for="concrete_edge_dist_ca1" class="block text-sm">Min Edge (cₐ₁)</label><input type="number" id="concrete_edge_dist_ca1" value="6"></div>
-                                            <div><label for="num_bolts_at_edge" class="block text-sm">Bolts at Edge</label><input type="number" id="num_bolts_at_edge" value="2"></div>
+                                     <div><label for="anchor_bolt_diameter" class="block text-sm">Diameter</label><input type="number" id="anchor_bolt_diameter" value="0.375" data-validate="positive"></div>
+                                    <div><label for="anchor_embedment_hef" class="block text-sm">h_ef</label><input type="number" id="anchor_embedment_hef" value="2.88" data-validate="positive"></div>
+                                    <div><label for="num_bolts_N" class="block text-sm">Bolts along N</label><input type="number" id="num_bolts_N" value="2" data-validate="integer,positive"></div>
+                                    <div><label for="num_bolts_B" class="block text-sm">Bolts along B</label><input type="number" id="num_bolts_B" value="2" data-validate="integer,positive"></div>
+                                    <div><label for="bolt_spacing_N" class="block text-sm">Spacing (N)</label><input type="number" id="bolt_spacing_N" value="3" data-validate="positive"></div>
+                                    <div><label for="bolt_spacing_B" class="block text-sm">Spacing (B)</label><input type="number" id="bolt_spacing_B" value="3" data-validate="positive"></div>
+                                    <div><label for="concrete_edge_dist_ca1" class="block text-sm">Min Edge (cₐ₁)</label><input type="number" id="concrete_edge_dist_ca1" value="6" data-validate="non-negative"></div>
                                     <div>
                                         <label for="bolt_type" class="block text-sm font-medium mb-1">Bolt Type</label>
                                         <select id="bolt_type">
@@ -165,9 +187,19 @@
                 <div class="hidden lg:block lg:w-1/2">
                     <div class="sticky top-8">
                         <div class="form-section mt-6 lg:mt-0">
-                            <h2>Base Plate Diagram</h2>
-                            <div class="diagram">
+                            <div class="flex justify-between items-center">
+                                <h2 class="text-xl font-semibold">Base Plate Diagram</h2>
+                                <button id="copy-2d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
+                            </div>
+                            <div id="diagram-2d-container" class="diagram mt-2">
                                 <svg id="baseplate-diagram" viewBox="0 0 500 350" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg"></svg>
+                            </div>
+                            <div class="mt-4">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-xl font-semibold">3D Visualization</h3>
+                                    <button id="copy-3d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
+                                </div>
+                                <div id="3d-diagram-container" class="diagram mt-2" style="height: 400px; cursor: grab; position: relative;"></div>
                             </div>
                         </div>
                     </div>
