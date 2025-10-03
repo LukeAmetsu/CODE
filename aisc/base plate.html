@@ -185,8 +185,8 @@
                 </div>
                 <!-- Sticky Diagram Column -->
                 <div class="hidden lg:block lg:w-1/2">
-                    <div class="sticky top-8">
-                        <div class="form-section mt-6 lg:mt-0">
+                    <div class="sticky top-8 space-y-6">
+                        <div class="form-section">
                             <div class="flex justify-between items-center">
                                 <h2 class="text-xl font-semibold">Base Plate Diagram</h2>
                                 <button id="copy-2d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
@@ -194,12 +194,14 @@
                             <div id="diagram-2d-container" class="diagram mt-2">
                                 <svg id="baseplate-diagram" viewBox="0 0 500 350" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg"></svg>
                             </div>
-                            <div class="mt-4">
+                        </div>
+                        <div class="form-section">
+                             <div class="mt-4">
                                 <div class="flex justify-between items-center">
                                     <h3 class="text-xl font-semibold">3D Visualization</h3>
                                     <button id="copy-3d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
                                 </div>
-                                <div id="3d-diagram-container" class="diagram mt-2" style="height: 400px; cursor: grab; position: relative;"></div>
+                            <div id="3d-diagram-container" class="diagram mt-2" style="cursor: grab;"></div>
                             </div>
                         </div>
                     </div>

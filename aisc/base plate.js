@@ -24,7 +24,7 @@ function createDiagramDrawer(config) {
 
         // Drawing parameters
         const { W, H } = config.viewBox;
-        const pad = 40;
+        const pad = 50; // Increased padding to ensure labels fit
         const cx = W / 2;
         const cy = H / 2;
 
@@ -32,6 +32,9 @@ function createDiagramDrawer(config) {
         const { total_len, total_h } = config.getScaleDimensions(inputs);
         const scale = Math.min((W - 2 * pad) / total_len, (H - 2 * pad) / total_h);
         if (!isFinite(scale) || scale <= 0) return;
+
+        // Dynamically set the viewBox to fit the content
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
 
         const ns = "http://www.w3.org/2000/svg";
         const createEl = (tag, attrs) => {
@@ -53,7 +56,7 @@ function createDiagramDrawer(config) {
 
 const drawBasePlateDiagram = createDiagramDrawer({
     svgId: 'baseplate-diagram',
-    viewBox: { W: 500, H: 400 },
+    viewBox: { W: 500, H: 350 }, // Adjusted default viewBox
     inputIds: ['base_plate_length_N', 'base_plate_width_B', 'column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw', 'column_type', 'anchor_bolt_diameter', 'bolt_spacing_N', 'bolt_spacing_B', 'num_bolts_N', 'num_bolts_B'],
     getScaleDimensions: (i) => ({
         total_len: i.base_plate_width_B,
@@ -170,9 +173,13 @@ function draw3dBasePlateDiagram() {
     const scene = new THREE.Scene();
     const isDarkMode = document.documentElement.classList.contains('dark');
     scene.background = new THREE.Color(isDarkMode ? 0x2d3748 : 0xf0f0f0); // Dark gray-blue for dark mode
-    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+    
+    // FIX: The container's height is 0 due to the aspect-ratio padding trick.
+    // We must use the container's width for both width and height to match the 1:1 aspect ratio set in CSS.
+    const width = container.clientWidth;
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Use 1:1 aspect ratio for the camera
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(width, width); // Set renderer to be a square based on the container's width
     container.appendChild(renderer.domElement);
     container.renderer = renderer; // Store renderer for access by other functions
     container.scene = scene;       // Store scene
@@ -189,7 +196,7 @@ function draw3dBasePlateDiagram() {
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const light = new THREE.DirectionalLight(0xffffff, 0.8);
     light.position.set(50, 100, 75);
-    scene.add(light); // FIX: The directional light must be added to the scene to illuminate the objects.
+    scene.add(light);
 
     // --- Label Helper ---
     function createLabel(text) {
@@ -221,10 +228,10 @@ function draw3dBasePlateDiagram() {
     plateMesh.position.y = -inputs.provided_plate_thickness_tp / 2;
     
     const labelN = createLabel(`N = ${inputs.base_plate_length_N}"`);
-    labelN.position.set(inputs.base_plate_width_B / 2 + 2, -inputs.provided_plate_thickness_tp / 2, 0);
+    labelN.position.set(inputs.base_plate_width_B / 2 + 4, -inputs.provided_plate_thickness_tp / 2, 0);
     plateMesh.add(labelN);
     const labelB = createLabel(`B = ${inputs.base_plate_width_B}"`);
-    labelB.position.set(0, -inputs.provided_plate_thickness_tp / 2, inputs.base_plate_length_N / 2 + 2);
+    labelB.position.set(0, -inputs.provided_plate_thickness_tp / 2, inputs.base_plate_length_N / 2 + 4);
     plateMesh.add(labelB);
     scene.add(plateMesh);
 
@@ -243,10 +250,10 @@ function draw3dBasePlateDiagram() {
         colGroup.position.y = 12 / 2; // Position column stub
 
         const labelD = createLabel(`d = ${inputs.column_depth_d}"`);
-        labelD.position.set(inputs.column_flange_width_bf / 2 + 2, 0, 0);
+        labelD.position.set(inputs.column_flange_width_bf / 2 + 4, 0, 0);
         colGroup.add(labelD);
         const labelBf = createLabel(`bf = ${inputs.column_flange_width_bf}"`);
-        labelBf.position.set(0, inputs.column_depth_d / 2 + 2, 0);
+        labelBf.position.set(0, inputs.column_depth_d / 2 + 4, 0);
         colGroup.add(labelBf);
 
         scene.add(colGroup);
@@ -255,7 +262,7 @@ function draw3dBasePlateDiagram() {
         const hssMesh = new THREE.Mesh(hssGeom, columnMaterial);
         hssMesh.position.y = 12 / 2;
         const labelD_hss = createLabel(`D = ${inputs.column_depth_d}"`);
-        labelD_hss.position.set(inputs.column_depth_d / 2 + 2, 6, 0);
+        labelD_hss.position.set(inputs.column_depth_d / 2 + 4, 6, 0);
         hssMesh.add(labelD_hss);
         scene.add(hssMesh);
     }
@@ -291,7 +298,7 @@ function draw3dBasePlateDiagram() {
             // Add label to the first bolt only
             if (r === 0 && c === 0) {
                 const labelHef = createLabel(`hef = ${inputs.anchor_embedment_hef}"`);
-                labelHef.position.set(inputs.anchor_bolt_diameter / 2 + 1, -inputs.anchor_embedment_hef / 2, 0);
+                labelHef.position.set(inputs.anchor_bolt_diameter / 2 + 2, -inputs.anchor_embedment_hef / 2, 0);
                 boltMesh.add(labelHef);
             }
             scene.add(boltMesh);
@@ -301,12 +308,12 @@ function draw3dBasePlateDiagram() {
     // Bolt Spacing Labels
     if (inputs.num_bolts_B > 1) {
         const labelB_spacing = createLabel(`B Spacing = ${inputs.bolt_spacing_B}"`);
-        labelB_spacing.position.set(startX + inputs.bolt_spacing_B / 2, 0, startZ - 2);
+        labelB_spacing.position.set(startX + inputs.bolt_spacing_B / 2, 0, startZ - 4);
         scene.add(labelB_spacing);
     }
     if (inputs.num_bolts_N > 1) {
         const labelN_spacing = createLabel(`N Spacing = ${inputs.bolt_spacing_N}"`);
-        labelN_spacing.position.set(startX - 2, 0, startZ + inputs.bolt_spacing_N / 2);
+        labelN_spacing.position.set(startX - 4, 0, startZ + inputs.bolt_spacing_N / 2);
         // Rotate the label to be parallel with the dimension
         labelN_spacing.element.style.transform += ' rotate(90deg)';
         scene.add(labelN_spacing);
@@ -1152,6 +1159,10 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
             ]));
             break;
         case 'Anchor Concrete Pryout':
+            // FIX: Add a guard clause to prevent errors if the check is not applicable and details are missing.
+            if (!details) {
+                return 'Breakdown not available. Check is not applicable (e.g., no tension on bolts or preceding checks failed).';
+            }
             content = format_list([
                 `<u>Nominal Pryout Strength (V<sub>cpg</sub>) per ACI 17.7.3</u>`,
                 `Pryout Factor (k<sub>cp</sub>) = <b>${details.k_cp.toFixed(1)}</b> (since h<sub>ef</sub> ${inputs.anchor_embedment_hef < 2.5 ? '<' : '>='} 2.5")`,
