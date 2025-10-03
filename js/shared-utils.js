@@ -905,13 +905,13 @@ function createCalculationHandler(config) { // This is the function being called
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
 
         let calculationResult;
+        const originalCalculator = calculatorFunction; // Preserve the original function reference
         try {
-            calculationResult = calculatorFunction(inputs, validation);
+            calculationResult = originalCalculator(inputs, validation);
         } catch (error) {
             console.error('An unexpected error occurred during calculation:', error);
             calculationResult = { error: `Calculation Error: ${error.message}. Check console for details.`, success: false };
         }
-        
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
 
         if (calculationResult.error) {

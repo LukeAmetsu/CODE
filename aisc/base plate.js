@@ -30,8 +30,22 @@ function createDiagramDrawer(config) {
 
         // Calculate scale using a provided function
         const { total_len, total_h } = config.getScaleDimensions(inputs);
-        const scale = Math.min((W - 2 * pad) / total_len, (H - 2 * pad) / total_h);
-        if (!isFinite(scale) || scale <= 0) return;
+
+        // --- Improved Scale Calculation and Error Handling ---
+        let scale = 1;
+        if (total_len > 0 && total_h > 0) {
+            scale = Math.min((W - 2 * pad) / total_len, (H - 2 * pad) / total_h);
+        }
+
+        if (!isFinite(scale) || scale <= 0) {
+            const errorText = document.createElementNS("http://www.w3.org/2000/svg", 'text');
+            errorText.setAttribute('x', cx);
+            errorText.setAttribute('y', cy);
+            errorText.setAttribute('class', 'svg-error-text'); // Use a class for styling
+            errorText.textContent = 'Invalid dimensions. Please enter positive values for plate N and B.';
+            svg.appendChild(errorText);
+            return; // Stop further drawing
+        }
 
         // Dynamically set the viewBox to fit the content
         svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
@@ -51,13 +65,14 @@ function createDiagramDrawer(config) {
         config.drawMember(drawContext);
         config.drawBolts(drawContext);
         config.drawDimensions(drawContext);
+        config.drawWeld?.(drawContext); // Optional weld drawing function
     };
 }
 
 const drawBasePlateDiagram = createDiagramDrawer({
     svgId: 'baseplate-diagram',
     viewBox: { W: 500, H: 350 }, // Adjusted default viewBox
-    inputIds: ['base_plate_length_N', 'base_plate_width_B', 'column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw', 'column_type', 'anchor_bolt_diameter', 'bolt_spacing_N', 'bolt_spacing_B', 'num_bolts_N', 'num_bolts_B'],
+    inputIds: ['base_plate_length_N', 'base_plate_width_B', 'column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw', 'column_type', 'anchor_bolt_diameter', 'bolt_spacing_N', 'bolt_spacing_B', 'num_bolts_N', 'num_bolts_B', 'weld_size'],
     getScaleDimensions: (i) => ({
         total_len: i.base_plate_width_B,
         total_h: i.base_plate_length_N
@@ -70,7 +85,7 @@ const drawBasePlateDiagram = createDiagramDrawer({
     drawMember: ({ svg, inputs, cx, cy, scale, createEl }) => {
         if (inputs.column_type === 'Round HSS') {
             const s_diam = inputs.column_depth_d * scale;
-            svg.appendChild(createEl('circle', { cx: cx, cy: cy, r: s_diam / 2, class: 'svg-member' }));
+            svg.appendChild(createEl('circle', { cx: cx, cy: cy, r: s_diam / 2, class: 'svg-plate' }));
         } else { // Wide Flange
             const d = inputs.column_depth_d;
             const bf = inputs.column_flange_width_bf;
@@ -86,7 +101,7 @@ const drawBasePlateDiagram = createDiagramDrawer({
     drawBolts: ({ svg, inputs, cx, cy, scale, createEl }) => {
         const s_bolt_N = inputs.bolt_spacing_N * scale;
         const s_bolt_B = inputs.bolt_spacing_B * scale; // This is spacing between bolts in a row
-        const bolt_r = (inputs.anchor_bolt_diameter * scale) / 2;
+        const bolt_r = (inputs.anchor_bolt_diameter * scale) / 2 || 0;
 
         const num_cols = inputs.num_bolts_B;
         const num_rows = inputs.num_bolts_N;
@@ -105,6 +120,21 @@ const drawBasePlateDiagram = createDiagramDrawer({
                 const bolt_cy = start_y + r * s_bolt_N;
                 svg.appendChild(createEl('circle', { cx: bolt_cx, cy: bolt_cy, r: bolt_r, class: 'svg-bolt' }));
             }
+        }
+    },
+    drawWeld: ({ svg, inputs, cx, cy, scale, createEl }) => {
+        if (!inputs.weld_size || inputs.weld_size <= 0) return;
+        const weld_offset = inputs.weld_size * scale;
+        if (inputs.column_type === 'Round HSS') {
+            const s_diam = inputs.column_depth_d * scale;
+            svg.appendChild(createEl('circle', { cx: cx, cy: cy, r: s_diam / 2 + weld_offset, class: 'svg-weld' }));
+        } else { // Wide Flange
+            const d = inputs.column_depth_d * scale;
+            const bf = inputs.column_flange_width_bf * scale;
+            const tf = inputs.column_flange_tf * scale;
+            const tw = inputs.column_web_tw * scale;
+            // Draw weld around the column perimeter
+            svg.appendChild(createEl('path', { d: `M${cx-bf/2-weld_offset},${cy-d/2-weld_offset} h${bf+2*weld_offset} v${d+2*weld_offset} h-${bf+2*weld_offset} z`, class: 'svg-weld' }));
         }
     },
     drawDimensions: ({ svg, inputs, cx, cy, scale, createEl }) => {
@@ -152,6 +182,9 @@ const drawBasePlateDiagram = createDiagramDrawer({
     }
 });
 
+// --- Global variables for the 3D scene to avoid re-creation ---
+let threeJsScene, threeJsCamera, threeJsRenderer, threeJsLabelRenderer, threeJsControls;
+
 /**
  * Draws an interactive 3D visualization of the base plate connection using Three.js.
  */
@@ -160,177 +193,191 @@ function draw3dBasePlateDiagram() {
     if (!container || typeof THREE === 'undefined') return;
 
     // --- 1. Gather Inputs ---
-    const getVal = (id, isString = false) => {
-        const el = document.getElementById(id);
-        if (!el) return isString ? '' : 0;
-        return isString ? el.value : parseFloat(el.value) || 0;
-    };
     const inputs = gatherInputsFromIds(basePlateInputIds);
-    inputs.weld_size = getVal('weld_size');
-
-    // --- 2. Scene Setup ---
-    container.innerHTML = '';
-    const scene = new THREE.Scene();
     const isDarkMode = document.documentElement.classList.contains('dark');
-    scene.background = new THREE.Color(isDarkMode ? 0x2d3748 : 0xf0f0f0); // Dark gray-blue for dark mode
-    
-    // FIX: The container's height is 0 due to the aspect-ratio padding trick.
-    // We must use the container's width for both width and height to match the 1:1 aspect ratio set in CSS.
-    const width = container.clientWidth;
-    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000); // Use 1:1 aspect ratio for the camera
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, width); // Set renderer to be a square based on the container's width
-    container.appendChild(renderer.domElement);
-    container.renderer = renderer; // Store renderer for access by other functions
-    container.scene = scene;       // Store scene
-    container.camera = camera;     // Store camera
-    
-    const labelRenderer = new THREE.CSS2DRenderer();
-    labelRenderer.setSize(container.clientWidth, container.clientHeight);
-    labelRenderer.domElement.style.position = 'absolute';
-    labelRenderer.domElement.style.top = '0px';
-    labelRenderer.domElement.style.pointerEvents = 'none'; // Allow orbit controls to work
-    container.appendChild(labelRenderer.domElement);
+
+    // --- 2. Initialize Scene, Camera, Renderer (only once) ---
+    if (!threeJsScene) {
+        container.innerHTML = ''; // Clear container only on first run
+        threeJsScene = new THREE.Scene();
+        
+        const width = container.clientWidth;
+        const height = width; // Force a square canvas
+
+        threeJsCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        threeJsRenderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        threeJsRenderer.setSize(width, height);
+        container.appendChild(threeJsRenderer.domElement);
+
+        threeJsLabelRenderer = new THREE.CSS2DRenderer();
+        threeJsLabelRenderer.setSize(width, height);
+        threeJsLabelRenderer.domElement.style.position = 'absolute';
+        threeJsLabelRenderer.domElement.style.top = '0px';
+        threeJsLabelRenderer.domElement.style.pointerEvents = 'none';
+        container.appendChild(threeJsLabelRenderer.domElement);
+
+        threeJsControls = new THREE.OrbitControls(threeJsCamera, threeJsRenderer.domElement);
+        threeJsControls.enableDamping = true;
+
+        const animate = () => {
+            requestAnimationFrame(animate);
+            threeJsControls.update();
+            threeJsRenderer.render(threeJsScene, threeJsCamera);
+            threeJsLabelRenderer.render(threeJsScene, threeJsCamera);
+        };
+        animate();
+    }
+
+    // --- Clear previous objects from the scene (recursively) ---
+    const clearScene = (obj) => {
+        while (obj.children.length > 0) {
+            clearScene(obj.children[0]);
+            obj.remove(obj.children[0]);
+        }
+        if (obj.geometry) {
+            obj.geometry.dispose();
+        }
+        if (obj.material) {
+            if (Array.isArray(obj.material)) {
+                obj.material.forEach(material => material.dispose());
+            } else {
+                obj.material.dispose();
+            }
+        }
+    }
+    clearScene(threeJsScene);
+
 
     // --- 3. Lighting ---
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const light = new THREE.DirectionalLight(0xffffff, 0.8);
+    threeJsScene.background = new THREE.Color(isDarkMode ? 0x1a202c : 0xf0f0f0);
+    threeJsScene.add(new THREE.AmbientLight(0xffffff, isDarkMode ? 0.5 : 0.8));
+    const light = new THREE.DirectionalLight(0xffffff, isDarkMode ? 0.7 : 1.0);
     light.position.set(50, 100, 75);
-    scene.add(light);
+    threeJsScene.add(light);
 
     // --- Label Helper ---
     function createLabel(text) {
         const div = document.createElement('div');
-        div.className = 'text-xs bg-black bg-opacity-60 text-white px-1.5 py-0.5 rounded-md';
+        div.className = `text-xs px-1.5 py-0.5 rounded-md ${isDarkMode ? 'bg-gray-900 bg-opacity-70 text-gray-200' : 'bg-white bg-opacity-70 text-gray-800'}`;
         div.textContent = text;
         return new THREE.CSS2DObject(div);
     }
 
-    // --- 4. Materials ---
-    const plateMaterial = new THREE.MeshStandardMaterial({ color: 0x607d8b, metalness: 0.5, roughness: 0.6 });
-    const columnMaterial = new THREE.MeshStandardMaterial({ color: 0x455a64, metalness: 0.7, roughness: 0.5 });
-    const boltMaterial = new THREE.MeshStandardMaterial({ color: 0xb0bec5, metalness: 0.8, roughness: 0.4 });
-    const concreteMaterial = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, roughness: 0.9, metalness: 0.1 });
-    const weldMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.3, roughness: 0.7, transparent: true, opacity: 0.8 });
+    // --- Materials (with Dark Mode support) ---
+    const plateMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x4a5568 : 0x607d8b, metalness: 0.5, roughness: 0.6 });
+    const columnMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x2c5282 : 0x455a64, metalness: 0.7, roughness: 0.5 });
+    const boltMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x718096 : 0xb0bec5, metalness: 0.8, roughness: 0.4 });
+    const concreteMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x3b475c : 0xc0c0c0, roughness: 0.9, transparent: true, opacity: 0.75 });
 
     // --- 5. Geometries ---
-    // Concrete Pedestal
-    const pedestalHeight = Math.max(12, inputs.anchor_embedment_hef * 1.5); // Give it a reasonable height for visualization
-    const pedestalGeom = new THREE.BoxGeometry(inputs.pedestal_B, pedestalHeight, inputs.pedestal_N);
-    const pedestalMesh = new THREE.Mesh(pedestalGeom, concreteMaterial);
-    // Position the top of the pedestal at the bottom of the base plate
-    pedestalMesh.position.y = -inputs.provided_plate_thickness_tp - (pedestalHeight / 2);
-    scene.add(pedestalMesh);
-
-    // Base Plate
-    const plateGeom = new THREE.BoxGeometry(inputs.base_plate_width_B, inputs.provided_plate_thickness_tp, inputs.base_plate_length_N);
-    const plateMesh = new THREE.Mesh(plateGeom, plateMaterial);
-    plateMesh.position.y = -inputs.provided_plate_thickness_tp / 2;
+    const group = new THREE.Group(); // Group to hold all meshes
+    threeJsScene.add(group);
     
-    const labelN = createLabel(`N = ${inputs.base_plate_length_N}"`);
-    labelN.position.set(inputs.base_plate_width_B / 2 + 4, -inputs.provided_plate_thickness_tp / 2, 0);
-    plateMesh.add(labelN);
-    const labelB = createLabel(`B = ${inputs.base_plate_width_B}"`);
-    labelB.position.set(0, -inputs.provided_plate_thickness_tp / 2, inputs.base_plate_length_N / 2 + 4);
-    plateMesh.add(labelB);
-    scene.add(plateMesh);
-
-    // Column
-    if (inputs.column_type === 'Wide Flange') {
-        const colGroup = new THREE.Group();
-        const topFlangeGeom = new THREE.BoxGeometry(inputs.column_flange_width_bf, inputs.column_flange_tf, inputs.column_depth_d);
-        const topFlange = new THREE.Mesh(topFlangeGeom, columnMaterial);
-        topFlange.position.y = (inputs.column_depth_d / 2) - (inputs.column_flange_tf / 2); // Position top flange at the top
-        const bottomFlange = topFlange.clone();
-        bottomFlange.position.y = -(inputs.column_depth_d / 2) + (inputs.column_flange_tf / 2); // Position bottom flange at the bottom
-        const webGeom = new THREE.Mesh(new THREE.BoxGeometry(inputs.column_web_tw, inputs.column_depth_d - 2 * inputs.column_flange_tf, inputs.column_depth_d), columnMaterial); // Web is in between
-        
-        colGroup.add(topFlange, bottomFlange, webGeom);
-        colGroup.rotation.x = -Math.PI / 2; // Rotate to stand up
-        colGroup.position.y = 12 / 2; // Position column stub
-
-        const labelD = createLabel(`d = ${inputs.column_depth_d}"`);
-        labelD.position.set(inputs.column_flange_width_bf / 2 + 4, 0, 0);
-        colGroup.add(labelD);
-        const labelBf = createLabel(`bf = ${inputs.column_flange_width_bf}"`);
-        labelBf.position.set(0, inputs.column_depth_d / 2 + 4, 0);
-        colGroup.add(labelBf);
-
-        scene.add(colGroup);
-    } else if (inputs.column_type === 'Round HSS') { // Round HSS
-        const hssGeom = new THREE.CylinderGeometry(inputs.column_depth_d / 2, inputs.column_depth_d / 2, 12, 32); // 12" tall stub
-        const hssMesh = new THREE.Mesh(hssGeom, columnMaterial);
-        hssMesh.position.y = 12 / 2;
-        const labelD_hss = createLabel(`D = ${inputs.column_depth_d}"`);
-        labelD_hss.position.set(inputs.column_depth_d / 2 + 4, 6, 0);
-        hssMesh.add(labelD_hss);
-        scene.add(hssMesh);
-    }
-
-    // Weld Geometry
+    // --- Weld Geometry ---
     if (inputs.weld_size > 0) {
         const w = inputs.weld_size;
+        const weldMaterial = new THREE.MeshStandardMaterial({ color: 0xffa726, metalness: 0.3, roughness: 0.7 });
         const weldGroup = new THREE.Group();
         weldGroup.position.y = w / 2; // Position weld on top of the plate
 
         if (inputs.column_type === 'Wide Flange') {
-            const d = inputs.column_depth_d, bf = inputs.column_flange_width_bf, tf = inputs.column_flange_tf, tw = inputs.column_web_tw;
-            // Flange welds
-            weldGroup.add(new THREE.Mesh(new THREE.BoxGeometry(bf, w, w), weldMaterial).translateZ(d/2 - w/2));
-            weldGroup.add(new THREE.Mesh(new THREE.BoxGeometry(bf, w, w), weldMaterial).translateZ(-d/2 + w/2));
-            // Web welds
-            weldGroup.add(new THREE.Mesh(new THREE.BoxGeometry(w, w, d - 2*tf), weldMaterial).translateX(tw/2 + w/2));
-            weldGroup.add(new THREE.Mesh(new THREE.BoxGeometry(w, w, d - 2*tf), weldMaterial).translateX(-tw/2 - w/2));
+            const d = inputs.column_depth_d, bf = inputs.column_flange_width_bf;
+            // Simplified box representing the weld footprint
+            const weldFootprint = new THREE.BoxGeometry(bf + 2*w, w, d + 2*w);
+            weldGroup.add(new THREE.Mesh(weldFootprint, weldMaterial));
         } else { // Round HSS
             weldGroup.add(new THREE.Mesh(new THREE.TorusGeometry(inputs.column_depth_d/2, w, 16, 64), weldMaterial).rotateX(Math.PI/2));
         }
-        scene.add(weldGroup);
+        group.add(weldGroup);
     }
 
-    // Anchor Bolts
+    const pedestalHeight = Math.max(12, inputs.anchor_embedment_hef * 1.5);
+    const pedestalGeom = new THREE.BoxGeometry(inputs.pedestal_B, pedestalHeight, inputs.pedestal_N);
+    const pedestalMesh = new THREE.Mesh(pedestalGeom, concreteMaterial);
+    pedestalMesh.position.y = -inputs.provided_plate_thickness_tp / 2 - (pedestalHeight / 2);
+    group.add(pedestalMesh);
+
+    const plateGeom = new THREE.BoxGeometry(inputs.base_plate_width_B, inputs.provided_plate_thickness_tp, inputs.base_plate_length_N);
+    const plateMesh = new THREE.Mesh(plateGeom, plateMaterial);
+    group.add(plateMesh);
+
+    const labelN = createLabel(`N = ${inputs.base_plate_length_N}"`);
+    labelN.position.set(inputs.base_plate_width_B / 2 + 4, 0, 0);
+    plateMesh.add(labelN);
+    
+    const labelB = createLabel(`B = ${inputs.base_plate_width_B}"`);
+    labelB.position.set(0, 0, inputs.base_plate_length_N / 2 + 4);
+    plateMesh.add(labelB);
+
+    if (inputs.column_type === 'Wide Flange' && inputs.column_depth_d > 0) {
+        const colGroup = new THREE.Group();
+        const colHeight = 12;
+        
+        // Create geometries in X-Y plane (like looking at a cross-section)
+        const topFlangeGeom = new THREE.BoxGeometry(inputs.column_flange_width_bf, inputs.column_flange_tf, colHeight);
+        const webGeom = new THREE.BoxGeometry(inputs.column_web_tw, inputs.column_depth_d - 2 * inputs.column_flange_tf, colHeight);
+        
+        const topFlange = new THREE.Mesh(topFlangeGeom, columnMaterial);
+        // Position flanges relative to the center
+        topFlange.position.y = (inputs.column_depth_d / 2) - (inputs.column_flange_tf / 2);
+        
+        const bottomFlange = topFlange.clone();
+        bottomFlange.position.y = -(inputs.column_depth_d / 2) + (inputs.column_flange_tf / 2);
+        
+        const web = new THREE.Mesh(webGeom, columnMaterial); // Web is already at the center
+        
+        colGroup.add(topFlange, bottomFlange, web);
+        colGroup.rotation.x = -Math.PI / 2;
+        colGroup.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
+        group.add(colGroup);
+
+    } else if (inputs.column_type === 'Round HSS' && inputs.column_depth_d > 0) {
+        const hssGeom = new THREE.CylinderGeometry(inputs.column_depth_d / 2, inputs.column_depth_d / 2, 12, 32);
+        const hssMesh = new THREE.Mesh(hssGeom, columnMaterial);
+        hssMesh.position.y = 12 / 2 + inputs.provided_plate_thickness_tp / 2;
+        group.add(hssMesh);
+    }
+
     const startX = -(inputs.num_bolts_B - 1) * inputs.bolt_spacing_B / 2;
     const startZ = -(inputs.num_bolts_N - 1) * inputs.bolt_spacing_N / 2;
     for (let r = 0; r < inputs.num_bolts_N; r++) {
         for (let c = 0; c < inputs.num_bolts_B; c++) {
             const boltGeom = new THREE.CylinderGeometry(inputs.anchor_bolt_diameter / 2, inputs.anchor_bolt_diameter / 2, inputs.anchor_embedment_hef, 16);
             const boltMesh = new THREE.Mesh(boltGeom, boltMaterial);
-            boltMesh.position.set(startX + c * inputs.bolt_spacing_B, -inputs.provided_plate_thickness_tp - inputs.anchor_embedment_hef / 2, startZ + r * inputs.bolt_spacing_N);
-            // Add label to the first bolt only
-            if (r === 0 && c === 0) {
-                const labelHef = createLabel(`hef = ${inputs.anchor_embedment_hef}"`);
-                labelHef.position.set(inputs.anchor_bolt_diameter / 2 + 2, -inputs.anchor_embedment_hef / 2, 0);
-                boltMesh.add(labelHef);
-            }
-            scene.add(boltMesh);
+            boltMesh.position.set(startX + c * inputs.bolt_spacing_B, -inputs.anchor_embedment_hef / 2, startZ + r * inputs.bolt_spacing_N);
+            group.add(boltMesh);
         }
     }
-
-    // Bolt Spacing Labels
-    if (inputs.num_bolts_B > 1) {
-        const labelB_spacing = createLabel(`B Spacing = ${inputs.bolt_spacing_B}"`);
-        labelB_spacing.position.set(startX + inputs.bolt_spacing_B / 2, 0, startZ - 4);
-        scene.add(labelB_spacing);
-    }
-    if (inputs.num_bolts_N > 1) {
-        const labelN_spacing = createLabel(`N Spacing = ${inputs.bolt_spacing_N}"`);
-        labelN_spacing.position.set(startX - 4, 0, startZ + inputs.bolt_spacing_N / 2);
-        // Rotate the label to be parallel with the dimension
-        labelN_spacing.element.style.transform += ' rotate(90deg)';
-        scene.add(labelN_spacing);
-    }
-
+    
     // --- 6. Camera and Controls ---
-    camera.position.set(Math.max(inputs.pedestal_B, inputs.pedestal_N) * 1.2, Math.max(inputs.pedestal_B, inputs.pedestal_N) * 0.8, Math.max(inputs.pedestal_B, inputs.pedestal_N) * 1.2);
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    const animate = () => { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); labelRenderer.render(scene, camera); };
-    animate();
+    // --- Auto-fit camera to the scene ---
+    const box = new THREE.Box3().setFromObject(group);
+    // Manually expand the bounding box to include the labels, which are outside the geometry.
+    // Add a buffer of ~10 units in each direction to account for label size.
+    box.expandByVector(new THREE.Vector3(10, 2, 10));
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const maxSize = Math.max(size.x, size.y, size.z);
+    const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * threeJsCamera.fov / 360));
+    const fitWidthDistance = fitHeightDistance / threeJsCamera.aspect;
+    const distance = 1.5 * Math.max(fitHeightDistance, fitWidthDistance, 10); // Add padding and a min distance
+
+    threeJsControls.target.copy(center);
+    threeJsCamera.position.copy(center).add(new THREE.Vector3(distance, distance * 0.8, distance));
+    threeJsCamera.near = distance / 100;
+    threeJsCamera.far = distance * 100;
+    threeJsCamera.updateProjectionMatrix();
+
+    // Store scene elements on the container for later use (e.g., copying image)
+    container.scene = threeJsScene;
+    container.camera = threeJsCamera;
+    container.renderer = threeJsRenderer;
 }
 
 const basePlateInputIds = [
     'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx', 
-    'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B',
+    'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
     'anchor_embedment_hef',
     'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_size', 'axial_load_P_in',
@@ -373,16 +420,9 @@ const basePlateCalculator = (() => {
      * @returns {object} An object containing the geometry check results.
      */
     function getBasePlateGeometryChecks(inputs) { // FIX: Corrected function name
-        const { anchor_bolt_diameter: db, bolt_spacing_N, bolt_spacing_B, bolt_type, base_plate_length_N, base_plate_width_B, num_bolts_N, num_bolts_B, pedestal_N, pedestal_B } = inputs;
+        const { anchor_bolt_diameter: db, bolt_spacing_N, bolt_spacing_B, bolt_type, concrete_edge_dist_ca1, concrete_edge_dist_ca2 } = inputs;
         const checks = {};
         const tolerance = 1e-9;
-
-        // --- Calculate Actual Edge Distances ---
-        // These are the distances from the center of the outermost bolts to the edge of the concrete pedestal.
-        const bolt_group_length = (num_bolts_N - 1) * bolt_spacing_N;
-        const bolt_group_width = (num_bolts_B - 1) * bolt_spacing_B;
-        const ca1_actual = (pedestal_N - bolt_group_length) / 2.0;
-        const ca2_actual = (pedestal_B - bolt_group_width) / 2.0;
 
         // --- ACI 318-19, Section 17.7 - Minimum spacing and edge distance for cast-in anchors ---
         if (bolt_type === 'Cast-in') {
@@ -393,8 +433,8 @@ const basePlateCalculator = (() => {
 
             checks['Min Anchor Spacing (N)'] = { actual: bolt_spacing_N, min: s_min, pass: bolt_spacing_N >= s_min - tolerance };
             checks['Min Anchor Spacing (B)'] = { actual: bolt_spacing_B, min: s_min, pass: bolt_spacing_B >= s_min - tolerance };
-            checks['Min Edge Distance (ca1)'] = { actual: ca1_actual, min: ca_min, pass: ca1_actual >= ca_min - tolerance };
-            checks['Min Edge Distance (ca2)'] = { actual: ca2_actual, min: ca_min, pass: ca2_actual >= ca_min - tolerance };
+            checks['Min Edge Distance (ca1)'] = { actual: concrete_edge_dist_ca1, min: ca_min, pass: concrete_edge_dist_ca1 >= ca_min - tolerance };
+            checks['Min Edge Distance (ca2)'] = { actual: concrete_edge_dist_ca2, min: ca_min, pass: concrete_edge_dist_ca2 >= ca_min - tolerance };
         } else { // Post-installed
             // For post-installed anchors, minimum spacing and edge distance are specified by the manufacturer's ESR.
             // This calculator does not have a database for these values, so we cannot perform a check.
@@ -803,6 +843,16 @@ const basePlateCalculator = (() => {
         return checks;
     }
 
+    function calculateEdgeDistances(inputs) {
+        const { pedestal_N, num_bolts_N, bolt_spacing_N, pedestal_B, num_bolts_B, bolt_spacing_B } = inputs;
+        // Edge distance along N dimension
+        const bolt_group_length = (num_bolts_N > 1) ? (num_bolts_N - 1) * bolt_spacing_N : 0;
+        const ca1 = (pedestal_N - bolt_group_length) / 2.0;
+        // Edge distance along B dimension
+        const bolt_group_width = (num_bolts_B > 1) ? (num_bolts_B - 1) * bolt_spacing_B : 0;
+        const ca2 = (pedestal_B - bolt_group_width) / 2.0;
+        return { ca1: ca1 >= 0 ? ca1 : 0, ca2: ca2 >= 0 ? ca2 : 0 };
+    }
     function run(inputs) {
         // --- FIX: Call getBasePlateGeometryChecks ---
         // This function was defined but not called in the main run function.
@@ -814,6 +864,10 @@ const basePlateCalculator = (() => {
             return { errors: validation.errors, warnings: validation.warnings, checks: {}, geomChecks };
         }
 
+        // Calculate edge distances and add them to the inputs object for use in other checks
+        const { ca1, ca2 } = calculateEdgeDistances(inputs);
+        inputs.concrete_edge_dist_ca1 = ca1;
+        inputs.concrete_edge_dist_ca2 = ca2;
         const checks = {};
 
         const bearing_results = checkConcreteBearing(inputs);
@@ -956,6 +1010,29 @@ function renderBasePlateInputSummary(inputs) {
     </div>`;
 }
 
+function renderCalculatedGeometry(inputs) {
+    const { concrete_edge_dist_ca1, concrete_edge_dist_ca2 } = inputs;
+
+    const rows = [
+        `<tr><td>Concrete Edge Distance (cₐ₁)</td><td>${concrete_edge_dist_ca1.toFixed(3)} in</td><td>(Pedestal N - Bolt Group N) / 2</td></tr>`,
+        `<tr><td>Concrete Edge Distance (cₐ₂)</td><td>${concrete_edge_dist_ca2.toFixed(3)} in</td><td>(Pedestal B - Bolt Group B) / 2</td></tr>`
+    ];
+
+    return `
+    <div id="calculated-geometry-section" class="report-section-copyable mt-6">
+        <div class="flex justify-between items-center">
+            <h3 class="report-header">Calculated Geometry</h3>
+            <button data-copy-target-id="calculated-geometry-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
+            <table class="w-full mt-2 summary-table">
+                <thead><tr><th>Parameter</th><th>Value</th><th>Formula</th></tr></thead>
+                <tbody>${rows.join('')}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
 function renderBasePlateGeometryChecks(geomChecks) {
     if (Object.keys(geomChecks).length === 0) return '';
 
@@ -1024,12 +1101,30 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
 
     switch (name) {
         case 'Concrete Bearing':
-            const confinement_limit = 1.7 * inputs.concrete_fc * details.A1;
+            let demand_calc_html = '';
+            if (details.bearing_case === "Full Bearing") {
+                demand_calc_html = `f<sub>p,max</sub> = (P/A) * (1 + 6e<sub>x</sub>/N + 6e<sub>y</sub>/B) = (${details.Pu.toFixed(2)}/(${inputs.base_plate_width_B}*${inputs.base_plate_length_N})) * (1 + 6*${details.e_x.toFixed(2)}/${inputs.base_plate_length_N} + 6*${details.e_y.toFixed(2)}/${inputs.base_plate_width_B}) = <b>${details.f_p_max.toFixed(2)} ksi</b>`;
+            } else if (details.bearing_case === "Partial Bearing") {
+                demand_calc_html = `f<sub>p,max</sub> &approx; max(f<sub>p,x</sub>, f<sub>p,y</sub>) = <b>${details.f_p_max.toFixed(2)} ksi</b> (Simplified from uniaxial check)`;
+            } else if (details.bearing_case === "Corner Bearing") {
+                const gx = inputs.base_plate_length_N / 2 - details.e_x;
+                const gy = inputs.base_plate_width_B / 2 - details.e_y;
+                demand_calc_html = `f<sub>p,max</sub> = (2 * P) / (3 * g<sub>x</sub> * g<sub>y</sub>) = (2 * ${details.Pu.toFixed(2)}) / (3 * ${gx.toFixed(2)} * ${gy.toFixed(2)}) = <b>${details.f_p_max.toFixed(2)} ksi</b>`;
+            } else { // Pure Moment or other
+                demand_calc_html = `f<sub>p,max</sub> = <b>${details.f_p_max.toFixed(2)} ksi</b> (Calculated for pure moment case)`;
+            }
+
             content = format_list([
+                `<u>Maximum Bearing Pressure (f<sub>p,max</sub>)</u>`,
+                `Eccentricity (e<sub>x</sub>) = M<sub>ux</sub> / P<sub>u</sub> = ${(inputs.moment_Mx_in * 12).toFixed(2)} / ${details.Pu.toFixed(2)} = ${details.e_x.toFixed(2)} in`,
+                `Eccentricity (e<sub>y</sub>) = M<sub>uy</sub> / P<sub>u</sub> = ${(inputs.moment_My_in * 12).toFixed(2)} / ${details.Pu.toFixed(2)} = ${details.e_y.toFixed(2)} in`,
+                `Bearing Case: <b>${details.bearing_case}</b>`,
+                `Calculation: ${demand_calc_html}`,
+                `<hr class="my-2">`,
                 `<u>Nominal Bearing Strength (P<sub>p</sub>) per AISC J8</u>`,
                 `Confinement Factor (&Psi;) = min(&radic;(A₂/A₁), 2.0) = min(&radic;(${details.A2.toFixed(2)}/${details.A1.toFixed(2)}), 2.0) = ${details.confinement_factor.toFixed(2)}`,
                 `P<sub>p</sub> = 0.85 &times; f'c &times; A₁ &times; &Psi;`,
-                `P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b> (This is total capacity, not a pressure)`,
                 `<u>Design Capacity</u>`,
                 `Capacity = ${capacity_eq} = ${final_capacity.toFixed(2)} kips`
             ]);
@@ -1047,7 +1142,12 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
             break;
         case 'Anchor Steel Tension':
             const Ab_tension = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
+            const Tu_bolt = data.demand;
             content = format_list([
+                `<u>Tension Demand per Bolt (T<sub>u,bolt</sub>)</u>`,
+                `Calculated based on bearing analysis and bolt group geometry.`,
+                `T<sub>u,bolt</sub> = <b>${Tu_bolt.toFixed(2)} kips</b>`,
+                `<hr class="my-2">`,
                 `<u>Nominal Steel Strength (N<sub>sa</sub>) per ACI 17.6.1</u>`,
                 `N<sub>sa</sub> = A<sub>b,eff</sub> &times; F<sub>ut</sub>`,
                 `N<sub>sa</sub> = ${Ab_tension.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${check.Rn.toFixed(2)} kips</b>`,
@@ -1057,7 +1157,11 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
             break;
         case 'Anchor Steel Shear':
             const Ab_shear = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
+            const Vu_bolt = data.demand;
             content = format_list([
+                `<u>Shear Demand per Bolt (V<sub>u,bolt</sub>)</u>`,
+                `V<sub>u,bolt</sub> = V<sub>u,total</sub> / n<sub>bolts</sub> = ${inputs.shear_V_in.toFixed(2)} / ${details.num_bolts_total} = <b>${Vu_bolt.toFixed(2)} kips</b>`,
+                `<hr class="my-2">`,
                 `<u>Nominal Steel Strength (V<sub>sa</sub>) per ACI 17.7.1</u>`,
                 `V<sub>sa</sub> = 0.6 &times; A<sub>b,eff</sub> &times; F<sub>ut</sub>`,
                 `V<sub>sa</sub> = 0.6 &times; ${Ab_shear.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${check.Rn.toFixed(2)} kips</b>`,
@@ -1185,11 +1289,13 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
 
 function renderResults(results) {
     const { checks, geomChecks, inputs } = results;
-
+    
     const inputSummaryHtml = renderBasePlateInputSummary(inputs);
+    const calculatedGeometryHtml = renderCalculatedGeometry(inputs);
     const geometryChecksHtml = renderBasePlateGeometryChecks(geomChecks);
     const loadSummaryHtml = renderBasePlateLoadSummary(inputs, checks);
     const strengthChecksHtml = renderBasePlateStrengthChecks(results); // Pass the whole results object
+
 
     const finalHtml = `
         <div id="baseplate-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
@@ -1201,6 +1307,7 @@ function renderResults(results) {
             </div>
             <h2 class="report-title text-center">Base Plate & Anchorage Check Results</h2>
             ${inputSummaryHtml}
+            ${calculatedGeometryHtml}
             ${geometryChecksHtml}
             ${loadSummaryHtml}
             ${strengthChecksHtml}
@@ -1229,16 +1336,16 @@ document.addEventListener('DOMContentLoaded', () => {
             select.dispatchEvent(new Event('change')); // Trigger initial population
         }
 
-        // Add event listeners to diagram inputs
-        const diagramInputIds = ['base_plate_length_N', 'base_plate_width_B', 'column_depth_d', 'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter', 'bolt_spacing_N', 'bolt_spacing_B', 'num_bolts_total', 'num_bolts_tension_row'];
-        diagramInputIds.forEach(id => {
+        // Add event listeners to all inputs to redraw diagrams on input/change, but not run the full check.
+        basePlateInputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('input', drawBasePlateDiagram);
-                el.addEventListener('input', draw3dBasePlateDiagram); // Also update 3D diagram
+                // Redraw diagrams on input, but do not run the heavy calculation.
+                const redraw = () => { drawBasePlateDiagram(); draw3dBasePlateDiagram(); };
+                el.addEventListener('input', redraw);
+                el.addEventListener('change', redraw);
             }
         });
-
         // --- Populate Weld Electrode Dropdown ---
         const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
         const weldSelect = document.getElementById('weld_electrode');
@@ -1326,20 +1433,22 @@ document.addEventListener('DOMContentLoaded', () => {
     injectFooter({
         footerPlaceholderId: 'footer-placeholder'
     });
+
     initializeSharedUI();
     // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
     populateMaterialDropdowns();
     updateColumnInputsUI(); // Set initial state
+
+    // --- Auto-save inputs to localStorage on any change ---
+    basePlateInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('change', () => saveInputsToLocalStorage('baseplate-inputs', gatherInputsFromIds(basePlateInputIds)));
+    });
+
     loadInputsFromLocalStorage('baseplate-inputs', basePlateInputIds);
 
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunBasePlateCheck);
     
-    // Auto-run on input change
-    basePlateInputIds.forEach(id => {
-        const el = document.getElementById(id);
-        el?.addEventListener('change', handleRunBasePlateCheck);
-    });
-
     const handleSaveInputs = createSaveInputsHandler(basePlateInputIds, 'baseplate-inputs.txt');
     const handleLoadInputs = createLoadInputsHandler(basePlateInputIds, handleRunBasePlateCheck);
     document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);

@@ -71,7 +71,7 @@ const drawFlangeDiagram = createDiagramDrawer({
     drawBolts: ({ svg, inputs, cx, cy, scale, createEl }) => {
         const { gap, Nc_fp, Nr_fp, S1_col_spacing_fp, S2_row_spacing_fp, S3_end_dist_fp, g_gage_fp, D_fp } = inputs;
         const sg = gap * scale;
-        const bolt_r = Math.max(0, (D_fp * scale) / 2);
+        const bolt_r = Math.max(0, (D_fp * scale) / 2) || 0;
 
         // Iterate through each of the four symmetric quadrants
         const sides = [-1, 1]; // -1 for left, 1 for right
@@ -140,11 +140,11 @@ const drawWebDiagram = createDiagramDrawer({
         // Draw left member
         svg.appendChild(createEl('rect', { x: 0, y: cy - sd / 2, width: member_len_left, height: stf, class: 'svg-member' })); // Top flange
         svg.appendChild(createEl('rect', { x: 0, y: cy + sd / 2 - stf, width: member_len_left, height: stf, class: 'svg-member' })); // Bottom flange
-        svg.appendChild(createEl('rect', { x: cx - sg/2 - stw, y: cy - sd / 2 + stf, width: stw, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
+        svg.appendChild(createEl('rect', { x: -cx - sg/2 , y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
         // Draw right member
         svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2, width: member_len_right, height: stf, class: 'svg-member' })); // Top flange
         svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy + sd / 2 - stf, width: member_len_right, height: stf, class: 'svg-member' })); // Bottom flange
-        svg.appendChild(createEl('rect', { x: cx + sg/2, y: cy - sd / 2 + stf, width: stw, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
+        svg.appendChild(createEl('rect', { x: cx + sg/2, y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
     },
     drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
         const sH_wp = inputs.H_wp * scale;
@@ -154,7 +154,7 @@ const drawWebDiagram = createDiagramDrawer({
     drawBolts: ({ svg, inputs, W, cx, cy, scale, createEl }) => {
         const { gap, Nc_wp, Nr_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp, D_wp } = inputs;
         const sg = gap * scale;
-        const bolt_r = Math.max(0, (D_wp * scale) / 2);
+        const bolt_r = Math.max(0, (D_wp * scale) / 2) || 0;
         const x_first_bolt_col_right = cx + sg / 2 + S6_end_dist_wp * scale;
         const start_y = cy - ((Nr_wp - 1) * S5_row_spacing_wp * scale) / 2;
         for (let i = 0; i < Nc_wp; i++) {
