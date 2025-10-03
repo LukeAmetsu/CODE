@@ -748,7 +748,8 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete) {
  * Creates a standardized calculation handler to reduce boilerplate code.
  * This function encapsulates the common pattern: gather, validate, calculate, render.
  * @param {object} config - The configuration object for the handler.
- * @param {string[]} config.inputIds - Array of input element IDs.
+ * @param {string[]} [config.inputIds] - Array of input element IDs. Used if gatherInputsFunction is not provided.
+ * @param {function} [config.gatherInputsFunction] - A function that returns the inputs object. Overrides inputIds.
  * @param {string} config.storageKey - Local storage key for saving inputs.
  * @param {string} config.validationRuleKey - Key for the validationRules object.
  * @param {function} config.calculatorFunction - The function that performs the calculation.
@@ -762,6 +763,7 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete) {
 function createCalculationHandler(config) { // This is the function being called
     const {
         inputIds,
+        gatherInputsFunction,
         storageKey,
         validationRuleKey,
         calculatorFunction,
@@ -776,7 +778,9 @@ function createCalculationHandler(config) { // This is the function being called
         if (buttonId) setLoadingState(true, buttonId);
         showFeedback('Gathering inputs...', false, feedbackElId);
 
-        const inputs = gatherInputsFromIds(inputIds);
+        const inputs = typeof gatherInputsFunction === 'function' 
+            ? gatherInputsFunction() 
+            : gatherInputsFromIds(inputIds);
         
         showFeedback('Validating inputs...', false, feedbackElId);
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update

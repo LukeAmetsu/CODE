@@ -1807,8 +1807,8 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'
     });
+    // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
     populateDropdowns();
-
     loadInputsFromLocalStorage('splice-inputs', inputIds);
 
     // --- Auto-save inputs to localStorage on any change ---

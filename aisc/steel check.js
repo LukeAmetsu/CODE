@@ -2,7 +2,8 @@ const steelCheckInputIds = [
     'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E', 'section_type',
     'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
-    'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input'
+    'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input',
+    'num_beams', 'beam_spacing' // Added for built-up section calculator
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const handleRunSteelCheck = createCalculationHandler({
-        inputIds: steelCheckInputIds,
+        gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds), // Use the generic function
         storageKey: 'steel-check-inputs',
         validationRuleKey: 'steel_check',
         calculatorFunction: steelChecker.run,
@@ -55,14 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('num_beams').addEventListener('input', calculateAndDisplayBuiltUpProperties);
     document.getElementById('beam_spacing').addEventListener('input', calculateAndDisplayBuiltUpProperties);
     updateGeometryInputsUI(); // Initial call
-    loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
     populateMaterialDropdowns();
+    loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds, handleRunSteelCheck);
+
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);
-    document.getElementById('steel-results-container').addEventListener('click', (event) => {
-        if (event.target.id === 'toggle-all-details-btn') {
-            handleToggleAllDetails(event.target, '#steel-results-container');
-        }
-    });
 
     document.getElementById('steel-results-container').addEventListener('click', (event) => {
         const button = event.target.closest('.toggle-details-btn');
@@ -71,12 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const detailRow = document.getElementById(detailId);
             detailRow?.classList.toggle('is-visible');
             button.textContent = detailRow?.classList.contains('is-visible') ? '[Hide]' : '[Show]';
-        }
-        if (event.target.id === 'copy-report-btn') {
+        } else if (event.target.id === 'copy-report-btn') {
             handleCopyToClipboard('steel-results-container', 'feedback-message');
-        }
-        if (event.target.id === 'download-pdf-btn') {
+        } else if (event.target.id === 'download-pdf-btn') {
             handleDownloadPdf('steel-results-container', 'Steel-Check-Report.pdf');
+        } else if (event.target.id === 'toggle-all-details-btn') {
+            handleToggleAllDetails(event.target, '#steel-results-container');
         }
     });
 });
@@ -97,16 +94,6 @@ function handleToggleAllDetails(mainButton, containerSelector) {
     mainButton.blur();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // ... (rest of the event listener)
-    document.getElementById('steel-results-container').addEventListener('click', (event) => {
-        // ... (existing event handlers)
-        if (event.target.id === 'toggle-all-details-btn') {
-            handleToggleAllDetails(event.target, '#steel-results-container');
-        }
-    });
-});
-
 function calculateAndDisplayBuiltUpProperties() {
     const n_beams = parseInt(document.getElementById('num_beams').value) || 1;
     const spacing = parseFloat(document.getElementById('beam_spacing').value) || 0;
@@ -117,7 +104,8 @@ function calculateAndDisplayBuiltUpProperties() {
         return;
     }
 
-    const single_props = getSectionProperties(gatherInputs());
+    // Use the generic gatherInputsFromIds function
+    const single_props = getSectionProperties(gatherInputsFromIds(steelCheckInputIds));
     if (!single_props.Ag) {
         resultsDiv.innerHTML = '<p class="text-red-500">Define single section properties first.</p>';
         return;
@@ -148,17 +136,7 @@ function calculateAndDisplayBuiltUpProperties() {
     // --- Render Results ---
     resultsDiv.innerHTML = `
         <h4 class="font-semibold border-t dark:border-gray-600 pt-3">Calculated Built-Up Properties:</h4>
-        <table class="text-sm w-full mt-2">
-            <tbody class="divide-y dark:divide-gray-700">
-                <tr><td class="py-1">Total Area (A<sub>g,total</sub>):</td><td class="text-right font-mono">${bu_props.Ag.toFixed(2)} in²</td></tr>
-                <tr><td class="py-1">Total Strong Axis I<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Ix.toFixed(2)} in⁴</td></tr>
-                <tr><td class="py-1">Total Strong Axis S<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Sx.toFixed(2)} in³</td></tr>
-                <tr><td class="py-1">Total Strong Axis Z<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Zx.toFixed(2)} in³</td></tr>
-                <tr class="border-t border-dashed dark:border-gray-600"><td class="py-1 font-semibold">Total Weak Axis I<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Iy.toFixed(2)} in⁴</td></tr>
-                <tr><td class="py-1">Total Weak Axis S<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Sy.toFixed(2)} in³</td></tr>
-                <tr><td class="py-1">Weak Axis Radius of Gyration (r<sub>y,total</sub>):</td><td class="text-right font-mono">${bu_props.ry.toFixed(2)} in</td></tr>
-            </tbody>
-        </table>
+        <table class="text-sm w-full mt-2"><tbody><tr><td class="py-1">Total Area (A<sub>g,total</sub>):</td><td class="text-right font-mono">${bu_props.Ag.toFixed(2)} in²</td></tr><tr><td class="py-1">Total Strong Axis I<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Ix.toFixed(2)} in⁴</td></tr><tr><td class="py-1">Total Strong Axis S<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Sx.toFixed(2)} in³</td></tr><tr><td class="py-1">Total Strong Axis Z<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Zx.toFixed(2)} in³</td></tr><tr class="border-t border-dashed dark:border-gray-600"><td class="py-1 font-semibold">Total Weak Axis I<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Iy.toFixed(2)} in⁴</td></tr><tr><td class="py-1">Total Weak Axis S<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Sy.toFixed(2)} in³</td></tr><tr><td class="py-1">Weak Axis Radius of Gyration (r<sub>y,total</sub>):</td><td class="text-right font-mono">${bu_props.ry.toFixed(2)} in</td></tr></tbody></table>
     `;
 }
 
@@ -189,7 +167,7 @@ function updateGeometryInputsUI() {
         bf_label.textContent = 'Width (B)';
         tf_label.textContent = 'Thickness (t)';
         tw_container.style.display = 'none'; // Hide tw
-    } else if (sectionType === 'HSS-round') {
+    } else if (sectionType === 'HSS/Pipe (Circular)') {
         d_label.textContent = 'Diameter (D)';
         bf_label.textContent = 'Thickness (t)';
         d_container.style.display = 'block';
@@ -204,121 +182,77 @@ function updateGeometryInputsUI() {
     }
 }
 
-function gatherInputs() {
-    const getVal = (id) => {
-        const el = document.getElementById(id);
-        return el ? (parseFloat(el.value) || 0) : 0;
-    };
-    const getStr = (id) => document.getElementById(id).value;
-    return {
-        design_method: getStr('design_method'),
-        aisc_standard: getStr('aisc_standard'),
-        unit_system: getStr('unit_system'),
-        Fy: getVal('Fy'),
-        Fu: getVal('Fu'),
-        E: getVal('E'),
-        section_type: getStr('section_type'),
-        d: getVal('d'),
-        bf: getVal('bf'),
-        tf: getVal('tf'),
-        tw: getVal('tw'),
-        Ag_manual: getVal('Ag_manual'),
-        I_manual: getVal('I_manual'),
-        Sx_manual: getVal('Sx_manual'),
-        Zx_manual: getVal('Zx_manual'),
-        Iy_manual: getVal('Iy_manual'), Sy_manual: getVal('Sy_manual'), Zy_manual: getVal('Zy_manual'),
-        ry_manual: getVal('ry_manual'),
-        J_manual: getVal('J_manual'),
-        Cw_manual: getVal('Cw_manual'),
-        rts_manual: getVal('rts_manual'),
-        Lb_input: getVal('Lb_input'),
-        K: getVal('K'),
-        Cb: getVal('Cb'),
-        lb_bearing: getVal('lb_bearing'),
-        is_end_bearing: getStr('is_end_bearing') === 'true',
-        k_des: getVal('k_des'), Cm: getVal('Cm'),
-        Pu_or_Pa: getVal('Pu_or_Pa'),
-        Mux_or_Max: getVal('Mux_or_Max'),
-        Muy_or_May: getVal('Muy_or_May'),
-        Vu_or_Va: getVal('Vu_or_Va'),
-        deflection_span: getVal('deflection_span'),
-        deflection_limit: getVal('deflection_limit'),
-        actual_deflection_input: getVal('actual_deflection_input'), Tu_or_Ta: getVal('Tu_or_Ta'),
-        An_net: getVal('Ag_manual'), U_shear_lag: 1.0, // Assume full beam, U=1.0
-    };
+function getSectionProperties(inputs) {
+    if (inputs.section_type === 'Manual Input') {
+        return {
+            type: 'I-Shape', Ag: inputs.Ag_manual, Ix: inputs.I_manual, Sx: inputs.Sx_manual, Zx: inputs.Zx_manual,
+            Iy: inputs.Iy_manual, Sy: inputs.Sy_manual, Zy: inputs.Zy_manual, ry: inputs.ry_manual,
+            rts: inputs.rts_manual, J: inputs.J_manual, Cw: inputs.Cw_manual, d: inputs.d,
+            bf: inputs.bf, tf: inputs.tf, tw: inputs.tw, h: inputs.d - 2 * inputs.tf, k_des: inputs.tf
+        };
+    }
+
+    if (inputs.section_type === 'I-Shape') {
+        const { d, bf, tf, tw } = inputs;
+        const Ag = 2 * bf * tf + (d - 2 * tf) * tw;
+        const Ix = (bf * d**3 / 12) - ((bf - tw) * (d - 2 * tf)**3 / 12);
+        const Sx = Ix / (d / 2);
+        const Zx = (bf * tf * (d - tf)) + (tw * (d - 2 * tf)**2 / 4);
+        const Iy = (2 * tf * bf**3 / 12) + ((d - 2 * tf) * tw**3 / 12);
+        const ry = Math.sqrt(Iy / Ag);
+        const h = d - 2 * tf;
+        const Sy = Iy / (bf / 2);
+        const Zy = (tf * bf**2 / 2) + (tw**3 * (d - 2*tf) / 4);
+        const J = (1/3) * (2 * bf * tf**3 + (d - 2 * tf) * tw**3);
+        const Cw = (Iy * h**2) / 4;
+        const rts = (Cw > 0 && Sx > 0) ? Math.sqrt(Math.sqrt(Iy * Cw) / Sx) : 0; // Corrected per AISC F2-7
+        const rx = Math.sqrt(Ix / Ag);
+        return { type: 'I-Shape', Ag, Ix, Sx, Zx, Iy, Sy, Zy, ry, rts, J, Cw, d, bf, tf, tw, h, rx, k_des: inputs.k_des };
+    } else if (inputs.section_type === 'Rectangular HSS') {
+        const { d: H, bf: B, tf: t } = inputs;
+        const Ag = 2 * t * (H + B - 2 * t);
+        const Ix = (B * H**3 / 12) - ((B - 2*t) * (H - 2*t)**3 / 12);
+        const Zx = (B * H**2 / 4) - ((B - 2*t) * (H - 2*t)**2 / 4);
+        const Sx = Ix / (H / 2);
+        const Iy = (H * B**3 / 12) - ((H - 2*t) * (B - 2*t)**3 / 12); // Strong axis for ry
+        const ry = Math.sqrt(Iy / Ag); // ry is weak axis for compression check
+        const Sy = Iy / (B / 2);
+        const Zy = (H * B**2 / 4) - ((H - 2*t) * (B - 2*t)**2 / 4);
+        const h = H - 2 * t;
+        const rx = Math.sqrt(Ix / Ag);
+        return { type: 'Rectangular HSS', Ag, Ix, Sx, Zx, Iy, Sy, Zy, ry, h, d: H, tw: t, tf: t, bf: B, rx, k_des: inputs.k_des };
+    } else if (inputs.section_type === 'HSS/Pipe (Circular)') {
+        const { d: OD, bf: t } = inputs; // bf is used for thickness in UI
+        const ID = OD - 2 * t;
+        const Ag = (Math.PI / 4) * (OD**2 - ID**2);
+        const Ix = (Math.PI / 64) * (OD**4 - ID**4);
+        const Sx = Ix / (OD / 2);
+        const Zx = (OD**3 - ID**3) / 6;
+        const ry = Math.sqrt(Ix / Ag); // r = ry = rx
+        const J = (Math.PI / 32) * (OD**4 - ID**4);
+        const rx = ry;
+        return { type: 'HSS-round', Ag, Ix, Sx, Zx, Iy: Ix, Sy: Sx, Zy: Zx, ry, J, d: OD, tf: t, rx, k_des: inputs.k_des, bf: OD };
+    } else if (inputs.section_type === 'channel') {
+        // Simplified properties for a standard channel. x_bar is a critical missing input.
+        // For a real tool, this would come from a database.
+        const { d, bf, tf, tw } = inputs;
+        const Ag = 2 * bf * tf + (d - 2 * tf) * tw;
+        const Ix = (bf * d**3 / 12) - ((bf - tw) * (d - 2 * tf)**3 / 12); // Approx
+        const x_bar = 0.7; // Placeholder for shear center, MUST be user input or from DB
+        const Iy = (2 * tf * bf**3 / 12) + ((d - 2 * tf) * tw**3 / 12) + Ag * x_bar**2; // Approx
+        const ry = Math.sqrt(Iy/Ag);
+        const rx = Math.sqrt(Ix/Ag);
+        return { type: 'channel', Ag, Ix, Iy, rx, ry, d, bf, tf, tw, x_bar, J: (1/3) * (2 * bf * tf**3 + (d - 2 * tf) * tw**3) };
+    } else if (inputs.section_type === 'angle') {
+        const { d: L1, bf: L2, tf: t } = inputs; // d=long leg, bf=short leg, tf=thickness
+        const Ag = (L1 + L2 - t) * t;
+        // Properties for angles are complex (principal axes). Using geometric for now.
+        return { type: 'angle', Ag, d: L1, bf: L2, tf: t, tw: t, J: (1/3)*(L1+L2)*t**3 };
+    }
+    return {}; // Should not happen
 }
 
 const steelChecker = (() => {
-
-    function getSectionProperties(inputs) {
-        if (inputs.section_type === 'Manual Input') {
-            return {
-                type: 'I-Shape', Ag: inputs.Ag_manual, Ix: inputs.I_manual, Sx: inputs.Sx_manual, Zx: inputs.Zx_manual,
-                Iy: inputs.Iy_manual, Sy: inputs.Sy_manual, Zy: inputs.Zy_manual, ry: inputs.ry_manual,
-                rts: inputs.rts_manual, J: inputs.J_manual, Cw: inputs.Cw_manual, d: inputs.d,
-                bf: inputs.bf, tf: inputs.tf, tw: inputs.tw, h: inputs.d - 2 * inputs.tf, k_des: inputs.tf
-            };
-        }
-
-        if (inputs.section_type === 'I-Shape') {
-            const { d, bf, tf, tw } = inputs;
-            const Ag = 2 * bf * tf + (d - 2 * tf) * tw;
-            const Ix = (bf * d**3 / 12) - ((bf - tw) * (d - 2 * tf)**3 / 12);
-            const Sx = Ix / (d / 2);
-            const Zx = (bf * tf * (d - tf)) + (tw * (d - 2 * tf)**2 / 4);
-            const Iy = (2 * tf * bf**3 / 12) + ((d - 2 * tf) * tw**3 / 12);
-            const ry = Math.sqrt(Iy / Ag);
-            const h = d - 2 * tf;
-            const Sy = Iy / (bf / 2);
-            const Zy = (tf * bf**2 / 2) + (tw**3 * (d - 2*tf) / 4);
-            const J = (1/3) * (2 * bf * tf**3 + (d - 2 * tf) * tw**3);
-            const Cw = (Iy * h**2) / 4;
-            const rts = (Cw > 0 && Sx > 0) ? Math.sqrt(Math.sqrt(Iy * Cw) / Sx) : 0; // Corrected per AISC F2-7
-            const rx = Math.sqrt(Ix / Ag);
-            return { type: 'I-Shape', Ag, Ix, Sx, Zx, Iy, Sy, Zy, ry, rts, J, Cw, d, bf, tf, tw, h, rx, k_des: inputs.k_des };
-        } else if (inputs.section_type === 'Rectangular HSS') {
-            const { d: H, bf: B, tf: t } = inputs;
-            const Ag = 2 * t * (H + B - 2 * t);
-            const Ix = (B * H**3 / 12) - ((B - 2*t) * (H - 2*t)**3 / 12);
-            const Zx = (B * H**2 / 4) - ((B - 2*t) * (H - 2*t)**2 / 4);
-            const Sx = Ix / (H / 2);
-            const Iy = (H * B**3 / 12) - ((H - 2*t) * (B - 2*t)**3 / 12); // Strong axis for ry
-            const ry = Math.sqrt(Iy / Ag); // ry is weak axis for compression check
-            const Sy = Iy / (B / 2);
-            const Zy = (H * B**2 / 4) - ((H - 2*t) * (B - 2*t)**2 / 4);
-            const h = H - 2 * t;
-            const rx = Math.sqrt(Ix / Ag);
-            return { type: 'Rectangular HSS', Ag, Ix, Sx, Zx, Iy, Sy, Zy, ry, h, d: H, tw: t, tf: t, bf: B, rx, k_des: inputs.k_des };
-        } else if (inputs.section_type === 'HSS/Pipe (Circular)') {
-            const { d: OD, bf: t } = inputs; // bf is used for thickness in UI
-            const ID = OD - 2 * t;
-            const Ag = (Math.PI / 4) * (OD**2 - ID**2);
-            const Ix = (Math.PI / 64) * (OD**4 - ID**4);
-            const Sx = Ix / (OD / 2);
-            const Zx = (OD**3 - ID**3) / 6;
-            const ry = Math.sqrt(Ix / Ag); // r = ry = rx
-            const J = (Math.PI / 32) * (OD**4 - ID**4);
-            const rx = ry;
-            return { type: 'HSS-round', Ag, Ix, Sx, Zx, Iy: Ix, Sy: Sx, Zy: Zx, ry, J, d: OD, tf: t, rx, k_des: inputs.k_des, bf: OD };
-        } else if (inputs.section_type === 'channel') {
-            // Simplified properties for a standard channel. x_bar is a critical missing input.
-            // For a real tool, this would come from a database.
-            const { d, bf, tf, tw } = inputs;
-            const Ag = 2 * bf * tf + (d - 2 * tf) * tw;
-            const Ix = (bf * d**3 / 12) - ((bf - tw) * (d - 2 * tf)**3 / 12); // Approx
-            const x_bar = 0.7; // Placeholder for shear center, MUST be user input or from DB
-            const Iy = (2 * tf * bf**3 / 12) + ((d - 2 * tf) * tw**3 / 12) + Ag * x_bar**2; // Approx
-            const ry = Math.sqrt(Iy/Ag);
-            const rx = Math.sqrt(Ix/Ag);
-            return { type: 'channel', Ag, Ix, Iy, rx, ry, d, bf, tf, tw, x_bar, J: (1/3) * (2 * bf * tf**3 + (d - 2 * tf) * tw**3) };
-        } else if (inputs.section_type === 'angle') {
-            const { d: L1, bf: L2, tf: t } = inputs; // d=long leg, bf=short leg, tf=thickness
-            const Ag = (L1 + L2 - t) * t;
-            // Properties for angles are complex (principal axes). Using geometric for now.
-            return { type: 'angle', Ag, d: L1, bf: L2, tf: t, tw: t, J: (1/3)*(L1+L2)*t**3 };
-        }
-        return {}; // Should not happen
-    }
 
     function getDesignFactor(design_method, phi, omega) {
         if (design_method === 'LRFD') return phi;
@@ -851,7 +785,7 @@ const steelChecker = (() => {
             Vn = Fcr * (props.Ag / 2);
         }
         const phiVn_or_Vn_omega = Vn * factor;
-        return { phiVn_or_Vn_omega: phiVn_or_Vn_omega, Vn, Cv, h_tw, governing_limit_state, reference: "AISC G5, G6" }; // to kips
+        return { phiVn_or_Vn_omega: phiVn_or_Vn_omega, Vn, Cv, h_tw, governing_limit_state, phi: phi_v, omega: omega_v, reference: "AISC G5, G6" }; // to kips
     }
 
     function calculateB1Factor(inputs, props, axis) {
@@ -1294,13 +1228,19 @@ const steelChecker = (() => {
     }
 
     function run(inputs) {
+        // Post-process inputs gathered by the generic function
+        inputs.is_end_bearing = inputs.is_end_bearing === 'true';
+        inputs.An_net = inputs.Ag_manual; // Assume full beam net area
+        inputs.U_shear_lag = 1.0; // Assume full beam shear lag factor
+
         const { errors, warnings } = validateInputs(inputs);
         if (inputs.Tu_or_Ta !== 0 && inputs.section_type === 'I-Shape') {
             warnings.push("Torsion analysis for I-shapes is a simplified approximation and may not be accurate. See AISC Design Guide 9 for a complete analysis.");
         }
         if (errors.length > 0) return { errors, warnings };
 
-        const props = getSectionProperties(inputs);
+        // Pass the processed inputs to the property calculator
+        const props = getSectionProperties(inputs); 
 
         // Enhanced checks
         // const hss_local_buckling = checkHSSLocalBuckling(props, inputs);
@@ -1385,14 +1325,18 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
     switch (name) {
         case 'Axial':
             if (data.type === 'Tension') {
+                // Use the final capacity directly from the check data
+                const final_cap = data.check.phiPn_or_Pn_omega;
                 if (!data.details || !data.details.yield) return 'Breakdown not available (missing tension details).';
                 content = format_list([
                     `<b>Yielding (D2a):</b> Pn = Fy * Ag = ${inputs.Fy} ksi * ${data.details.yield.Ag.toFixed(2)} in² = ${(data.details.yield.Pn).toFixed(2)} kips`,
                     `<b>Rupture (D2b):</b> Pn = Fu * Ae = ${inputs.Fu} ksi * ${data.details.rupture.Ae.toFixed(2)} in² = ${(data.details.rupture.Pn).toFixed(2)} kips`,
                     `Governing Limit State = <b>${governing_limit_state}</b>`,
-                    `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+                    `Design Capacity (${capacity_eq}) = <b>${final_cap.toFixed(2)} kips</b>`
                 ]);
             } else { // Compression
+                // Use the final capacity directly from the check data
+                const final_cap = data.check.phiPn_or_Pn_omega;
                 if (!check) return 'Breakdown not available (missing compression details).';
                 content = format_list([
                     `Slender Element Factor (Q) = <b>${check.Q.toFixed(3)}</b>`,
@@ -1400,12 +1344,14 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
                     `Elastic Buckling Stress (F<sub>e</sub>) = <b>${(check.Fe).toFixed(2)} ksi</b>`,
                     `Critical Buckling Stress (F<sub>cr</sub>) = <b>${(check.Fcr).toFixed(2)} ksi</b>`,
                     `Nominal Capacity (P<sub>n</sub> = F<sub>cr</sub> * A<sub>g</sub>) = ${check.Fcr.toFixed(2)} ksi * ${data.properties.Ag.toFixed(2)} in² = <b>${check.Pn.toFixed(2)} kips</b>`,
-                    `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+                    `Design Capacity (${capacity_eq}) = <b>${final_cap.toFixed(2)} kips</b>`
                 ]);
             }
             break;
 
         case 'Flexure (Major)':
+            // Use the final capacity directly from the check data, which is already in kip-ft
+            const final_cap_flex = data.check.phiMn_or_Mn_omega;
             const f_sl = slenderness;
             content = format_list([
                 `Flange Slenderness (λ<sub>f</sub>) = <b>${f_sl.lambda_f.toFixed(2)}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_f.toFixed(2)}, λ<sub>r</sub>=${f_sl.lambda_r_f.toFixed(2)})`,
@@ -1415,7 +1361,7 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
                 `Nominal Capacity (M<sub>n</sub>) = <b>${(check.Mn).toFixed(2)} kip-in</b> = <b>${(check.Mn / 12).toFixed(2)} kip-ft</b>`,
                 (check.Rpg < 1.0 ? `Web Plastification Factor (Rpg) = <b>${check.Rpg.toFixed(3)}</b> (due to slender web)` : ''),
                 `Governing Limit State = <b>${governing_limit_state || 'N/A'}</b>`,
-                `Design Capacity (${capacity_eq.replace('R', 'M')}) = <b>${final_capacity_kipft.toFixed(2)} kip-ft</b>`
+                `Design Capacity (${capacity_eq.replace('R', 'M')}) = <b>${final_cap_flex.toFixed(2)} kip-ft</b>`
             ].filter(Boolean));
             break;
 
@@ -1629,7 +1575,7 @@ function renderSteelResults(results) {
     const checks = {};
 
     if (axial && axial.type) {
-        checks['Axial'] = { demand: Pu, capacity: axial.phiPn_or_Pn_omega, unit: 'kips', data: { ...axial, properties, reference: axial.reference } };
+        checks['Axial'] = { demand: Pu, capacity: axial.phiPn_or_Pn_omega, unit: 'kips', data: { ...axial, check: axial, properties, reference: axial.reference } };
     }
     if (inputs.Mux_or_Max !== 0) {
         checks['Flexure (Major)'] = { demand: inputs.Mux_or_Max, capacity: flexure.phiMn_or_Mn_omega, unit: 'kip-ft', data: { ...flexure, check: flexure, reference: flexure.reference, slenderness: flexure.slenderness } };
@@ -1638,10 +1584,10 @@ function renderSteelResults(results) {
         checks['Shear'] = { demand: inputs.Vu_or_Va, capacity: shear.phiVn_or_Vn_omega, unit: 'kips', data: { ...shear, check: shear, properties, reference: shear.reference } };
     }
     if (interaction && interaction.ratio) {
-        checks['Combined Forces'] = { demand: interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...interaction, check: interaction } };
+        checks['Combined Forces'] = { demand: interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...interaction, check: interaction, details: interaction.details, reference: interaction.reference } };
     }
     if (torsion && torsion.applicable) {
-        checks['Torsion'] = { demand: Math.abs(inputs.Tu_or_Ta), capacity: torsion.phiTn_or_Tn_omega, unit: 'kip-in', data: { ...torsion, check: torsion } };
+        checks['Torsion'] = { demand: Math.abs(inputs.Tu_or_Ta), capacity: torsion.phiTn_or_Tn_omega, unit: 'kip-in', data: { ...torsion, check: torsion, details: torsion.details, reference: torsion.reference, governing_limit_state: torsion.governing_limit_state } };
     }
     if (shear_torsion_interaction && shear_torsion_interaction.applicable) {
         checks['Combined Shear + Torsion'] = { demand: shear_torsion_interaction.ratio, capacity: 1.0, unit: 'ratio', data: { ...shear_torsion_interaction, check: shear_torsion_interaction } };
@@ -1650,7 +1596,7 @@ function renderSteelResults(results) {
         checks['Combined Stresses (H3.3)'] = { demand: combined_stress_H33.ratio, capacity: 1.0, unit: 'ratio', data: { ...combined_stress_H33, check: combined_stress_H33 } };
     }
     if (web_crippling && web_crippling.phiRn_or_Rn_omega) {
-        checks['Web Crippling'] = { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling } };
+        checks['Web Crippling'] = { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling, details: web_crippling.details, reference: web_crippling.reference, governing_limit_state: web_crippling.governing_limit_state } };
     }
     if (deflection && deflection.allowable) {
         checks['Deflection'] = { demand: deflection.actual, capacity: deflection.allowable, unit: 'in', data: { ...deflection, check: deflection, details: deflection } };

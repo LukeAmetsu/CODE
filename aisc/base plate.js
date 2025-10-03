@@ -249,6 +249,31 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             select.dispatchEvent(new Event('change')); // Trigger initial population
         }
+
+        // --- Populate Bolt Grade Dropdown ---
+        const boltGradeOptions = Object.keys(AISC_SPEC.boltGrades).map(grade =>
+            `<option value="${grade}">${grade}</option>`
+        ).join('');
+        const boltSelect = document.getElementById('anchor_bolt_grade');
+        const threadsCheckbox = document.getElementById('anchor_threads_included');
+
+        function updateBoltProperties() {
+            const grade = boltSelect.value;
+            const threadsIncl = threadsCheckbox.checked;
+            const { Fnv } = AISC_SPEC.getFnv(grade, threadsIncl);
+            const Fnt = AISC_SPEC.getFnt(grade); // Note: AISC provides Fnt (nominal tensile stress), not Fut. Using Fnt for Fut.
+
+            document.getElementById(boltSelect.dataset.futTarget).value = Fnt;
+            document.getElementById(boltSelect.dataset.fnvTarget).value = Fnv;
+        }
+
+        if (boltSelect && threadsCheckbox) {
+            boltSelect.innerHTML = boltGradeOptions;
+            boltSelect.value = 'A325'; // A common default
+            boltSelect.addEventListener('change', updateBoltProperties);
+            threadsCheckbox.addEventListener('change', updateBoltProperties);
+            updateBoltProperties(); // Initial population
+        }
     }
 
     const handleRunBasePlateCheck = createCalculationHandler({
@@ -269,7 +294,9 @@ document.addEventListener('DOMContentLoaded', () => {
         footerPlaceholderId: 'footer-placeholder'
     });
     initializeSharedUI();
+    // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
     populateMaterialDropdowns();
+    loadInputsFromLocalStorage('baseplate-inputs', basePlateInputIds, handleRunBasePlateCheck);
 
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunBasePlateCheck);
     const handleSaveInputs = createSaveInputsHandler(basePlateInputIds, 'baseplate-inputs.txt');
