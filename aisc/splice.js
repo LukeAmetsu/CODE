@@ -64,11 +64,9 @@ const drawFlangeDiagram = createDiagramDrawer({
         svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sbf / 2, width: 500 - (cx + sg / 2), height: sbf, class: 'svg-member' }));
     },
     drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sg = inputs.gap * scale;
         const sH_fp = inputs.H_fp * scale;
-        const plate_len = (inputs.L_fp / 2.0) * scale;
-        svg.appendChild(createEl('rect', { x: cx - sg / 2 - plate_len, y: cy - sH_fp / 2, width: plate_len, height: sH_fp, class: 'svg-plate' }));
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sH_fp / 2, width: plate_len, height: sH_fp, class: 'svg-plate' }));
+        const total_plate_len = inputs.L_fp * scale;
+        svg.appendChild(createEl('rect', { x: cx - total_plate_len / 2, y: cy - sH_fp / 2, width: total_plate_len, height: sH_fp, class: 'svg-plate' }));
     },
     drawBolts: ({ svg, inputs, cx, cy, scale, createEl }) => {
         const { gap, Nc_fp, Nr_fp, S1_col_spacing_fp, S2_row_spacing_fp, S3_end_dist_fp, g_gage_fp, D_fp } = inputs;
@@ -127,7 +125,7 @@ const drawFlangeDiagram = createDiagramDrawer({
 const drawWebDiagram = createDiagramDrawer({
     svgId: 'web-svg',
     viewBox: { W: 500, H: 300 },
-    inputIds: ['H_wp', 'member_d', 'member_tf', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp', 'L_wp'],
+    inputIds: ['H_wp', 'member_d', 'member_tf', 'member_tw', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp', 'L_wp'],
     getScaleDimensions: (i) => ({
         total_len: i.gap + i.L_wp, // L_wp is total length
         total_h: i.member_d
@@ -136,19 +134,22 @@ const drawWebDiagram = createDiagramDrawer({
         const sg = inputs.gap * scale;
         const sd = inputs.member_d * scale;
         const stf = inputs.member_tf * scale;
+        const stw = inputs.member_tw * scale;
         const member_len_left = cx - sg / 2;
         const member_len_right = W - (cx + sg / 2);
-        svg.appendChild(createEl('rect', { x: 0, y: cy - sd / 2, width: member_len_left, height: stf, class: 'svg-member' }));
-        svg.appendChild(createEl('rect', { x: 0, y: cy + sd / 2 - stf, width: member_len_left, height: stf, class: 'svg-member' }));
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2, width: member_len_right, height: stf, class: 'svg-member' }));
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy + sd / 2 - stf, width: member_len_right, height: stf, class: 'svg-member' }));
+        // Draw left member (flanges and web)
+        svg.appendChild(createEl('rect', { x: 0, y: cy - sd / 2, width: member_len_left, height: stf, class: 'svg-member' })); // Top flange
+        svg.appendChild(createEl('rect', { x: 0, y: cy + sd / 2 - stf, width: member_len_left, height: stf, class: 'svg-member' })); // Bottom flange
+        svg.appendChild(createEl('rect', { x: -cx - sg/2, y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web
+        // Draw right member (flanges and web)
+        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2, width: member_len_right, height: stf, class: 'svg-member' })); // Top flange
+        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy + sd / 2 - stf, width: member_len_right, height: stf, class: 'svg-member' })); // Bottom flange
+        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web
     },
     drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sg = inputs.gap * scale;
         const sH_wp = inputs.H_wp * scale;
-        const plate_len = (inputs.L_wp / 2.0) * scale;
-        svg.appendChild(createEl('rect', { x: cx - sg / 2 - plate_len, y: cy - sH_wp / 2, width: plate_len, height: sH_wp, class: 'svg-plate' }));
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sH_wp / 2, width: plate_len, height: sH_wp, class: 'svg-plate' }));
+        const total_plate_len = inputs.L_wp * scale;
+        svg.appendChild(createEl('rect', { x: cx - total_plate_len / 2, y: cy - sH_wp / 2, width: total_plate_len, height: sH_wp, class: 'svg-plate' }));
     },
     drawBolts: ({ svg, inputs, W, cx, cy, scale, createEl }) => {
         const { gap, Nc_wp, Nr_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp, D_wp } = inputs;
@@ -471,6 +472,48 @@ function calculateWebSpliceEccentricity(V_load, H_load, gap, Nc, Nr, S_pitch, S_
     const max_R = sqrt(R_h**2 + R_v**2);
 
     return { max_R, eccentricity, M_ecc, Ip, f_vy_direct, f_vx_direct, f_v_moment, f_h_moment, num_bolts };
+}
+
+/**
+ * Checks for prying action on a bolt connection.
+ * @param {object} params - Parameters for prying action check.
+ * @param {number} params.t_plate - Thickness of the connected plate (in).
+ * @param {number} params.Fy_plate - Yield strength of the connected plate (ksi).
+ * @param {number} params.b - Distance from bolt centerline to toe of fillet or edge of plate (in).
+ * @param {number} params.a - Distance from bolt centerline to point of contraflexure (in).
+ * @param {number} params.p - Bolt pitch (spacing along the line of force) (in).
+ * @param {number} params.d_bolt - Nominal bolt diameter (in).
+ * @param {number} params.d_hole - Nominal hole diameter (in).
+ * @param {number} params.B_bolt - Required tensile force per bolt (demand) (kips).
+ * @returns {object} An object containing the total required tensile force (including prying), prying force, and critical thickness.
+ */
+function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt }) {
+    // Per AISC Manual Part 9, simplified for T-stub or similar flexural elements
+    // This function is designed for bolts in tension.
+    if (p <= 0 || Fy_plate <= 0 || B_bolt < 0) return { Q_prime: 0, T_req: B_bolt, tc: Infinity, alpha_prime: 0, b_prime: b, a_prime: a, rho: 0, delta: 0 };
+    
+    const b_prime = b - d_bolt / 2.0;
+    const a_prime = min(a + d_bolt / 2.0, 1.25 * b_prime); // AISC Manual Part 9, Eq. 9-28
+
+    if (a_prime <= 0 || b_prime < 0) return { Q_prime: 0, T_req: B_bolt, tc: Infinity, alpha_prime: 0, b_prime, a_prime, rho: 0, delta: 0 };
+
+    const rho = b_prime / a_prime;
+    const delta = 1 - (d_hole / p);
+
+    if (delta <= 0) return { Q_prime: Infinity, T_req: Infinity, tc: 0, alpha_prime: 0, b_prime, a_prime, rho, delta }; // Invalid geometry or holes too close
+
+    // Critical thickness tc is calculated based on the applied demand B, per AISC Eq. 9-27.
+    const tc = sqrt((4 * B_bolt * b_prime) / (p * Fy_plate));
+
+    let Q_prime = 0;
+    let alpha_prime = 0;
+    if (t_plate < tc) { // Prying occurs if actual thickness is less than critical thickness
+        alpha_prime = (1 / delta) * (((t_plate / tc)**2) - 1); // AISC Manual Part 9, Eq. 9-29
+        alpha_prime = max(0, min(alpha_prime, 1.0)); // alpha' cannot be negative or > 1
+        Q_prime = B_bolt * delta * alpha_prime * rho; // AISC Manual Part 9, Eq. 9-30
+    }
+    const T_req = B_bolt + Q_prime;
+    return { T_req, Q_prime, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
 }
 
 function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt, design_method }) {
@@ -1421,6 +1464,7 @@ function getBreakdownGenerator(name) {
     if (name.includes('Shear Yield')) return baseBreakdownGenerators['Shear Yield'];
     if (name.includes('Shear Rupture')) return baseBreakdownGenerators['Shear Rupture'];
     if (name.includes('Flexural Rupture')) return baseBreakdownGenerators['Beam Flexural Rupture'];
+    if (name.includes('Web Bolt Tension with Prying')) return baseBreakdownGenerators['Web Bolt Tension with Prying'];
     if (name.includes('Beam Flange Tensile Rupture')) return baseBreakdownGenerators['NSF']; // Reuse the plate NSF breakdown
     if (name.includes('Plate Thickness for Prying')) return baseBreakdownGenerators['Plate Thickness for Prying'];
 
@@ -1670,7 +1714,8 @@ function renderResults(results, rawInputs) {
         'Web Plate Gross Shear Yield',
         'Web Plate Net Shear Rupture',
         'Web Plate Block Shear',
-        'Web Plate Bolt Bearing'
+        'Web Plate Bolt Bearing',
+        'Web Bolt Tension with Prying'
     ];
 
     const memberChecks = [
@@ -1714,12 +1759,12 @@ function renderResults(results, rawInputs) {
 
     // --- Final Assembly ---
     const finalHtml = `
-        <div class="results-section">
+        <div id="splice-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
                 <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
                     <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
                     <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
                 </div>
-                <h2 class="report-header !mt-0 text-center">Splice Check Results</h2>
+                <h2 class="report-title text-center">Splice Check Results</h2>
                 ${renderSpliceInputSummary(rawInputs)}
                 ${optimizationHtml}
                 ${geometryTableHtml}
@@ -1727,7 +1772,7 @@ function renderResults(results, rawInputs) {
                 ${strengthTableHtml}
         </div>`;
 
-    document.getElementById('results-container').innerHTML = finalHtml;
+    document.getElementById('results-container').innerHTML = `<div id="report-wrapper">${finalHtml}</div>`;
 }
 
 // --- Input Gathering and Orchestration ---
@@ -1737,8 +1782,8 @@ const inputIds = [
     'num_flange_plates', 'flange_plate_material', 'flange_plate_Fy', 'flange_plate_Fu', 'H_fp', 't_fp', 'L_fp',
     'flange_plate_material_inner', 'flange_plate_Fy_inner', 'flange_plate_Fu_inner', 'H_fp_inner', 't_fp_inner', 'L_fp_inner',
     'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp',
-    'num_web_plates', 'web_plate_material', 'web_plate_Fy', 'web_plate_Fu', 'H_wp', 't_wp', 'L_wp',
-    'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'hole_calc_method',
+    'num_web_plates', 'web_plate_material', 'web_plate_Fy', 'web_plate_Fu', 'H_wp', 't_wp', 'L_wp', 'connection_type', 'faying_surface_class',
+    'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp',
     'D_fp', 'bolt_grade_fp', 'threads_included_fp', 'D_wp', 'bolt_grade_wp', 'threads_included_wp',
 ];
 
@@ -1818,7 +1863,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const handleSaveInputs = createSaveInputsHandler(inputIds, 'splice-inputs.txt', 'feedback-message');
-    const handleLoadInputs = createLoadInputsHandler(inputIds, handleRunCheck, 'feedback-message');
+    const handleLoadInputs = createLoadInputsHandler(inputIds, null, 'feedback-message');
     
     document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
     document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);

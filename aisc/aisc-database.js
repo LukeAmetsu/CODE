@@ -140,6 +140,12 @@ const AISC_SPEC = (() => {
         return structuralSteelGrades[grade] || null;
     }
 
+    // Weld Electrode Strengths (Fexx in ksi)
+    const weldElectrodes = {
+        "E60XX": { Fexx: 60 },
+        "E70XX": { Fexx: 70 },
+    };
+
     // --- PUBLIC API ---
     return {
         getFnv,
@@ -151,6 +157,7 @@ const AISC_SPEC = (() => {
         structuralSteelGrades, // Expose for populating dropdowns
         slipCoefficients, // Expose for UI and calculations
         getNominalHoleDiameter,
+        weldElectrodes, // Expose for populating dropdowns
         minEdgeDistanceTable,
     };
 })();

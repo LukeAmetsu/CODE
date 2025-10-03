@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('beam_spacing').addEventListener('input', calculateAndDisplayBuiltUpProperties);
     updateGeometryInputsUI(); // Initial call
     populateMaterialDropdowns();
-    loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds, handleRunSteelCheck);
+    loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
 
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);
 
@@ -1095,6 +1095,37 @@ const steelChecker = (() => {
         return Rpg * Fy * Sx;
     }
 
+    function checkWebSideswayBuckling(props, inputs) {
+        // Per AISC 360, Section G4
+        const { type, h, tw, bf, d } = props;
+        const { Lb_input, Fy, design_method } = inputs;
+
+        // This limit state applies to singly symmetric I-shapes and channels under compression.
+        // We will apply it to channels for now.
+        if (type !== 'channel' || inputs.Pu_or_Pa >= 0) {
+            return { applicable: false };
+        }
+
+        const Lb = Lb_input * 12; // Unbraced length in inches
+        if (Lb <= 0 || bf <= 0 || tw <= 0) return { applicable: false };
+
+        const h_tw = h / tw;
+        const L_bf = Lb / bf;
+        const ratio = h_tw / L_bf;
+
+        let Cr;
+        // From AISC Table G4.1
+        if (ratio <= 1.8) {
+            Cr = 2470;
+        } else {
+            Cr = 4430 / ratio;
+        }
+
+        const Aw = d * tw;
+        const Rn = (Cr * Aw * Fy) / (h_tw**2);
+        return { applicable: true, Rn, phi: 0.90, omega: 1.67, Cr, h_tw, L_bf, reference: "AISC G4" };
+    }
+
     function checkWebLocalBuckling(props, inputs, Mp, My) {
         const { Fy, E } = inputs;
         const { h, tw, bf, tf } = props;
@@ -1259,6 +1290,7 @@ const steelChecker = (() => {
         const flex_results = checkFlexure(props, inputs);
         const shear_results = checkShear(props, inputs);
 
+        const web_sidesway_buckling = checkWebSideswayBuckling(props, inputs);
         // Only include web crippling results if the check is applicable
         const web_crippling_check = checkWebCrippling(props, inputs);
         const web_crippling_results = web_crippling_check.applicable ? web_crippling_check : {};
@@ -1294,6 +1326,7 @@ const steelChecker = (() => {
             flexure_y: flex_results_y,
             shear: shear_results,
             axial: axial_results,
+            web_sidesway_buckling,
             web_crippling: web_crippling_results,
             interaction: interaction_results,
             combined_stress_H33,
@@ -1306,7 +1339,7 @@ const steelChecker = (() => {
 })(); // steelChecker
 
 function generateSteelCheckBreakdownHtml(name, data, inputs) {
-    const { check, details, reference, slenderness, governing_limit_state } = data;
+    const { check, details, reference, slenderness, governing_limit_state, Cr, h_tw, L_bf } = data;
     if (!check && !details && !governing_limit_state) return 'Breakdown not available.';
 
     const { design_method } = inputs;
@@ -1409,6 +1442,17 @@ function generateSteelCheckBreakdownHtml(name, data, inputs) {
                 `Web Local Yielding Capacity (R<sub>n</sub>) = <b>${details.Rn_yield.toFixed(2)} kips</b>`,
                 `Web Local Crippling Capacity (R<sub>n</sub>) = <b>${details.Rn_crippling.toFixed(2)} kips</b>`,
                 `Governing Limit State = <b>${governing_limit_state}</b>`,
+                `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+            ]);
+            break;
+
+        case 'Web Sidesway Buckling':
+            content = format_list([
+                `Reference: <b>${reference}</b>`,
+                `h/t<sub>w</sub> = <b>${h_tw.toFixed(2)}</b>`,
+                `L<sub>b</sub>/b<sub>f</sub> = <b>${L_bf.toFixed(2)}</b>`,
+                `Coefficient (C<sub>r</sub>) from Table G4.1 = <b>${Cr.toFixed(0)}</b>`,
+                `Nominal Capacity (R<sub>n</sub>) = (C<sub>r</sub> * A<sub>w</sub> * F<sub>y</sub>) / (h/t<sub>w</sub>)² = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
             ]);
             break;
@@ -1532,22 +1576,20 @@ function renderSteelResults(results) {
                 <p class="mt-2">Please correct the errors and run the check again.</p>
             </div>`;
         return;
-    }
+    }    
 
-    const { inputs, properties, warnings, flexure, flexure_y, axial, shear, web_crippling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
+    const { inputs, properties, warnings, flexure, flexure_y, axial, shear, web_crippling, web_sidesway_buckling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
     const method = inputs.design_method;
     const Pu = Math.abs(inputs.Pu_or_Pa);
 
     let html = `
-        ${(results.errors && results.errors.length > 0) ? `
-            ` : `
         ${(warnings && warnings.length > 0) ? `
             <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
                 <p class="font-bold">Input Warnings:</p>
                 <ul class="list-disc list-inside mt-2">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
             </div>
         ` : ''}
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+        <div id="steel-check-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
             <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
             <div class="flex justify-end gap-2 -mt-2 -mr-2">
                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
@@ -1559,16 +1601,16 @@ function renderSteelResults(results) {
                 Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
             </div>
             <div"flex justify-between items-center">
-                <h2 class="report-header text-center flex-grow !mt-4">Steel Check Results (${inputs.aisc_standard})</h2>
+                <h2 class="report-title text-center">Steel Check Results (${inputs.aisc_standard})</h2>
             </div>
             ${renderInputSummary(inputs, properties)}
-            <table id="steel-check-summary" class="report-section-copyable mt-6">
+            <table id="steel-check-summary" class="report-section-copyable mt-6 results-table">
                 <caption class="report-caption">Summary of Design Checks (${method})</caption>
                 <thead><tr><th class="w-2/5">Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
                 <tbody>
                 </tbody>
             </table>
-        </div>`}
+        </div>
     `;
 
     // --- Dynamically build and inject the results table ---
@@ -1595,6 +1637,9 @@ function renderSteelResults(results) {
     if (combined_stress_H33 && combined_stress_H33.applicable) {
         checks['Combined Stresses (H3.3)'] = { demand: combined_stress_H33.ratio, capacity: 1.0, unit: 'ratio', data: { ...combined_stress_H33, check: combined_stress_H33 } };
     }
+    if (web_sidesway_buckling && web_sidesway_buckling.applicable) {
+        checks['Web Sidesway Buckling'] = { demand: Pu, capacity: web_sidesway_buckling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_sidesway_buckling, check: web_sidesway_buckling } };
+    }
     if (web_crippling && web_crippling.phiRn_or_Rn_omega) {
         checks['Web Crippling'] = { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling, details: web_crippling.details, reference: web_crippling.reference, governing_limit_state: web_crippling.governing_limit_state } };
     }
@@ -1617,7 +1662,7 @@ function renderSteelResults(results) {
         const demand_val = checkData.demand || 0;
         const capacity_val = checkData.capacity || 0;
         const ratio_val = ratio || 0;
-        const status = ratio_val <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
+        const status = ratio_val <= 1.0 ? '<span class="status-pass">Pass</span>' : '<span class="status-fail">Fail</span>';
         const breakdownHtml = generateSteelCheckBreakdownHtml(name, checkData.data, inputs);
 
         const rowHtml = `
