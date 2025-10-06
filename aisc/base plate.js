@@ -644,6 +644,32 @@ const basePlateCalculator = (() => {
     }
 
     /**
+     * Calculates the minimum required plate thickness for rigidity based on Thornton's method.
+     * This is a serviceability check to ensure the plate behaves as assumed (rigid).
+     * Reference: AISC Design Guide 1, 2nd Ed., Section 3.3.4 and Thornton's research.
+     * @param {object} inputs - The user inputs object.
+     * @param {object} bearing_results - The results from the concrete bearing check.
+     * @returns {object} An object with the minimum required thickness check.
+     */
+    function checkMinimumThickness(inputs, bearing_results) {
+        const { base_plate_length_N: N, base_plate_width_B: B, column_depth_d: d, column_flange_width_bf: bf, base_plate_Fy: Fy, provided_plate_thickness_tp: tp, design_method } = inputs;
+        const Pu_abs = Math.abs(bearing_results.details.Pu);
+
+        if (Pu_abs <= 0) {
+            // If there's no compression, Thornton's formula doesn't apply. Fallback to a common minimum.
+            return { demand: tp, check: { Rn: 0.25, phi: 1.0, omega: 1.0 }, details: { l: 0, t_min: 0.25, reason: "No compression load." } };
+        }
+
+        const m = (N - 0.95 * d) / 2.0;
+        const n = (B - 0.80 * bf) / 2.0;
+        const l = Math.max(m, n);
+
+        // Thornton's formula for minimum thickness for rigidity
+        const t_min = l * Math.sqrt((2 * Pu_abs) / (0.9 * Fy * B * N));
+        return { demand: tp, check: { Rn: t_min, phi: 1.0, omega: 1.0 }, details: { l, t_min, Pu_abs, B, N, Fy } };
+    }
+
+    /**
      * Calculates the coordinates of each anchor bolt relative to the centroid of the bolt group.
      * @param {object} inputs - The user inputs object.
      * @returns {Array<{x: number, z: number}>} An array of bolt coordinate objects.
@@ -1030,11 +1056,8 @@ const basePlateCalculator = (() => {
         if (web_checks?.error) return { errors: [web_checks.error], checks, geomChecks };
         Object.assign(checks, web_checks);
 
-        // Add minimum thickness check
-        checks['Minimum Plate Thickness'] = {
-            demand: inputs.provided_plate_thickness_tp,
-            check: { Rn: 0.25, phi: 1.0, omega: 1.0 } // Required is 0.25", capacity is provided
-        };
+        // Add minimum thickness check based on Thornton's formula
+        checks['Minimum Plate Thickness (Rigidity)'] = checkMinimumThickness(inputs, bearing_results);
 
         return { checks, geomChecks, inputs, warnings: validation.warnings };
     }
@@ -1062,7 +1085,7 @@ function renderBasePlateStrengthChecks(results) {
             const design_capacity = design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
  
             let ratio, demand_val, capacity_val;
-            if (name === 'Plate Bending' || name === 'Minimum Plate Thickness') {
+            if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
                 // For thickness, demand is provided, capacity is required. Ratio is req/prov.
                 demand_val = demand;             // provided tp
                 capacity_val = design_capacity; // required t_req
@@ -1569,10 +1592,15 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
                 `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
             break;
-        case 'Minimum Plate Thickness':
+        case 'Minimum Plate Thickness (Rigidity)':
+            if (details.Pu_abs <= 0) {
+                return `No compression load applied. A minimum thickness of <b>0.25 inches</b> is recommended for serviceability.`;
+            }
             content = format_list([
-                `A minimum plate thickness of <b>0.25 inches</b> is recommended for serviceability and to ensure rigid behavior.`,
-                `Provided thickness = <b>${inputs.provided_plate_thickness_tp} inches</b>.`
+                `<u>Required Minimum Thickness (t<sub>min</sub>) for Rigidity (Thornton's Method)</u>`,
+                `Cantilever (l) = max((N-0.95d)/2, (B-0.80b<sub>f</sub>)/2) = <b>${details.l.toFixed(3)} in</b>`,
+                `t<sub>min</sub> = l &times; &radic;[ (2 &times; P<sub>u</sub>) / (0.9 &times; F<sub>y</sub> &times; B &times; N) ]`,
+                `t<sub>min</sub> = ${details.l.toFixed(3)} &times; &radic;[ (2 &times; ${details.Pu_abs.toFixed(2)}) / (0.9 &times; ${details.Fy} &times; ${details.B} &times; ${details.N}) ] = <b>${check.Rn.toFixed(3)} in</b>`
             ]);
             break;
         default: return 'Breakdown not available.';

@@ -301,38 +301,83 @@ const steelChecker = (() => {
         return { phiMn_or_Mn_omega: 0 };
     }
 
-    function checkFlexure_IShape(props, inputs) {
+    // --- Refactored Flexure Limit State Functions for I-Shapes ---
+
+    function calculate_Mn_yield(Fy, Zx) {
+        // AISC F2.1: Yielding
+        return Fy * Zx;
+    }
+
+    function calculate_Mn_ltb(Mp, My, Lb, Lp, Lr, Cb, E, Sx, rts, J, d, tf, aisc_standard) {
+        // AISC F2.2: Lateral-Torsional Buckling (LTB)
+        if (Lb <= Lp) {
+            return Mp; // No LTB
+        }
+
+        if (Lb <= Lr) {
+            // Inelastic LTB (AISC F2-2)
+            const Mn = Cb * (Mp - (Mp - My) * ((Lb - Lp) / (Lr - Lp)));
+            return Math.min(Mn, Mp);
+        }
+
+        // Elastic LTB (AISC F2-3)
+        const ho = d - tf;
+        const c = 1.0; // for doubly symmetric I-shapes
+        const term1 = (Cb * Math.PI ** 2 * E) / Math.pow(Lb / rts, 2);
+        let term2;
+
+        if (aisc_standard === '360-22') {
+            // AISC 360-22 Eq. F2-4
+            const rt = rts; // For I-shapes
+            const term2_inner = 0.078 * (J / (Sx * ho)) * Math.pow(Lb / rt, 2);
+            term2 = Math.sqrt(1 + term2_inner);
+        } else { // AISC 360-16
+            const term2_inner = 0.078 * (J * c / (Sx * ho)) * Math.pow(Lb / rts, 2);
+            term2 = Math.sqrt(1 + term2_inner);
+        }
+
+        const Fcr = term1 * term2;
+        const Mn = Fcr * Sx;
+        return Math.min(Mn, Mp);
+    }
+
+    function calculate_Mn_flb(Mp, My, lambda_f, lambda_p_f, lambda_r_f, E, Sx) {
+        // AISC F3.2: Flange Local Buckling (FLB)
+        if (lambda_f <= lambda_p_f) {
+            return Mp; // Compact flange
+        }
+
+        if (lambda_f <= lambda_r_f) {
+            // Noncompact flange (AISC F3-1)
+            const ratio = (lambda_f - lambda_p_f) / (lambda_r_f - lambda_p_f);
+            return Mp - (Mp - My) * ratio;
+        }
+
+        // Slender flange (AISC F3-2)
+        const kc = 4 / Math.sqrt(lambda_f); // h/tw is not correct here, lambda_f is bf/2tf
+        const kc_lim = Math.max(0.35, Math.min(0.76, kc));
+        const Fcr_flb = (0.9 * E * kc_lim) / Math.pow(lambda_f, 2);
+        return Fcr_flb * Sx;
+    }
+
+    function checkFlexure_IShape(props, inputs, isHighShear = false) {
         const { Fy, E, Cb, Lb_input, K, aisc_standard } = inputs;
         const { Zx, Sx, rts, h, J, Cw, tw, bf, tf, d } = props;
         const Lb = Lb_input * 12; // to inches
 
-        const phi_b = 0.9;
-        const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
-
-        // Slenderness checks
+        // --- Slenderness Checks (AISC B4) ---
         const lambda_f = bf / (2 * tf);
         const lambda_p_f = 0.38 * Math.sqrt(E / Fy);
         const lambda_r_f = 1.0 * Math.sqrt(E / Fy);
-        const isFlangeCompact = lambda_f <= lambda_p_f;
-
         const lambda_w = h / tw;
         const lambda_p_w = 3.76 * Math.sqrt(E / Fy);
         const lambda_r_w = 5.70 * Math.sqrt(E / Fy);
-        const isWebCompact = lambda_w <= lambda_p_w;
+        const isCompact = (lambda_f <= lambda_p_f) && (lambda_w <= lambda_p_w);
 
-        const isCompact = isFlangeCompact && isWebCompact; // Section is compact if both flange and web are compact
-        const isWebSlender = lambda_w > lambda_r_w; // Used for F5 check
-        // --- Limit States ---
-        // 1. Yielding (AISC F2.1)
-        let Mp = Fy * Zx;
-        const Mn_yield = Mp;
-
-        // 2. Lateral-Torsional Buckling (LTB) (AISC F2.2)
+        // --- LTB Parameters (AISC F2) ---
         const Lp = 1.76 * rts * Math.sqrt(E / Fy); // F2-5
         let Lr;
         if (aisc_standard === '360-22') {
-            // AISC 360-22 Eq. F2-6
             const ho = d - tf;
             const term1 = J / (Sx * ho);
             const term2 = Math.pow(term1, 2);
@@ -340,67 +385,38 @@ const steelChecker = (() => {
             Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(term1 + Math.sqrt(term2 + term3));
         } else { // AISC 360-16
             const ho = d - tf;
-            const c = 1.0;
-            const term_inside_sqrt = Math.pow(J * c / (Sx * ho), 2) + 6.76 * Math.pow(0.7 * Fy / E, 2);
-            Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(J * c / (Sx * ho) + Math.sqrt(term_inside_sqrt));
+            const term_inside_sqrt = Math.pow(J * 1.0 / (Sx * ho), 2) + 6.76 * Math.pow(0.7 * Fy / E, 2);
+            Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(J * 1.0 / (Sx * ho) + Math.sqrt(term_inside_sqrt));
         }
 
-        let Mn_ltb;
-        if (Lb <= Lp) {
-            Mn_ltb = Mp; // No LTB
-        } else if (Lb <= Lr) {
-            // AISC F2-2: Inelastic LTB
-            Mn_ltb = Cb * (Mp - (Mp - 0.7 * Fy * Sx) * ((Lb - Lp) / (Lr - Lp)));
-            Mn_ltb = Math.min(Mn_ltb, Mp);
-        } else {
-            // AISC F2-3: Elastic LTB
-            const ho = d - tf; const c = 1.0;
-            const term1 = (Cb * Math.PI**2 * E) / Math.pow(Lb / rts, 2);
-            const term2 = Math.sqrt(1 + 0.078 * (J * c / (Sx * ho)) * Math.pow(Lb / rts, 2));
-            const Fcr = term1 * term2;
-            Mn_ltb = Math.min(Fcr * Sx, Mp);
-        }
-
-        // 3. Flange Local Buckling (FLB) (AISC F3.2)
-        let Mn_flb;
+        // --- Calculate Nominal Capacities for Each Limit State ---
+        const Mp = calculate_Mn_yield(Fy, Zx);
         const My = Fy * Sx;
-        const kc = 4 / Math.sqrt(h / tw);
-        const kc_lim = Math.max(0.35, Math.min(0.76, kc));
-        const lambda_r_f_kc = 0.95 * Math.sqrt(E / (kc_lim * Fy)); // Updated for accuracy per AISC
-
-        if (isFlangeCompact) {
-            Mn_flb = Mp;
-        } else if (lambda_f <= lambda_r_f_kc) {
-            // Noncompact flange - F3-1
-            const ratio = (lambda_f - lambda_p_f) / (lambda_r_f_kc - lambda_p_f);
-            Mn_flb = Mp - (Mp - 0.7 * Fy * Sx) * ratio;
-        } else {
-            // Slender flange - F3-2
-            const Fcr_flb = (0.9 * E * kc_lim) / Math.pow(lambda_f, 2);
-            Mn_flb = Fcr_flb * Sx;
-        }
-
-        // 4. Web Local Buckling (WLB) (AISC F4)
-        const Mn_wlb = checkWebLocalBuckling(props, inputs, Mp, My);
-
-        // 5. Compression Flange Yielding (for slender webs, AISC F5)
-        let Mn_cfy = Infinity;
         let Rpg = 1.0;
-        if (isWebSlender) {
-            Mn_cfy = checkSlenderWebFlexure(props, inputs, Mp, My);
-            // Adjust Mp for slender web sections per F5.3
-            Mp = Math.min(Fy * Zx, Mn_cfy);
-        }
 
         const limit_states = {
-            'Yielding (F2.1)': Mn_yield,
-            'Lateral-Torsional Buckling (F2.2)': Mn_ltb,
-            'Flange Local Buckling (F3)': Mn_flb,
-            'Web Local Buckling (F4)': Mn_wlb,
-            'Compression Flange Yielding (F5)': Mn_cfy
+            'Yielding (F2.1)': Mp,
+            'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(Mp, My, Lb, Lp, Lr, Cb, E, Sx, rts, J, d, tf, aisc_standard),
+            'Flange Local Buckling (F3)': calculate_Mn_flb(Mp, My, lambda_f, lambda_p_f, lambda_r_f, E, Sx),
+            'Web Local Buckling (F4)': checkWebLocalBuckling(props, inputs, Mp, My),
+            'Compression Flange Yielding (F5)': (lambda_w > lambda_r_w) ? checkSlenderWebFlexure(props, inputs, Mp, My) : Infinity,
         };
 
-        const Mn = Math.min(...Object.values(limit_states));
+        let Mn = Math.min(...Object.values(limit_states));
+
+        // --- G2.1: Interaction of Flexure and Shear for I-Shapes ---
+        // This reduction applies when Vu > 0.6 * phi_v * Vy
+        let R_pv = 1.0; // Reduction factor for high shear
+        if (isHighShear) {
+            const Aw = d * tw;
+            const h_tw = h / tw;
+            const limit = 1.10 * Math.sqrt(E / Fy); // Simplified limit from G2.1
+            if (h_tw <= limit) {
+                const Cvx = 1.0; // Assuming Cv1 from G2.1 is 1.0
+                R_pv = (1 - (0.6 * inputs.Vu_or_Va) / (0.6 * Fy * Aw * Cvx));
+                Mn *= R_pv;
+            }
+        }
 
         let governing_limit_state = '';
         for (const [name, value] of Object.entries(limit_states)) {
@@ -410,11 +426,14 @@ const steelChecker = (() => {
             }
         }
 
+        const phi_b = 0.9;
+        const omega_b = 1.67;
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
         const phiMn_or_Mn_omega = Mn * factor;
 
         return {
             phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, // Corrected to kip-ft (from kip-in)
-            isCompact, Mn, Lb, Lp, Lr, Rpg, governing_limit_state,
+            isCompact, Mn, Lb, Lp, Lr, Rpg, R_pv, governing_limit_state,
             reference: "AISC F2, F3, F4, F5",
             slenderness: { lambda_f, lambda_p_f, lambda_r_f, lambda_w, lambda_p_w, lambda_r_w }
         };
@@ -1297,6 +1316,8 @@ const steelChecker = (() => {
 
     function run(inputs) {
         // Post-process inputs gathered by the generic function
+        inputs.Fy = parseFloat(inputs.Fy) || 0;
+        inputs.Fu = parseFloat(inputs.Fu) || 0;
         inputs.is_end_bearing = inputs.is_end_bearing === 'true';
         inputs.An_net = inputs.Ag_manual; // Assume full beam net area
         inputs.U_shear_lag = 1.0; // Assume full beam shear lag factor
@@ -1309,6 +1330,18 @@ const steelChecker = (() => {
 
         // Pass the processed inputs to the property calculator
         const props = getSectionProperties(inputs); 
+
+        // --- Shear and Flexure Interaction (AISC Chapter G) ---
+        // 1. First, calculate shear capacity to determine if it's "high shear".
+        const shear_results = checkShear(props, inputs);
+        const Aw = props.d * props.tw;
+        const Vy = 0.6 * inputs.Fy * Aw; // Nominal shear yield strength
+        const phi_v = shear_results.phi || 0.9;
+        const omega_v = shear_results.omega || 1.67;
+        const shear_yield_capacity = inputs.design_method === 'LRFD' ? phi_v * Vy : Vy / omega_v;
+        
+        // 2. Check if shear demand exceeds 60% of the shear yield capacity.
+        const isHighShear = Math.abs(inputs.Vu_or_Va) > 0.6 * shear_yield_capacity;
 
         // Enhanced checks
         // const hss_local_buckling = checkHSSLocalBuckling(props, inputs);
@@ -1324,8 +1357,8 @@ const steelChecker = (() => {
             axial_results.type = 'Compression';
         }
 
-        const flex_results = checkFlexure(props, inputs);
-        const shear_results = checkShear(props, inputs);
+        // 3. Pass the isHighShear flag to the flexure check.
+        const flex_results = checkFlexure(props, inputs, isHighShear);
 
         const web_sidesway_buckling = checkWebSideswayBuckling(props, inputs);
         // Only include web crippling results if the check is applicable
@@ -1398,7 +1431,7 @@ const baseSteelBreakdownGenerators = {
                 `<u>Nominal Capacity (P<sub>n</sub>)</u>`,
                 `P<sub>n</sub> = F<sub>cr</sub> &times; A<sub>g</sub> = ${common.fmt(check.Fcr)} ksi &times; ${common.fmt(properties.Ag, 2)} in² = <b>${common.fmt(check.Pn)} kips</b>`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${common.capacity_eq} = ${common.fmt(check.Pn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+                `Capacity = ${common.capacity_eq} = ${common.fmt(check.Pn)} / ${common.factor_val} = <b>${common.fmt(check.phiPn_or_Pn_omega)} kips</b>`
             ]);
         }
     },
@@ -1416,6 +1449,11 @@ const baseSteelBreakdownGenerators = {
                 `<u>Nominal Capacity (M<sub>n</sub>)</u>`,
                 `M<sub>n</sub> = <b>${common.fmt(check.Mn)} kip-in</b> = <b>${common.fmt(check.Mn / 12)} kip-ft</b>`,
                 `Governing Limit State = <b>${check.governing_limit_state || 'N/A'}</b>`,
+                (check.R_pv && check.R_pv < 1.0) ? `
+                    <hr class="my-2">
+                    <b class="text-yellow-600">High Shear Reduction (AISC G2.1):</b><br>
+                    Shear demand exceeds 60% of shear yield capacity. Flexural strength is reduced by R<sub>pv</sub> = <b>${common.fmt(check.R_pv, 3)}</b>.
+                ` : '',
                 `<u>Design Capacity</u>`,
                 `Capacity = ${common.capacity_eq.replace('R', 'M')} = ${common.fmt(check.Mn / 12)} / ${common.factor_val} = <b>${common.fmt(check.phiMn_or_Mn_omega)} kip-ft</b>`
             ].filter(Boolean));
@@ -1442,7 +1480,7 @@ const baseSteelBreakdownGenerators = {
                 `V<sub>n</sub> = F<sub>cr</sub> &times; ${area_label} = <b>${common.fmt(check.Vn)} kips</b>`,
                 `Governing Limit State = <b>${check.governing_limit_state || 'N/A'}</b>`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${common.capacity_eq.replace('R', 'V')} = ${common.fmt(check.Vn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+                `Capacity = ${common.capacity_eq.replace('R', 'V')} = ${common.fmt(check.Vn)} / ${common.factor_val} = <b>${common.fmt(check.phiVn_or_Vn_omega)} kips</b>`
             ]);
         } else { // I-Shape
             const Aw = properties.d * properties.tw;
@@ -1452,7 +1490,7 @@ const baseSteelBreakdownGenerators = {
                 `V<sub>n</sub> = 0.6 &times; F<sub>y</sub> &times; A<sub>w</sub> &times; C<sub>v</sub> = 0.6 &times; ${common.fmt(common.inputs.Fy)} &times; ${common.fmt(Aw)} &times; ${common.fmt(check.Cv, 3)} = <b>${common.fmt(check.Vn)} kips</b>`,
                 `Governing Limit State = <b>${check.governing_limit_state || 'N/A'}</b>`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${common.capacity_eq.replace('R', 'V')} = ${common.fmt(check.Vn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+                `Capacity = ${common.capacity_eq.replace('R', 'V')} = ${common.fmt(check.Vn)} / ${common.factor_val} = <b>${common.fmt(check.phiVn_or_Vn_omega)} kips</b>`
             ]);
         }
     },
@@ -1579,6 +1617,98 @@ function renderInputSummary(inputs, properties) {
     </div>`;
 }
 
+function renderSlendernessChecks(results) {
+    const { inputs, flexure, properties } = results;
+    if (!flexure || !flexure.slenderness) {
+        return '';
+    }
+
+    const { slenderness } = flexure;
+    const { section_type } = inputs;
+    const rows = [];
+
+    const addRow = (item, ratio, limit_p, limit_r, status) => {
+        rows.push(`
+            <tr>
+                <td>${item}</td>
+                <td>${ratio.toFixed(2)}</td>
+                <td>${limit_p.toFixed(2)}</td>
+                <td>${limit_r.toFixed(2)}</td>
+                <td class="font-semibold ${status === 'Compact' ? 'text-green-600' : (status === 'Noncompact' ? 'text-yellow-600' : 'text-red-600')}">${status}</td>
+            </tr>
+        `);
+    };
+
+    if (section_type === 'I-Shape' || section_type === 'channel') {
+        const flange_status = slenderness.lambda_f <= slenderness.lambda_p_f ? 'Compact' : (slenderness.lambda_f <= slenderness.lambda_r_f ? 'Noncompact' : 'Slender');
+        const web_status = slenderness.lambda_w <= slenderness.lambda_p_w ? 'Compact' : (slenderness.lambda_w <= slenderness.lambda_r_w ? 'Noncompact' : 'Slender');
+        addRow(`Flange (b<sub>f</sub>/2t<sub>f</sub>)`, slenderness.lambda_f, slenderness.lambda_p_f, slenderness.lambda_r_f, flange_status);
+        addRow(`Web (h/t<sub>w</sub>)`, slenderness.lambda_w, slenderness.lambda_p_w, slenderness.lambda_r_w, web_status);
+    } else if (section_type === 'Rectangular HSS') {
+        const status = slenderness.lambda <= slenderness.lambda_p ? 'Compact' : (slenderness.lambda <= slenderness.lambda_r ? 'Noncompact' : 'Slender');
+        addRow(`Flange/Web (h/t)`, slenderness.lambda, slenderness.lambda_p, slenderness.lambda_r, status);
+    } else if (section_type === 'HSS/Pipe (Circular)') {
+        const status = slenderness.lambda <= slenderness.lambda_p ? 'Compact' : (slenderness.lambda <= slenderness.lambda_r ? 'Noncompact' : 'Slender');
+        addRow(`Wall (D/t)`, slenderness.lambda, slenderness.lambda_p, slenderness.lambda_r, status);
+    }
+
+    return `
+    <div id="slenderness-checks-section" class="report-section-copyable mt-6">
+        <div class="flex justify-between items-center">
+            <h3 class="report-header">2. Slenderness Checks (AISC B4)</h3>
+            <button data-copy-target-id="slenderness-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
+            <table class="w-full mt-2 results-table">
+                <caption class="report-caption">Element Slenderness for Flexure</caption>
+                <thead>
+                    <tr>
+                        <th>Element</th>
+                        <th>Ratio (&lambda;)</th>
+                        <th>&lambda;<sub>p</sub> (Compact)</th>
+                        <th>&lambda;<sub>r</sub> (Noncompact)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>${rows.join('')}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function renderLtbParameters(results) {
+    const { inputs, flexure } = results;
+    // This section is only relevant for shapes susceptible to LTB, like I-shapes and channels.
+    if (!flexure || !['I-Shape', 'channel'].includes(inputs.section_type)) {
+        return '';
+    }
+
+    const { Lb, Lp, Lr } = flexure;
+    const { Cb, Lb_input } = inputs;
+
+    const rows = [
+        `<tr><td>Unbraced Length (L<sub>b</sub>)</td><td>${Lb_input.toFixed(2)} ft (${Lb.toFixed(2)} in)</td><td>User Input</td></tr>`,
+        `<tr><td>Limiting Length for Yielding (L<sub>p</sub>)</td><td>${(Lp / 12).toFixed(2)} ft (${Lp.toFixed(2)} in)</td><td>AISC Eq. F2-5</td></tr>`,
+        `<tr><td>Limiting Length for Inelastic LTB (L<sub>r</sub>)</td><td>${(Lr / 12).toFixed(2)} ft (${Lr.toFixed(2)} in)</td><td>AISC Eq. F2-6</td></tr>`,
+        `<tr><td>LTB Modification Factor (C<sub>b</sub>)</td><td>${Cb.toFixed(3)}</td><td>User Input / AISC F1</td></tr>`
+    ];
+
+    return `
+    <div id="ltb-parameters-section" class="report-section-copyable mt-6">
+        <div class="flex justify-between items-center">
+            <h3 class="report-header">3. LTB Parameters (AISC F2)</h3>
+            <button data-copy-target-id="ltb-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
+            <table class="w-full mt-2 summary-table">
+                <caption class="report-caption">Lateral-Torsional Buckling Parameters</caption>
+                <thead><tr><th>Parameter</th><th>Value</th><th>Reference</th></tr></thead>
+                <tbody>${rows.join('')}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
 function renderSteelStrengthChecks(results) {
     const { inputs, properties, flexure, axial, shear, web_crippling, web_sidesway_buckling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
     const method = inputs.design_method;
@@ -1673,7 +1803,7 @@ function renderSteelStrengthChecks(results) {
 
     return createReportTable({
         id: 'steel-check-summary',
-        caption: `2. Summary of Design Checks (${method})`,
+        caption: `4. Summary of Design Checks (${method})`,
         headers: ['Limit State', 'Demand', 'Capacity', 'Ratio', 'Status'],
         rows: rows
     });
@@ -1718,6 +1848,8 @@ function renderSteelResults(results) {
                 Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
             </div>
             ${renderInputSummary(inputs, properties)}
+            ${renderSlendernessChecks(results)}
+            ${renderLtbParameters(results)}
             ${renderSteelStrengthChecks(results)}
         </div>`;
 
