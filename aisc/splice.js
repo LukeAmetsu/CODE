@@ -1,165 +1,152 @@
-let flangeEngine, flangeScene;
-let webEngine, webScene;
+// --- Global variables for the 3D scene ---
+let bjsEngine, bjsScene, bjsGuiTexture;
 
 /**
- * Factory function to create a 3D diagram drawer using Babylon.js.
- * @param {object} config - Configuration for the 3D scene.
- * @returns {function} A function that draws the configured 3D diagram.
+ * Draws an interactive 3D visualization of the splice connection using Babylon.js.
  */
-function create3dDiagramDrawer(config) {
-    let engine, scene;
+function draw3dSpliceDiagram() {
+    const canvas = document.getElementById("splice-3d-canvas");
+    if (!canvas || typeof BABYLON === 'undefined') return;
 
-    return function() {
-        const canvas = document.getElementById(config.canvasId);
-        if (!canvas || typeof BABYLON === 'undefined') return;
+    // --- 1. Gather Inputs ---
+    const inputs = gatherInputsFromIds(inputIds);
+    const isDarkMode = document.documentElement.classList.contains('dark');
 
-        const getVal = id => parseFloat(document.getElementById(id)?.value) || 0;
-        const inputs = {};
-        config.inputIds.forEach(id => {
-            inputs[id] = getVal(id);
+    // --- 2. Initialize Scene (if needed) ---
+    if (!bjsEngine) {
+        bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        bjsScene = new BABYLON.Scene(bjsEngine);
+        bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
+
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.2, Math.PI / 2.5, 50, BABYLON.Vector3.Zero(), bjsScene);
+        camera.attachControl(canvas, true);
+        camera.lowerRadiusLimit = 10;
+        camera.upperRadiusLimit = 400;
+
+        bjsEngine.runRenderLoop(() => {
+            if (bjsScene.isReady()) {
+                bjsScene.render();
+            }
         });
+        window.addEventListener('resize', () => bjsEngine.resize());
+    }
 
-        // --- Initialize Scene (only once) ---
-        if (!engine) {
-            engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
-            scene = new BABYLON.Scene(engine);
-            const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, config.cameraRadius, BABYLON.Vector3.Zero(), scene);
-            camera.attachControl(canvas, true);
-            camera.lowerRadiusLimit = 10;
-            camera.upperRadiusLimit = 200;
+    // --- Clear previous elements ---
+    bjsScene.meshes.forEach(mesh => mesh.dispose());
+    bjsScene.lights.forEach(light => light.dispose());
+    bjsGuiTexture.getChildren().forEach(control => control.dispose());
 
-            engine.runRenderLoop(() => scene.render());
-            window.addEventListener('resize', () => engine.resize());
+
+    // --- 3. Lighting & Materials ---
+    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.25), bjsScene);
+    light.intensity = 1.0;
+
+    const memberMaterial = new BABYLON.PBRMaterial("memberMat", bjsScene);
+    memberMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#2c5282" : "#36454F");
+    memberMaterial.metallic = 0.8;
+    memberMaterial.roughness = 0.6;
+
+    const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
+    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#4a5568" : "#A8A8A8");
+    plateMaterial.metallic = 0.7;
+    plateMaterial.roughness = 0.5;
+
+    const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
+    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#718096" : "#C0C0C0");
+    boltMaterial.metallic = 0.9;
+    boltMaterial.roughness = 0.4;
+
+    // --- 4. Geometry Creation ---
+
+    // Function to create a single I-beam member
+    const createBeamMember = (name, length) => {
+        const { member_d: d, member_bf: bf, member_tf: tf, member_tw: tw } = inputs;
+        const topFlange = BABYLON.MeshBuilder.CreateBox(`${name}_tf`, { width: bf, height: tf, depth: length }, bjsScene);
+        topFlange.position.y = (d - tf) / 2;
+        const botFlange = BABYLON.MeshBuilder.CreateBox(`${name}_bf`, { width: bf, height: tf, depth: length }, bjsScene);
+        botFlange.position.y = -(d - tf) / 2;
+        const web = BABYLON.MeshBuilder.CreateBox(`${name}_web`, { width: tw, height: d - 2 * tf, depth: length }, bjsScene);
+        const member = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
+        if (member) {
+            member.material = memberMaterial;
         }
-
-        // --- Clear and Re-setup Scene ---
-        scene.meshes.forEach(mesh => mesh.dispose());
-        scene.lights.forEach(light => light.dispose());
-
-        const isDarkMode = document.documentElement.classList.contains('dark');
-        scene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
-        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.25), scene);
-        light.intensity = 1.0;
-
-        // --- Materials ---
-        const memberMaterial = new BABYLON.PBRMaterial("memberMat", scene);
-        memberMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#2c5282" : "#36454F");
-        memberMaterial.metallic = 0.7;
-        memberMaterial.roughness = 0.5;
-
-        const plateMaterial = new BABYLON.PBRMaterial("plateMat", scene);
-        plateMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#4a5568" : "#A8A8A8");
-        plateMaterial.metallic = 0.8;
-        plateMaterial.roughness = 0.6;
-
-        const boltMaterial = new BABYLON.PBRMaterial("boltMat", scene);
-        boltMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#718096" : "#C0C0C0");
-        boltMaterial.metallic = 0.9;
-        boltMaterial.roughness = 0.4;
-
-        // --- Create Meshes ---
-        config.drawMeshes(scene, inputs, { memberMaterial, plateMaterial, boltMaterial });
+        return member;
     };
+
+    const beamLength = Math.max(inputs.L_fp, inputs.L_wp, 24);
+    const beam1 = createBeamMember("beam1", beamLength);
+    beam1.position.z = -(inputs.gap / 2 + beamLength / 2);
+
+    const beam2 = createBeamMember("beam2", beamLength);
+    beam2.position.z = (inputs.gap / 2 + beamLength / 2);
+
+    // --- Splice Plates ---
+    // Flange Plates
+    const outerFlangePlate = BABYLON.MeshBuilder.CreateBox("outer_fp", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
+    outerFlangePlate.material = plateMaterial;
+    outerFlangePlate.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
+
+    if (inputs.num_flange_plates === 2) {
+        const innerFlangePlate = BABYLON.MeshBuilder.CreateBox("inner_fp", { width: inputs.H_fp_inner, height: inputs.t_fp_inner, depth: inputs.L_fp_inner }, bjsScene);
+        innerFlangePlate.material = plateMaterial;
+        innerFlangePlate.position.y = inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2;
+    }
+    
+    // Web Plates
+    for (let i = 0; i < inputs.num_web_plates; i++) {
+        const webPlate = BABYLON.MeshBuilder.CreateBox(`wp_${i}`, { width: inputs.t_wp, height: inputs.H_wp, depth: inputs.L_wp }, bjsScene);
+        webPlate.material = plateMaterial;
+        const offset = (inputs.member_tw / 2 + inputs.t_wp / 2) * (i === 0 ? 1 : -1);
+        webPlate.position.x = offset;
+    }
+
+    // --- Bolts ---
+    const createBoltArray = (params) => {
+        const { D, L, Nc, Nr, S_col, S_row, S_end, gage, y_pos, thickness_to_penetrate } = params;
+        const boltLength = thickness_to_penetrate + 1.5 * D; // Bolt length
+        const headHeight = 0.6 * D;
+
+        for (let side = -1; side <= 1; side += 2) { // Left and right side of the gap
+            for (let i = 0; i < Nc; i++) {
+                const z_pos = side * (inputs.gap / 2 + S_end + i * S_col);
+                for (let j = 0; j < Nr; j++) {
+                    const x_pos_base = gage / 2 + j * S_row;
+                    // Bolts on both sides of the centerline for flanges
+                    const x_positions = gage > 0 ? [-x_pos_base, x_pos_base] : [0];
+                     for (const x_pos of x_positions) {
+                        const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${i}_${j}_${side}`, { diameter: D, height: boltLength }, bjsScene);
+                        bolt.material = boltMaterial;
+                        bolt.position = new BABYLON.Vector3(x_pos, y_pos, z_pos);
+                        bolt.rotation.z = Math.PI / 2;
+                     }
+                }
+            }
+        }
+    };
+    
+    // Flange Bolts
+    createBoltArray({
+        D: inputs.D_fp, L: inputs.L_fp, Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S_col: inputs.S1_col_spacing_fp,
+        S_row: inputs.S2_row_spacing_fp, S_end: inputs.S3_end_dist_fp, gage: inputs.g_gage_fp,
+        y_pos: inputs.member_d / 2, thickness_to_penetrate: inputs.t_fp + inputs.member_tf
+    });
+
+    // Web Bolts
+    createBoltArray({
+        D: inputs.D_wp, L: inputs.L_wp, Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S_col: inputs.S4_col_spacing_wp,
+        S_row: inputs.S5_row_spacing_wp, S_end: inputs.S6_end_dist_wp, gage: 0,
+        y_pos: 0, thickness_to_penetrate: inputs.member_tw + inputs.num_web_plates * inputs.t_wp
+    });
+    
+    // Auto-fit camera
+    if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
+        const allMeshes = bjsScene.meshes;
+        const boundingInfo = BABYLON.BoundingInfo.Merge(allMeshes.map(m => m.getBoundingInfo()));
+        bjsScene.activeCamera.setTarget(boundingInfo.boundingSphere.center);
+        bjsScene.activeCamera.radius = boundingInfo.boundingSphere.radius * 2.5;
+    }
 }
-
-const draw3dFlangeDiagram = create3dDiagramDrawer({
-    canvasId: 'flange-3d-canvas',
-    cameraRadius: 60,
-    inputIds: ['H_fp', 't_fp', 'L_fp', 'member_bf', 'member_tf', 'gap', 'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp', 'D_fp'],
-    drawMeshes: (scene, i, materials) => {
-        const { H_fp, t_fp, L_fp, member_bf, member_tf, gap, Nc_fp, Nr_fp, S1_col_spacing_fp, S2_row_spacing_fp, S3_end_dist_fp, g_gage_fp, D_fp } = i;
-
-        // Member Flanges
-        const flangeLeft = BABYLON.MeshBuilder.CreateBox("flangeL", { width: member_bf, height: member_tf, depth: 20 }, scene);
-        flangeLeft.material = materials.memberMaterial;
-        flangeLeft.position.z = -(gap / 2 + 10);
-
-        const flangeRight = flangeLeft.clone("flangeR");
-        flangeRight.position.z = gap / 2 + 10;
-
-        // Splice Plate
-        const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: H_fp, height: t_fp, depth: L_fp }, scene);
-        plate.material = materials.plateMaterial;
-        plate.position.y = (t_fp + member_tf) / 2;
-
-        // Bolts
-        const boltLength = t_fp + member_tf + D_fp;
-        const startX = -(g_gage_fp / 2 + (Nr_fp > 1 ? (Nr_fp - 1) * S2_row_spacing_fp : 0));
-        const startZ = -(gap / 2 + S3_end_dist_fp + (Nc_fp > 1 ? (Nc_fp - 1) * S1_col_spacing_fp : 0));
-
-        for (let side of [-1, 1]) { // Left/Right of gap
-            for (let r = 0; r < Nr_fp; r++) { // Rows from gage
-                for (let c = 0; c < Nc_fp; c++) { // Columns from gap
-                    const bolt = BABYLON.MeshBuilder.CreateCylinder("bolt", { diameter: D_fp, height: boltLength }, scene);
-                    bolt.material = materials.boltMaterial;
-                    bolt.rotation.x = Math.PI / 2;
-
-                    const xPos = startX + r * S2_row_spacing_fp;
-                    const zPos = side * (gap / 2 + S3_end_dist_fp + c * S1_col_spacing_fp);
-
-                    // Create bolts on both sides of the flange centerline
-                    const bolt1 = bolt.clone();
-                    bolt1.position = new BABYLON.Vector3(xPos, (t_fp - member_tf) / 2, zPos);
-                    const bolt2 = bolt.clone();
-                    bolt2.position = new BABYLON.Vector3(-xPos, (t_fp - member_tf) / 2, zPos);
-                }
-            }
-        }
-    }
-});
-
-const draw3dWebDiagram = create3dDiagramDrawer({
-    canvasId: 'web-3d-canvas',
-    cameraRadius: 80,
-    inputIds: ['H_wp', 't_wp', 'L_wp', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp'],
-    drawMeshes: (scene, i, materials) => {
-        const { H_wp, t_wp, L_wp, member_d, member_bf, member_tf, member_tw, gap, Nc_wp, Nr_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp, D_wp } = i;
-
-        // --- Member (I-beam) ---
-        const createMemberHalf = (side) => {
-            const flange_y = (member_d - member_tf) / 2;
-            const topFlange = BABYLON.MeshBuilder.CreateBox(`tf_${side}`, { width: member_bf, height: member_tf, depth: 20 }, scene);
-            topFlange.position.y = flange_y;
-            const botFlange = topFlange.clone(`bf_${side}`);
-            botFlange.position.y = -flange_y;
-            const web = BABYLON.MeshBuilder.CreateBox(`web_${side}`, { width: member_tw, height: member_d - 2 * member_tf, depth: 20 }, scene);
-            const memberHalf = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
-            if (memberHalf) {
-                memberHalf.material = materials.memberMaterial;
-                memberHalf.position.z = side * (gap / 2 + 10);
-            }
-            return memberHalf;
-        };
-        createMemberHalf(-1); // Left
-        createMemberHalf(1);  // Right
-
-        // --- Web Splice Plates ---
-        const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: t_wp, height: H_wp, depth: L_wp }, scene);
-        plate.material = materials.plateMaterial;
-        plate.position.x = (member_tw + t_wp) / 2;
-        const plate2 = plate.clone("plate2");
-        plate2.position.x = -(member_tw + t_wp) / 2;
-
-        // --- Bolts ---
-        const boltLength = member_tw + 2 * t_wp + D_wp;
-        const startY = -((Nr_wp - 1) * S5_row_spacing_wp) / 2;
-
-        for (let side of [-1, 1]) { // Left/Right of gap
-            for (let r = 0; r < Nr_wp; r++) { // Rows
-                for (let c = 0; c < Nc_wp; c++) { // Columns
-                    const bolt = BABYLON.MeshBuilder.CreateCylinder("bolt", { diameter: D_wp, height: boltLength }, scene);
-                    bolt.material = materials.boltMaterial;
-                    bolt.rotation.z = Math.PI / 2;
-
-                    const yPos = startY + r * S5_row_spacing_wp;
-                    const zPos = side * (gap / 2 + S6_end_dist_wp + c * S4_col_spacing_wp);
-                    bolt.position = new BABYLON.Vector3(0, yPos, zPos);
-                }
-            }
-        }
-    }
-});
-
 // --- Main Calculator Logic (DOM interaction and event handling) ---
 const spliceCalculator = (() => {
     // --- PRIVATE HELPER & CALCULATION FUNCTIONS ---
@@ -1760,8 +1747,7 @@ document.addEventListener('DOMContentLoaded', () => {
         storageKey: 'splice-inputs',
         validationRuleKey: 'splice',
         calculatorFunction: (rawInputs) => {
-            drawFlangeDiagram();
-            drawWebDiagram();
+            draw3dSpliceDiagram(); // Add this call
             const results = spliceCalculator.run(rawInputs);
             if (results.inputs.develop_capacity_check) {
                 document.getElementById('M_load').value = results.final_loads.M_load.toFixed(2);
@@ -1845,12 +1831,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const flangeInputsToWatch = ['H_fp', 't_fp', 'L_fp', 'member_bf', 'member_tf', 'gap', 'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp', 'D_fp'];
-    flangeInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', draw3dFlangeDiagram));
+    // Add listeners for the 3D diagram
+    const allInputsToWatch = [...inputIds]; // Or a more specific list
+    allInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', draw3dSpliceDiagram));
 
-    const webInputsToWatch = ['H_wp', 't_wp', 'L_wp', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp'];
-    webInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', draw3dWebDiagram));
-
-    draw3dFlangeDiagram();
-    draw3dWebDiagram();
+    // Initial draw
+    draw3dSpliceDiagram();
 });

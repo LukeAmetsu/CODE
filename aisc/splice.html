@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AISC Splice Connection Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -269,16 +271,9 @@
             <div class="hidden lg:block lg:w-1/2">
                 <div class="sticky top-8">
                     <div class="form-section mt-6 lg:mt-0">
-                        <h2>Splice Diagrams</h2>
-                        <div class="grid grid-cols-1 gap-4">
-                            <div>
-                                <h3 class="text-center font-semibold">Flange Splice (Top View)</h3>
-                                <div class="diagram"><svg id="flange-svg" viewBox="0 0 500 250" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg"></svg></div>
-                            </div>
-                            <div>
-                                <h3 class="text-center font-semibold">Web Splice (Elevation)</h3>
-                                <div class="diagram"><svg id="web-svg" viewBox="0 0 500 300" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg"></svg></div>
-                            </div>
+                        <h2>Splice Diagram</h2>
+                        <div class="diagram">
+                            <canvas id="splice-3d-canvas" class="w-full h-[600px]"></canvas>
                         </div>
                     </div>
                 </div>
