@@ -687,8 +687,8 @@ function gatherInputsFromIds(inputIds) { // Updated for better validation
         if (el) {
             let value;
             if (el.type === 'number') {
-                value = parseFloat(el.value);
-                inputs[id] = value; // Keep NaN to be handled by validation
+                value = parseFloat(el.value) || 0; // Default to 0 if parsing fails
+                inputs[id] = value;
             } else if (el.type === 'checkbox') {
                 inputs[id] = el.checked;
             } else {

@@ -157,28 +157,51 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
 }
 
 /* --- SVG Diagram Styles --- */
-.svg-dim { stroke: #4b5563; stroke-width: .5; fill: none; }
-.svg-dim-text { font-size: 12px; fill: #4b5563; font-family: sans-serif; text-anchor: middle; }
-.svg-label { font-size: 10px; fill: #1f2937; font-family: sans-serif; font-weight: 700; text-anchor: middle; }
-.svg-plate { fill: #dbeafe; stroke: #60a5fa; stroke-width: .75; }
-.svg-member { fill: #e5e7eb; stroke: #9ca3af; stroke-width: .75; }
-.svg-bolt { fill: #9ca3af; stroke: #4b5563; stroke-width: .5; }
-.svg-gap { fill: none; stroke: #ef4444; stroke-width: .5; stroke-dasharray: 2 2; }
+.svg-dim { stroke: #4b5563; stroke-width: 1; fill: none; marker-end: url(#arrow); marker-start: url(#arrow); }
+.svg-dim-text { font-size: 14px; fill: #4b5563; font-family: sans-serif; text-anchor: middle; }
+.svg-label { font-size: 12px; fill: #1f2937; font-family: sans-serif; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+.svg-plate { fill: #dbeafe; stroke: #60a5fa; stroke-width: 1.5; }
+.svg-member { fill: #374151; stroke: #9ca3af; stroke-width: 1; }
+.svg-bolt { fill: #9ca3af; stroke: #4b5563; stroke-width: 1; }
+.svg-weld { fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 4 3; }
+
 .dark .svg-dim { stroke: #9ca3af; }
 .dark .svg-dim-text { fill: #9ca3af; }
 .dark .svg-label { fill: #d1d5db; }
 .dark .svg-plate { fill: #1e3a8a; stroke: #3b82f6; }
-.dark .svg-member { fill: #374151; stroke: #6b7280; }
+.dark .svg-member { fill: #4b5563; stroke: #6b7280; }
 .dark .svg-bolt { fill: #6b7280; stroke: #9ca3af; }
+.dark .svg-weld { stroke: #fcd34d; }
+
+/* --- Weld Specific Styles --- */
+.svg-weld-line { fill: none; stroke: #f97316; stroke-dasharray: 3 2; }
+.dark .svg-weld-line { stroke: #fb923c; }
+
+/* --- Load Arrow Styles --- */
+.svg-load-arrow { stroke: #ef4444; stroke-width: 1.5; fill: none; marker-end: url(#arrow-marker); }
+.dark .svg-load-arrow { stroke: #f87171; }
+
 
 /* --- 3D Diagram Container --- */
 #3d-diagram-container {
     position: relative; /* This is crucial for positioning children */
     width: 100%;
-    padding-top: 100%; /* Creates a 1:1 aspect ratio box */
-    height: 0;
-    overflow: hidden;
+    height: 400px; /* Fixed height to contain */
+    overflow: hidden; /* Prevent overflow floating */
     border-radius: 0.5rem; /* Optional: matches card rounding */
+    background: #1a1a1a; /* Dark background for better contrast */
+}
+
+/* New class for 3D labels */
+.three-label {
+    font-size: 12px;
+    color: #ffffff;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap; /* Prevent wrapping */
+    transform: translate(-50%, -50%); /* Center on position */
+    pointer-events: none; /* Allow mouse events to pass through */
 }
 
 /* This targets BOTH the 3D canvas and the label div */

@@ -57,6 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('beam_spacing').addEventListener('input', calculateAndDisplayBuiltUpProperties);
     updateGeometryInputsUI(); // Initial call
     populateMaterialDropdowns();
+
+    // --- Auto-save inputs to localStorage on any change ---
+    steelCheckInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('change', () => saveInputsToLocalStorage('steel-check-inputs', gatherInputsFromIds(steelCheckInputIds)));
+    });
     loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
 
     document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);

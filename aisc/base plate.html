@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title>AISC Base Plate Design Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -63,11 +62,12 @@
                                 <h2>Material Properties</h2>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="col-span-2">
-                                        <label for="base_plate_material" class="block text-sm">Plate Material</label>
-                                        <select id="base_plate_material" data-fy-target="base_plate_Fy">
+                                        <label for="base_plate_material" class="block text-sm">Plate Material</label> 
+                                        <select id="base_plate_material" data-fy-target="base_plate_Fy" data-fu-target="base_plate_Fu">
                                             <!-- Options will be populated by JS -->
                                         </select>
                                         <input type="hidden" id="base_plate_Fy" value="36">
+                                        <input type="hidden" id="base_plate_Fu" value="58">
                                     </div>
                                     <div><label for="concrete_fc" class="block text-sm">Concrete f'c</label><input type="number" id="concrete_fc" value="4"></div>
                                     <div class="col-span-2">
@@ -110,10 +110,23 @@
                                          </select>
                                      </div>
                                     <div>
-                                       <label for="weld_size" class="block text-sm font-medium mb-1">Weld Size</label>
-                                       <input type="number" id="weld_size" value="0.25">
+                                        <label for="weld_type" class="block text-sm font-medium mb-1">Weld Type</label>
+                                        <select id="weld_type" data-ui-toggle-controller>
+                                            <option value="Fillet" selected>Fillet</option>
+                                            <option value="PJP">PJP Groove</option>
+                                            <option value="CJP">CJP Groove</option>
+                                        </select>
                                     </div>
-                                 </div>
+                                    <div id="fillet-weld-inputs" data-ui-toggle-target-for="weld_type" data-ui-toggle-condition-value="Fillet">
+                                        <label for="weld_size" class="block text-sm font-medium mb-1">Fillet Weld Size (w)</label>
+                                        <input type="number" id="weld_size" value="0.25">
+                                    </div>
+                                    <div id="pjp-weld-inputs" class="hidden" data-ui-toggle-target-for="weld_type" data-ui-toggle-condition-value="PJP">
+                                        <label for="weld_effective_throat" class="block text-sm font-medium mb-1">Effective Throat (E)</label>
+                                        <input type="number" id="weld_effective_throat" value="0.25">
+                                    </div>
+                                    <p id="cjp-weld-info" class="text-xs text-gray-500 dark:text-gray-400" data-ui-toggle-target-for="weld_type" data-ui-toggle-condition-value="CJP">CJP welds develop the full strength of the base metal.</p>
+                                </div>
                             </div>
                         </div>
                         
@@ -190,17 +203,22 @@
                                 <h2 class="text-xl font-semibold">Base Plate Diagram</h2>
                                 <button id="copy-2d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
                             </div>
-                            <div id="diagram-2d-container" class="diagram mt-2">
-                                <svg id="baseplate-diagram" viewBox="0 0 500 350" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg"></svg>
+                            <div id="diagram-2d-container" class="diagram mt-2 h-[350px] relative">
+                                <svg id="baseplate-diagram" viewBox="0 0 500 350" class="w-full h-full"></svg>
                             </div>
                         </div>
                         <div class="form-section">
                              <div class="mt-4">
                                 <div class="flex justify-between items-center">
                                     <h3 class="text-xl font-semibold">3D Visualization</h3>
-                                    <button id="copy-3d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
+                                    <button id="toggle-dimensions-btn" class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-gray-600 text-xs print-hidden">Toggle Dimensions</button>
+                                    <div class="flex gap-2">
+                                        <button id="copy-3d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Image</button>
+                                    </div>
                                 </div>
-                            <div id="3d-diagram-container" class="diagram mt-2" style="cursor: grab;"></div>
+                            <div id="3d-diagram-container" class="diagram mt-2 h-[400px] relative" style="cursor: grab;">
+                                 <canvas id="baseplate-3d-canvas" class="w-full h-full"></canvas>
+                            </div>
                             </div>
                         </div>
                     </div>

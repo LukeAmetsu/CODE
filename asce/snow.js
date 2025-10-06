@@ -320,6 +320,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('load-snow-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('snow-file-input'));
         document.getElementById('snow-file-input').addEventListener('change', createLoadInputsHandler(snowInputIds, handleRunSnowCalculation));
 
+        // --- Auto-save inputs to localStorage on any change ---
+        snowInputIds.forEach(id => {
+            const el = document.getElementById(id);
+            el?.addEventListener('change', () => saveInputsToLocalStorage('snow-calculator-inputs', gatherInputsFromIds(snowInputIds)));
+        });
+
         loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds, handleRunSnowCalculation);
     }, 50); // A small delay to ensure DOM is ready after injection
 });

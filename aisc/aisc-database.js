@@ -23,8 +23,9 @@ const AISC_SPEC = (() => {
         const threadsKey = !!threadsIncl;
         let Fnv = FnvMap[grade]?.[threadsKey] ?? 0;
         let wasReduced = false;
-        if (jointLength > 38.0) {
-            Fnv *= 0.833; // AISC Table J3.2 footnote [c]
+        // Per AISC 360-10 J3.2, reduce for joint lengths over 50 in.
+        if (jointLength > 50.0) {
+            Fnv *= 0.80; // 20% reduction
             wasReduced = true;
         }
         return { Fnv, wasReduced };

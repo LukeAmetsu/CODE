@@ -103,6 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Auto-save inputs to localStorage on any change ---
+    rainInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('change', () => saveInputsToLocalStorage('rain-calculator-inputs', gatherInputsFromIds(rainInputIds)));
+    });
+
     // Initial state setup
     // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
     setTimeout(() => {

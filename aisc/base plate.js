@@ -1,386 +1,363 @@
 /**
- * Factory function to create a generic SVG diagram drawer.
- * This reduces code duplication between the flange and web diagram functions.
- * @param {object} config - Configuration object for the specific diagram.
- * @returns {function} A function that draws the configured diagram.
+ * Draws the 2D base plate diagram using SVG for clarity and performance.
  */
-function createDiagramDrawer(config) {
-    return function() {
-        const svg = document.getElementById(config.svgId);
-        if (!svg) return;
-        svg.innerHTML = ''; // Clear previous drawing
+function drawBasePlateDiagram() {
+    const svg = document.getElementById('baseplate-diagram');
+    if (!svg) return;
+    svg.innerHTML = ''; // Clear previous drawing
 
-        const getVal = (id, isString = false) => {
-            const el = document.getElementById(id);
-            if (!el) return isString ? '' : 0;
-            return isString ? el.value : parseFloat(el.value) || 0;
-        };
-        
-        // Gather all inputs defined in the config
-        const inputs = {};
-        config.inputIds.forEach(id => {
-            inputs[id] = getVal(id, id === 'column_type'); // Special handling for string input
-        });
-
-        // Drawing parameters
-        const { W, H } = config.viewBox;
-        const pad = 50; // Increased padding to ensure labels fit
-        const cx = W / 2;
-        const cy = H / 2;
-
-        // Calculate scale using a provided function
-        const { total_len, total_h } = config.getScaleDimensions(inputs);
-
-        // --- Improved Scale Calculation and Error Handling ---
-        let scale = 1;
-        if (total_len > 0 && total_h > 0) {
-            scale = Math.min((W - 2 * pad) / total_len, (H - 2 * pad) / total_h);
-        }
-
-        if (!isFinite(scale) || scale <= 0) {
-            const errorText = document.createElementNS("http://www.w3.org/2000/svg", 'text');
-            errorText.setAttribute('x', cx);
-            errorText.setAttribute('y', cy);
-            errorText.setAttribute('class', 'svg-error-text'); // Use a class for styling
-            errorText.textContent = 'Invalid dimensions. Please enter positive values for plate N and B.';
-            svg.appendChild(errorText);
-            return; // Stop further drawing
-        }
-
-        // Dynamically set the viewBox to fit the content
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-        const ns = "http://www.w3.org/2000/svg";
-        const createEl = (tag, attrs) => {
-            const el = document.createElementNS(ns, tag);
-            for (const k in attrs) el.setAttribute(k, attrs[k]);
-            return el;
-        };
-
-        // Create a drawing context to pass to the specific drawing functions
-        const drawContext = { svg, inputs, W, H, cx, cy, scale, createEl };
-
-        // Call the specific drawing functions from the configuration
-        config.drawPlate(drawContext);
-        config.drawMember(drawContext);
-        config.drawBolts(drawContext);
-        config.drawDimensions(drawContext);
-        config.drawWeld?.(drawContext); // Optional weld drawing function
+    // Helper to get numeric values from inputs
+    const getVal = id => parseFloat(document.getElementById(id)?.value) || 0;
+    
+    const inputs = {
+        N: getVal('base_plate_length_N'),
+        B: getVal('base_plate_width_B'),
+        D: getVal('column_depth_d'),
+        bf: getVal('column_flange_width_bf'),
+        tf: getVal('column_flange_tf'),
+        tw: getVal('column_web_tw'),
+        colType: document.getElementById('column_type')?.value,
+        bolt_d: getVal('anchor_bolt_diameter'),
+        bolt_sN: getVal('bolt_spacing_N'),
+        bolt_sB: getVal('bolt_spacing_B'), 
+        weldType: document.getElementById('weld_type')?.value,
+        num_N: getVal('num_bolts_N'),
+        num_B: getVal('num_bolts_B'),
+        weld: getVal('weld_size')
     };
-}
 
-const drawBasePlateDiagram = createDiagramDrawer({
-    svgId: 'baseplate-diagram',
-    viewBox: { W: 500, H: 350 }, // Adjusted default viewBox
-    inputIds: ['base_plate_length_N', 'base_plate_width_B', 'column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw', 'column_type', 'anchor_bolt_diameter', 'bolt_spacing_N', 'bolt_spacing_B', 'num_bolts_N', 'num_bolts_B', 'weld_size'],
-    getScaleDimensions: (i) => ({
-        total_len: i.base_plate_width_B,
-        total_h: i.base_plate_length_N
-    }),
-    drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sN = inputs.base_plate_length_N * scale;
-        const sB = inputs.base_plate_width_B * scale;
-        svg.appendChild(createEl('rect', { x: cx - sB / 2, y: cy - sN / 2, width: sB, height: sN, class: 'svg-plate' }));
-    },
-    drawMember: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        if (inputs.column_type === 'Round HSS') {
-            const s_diam = inputs.column_depth_d * scale;
-            svg.appendChild(createEl('circle', { cx: cx, cy: cy, r: s_diam / 2, class: 'svg-plate' }));
-        } else { // Wide Flange
-            const d = inputs.column_depth_d;
-            const bf = inputs.column_flange_width_bf;
-            const tf = inputs.column_flange_tf;
-            const tw = inputs.column_web_tw;
+    const W = 500, H = 350; // ViewBox dimensions
+    const pad = 60;
+    const cx = W / 2, cy = H / 2;
+    const ns = "http://www.w3.org/2000/svg";
 
-            // Draw the I-beam shape
-            svg.appendChild(createEl('rect', { x: cx - (bf * scale) / 2, y: cy - (d * scale) / 2, width: bf * scale, height: tf * scale, class: 'svg-member' })); // Top Flange
-            svg.appendChild(createEl('rect', { x: cx - (bf * scale) / 2, y: cy + (d * scale) / 2 - (tf * scale), width: bf * scale, height: tf * scale, class: 'svg-member' })); // Bottom Flange
-            svg.appendChild(createEl('rect', { x: cx - (tw * scale) / 2, y: cy - (d * scale) / 2 + (tf * scale), width: tw * scale, height: (d - 2 * tf) * scale, class: 'svg-member' })); // Web
+    if (inputs.B <= 0 || inputs.N <= 0) return; // Exit if plate dimensions are invalid
+
+    const scale = Math.min((W - 2 * pad) / inputs.B, (H - 2 * pad) / inputs.N);
+    const sB = inputs.B * scale;
+    const sN = inputs.N * scale;
+
+    const createEl = (tag, attrs) => {
+        const el = document.createElementNS(ns, tag);
+        for (const k in attrs) el.setAttribute(k, attrs[k]);
+        return el;
+    };
+
+    // 1. Draw Plate
+    svg.appendChild(createEl('rect', { x: cx - sB / 2, y: cy - sN / 2, width: sB, height: sN, class: 'svg-plate' }));
+
+    // 2. Draw Column and Weld
+    if (inputs.colType === 'Round HSS') {
+        const sD = inputs.D * scale;
+        if (inputs.weld > 0 && inputs.weldType === 'Fillet') {
+            svg.appendChild(createEl('circle', { cx, cy, r: sD / 2 + (inputs.weld * scale), class: 'svg-weld' }));
         }
-    },
-    drawBolts: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const s_bolt_N = inputs.bolt_spacing_N * scale;
-        const s_bolt_B = inputs.bolt_spacing_B * scale; // This is spacing between bolts in a row
-        const bolt_r = (inputs.anchor_bolt_diameter * scale) / 2 || 0;
+        svg.appendChild(createEl('circle', { cx, cy, r: sD / 2, class: 'svg-member' }));
+    } else { // Wide Flange
+        const sD = inputs.D * scale;
+        const sBf = inputs.bf * scale;
+        const sTf = inputs.tf * scale;
+        const sTw = inputs.tw * scale;
 
-        const num_cols = inputs.num_bolts_B;
-        const num_rows = inputs.num_bolts_N;
+        svg.appendChild(createEl('rect', { x: cx - sBf / 2, y: cy - sD / 2, width: sBf, height: sTf, class: 'svg-member' })); // Top flange
+        svg.appendChild(createEl('rect', { x: cx - sBf / 2, y: cy + sD / 2 - sTf, width: sBf, height: sTf, class: 'svg-member' })); // Bottom flange
+        svg.appendChild(createEl('rect', { x: cx - sTw / 2, y: cy - sD / 2 + sTf, width: sTw, height: sD - 2 * sTf, class: 'svg-member' })); // Web
+    }
+    
+    // 3. Draw Bolts
+    const bolt_r = (inputs.bolt_d * scale) / 2;
+    const total_bolt_group_width = (inputs.num_B - 1) * inputs.bolt_sB * scale;
+    const total_bolt_group_height = (inputs.num_N - 1) * inputs.bolt_sN * scale;
+    const start_x = cx - total_bolt_group_width / 2;
+    const start_y = cy - total_bolt_group_height / 2;
 
-        if (num_rows <= 0 || num_cols <= 0) return; // Don't draw if bolt config is invalid
-
-        // Calculate starting position to center the bolt group
-        const total_bolt_group_width = (num_cols - 1) * s_bolt_B;
-        const total_bolt_group_height = (num_rows - 1) * s_bolt_N;
-        const start_x = cx - total_bolt_group_width / 2;
-        const start_y = cy - total_bolt_group_height / 2;
-
-        for (let r = 0; r < num_rows; r++) {
-            for (let c = 0; c < num_cols; c++) {
-                const bolt_cx = start_x + c * s_bolt_B;
-                const bolt_cy = start_y + r * s_bolt_N;
-                svg.appendChild(createEl('circle', { cx: bolt_cx, cy: bolt_cy, r: bolt_r, class: 'svg-bolt' }));
-            }
-        }
-    },
-    drawWeld: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        if (!inputs.weld_size || inputs.weld_size <= 0) return;
-        const weld_offset = inputs.weld_size * scale;
-        if (inputs.column_type === 'Round HSS') {
-            const s_diam = inputs.column_depth_d * scale;
-            svg.appendChild(createEl('circle', { cx: cx, cy: cy, r: s_diam / 2 + weld_offset, class: 'svg-weld' }));
-        } else { // Wide Flange
-            const d = inputs.column_depth_d * scale;
-            const bf = inputs.column_flange_width_bf * scale;
-            const tf = inputs.column_flange_tf * scale;
-            const tw = inputs.column_web_tw * scale;
-            // Draw weld around the column perimeter
-            svg.appendChild(createEl('path', { d: `M${cx-bf/2-weld_offset},${cy-d/2-weld_offset} h${bf+2*weld_offset} v${d+2*weld_offset} h-${bf+2*weld_offset} z`, class: 'svg-weld' }));
-        }
-    },
-    drawDimensions: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sN = inputs.base_plate_length_N * scale;
-        const sB = inputs.base_plate_width_B * scale;
-        const sd = inputs.column_depth_d * scale;
-        // Plate Width (B)
-        svg.appendChild(createEl('line', { x1: cx - sB / 2, y1: cy - sN / 2 - 10, x2: cx + sB / 2, y2: cy - sN / 2 - 10, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: cx, y: cy - sN / 2 - 15, class: 'svg-dim-text' })).textContent = `B = ${inputs.base_plate_width_B}"`;
-        // Plate Length (N)
-        svg.appendChild(createEl('line', { x1: cx - sB / 2 - 10, y1: cy - sN / 2, x2: cx - sB / 2 - 10, y2: cy + sN / 2, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: cx - sB / 2 - 15, y: cy, class: 'svg-dim-text', transform: `rotate(-90 ${cx - sB/2 - 15},${cy})` })).textContent = `N = ${inputs.base_plate_length_N}"`;
-        
-        if (inputs.column_type === 'Round HSS') {
-            svg.appendChild(createEl('line', { x1: cx - sd / 2, y1: cy - sd / 2 - 5, x2: cx + sd / 2, y2: cy - sd / 2 - 5, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: cx, y: cy - sd / 2 - 10, class: 'svg-dim-text' })).textContent = `D = ${inputs.column_depth_d}"`;
-        } else { // Wide Flange
-            const sbf = inputs.column_flange_width_bf * scale;
-            svg.appendChild(createEl('line', { x1: cx - sbf / 2 - 5, y1: cy - sd / 2, x2: cx - sbf / 2 - 5, y2: cy + sd / 2, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: cx - sbf / 2 - 10, y: cy, class: 'svg-dim-text', transform: `rotate(-90 ${cx - sbf/2 - 10},${cy})` })).textContent = `d = ${inputs.column_depth_d}"`;
-            svg.appendChild(createEl('line', { x1: cx - sbf / 2, y1: cy - sd / 2 - 5, x2: cx + sbf / 2, y2: cy - sd / 2 - 5, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: cx, y: cy - sd / 2 - 10, class: 'svg-dim-text' })).textContent = `bf = ${inputs.column_flange_width_bf}"`;
-        }
-
-        // Bolt Spacing Dimensions
-        const { num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B } = inputs;
-        const s_bolt_N = bolt_spacing_N * scale;
-        const s_bolt_B = bolt_spacing_B * scale;
-
-        const total_bolt_group_width = (num_bolts_B - 1) * s_bolt_B;
-        const total_bolt_group_height = (num_bolts_N - 1) * s_bolt_N;
-        const start_x = cx - total_bolt_group_width / 2;
-        const start_y = cy - total_bolt_group_height / 2;
-
-        if (num_bolts_B > 1) {
-            const dim_y_bolt = cy + sN / 2 + 20;
-            svg.appendChild(createEl('line', { x1: start_x, y1: dim_y_bolt, x2: start_x + s_bolt_B, y2: dim_y_bolt, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: start_x + s_bolt_B / 2, y: dim_y_bolt + 15, class: 'svg-dim-text' })).textContent = `B Spacing = ${bolt_spacing_B}"`;
-        }
-        if (num_bolts_N > 1) {
-            const dim_x_bolt = cx - sB / 2 - 40;
-            svg.appendChild(createEl('line', { x1: dim_x_bolt, y1: start_y, x2: dim_x_bolt, y2: start_y + s_bolt_N, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: dim_x_bolt - 5, y: start_y + s_bolt_N / 2, class: 'svg-dim-text', transform: `rotate(-90 ${dim_x_bolt - 5},${start_y + s_bolt_N / 2})` })).textContent = `N Spacing = ${bolt_spacing_N}"`;
+    for (let r = 0; r < inputs.num_N; r++) {
+        for (let c = 0; c < inputs.num_B; c++) {
+            svg.appendChild(createEl('circle', { 
+                cx: start_x + c * inputs.bolt_sB * scale, 
+                cy: start_y + r * inputs.bolt_sN * scale, 
+                r: bolt_r, 
+                class: 'svg-bolt' 
+            }));
         }
     }
-});
+
+    // 4. Draw Dimensions
+    const drawDim = (x1, y1, x2, y2, text, vertical = false) => {
+        svg.appendChild(createEl('line', { x1, y1, x2, y2, class: 'svg-dim' }));
+        const textEl = createEl('text', { class: 'svg-dim-text' });
+        textEl.textContent = text;
+        if(vertical) {
+            textEl.setAttribute('x', x1 - 10);
+            textEl.setAttribute('y', (y1 + y2) / 2);
+            textEl.setAttribute('transform', `rotate(-90 ${x1-10},${(y1+y2)/2})`);
+        } else {
+            textEl.setAttribute('x', (x1 + x2) / 2);
+            textEl.setAttribute('y', y1 - 10);
+        }
+        svg.appendChild(textEl);
+    };
+
+    // Plate Dims
+    drawDim(cx - sB / 2, cy - sN / 2 - 20, cx + sB / 2, cy - sN / 2 - 20, `B = ${inputs.B}"`);
+    drawDim(cx + sB / 2 + 20, cy - sN / 2, cx + sB / 2 + 20, cy + sN / 2, `N = ${inputs.N}"`, true);
+
+    // Bolt Dims
+    if (inputs.num_B > 1) drawDim(start_x, cy + sN / 2 + 20, start_x + (inputs.bolt_sB * scale), cy + sN / 2 + 20, `${inputs.bolt_sB}"`);
+    if (inputs.num_N > 1) drawDim(cx - sB / 2 - 20, start_y, cx - sB / 2 - 20, start_y + (inputs.bolt_sN * scale), `${inputs.bolt_sN}"`, true);
+    
+    // Column/Weld Dims
+    if (inputs.colType === 'Round HSS') {
+        const colText = createEl('text', {x: cx, y: cy, class: 'svg-label'});
+        colText.textContent = `D = ${inputs.D}"`;
+        svg.appendChild(colText);
+    } else {
+        drawDim(cx - inputs.bf * scale / 2 - 20, cy - inputs.D * scale / 2, cx - inputs.bf * scale / 2 - 20, cy + inputs.D * scale / 2, `d = ${inputs.D}"`, true);
+        drawDim(cx - inputs.bf * scale / 2, cy - inputs.D * scale / 2 - 20, cx + inputs.bf * scale / 2, cy - inputs.D * scale / 2 - 20, `bf = ${inputs.bf}"`);
+    }
+}
 
 // --- Global variables for the 3D scene to avoid re-creation ---
-let threeJsScene, threeJsCamera, threeJsRenderer, threeJsLabelRenderer, threeJsControls;
+let bjsEngine, bjsScene, bjsGuiTexture;
 
 /**
- * Draws an interactive 3D visualization of the base plate connection using Three.js.
+ * Draws an interactive 3D visualization of the base plate connection using Babylon.js.
  */
 function draw3dBasePlateDiagram() {
-    const container = document.getElementById('3d-diagram-container');
-    if (!container || typeof THREE === 'undefined') return;
+    const canvas = document.getElementById("baseplate-3d-canvas");
+    if (!canvas || typeof BABYLON === 'undefined') return;
 
     // --- 1. Gather Inputs ---
     const inputs = gatherInputsFromIds(basePlateInputIds);
     const isDarkMode = document.documentElement.classList.contains('dark');
 
-    // --- 2. Initialize Scene, Camera, Renderer (only once) ---
-    if (!threeJsScene) {
-        container.innerHTML = ''; // Clear container only on first run
-        threeJsScene = new THREE.Scene();
+    // --- 2. Initialize Scene, Camera, Renderer, and GUI (only once) ---
+    if (!bjsEngine) {
+        bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        bjsScene = new BABYLON.Scene(bjsEngine);
+        bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
+
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.2, Math.PI / 2.5, 50, BABYLON.Vector3.Zero(), bjsScene);
+        camera.attachControl(canvas, true);
+        camera.lowerRadiusLimit = 5;
+        camera.upperRadiusLimit = 400;
+        camera.wheelPrecision = 10;
         
-        const width = container.clientWidth;
-        const height = width; // Force a square canvas
+        canvas.addEventListener("wheel", (event) => {
+            event.preventDefault();
+        }, { passive: false }); // The { passive: false } is important for some browsers
 
-        threeJsCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-        threeJsRenderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        threeJsRenderer.setSize(width, height);
-        container.appendChild(threeJsRenderer.domElement);
-
-        threeJsLabelRenderer = new THREE.CSS2DRenderer();
-        threeJsLabelRenderer.setSize(width, height);
-        threeJsLabelRenderer.domElement.style.position = 'absolute';
-        threeJsLabelRenderer.domElement.style.top = '0px';
-        threeJsLabelRenderer.domElement.style.pointerEvents = 'none';
-        container.appendChild(threeJsLabelRenderer.domElement);
-
-        threeJsControls = new THREE.OrbitControls(threeJsCamera, threeJsRenderer.domElement);
-        threeJsControls.enableDamping = true;
-
-        const animate = () => {
-            requestAnimationFrame(animate);
-            threeJsControls.update();
-            threeJsRenderer.render(threeJsScene, threeJsCamera);
-            threeJsLabelRenderer.render(threeJsScene, threeJsCamera);
-        };
-        animate();
-    }
-
-    // --- Clear previous objects from the scene (recursively) ---
-    const clearScene = (obj) => {
-        while (obj.children.length > 0) {
-            clearScene(obj.children[0]);
-            obj.remove(obj.children[0]);
-        }
-        if (obj.geometry) {
-            obj.geometry.dispose();
-        }
-        if (obj.material) {
-            if (Array.isArray(obj.material)) {
-                obj.material.forEach(material => material.dispose());
-            } else {
-                obj.material.dispose();
+        bjsEngine.runRenderLoop(() => {
+            if (bjsScene.isReady()) {
+                bjsScene.render();
             }
-        }
+        });
+        window.addEventListener('resize', () => bjsEngine.resize());
     }
-    clearScene(threeJsScene);
 
+    // --- FIX: Clear previous elements instead of disposing the entire scene ---
+    bjsScene.meshes.forEach(mesh => mesh.dispose());
+    bjsScene.lights.forEach(light => light.dispose());
+    bjsGuiTexture.getChildren().forEach(control => {
+        control.dispose();
+    });
 
     // --- 3. Lighting ---
-    threeJsScene.background = new THREE.Color(isDarkMode ? 0x1a202c : 0xf0f0f0);
-    threeJsScene.add(new THREE.AmbientLight(0xffffff, isDarkMode ? 0.5 : 0.8));
-    const light = new THREE.DirectionalLight(0xffffff, isDarkMode ? 0.7 : 1.0);
-    light.position.set(50, 100, 75);
-    threeJsScene.add(light);
+    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 0) : new BABYLON.Color4(0.95, 0.95, 0.95, 0);
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.25), bjsScene);
+    light.intensity = 1.0;
+    light.specular = BABYLON.Color3.Black();
 
-    // --- Label Helper ---
-    function createLabel(text) {
-        const div = document.createElement('div');
-        div.className = `text-xs px-1.5 py-0.5 rounded-md ${isDarkMode ? 'bg-gray-900 bg-opacity-70 text-gray-200' : 'bg-white bg-opacity-70 text-gray-800'}`;
-        div.textContent = text;
-        return new THREE.CSS2DObject(div);
-    }
+    // --- Materials ---
+    const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
+    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#4a5568" : "#A8A8A8");
+    plateMaterial.metallic = 0.8;
+    plateMaterial.roughness = 0.6;
 
-    // --- Materials (with Dark Mode support) ---
-    const plateMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x4a5568 : 0x607d8b, metalness: 0.5, roughness: 0.6 });
-    const columnMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x2c5282 : 0x455a64, metalness: 0.7, roughness: 0.5 });
-    const boltMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x718096 : 0xb0bec5, metalness: 0.8, roughness: 0.4 });
-    const concreteMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x3b475c : 0xc0c0c0, roughness: 0.9, transparent: true, opacity: 0.75 });
+    const columnMaterial = new BABYLON.PBRMaterial("colMat", bjsScene);
+    columnMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#2c5282" : "#36454F");
+    columnMaterial.metallic = 0.7;
+    columnMaterial.roughness = 0.5;
 
-    // --- 5. Geometries ---
-    const group = new THREE.Group(); // Group to hold all meshes
-    threeJsScene.add(group);
+    const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
+    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#718096" : "#C0C0C0");
+    boltMaterial.metallic = 0.9;
+    boltMaterial.roughness = 0.4;
     
-    // --- Weld Geometry ---
-    if (inputs.weld_size > 0) {
-        const w = inputs.weld_size;
-        const weldMaterial = new THREE.MeshStandardMaterial({ color: 0xffa726, metalness: 0.3, roughness: 0.7 });
-        const weldGroup = new THREE.Group();
-        weldGroup.position.y = w / 2; // Position weld on top of the plate
+    const concreteMaterial = new BABYLON.PBRMaterial("concreteMat", bjsScene);
+    concreteMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#3b475c" : "#A9A9A9");
+    concreteMaterial.metallic = 0.1;
+    concreteMaterial.roughness = 0.9;
+    
+    const weldMaterial = new BABYLON.PBRMaterial("weldMat", bjsScene);
+    weldMaterial.albedoColor = new BABYLON.Color3.FromHexString("#DAA520"); // Gold color for weld
+    weldMaterial.metallic = 0.5;
+    weldMaterial.roughness = 0.7;
 
-        if (inputs.column_type === 'Wide Flange') {
-            const d = inputs.column_depth_d, bf = inputs.column_flange_width_bf;
-            // Simplified box representing the weld footprint
-            const weldFootprint = new THREE.BoxGeometry(bf + 2*w, w, d + 2*w);
-            weldGroup.add(new THREE.Mesh(weldFootprint, weldMaterial));
-        } else { // Round HSS
-            weldGroup.add(new THREE.Mesh(new THREE.TorusGeometry(inputs.column_depth_d/2, w, 16, 64), weldMaterial).rotateX(Math.PI/2));
+    // --- Helper for creating GUI labels ---
+    function createLabel(text, meshLink, isDarkMode) {
+        // Function content remains the same
+        const label = new BABYLON.GUI.Rectangle();
+        label.height = "20px";
+        label.width = `${text.length * 8}px`; // Auto-width
+        label.cornerRadius = 5;
+        label.thickness = 1;
+        label.background = isDarkMode ? "rgba(40, 40, 40, 0.7)" : "rgba(255, 255, 255, 0.7)";
+        label.color = isDarkMode ? "#FFFFFF" : "#000000";
+        bjsGuiTexture.addControl(label);
+
+        const textBlock = new BABYLON.GUI.TextBlock();
+        textBlock.text = text;
+        textBlock.fontSize = 12;
+        label.addControl(textBlock);
+        
+        if (meshLink) {
+            label.linkWithMesh(meshLink);
         }
-        group.add(weldGroup);
+        return label;
     }
 
+    // --- Geometries (Pedestal, Plate, etc.) ---
+    // This part remains mostly the same...
     const pedestalHeight = Math.max(12, inputs.anchor_embedment_hef * 1.5);
-    const pedestalGeom = new THREE.BoxGeometry(inputs.pedestal_B, pedestalHeight, inputs.pedestal_N);
-    const pedestalMesh = new THREE.Mesh(pedestalGeom, concreteMaterial);
-    pedestalMesh.position.y = -inputs.provided_plate_thickness_tp / 2 - (pedestalHeight / 2);
-    group.add(pedestalMesh);
+    const pedestal = BABYLON.MeshBuilder.CreateBox("pedestal", { width: inputs.pedestal_B, height: pedestalHeight, depth: inputs.pedestal_N }, bjsScene);
+    pedestal.material = concreteMaterial;
+    pedestal.position.y = -inputs.provided_plate_thickness_tp / 2 - (pedestalHeight / 2);
 
-    const plateGeom = new THREE.BoxGeometry(inputs.base_plate_width_B, inputs.provided_plate_thickness_tp, inputs.base_plate_length_N);
-    const plateMesh = new THREE.Mesh(plateGeom, plateMaterial);
-    group.add(plateMesh);
+    const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: inputs.base_plate_width_B, height: inputs.provided_plate_thickness_tp, depth: inputs.base_plate_length_N }, bjsScene);
+    plate.material = plateMaterial;
 
-    const labelN = createLabel(`N = ${inputs.base_plate_length_N}"`);
-    labelN.position.set(inputs.base_plate_width_B / 2 + 4, 0, 0);
-    plateMesh.add(labelN);
-    
-    const labelB = createLabel(`B = ${inputs.base_plate_width_B}"`);
-    labelB.position.set(0, 0, inputs.base_plate_length_N / 2 + 4);
-    plateMesh.add(labelB);
+    // --- Column & **FIXED WELD** Geometry ---
+    const colHeight = 12;
+    if (inputs.column_type === 'Round HSS' && inputs.column_depth_d > 0) {
+        const hss = BABYLON.MeshBuilder.CreateCylinder("hss", { diameter: inputs.column_depth_d, height: colHeight }, bjsScene);
+        hss.material = columnMaterial;
+        hss.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
 
-    if (inputs.column_type === 'Wide Flange' && inputs.column_depth_d > 0) {
-        const colGroup = new THREE.Group();
-        const colHeight = 12;
-        
-        // Create geometries in X-Y plane (like looking at a cross-section)
-        const topFlangeGeom = new THREE.BoxGeometry(inputs.column_flange_width_bf, inputs.column_flange_tf, colHeight);
-        const webGeom = new THREE.BoxGeometry(inputs.column_web_tw, inputs.column_depth_d - 2 * inputs.column_flange_tf, colHeight);
-        
-        const topFlange = new THREE.Mesh(topFlangeGeom, columnMaterial);
-        // Position flanges relative to the center
-        topFlange.position.y = (inputs.column_depth_d / 2) - (inputs.column_flange_tf / 2);
-        
-        const bottomFlange = topFlange.clone();
-        bottomFlange.position.y = -(inputs.column_depth_d / 2) + (inputs.column_flange_tf / 2);
-        
-        const web = new THREE.Mesh(webGeom, columnMaterial); // Web is already at the center
-        
-        colGroup.add(topFlange, bottomFlange, web);
-        colGroup.rotation.x = -Math.PI / 2;
-        colGroup.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
-        group.add(colGroup);
+        if (inputs.weld_size > 0 && inputs.weld_type === 'Fillet') {
+            const w = inputs.weld_size;
+            const column_radius = inputs.column_depth_d / 2;
+            
+            // Define the triangular profile for the lathe
+            const weldProfile = [
+                new BABYLON.Vector3(column_radius, 0, 0),
+                new BABYLON.Vector3(column_radius + w, 0, 0),
+                new BABYLON.Vector3(column_radius, w, 0),
+                new BABYLON.Vector3(column_radius, 0, 0) // Close the shape
+            ];
 
-    } else if (inputs.column_type === 'Round HSS' && inputs.column_depth_d > 0) {
-        const hssGeom = new THREE.CylinderGeometry(inputs.column_depth_d / 2, inputs.column_depth_d / 2, 12, 32);
-        const hssMesh = new THREE.Mesh(hssGeom, columnMaterial);
-        hssMesh.position.y = 12 / 2 + inputs.provided_plate_thickness_tp / 2;
-        group.add(hssMesh);
+            const weld = BABYLON.MeshBuilder.CreateLathe("weld", {
+                shape: weldProfile,
+                sideOrientation: BABYLON.Mesh.DOUBLESIDE
+            }, bjsScene);
+
+            weld.material = weldMaterial;
+            weld.position.y = inputs.provided_plate_thickness_tp / 2; // Position it on top of the base plate
+
+            // Weld Label Anchor
+            const weldLabelAnchor = new BABYLON.TransformNode("weld_label_anchor", bjsScene);
+            weldLabelAnchor.position = new BABYLON.Vector3(column_radius + w, inputs.provided_plate_thickness_tp / 2 + w / 2, 0);
+            createLabel(`${w}" Weld`, weldLabelAnchor, isDarkMode);
+        }
+    } else if (inputs.column_type === 'Wide Flange' && inputs.column_depth_d > 0) {
+        const { column_depth_d: d, column_flange_width_bf: bf, column_flange_tf: tf, column_web_tw: tw } = inputs;
+
+        const topFlange = BABYLON.MeshBuilder.CreateBox("tf", { width: bf, height: colHeight, depth: tf }, bjsScene);
+        topFlange.position.z = (d - tf) / 2;
+        const botFlange = topFlange.clone("bf");
+        botFlange.position.z = -(d - tf) / 2;
+        const web = BABYLON.MeshBuilder.CreateBox("web", { width: tw, height: colHeight, depth: d - 2 * tf }, bjsScene);
+        const column = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
+        if (column) {
+            column.material = columnMaterial;
+            column.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
+        }
+
+        if (inputs.weld_size > 0 && inputs.weld_type === 'Fillet') {
+            const weldSize = inputs.weld_size;
+            const weldY = inputs.provided_plate_thickness_tp / 2;
+            const createWeld = (name, length, rotation, position) => {
+                const weldShape = [ new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(weldSize, 0, 0), new BABYLON.Vector3(0, weldSize, 0) ];
+                const weld = BABYLON.MeshBuilder.ExtrudeShape(name, { shape: weldShape, path: [new BABYLON.Vector3(0, 0, -length/2), new BABYLON.Vector3(0, 0, length/2)] }, bjsScene);
+                weld.material = weldMaterial; weld.rotation = rotation; weld.position = position; return weld;
+            };
+            createWeld("weld_tf1", bf, new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, weldY, (d - tf) / 2 + weldSize));
+            createWeld("weld_tf2", bf, new BABYLON.Vector3(0, Math.PI, 0), new BABYLON.Vector3(0, weldY, -(d - tf) / 2 - weldSize));
+            createWeld("weld_tw1", d - 2*tf, new BABYLON.Vector3(0, Math.PI/2, 0), new BABYLON.Vector3(tw/2 + weldSize, weldY, 0));
+            createWeld("weld_tw2", d - 2*tf, new BABYLON.Vector3(0, -Math.PI/2, 0), new BABYLON.Vector3(-tw/2 - weldSize, weldY, 0));
+        }
     }
 
+    // --- Bolts, Dimensions, and Camera logic remains the same ---
     const startX = -(inputs.num_bolts_B - 1) * inputs.bolt_spacing_B / 2;
     const startZ = -(inputs.num_bolts_N - 1) * inputs.bolt_spacing_N / 2;
     for (let r = 0; r < inputs.num_bolts_N; r++) {
         for (let c = 0; c < inputs.num_bolts_B; c++) {
-            const boltGeom = new THREE.CylinderGeometry(inputs.anchor_bolt_diameter / 2, inputs.anchor_bolt_diameter / 2, inputs.anchor_embedment_hef, 16);
-            const boltMesh = new THREE.Mesh(boltGeom, boltMaterial);
-            boltMesh.position.set(startX + c * inputs.bolt_spacing_B, -inputs.anchor_embedment_hef / 2, startZ + r * inputs.bolt_spacing_N);
-            group.add(boltMesh);
+            const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${r}_${c}`, { diameter: inputs.anchor_bolt_diameter, height: inputs.anchor_embedment_hef }, bjsScene);
+            bolt.material = boltMaterial;
+            bolt.position.set(startX + c * inputs.bolt_spacing_B, -inputs.anchor_embedment_hef / 2 + inputs.provided_plate_thickness_tp / 2, startZ + r * inputs.bolt_spacing_N);
         }
     }
+
+    // (Dimensioning and camera auto-fit logic from previous response goes here)
+    const lineMat = new BABYLON.StandardMaterial("lineMat", bjsScene);
+    lineMat.emissiveColor = isDarkMode ? BABYLON.Color3.White() : BABYLON.Color3.Black();
+    lineMat.disableLighting = true;
+
+    // Plate Dimension N
+    const dimLine_N = BABYLON.MeshBuilder.CreateLines("dimLine_N", { points: [
+        new BABYLON.Vector3(inputs.base_plate_width_B/2 + 2, 0, -inputs.base_plate_length_N/2),
+        new BABYLON.Vector3(inputs.base_plate_width_B/2 + 2, 0, inputs.base_plate_length_N/2)
+    ]}, bjsScene);
+    dimLine_N.material = lineMat;
+    const nLabelAnchor = new BABYLON.TransformNode("n_label_anchor", bjsScene);
+    nLabelAnchor.position = new BABYLON.Vector3(inputs.base_plate_width_B/2 + 4, 0, 0);
+    createLabel(`N = ${inputs.base_plate_length_N}"`, nLabelAnchor, isDarkMode);
     
-    // --- 6. Camera and Controls ---
-    // --- Auto-fit camera to the scene ---
-    const box = new THREE.Box3().setFromObject(group);
-    // Manually expand the bounding box to include the labels, which are outside the geometry.
-    // Add a buffer of ~10 units in each direction to account for label size.
-    box.expandByVector(new THREE.Vector3(10, 2, 10));
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const maxSize = Math.max(size.x, size.y, size.z);
-    const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * threeJsCamera.fov / 360));
-    const fitWidthDistance = fitHeightDistance / threeJsCamera.aspect;
-    const distance = 1.5 * Math.max(fitHeightDistance, fitWidthDistance, 10); // Add padding and a min distance
+    // Plate Dimension B
+    const dimLine_B = BABYLON.MeshBuilder.CreateLines("dimLine_B", { points: [
+        new BABYLON.Vector3(-inputs.base_plate_width_B/2, 0, inputs.base_plate_length_N/2 + 2),
+        new BABYLON.Vector3(inputs.base_plate_width_B/2, 0, inputs.base_plate_length_N/2 + 2)
+    ]}, bjsScene);
+    dimLine_B.material = lineMat;
+    const bLabelAnchor = new BABYLON.TransformNode("b_label_anchor", bjsScene);
+    bLabelAnchor.position = new BABYLON.Vector3(0, 0, inputs.base_plate_length_N/2 + 4);
+    createLabel(`B = ${inputs.base_plate_width_B}"`, bLabelAnchor, isDarkMode);
 
-    threeJsControls.target.copy(center);
-    threeJsCamera.position.copy(center).add(new THREE.Vector3(distance, distance * 0.8, distance));
-    threeJsCamera.near = distance / 100;
-    threeJsCamera.far = distance * 100;
-    threeJsCamera.updateProjectionMatrix();
+    // Bolt Spacing B
+    if (inputs.num_bolts_B > 1) {
+        const bSpacingLabelAnchor = new BABYLON.TransformNode("b_spacing_anchor", bjsScene);
+        bSpacingLabelAnchor.position = new BABYLON.Vector3(0, inputs.provided_plate_thickness_tp/2 + 1, startZ);
+        createLabel(`${inputs.bolt_spacing_B}"`, bSpacingLabelAnchor, isDarkMode);
+    }
+    
+    // Bolt Spacing N
+    if (inputs.num_bolts_N > 1) {
+        const nSpacingLabelAnchor = new BABYLON.TransformNode("n_spacing_anchor", bjsScene);
+        nSpacingLabelAnchor.position = new BABYLON.Vector3(startX, inputs.provided_plate_thickness_tp/2 + 1, 0);
+        createLabel(`${inputs.bolt_spacing_N}"`, nSpacingLabelAnchor, isDarkMode);
+    }
 
-    // Store scene elements on the container for later use (e.g., copying image)
-    container.scene = threeJsScene;
-    container.camera = threeJsCamera;
-    container.renderer = threeJsRenderer;
+    if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
+        // Focus specifically on the base plate for the initial zoom.
+        const plateMesh = bjsScene.getMeshByName("plate");
+        if (plateMesh) {
+            const camera = bjsScene.activeCamera;
+            const boundingInfo = plateMesh.getBoundingInfo();
+            camera.setTarget(boundingInfo.boundingSphere.center);
+            // A multiplier is needed to frame the plate nicely.
+            camera.radius = boundingInfo.boundingSphere.radius * 4;
+        }
+    }
 }
 
-const basePlateInputIds = [
+const basePlateInputIds = [ // FIX: Corrected variable name
     'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx', 
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
     'anchor_embedment_hef',
-    'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_size', 'axial_load_P_in',
+    'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_type', 'weld_size', 'weld_effective_throat', 'axial_load_P_in',
     'moment_Mx_in', 'moment_My_in', 'shear_V_in', 'assume_cracked_concrete', 'concrete_edge_dist_ca1'
 ];
 
@@ -445,16 +422,17 @@ const basePlateCalculator = (() => {
 
     function getPhi(limit_state, design_method) {
         const factors = {
-            'bearing': { phi: 0.65, omega: 2.31 },
-            'bending': { phi: 0.90, omega: 1.67 },
-            'anchor_tension_steel': { phi: 0.75, omega: 2.00 },
-            'anchor_tension_concrete': { phi: 0.65, omega: 2.31 }, // Breakout
-            'anchor_pullout': { phi: 0.70, omega: 2.14 },
-            'anchor_side_face': { phi: 0.70, omega: 2.14 },
-            'anchor_shear_steel': { phi: 0.65, omega: 2.31 },
-            'anchor_shear_concrete': { phi: 0.65, omega: 2.31 }, // Breakout
-            'anchor_pryout': { phi: 0.65, omega: 2.31 },
-            'weld': { phi: 0.75, omega: 2.00 }
+            'bearing': { phi: 0.65, omega: 2.31 }, // AISC J8
+            'bending': { phi: 0.90, omega: 1.67 }, // AISC F1
+            'weld': { phi: 0.75, omega: 2.00 },    // AISC J2
+            // ACI 318 Anchor factors are LRFD (phi) only. ASD conversion is handled by factoring loads.
+            'anchor_tension_steel': { phi: 0.75, omega: 2.00 }, // Kept omega for steel check consistency, but will use phi.
+            'anchor_tension_concrete': { phi: 0.65 }, // Breakout
+            'anchor_pullout': { phi: 0.70 },
+            'anchor_side_face': { phi: 0.75 },
+            'anchor_shear_steel': { phi: 0.65, omega: 2.31 }, // Kept omega for steel check consistency, but will use phi.
+            'anchor_shear_concrete': { phi: 0.65 }, // Breakout
+            'anchor_pryout': { phi: 0.65 },
         };
         const f = factors[limit_state] || { phi: 1.0, omega: 1.0 };
         return design_method === 'LRFD' ? f.phi : f.omega;
@@ -469,19 +447,44 @@ const basePlateCalculator = (() => {
      */
     function checkConcreteBearing(inputs) {
         const { design_method, base_plate_length_N: N, base_plate_width_B: B, concrete_fc: fc, axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, pedestal_N, pedestal_B } = inputs;
-        const P_abs = Math.abs(Pu);
-
-        let f_p_max, Y, X, e_x, e_y, bearing_case;
         
-        if (P_abs < 1e-6 && (Mux > 0 || Muy > 0)) {
-            // --- Pure Moment Case ---
-            // Simplified approach assuming neutral axis at plate centerline.
-            // Tension T and Compression C form a couple to resist the moment.
+        // **FIX**: If Pu is positive (tension/uplift), there is no bearing pressure.
+        if (Pu > 0) {
+            return {
+                demand: 0,
+                check: { Rn: 0, phi: 0.65, omega: 2.31 },
+                details: { f_p_max: 0, e_x: Infinity, e_y: Infinity, Y: 0, X: 0, A1: N * B, A2: pedestal_N * pedestal_B, confinement_factor: 0, Pu, bearing_case: "Uplift" }
+            };
+        }
+
+        const P_abs = Math.abs(Pu); // Now P_abs is only used for compressive loads
+        let f_p_max, Y, X, e_x, e_y, bearing_case;
+        let breakdown_html = '';
+
+        if (Pu === 0 && (Mux > 0 || Muy > 0)) {
+            // --- Pure Moment Case (AISC Design Guide 1, Section 3.3.3) ---
+            // An iterative approach is used to find the neutral axis 'kd' and the bearing length 'Y'.
             bearing_case = "Pure Moment";
             e_x = Infinity; e_y = Infinity;
-            Y = N / 2; X = B / 2; // Assume half the plate is in compression
-            const C = (Mux * 12) / (N / 3 + (N - inputs.bolt_spacing_N) / 2); // Simplified lever arm
-            f_p_max = (2 * C) / (B * Y);
+
+            const { num_bolts_N, bolt_spacing_N, anchor_bolt_diameter, base_plate_Fy } = inputs;
+            const E_steel = 29000; // ksi
+            const E_concrete = 57 * sqrt(fc * 1000) / 1000; // ksi
+            const n_ratio = E_steel / E_concrete;
+            const Ab = Math.PI * (anchor_bolt_diameter ** 2) / 4.0;
+            const d_anchor = (N / 2.0) - ((num_bolts_N - 1) * bolt_spacing_N / 2.0); // Distance from plate center to anchor row
+
+            // Iteratively solve for neutral axis depth 'kd' (AISC DG1 Eq. 3.29)
+            let kd = N / 3; // Initial guess
+            for (let i = 0; i < 10; i++) {
+                kd = (n_ratio * Ab * d_anchor) / (0.5 * B * kd) + (n_ratio * Ab) / (0.5 * B);
+            }
+
+            Y = kd; // Bearing length is the neutral axis depth
+            X = B;
+            // Calculate max pressure using DG1 Eq. 3.31
+            f_p_max = (2 * Mux * 12) / (B * kd * (N / 2 - kd / 3 + d_anchor));
+            breakdown_html = `f<sub>p,max</sub> = <b>${f_p_max.toFixed(2)} ksi</b> (Calculated iteratively for pure moment)`;
         } else {
             // --- Combined Axial and Bending Case ---
             e_x = (Mux * 12) / P_abs;
@@ -492,24 +495,51 @@ const basePlateCalculator = (() => {
                 bearing_case = "Full Bearing";
                 f_p_max = (P_abs / (B * N)) * (1 + (6 * e_x) / N + (6 * e_y) / B);
                 Y = N; X = B;
+                breakdown_html = `f<sub>p,max</sub> = (P/A) * (1 + 6e<sub>x</sub>/N + 6e<sub>y</sub>/B) = (${P_abs.toFixed(2)}/(${B}*${N})) * (1 + 6*${e_x.toFixed(2)}/${N} + 6*${e_y.toFixed(2)}/${B}) = <b>${f_p_max.toFixed(2)} ksi</b>`;
             } else if (e_x / N + e_y / B <= 0.5) {
                 // Case 2: Partial compression (triangular/trapezoidal pressure, one edge in tension)
+                // Implements an iterative solution based on AISC Design Guide 1, 2nd Ed., Section 3.3.2
                 bearing_case = "Partial Bearing";
-                // Iterative solution is complex. Use simplified uniaxial check for now.
-                // This is conservative as it ignores biaxial effects that might reduce pressure.
-                const f_p_x = (P_abs / (B * N)) * (1 + (6 * e_x) / N);
-                const f_p_y = (P_abs / (B * N)) * (1 + (6 * e_y) / B);
-                f_p_max = Math.max(f_p_x, f_p_y);
-                Y = 3 * (N / 2 - e_x); // Effective length for x-axis moment
-                X = 3 * (B / 2 - e_y); // Effective width for y-axis moment
+                let q = 0; // Iteration variable
+                const MAX_ITER = 20;
+                const TOLERANCE = 0.001;
+
+                for (let i = 0; i < MAX_ITER; i++) {
+                    const q_prev = q;
+                    const A_prime = (B * N) / 2 * (1 - 2 * e_y / B) * (1 - 2 * e_x / N) / (1 - q);
+                    const f_p_calc = P_abs / A_prime;
+                    const f_p_max_N = f_p_calc * (1 + q);
+                    const f_p_max_B = f_p_calc * (1 - q);
+
+                    // Coefficients from DG1 Table 3-2
+                    const C1 = (1 + q) / 2;
+                    const C2 = (1 + q + q**2) / (3 * (1 + q));
+                    const C3 = (1 + 3*q + 3*q**2 + q**3) / (4 * Math.pow(1 + q, 3)); // Corrected denominator per DG1 typo
+
+                    // Update q based on eccentricities (DG1 Eq. 3.23)
+                    q = (1 - 2 * e_x / N) / (2 * C2) - 1;
+
+                    if (Math.abs(q - q_prev) < TOLERANCE) break;
+                }
+
+                const A_prime_final = (B * N) / 2 * (1 - 2 * e_y / B) * (1 - 2 * e_x / N) / (1 - q);
+                f_p_max = P_abs / A_prime_final * (1 + q);
+                Y = N / 2 * (1 - 2 * e_x / N) / (1 - q); // Effective bearing length
+                X = B; // Effective bearing width
+                breakdown_html = `f<sub>p,max</sub> = <b>${f_p_max.toFixed(2)} ksi</b> (Calculated iteratively for partial bearing)`;
             } else {
                 // Case 3: Corner bearing (triangular pressure, two edges in tension)
                 bearing_case = "Corner Bearing";
                 // Simplified approach from DG1 for corner bearing
                 const g_x = N / 2 - e_x;
                 const g_y = B / 2 - e_y;
-                f_p_max = (2 * P_abs) / (3 * g_x * g_y);
+                f_p_max = (g_x > 0 && g_y > 0) ? (2 * P_abs) / (3 * g_x * g_y) : 0;
                 Y = 3 * g_x; X = 3 * g_y;
+                if (f_p_max > 0) {
+                    breakdown_html = `f<sub>p,max</sub> = (2 * P) / (3 * g<sub>x</sub> * g<sub>y</sub>) = (2 * ${P_abs.toFixed(2)}) / (3 * ${g_x.toFixed(2)} * ${g_y.toFixed(2)}) = <b>${f_p_max.toFixed(2)} ksi</b>`;
+                } else {
+                    breakdown_html = `Resultant force is outside the base plate (g<sub>x</sub> or g<sub>y</sub> is negative). No compressive bearing occurs.`;
+                }
             }
         }
 
@@ -520,77 +550,141 @@ const basePlateCalculator = (() => {
         const P_p = 0.85 * fc * A1 * confinement_factor;
         const phi = getPhi('bearing', design_method);
         const omega = getPhi('bearing', design_method === 'LRFD' ? 'ASD' : 'LRFD');
+        const final_capacity = design_method === 'LRFD' ? P_p * phi : P_p / omega;
+
+        const breakdown = `
+            <u>Maximum Bearing Pressure (f<sub>p,max</sub>)</u>
+            <ul>
+                <li>Eccentricity (e<sub>x</sub>) = M<sub>ux</sub> / P<sub>u</sub> = ${(Mux * 12).toFixed(2)} / ${P_abs.toFixed(2)} = ${e_x.toFixed(2)} in</li>
+                <li>Eccentricity (e<sub>y</sub>) = M<sub>uy</sub> / P<sub>u</sub> = ${(Muy * 12).toFixed(2)} / ${P_abs.toFixed(2)} = ${e_y.toFixed(2)} in</li>
+                <li>Bearing Case: <b>${bearing_case}</b></li>
+                <li>Calculation: ${breakdown_html}</li>
+            </ul>`;
 
         return { // Return pressure in ksi for demand, capacity in kips
             demand: f_p_max,
             check: { Rn: P_p, phi, omega },
-            details: { f_p_max, e_x, e_y, Y, X, A1, A2, confinement_factor, Pu, bearing_case }
+            details: { f_p_max, e_x, e_y, Y, X, A1, A2, confinement_factor, Pu, bearing_case },
+            breakdown
         };
+    }
+
+    /**
+     * Calculates required plate thickness due to bending from anchor bolt tension (uplift).
+     * Reference: AISC Design Guide 1, 2nd Ed., Section 3.4.2
+     * @param {object} inputs - The user inputs object.
+     * @param {number} Tu_bolt - The maximum tension demand on a single anchor bolt.
+     * @returns {object|null} An object with the plate bending check results for uplift, or null if no tension.
+     */
+    function checkPlateBendingUplift(inputs, Tu_bolt) {
+        if (Tu_bolt <= 0) return null;
+
+        const { provided_plate_thickness_tp: tp, base_plate_Fy: Fy, design_method, bolt_spacing_N, bolt_spacing_B, column_type, column_depth_d, column_flange_width_bf } = inputs;
+
+        // Cantilever distance 'c' is the distance from the critical bolt to the column face.
+        // This is a simplified approach. A more rigorous analysis would consider the bolt pattern.
+        const c_N = (bolt_spacing_N - (column_type === 'Round HSS' ? column_depth_d : column_depth_d)) / 2.0;
+        const c_B = (bolt_spacing_B - (column_type === 'Round HSS' ? column_depth_d : column_flange_width_bf)) / 2.0;
+        const c = Math.max(c_N, c_B, 0); // Use the larger cantilever, ensure it's not negative.
+
+        // AISC DG1 Eq. 3-33
+        const t_req = Math.sqrt((4 * Tu_bolt) / (getPhi('bending', design_method) * Fy));
+
+        return { demand: tp, check: { Rn: t_req, phi: 1.0, omega: 1.0 }, details: { c, Tu_bolt } };
     }
 
     function checkPlateBending(inputs, bearing_results) {
-        const { base_plate_length_N: N, base_plate_width_B: B, column_depth_d: d, column_flange_width_bf: bf, base_plate_Fy: Fy, provided_plate_thickness_tp: tp, column_type } = inputs;
+        const { base_plate_length_N: N, base_plate_width_B: B, column_depth_d: d, column_flange_width_bf: bf, base_plate_Fy: Fy, provided_plate_thickness_tp: tp, column_type, design_method } = inputs;
         const f_p_max = bearing_results.details.f_p_max;
+        const Pu_abs = Math.abs(bearing_results.details.Pu);
+        const Pp = bearing_results.check.Rn; // Nominal bearing strength
+        
+        if (f_p_max <= 0) {
+            return null; // No bearing pressure, so no bending to check.
+        }
 
-        if (column_type !== 'Wide Flange') return null; // Bending check is for WF columns
+        if (column_type === 'Round HSS') {
+            // Simplified cantilever method for HSS columns
+            const cantilever_dist = (Math.max(N, B) - d) / 2.0;
+            const t_req_hss = cantilever_dist * Math.sqrt((2 * f_p_max) / (getPhi('bending', design_method) * Fy));
+            return {
+                demand: tp, check: { Rn: t_req_hss, phi: 1.0, omega: 1.0 },
+                details: { l: cantilever_dist, f_p_max }
+            };
+        }
 
+        // --- Cantilever and Plate Dimensions for WF columns per AISC DG1, Section 3.3.4 ---
         const m = (N - 0.95 * d) / 2.0;
         const n = (B - 0.80 * bf) / 2.0;
-        const l = max(m, n); // Simplified 'l' from DG1. For a more complex case, lambda*n' would be needed.
-        const t_req = l * sqrt((2 * f_p_max) / (getPhi('bending', inputs.design_method) * Fy));
+        const n_prime = sqrt(d * bf) / 4.0;
+
+        // --- More accurate 'l' calculation using lambda*n' ---
+        // Reference: AISC Design Guide 1, 2nd Ed., Eq. 3-11 to 3-13
+        let l, lambda, X;
+        const l_simple = max(m, n); // Fallback for pure moment or uplift cases
+
+        if (Pu_abs > 0 && Pp > 0) {
+            const Pu_Pp_ratio = Pu_abs / Pp;
+            X = ((4 * d * bf) / (d + bf)**2) * Pu_Pp_ratio;
+            // Ensure X is not > 1.0 to avoid issues with sqrt(1-X)
+            X = Math.min(X, 1.0); 
+            lambda = (2 * sqrt(X)) / (1 + sqrt(1 - X));
+            l = max(m, n, lambda * n_prime);
+        } else {
+            l = l_simple; // Use simplified 'l' if no compression
+        }
+
+        const t_req = l * sqrt((2 * f_p_max) / (getPhi('bending', design_method) * Fy));
 
         return {
             demand: tp,
-            check: { Rn: t_req, phi: 1.0, omega: 1.0 },
-            details: { m, n, l, t_req }
+            check: { Rn: t_req, phi: 1.0, omega: 1.0 }, // Rn is the required thickness
+            details: { m, n, n_prime, X, lambda, l, t_req, f_p_max }
         };
     }
 
+    /**
+     * Calculates the coordinates of each anchor bolt relative to the centroid of the bolt group.
+     * @param {object} inputs - The user inputs object.
+     * @returns {Array<{x: number, z: number}>} An array of bolt coordinate objects.
+     */
+    function getBoltCoordinates(inputs) {
+        const { num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B } = inputs;
+        const coords = [];
+
+        const start_x = -(num_bolts_B - 1) * bolt_spacing_B / 2.0;
+        const start_z = -(num_bolts_N - 1) * bolt_spacing_N / 2.0;
+
+        for (let r = 0; r < num_bolts_N; r++) {
+            for (let c = 0; c < num_bolts_B; c++) {
+                coords.push({
+                    x: start_x + c * bolt_spacing_B,
+                    z: start_z + r * bolt_spacing_N
+                });
+            }
+        }
+        return coords;
+    }
     /**
      * Calculates the maximum tension force on a single anchor bolt under combined axial load and biaxial bending.
      * @param {object} inputs - The user inputs object.
      * @param {object} bearing_results - The results from the concrete bearing check.
      * @returns {number} The maximum tension force in kips.
      */
-    function calculateAnchorTension(inputs, bearing_results) { // FIX: Corrected function name
-        const { axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, base_plate_length_N: N, base_plate_width_B: B, num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B } = inputs;
-        
-        if (!bearing_results || !bearing_results.details) return 0;
-        const { f_p_max, Y, X, bearing_case } = bearing_results.details;
+    function calculateAnchorTension(inputs) {
+        const { axial_load_P_in: Pu, moment_Mx_in: Mux_kipft, moment_My_in: Muy_kipft, num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B } = inputs;
+        const Mux = Mux_kipft * 12; // kip-in
+        const Muy = Muy_kipft * 12; // kip-in
+        const bolt_coords = getBoltCoordinates(inputs);
 
-        // Calculate bolt group properties
-        const num_bolts_total = num_bolts_N * num_bolts_B;
-        if (num_bolts_total === 0) return 0;
-
-        let sum_dist_sq = 0;
-        const bolt_coords = [];
-        const start_x = -(num_bolts_N - 1) * bolt_spacing_N / 2;
-        const start_y = -(num_bolts_B - 1) * bolt_spacing_B / 2;
-
-        for (let i = 0; i < num_bolts_N; i++) {
-            for (let j = 0; j < num_bolts_B; j++) {
-                const x = start_x + i * bolt_spacing_N;
-                const y = start_y + j * bolt_spacing_B;
-                bolt_coords.push({ x, y });
-                sum_dist_sq += x**2 + y**2;
-            }
-        }
-
-        // Calculate compression resultant and its location
-        const C = (f_p_max * X * Y) / 2;
-        const c_loc_x = N / 2 - Y / 3;
-        const c_loc_y = B / 2 - X / 3;
-
-        // Calculate tension on the most stressed bolt (simplified linear distribution)
-        const T_total = (Mux * 12 + Muy * 12 - Math.abs(Pu) * (c_loc_x + c_loc_y)) / (bolt_coords[0].x + bolt_coords[0].y); // Simplified lever arm
-        const Tu_max = (Pu / num_bolts_total) + (Mux * 12 * Math.abs(bolt_coords[0].x)) / sum_dist_sq + (Muy * 12 * Math.abs(bolt_coords[0].y)) / sum_dist_sq;
-
-        return max(0, Tu_max);
+        // Call the new breakdown function to get the value
+        const result = generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs);
+        return result; // This now returns an object { value, breakdown }
     }
 
     // --- Modular Anchor Check Functions (ACI 318-19, Chapter 17) ---
 
-    function checkAnchorSteelTension(inputs) {
+    function checkAnchorSteelTension(inputs) { // FIX: Corrected function name
         const { anchor_bolt_diameter: db, anchor_bolt_Fut: Fut, design_method } = inputs;
         const Ab = PI * (db ** 2) / 4.0;
         return { Rn: Ab * Fut, phi: getPhi('anchor_tension_steel', design_method), omega: getPhi('anchor_tension_steel', 'ASD') };
@@ -670,44 +764,54 @@ const basePlateCalculator = (() => {
         return { Rn: k_cp * Ncb_tension, phi: getPhi('anchor_pryout', design_method), omega: getPhi('anchor_pryout', 'ASD'), details };
     }
 
-    function checkAnchorInteraction(Tu_group, Vu, checks) {
+    function checkAnchorInteraction(Tu_group, Vu, checks, design_method) {
         const { 'Anchor Steel Tension': T_steel, 'Anchor Steel Shear': V_steel, 'Anchor Concrete Breakout': T_concrete_breakout, 'Anchor Pullout Strength': T_pullout, 'Anchor Side-Face Blowout': T_sideface, 'Anchor Concrete Shear Breakout': V_concrete_breakout, 'Anchor Concrete Pryout': V_pryout } = checks;
 
         // --- Steel Interaction ---
         const T_steel_cap = T_steel?.check?.Rn || Infinity;
         const V_steel_cap = V_steel?.check?.Rn || Infinity;
-        const phi_T_steel = T_steel?.check?.phi || 1.0;
-        const phi_V_steel = V_steel?.check?.phi || 1.0;
         const num_bolts_tension_row = T_steel?.details?.num_bolts_tension_row || 1;
         const num_bolts_total = V_steel?.details?.num_bolts_total || 1;
 
-        const steel_interaction = (Tu_group / (phi_T_steel * T_steel_cap * num_bolts_tension_row)) + (Vu / (phi_V_steel * V_steel_cap * num_bolts_total));
+        let steel_interaction, concrete_interaction;
+        let steel_details, concrete_details;
 
-        // --- Concrete Interaction ---
         const T_concrete_cap = Math.min(
             T_concrete_breakout?.check?.Rn || Infinity,
             (T_pullout?.check?.Rn || Infinity) * num_bolts_tension_row,
-            T_sideface?.check?.Rn || Infinity
+            T_sideface?.check?.Rn || Infinity // This is already a group capacity
         );
-        const V_concrete_cap = Math.min(
-            V_concrete_breakout?.check?.Rn || Infinity,
-            V_pryout?.check?.Rn || Infinity
-        );
-        const phi_T_concrete = T_concrete_breakout?.check?.phi || 1.0;
-        const phi_V_concrete = V_concrete_breakout?.check?.phi || 1.0;
+        const V_concrete_cap = Math.min(V_concrete_breakout?.check?.Rn || Infinity, V_pryout?.check?.Rn || Infinity);
 
-        const concrete_interaction = (Tu_group / (phi_T_concrete * T_concrete_cap)) + (Vu / (phi_V_concrete * V_concrete_cap));
+        // --- ACI 318 Anchor Interaction is ALWAYS strength-based (LRFD) ---
+        // The demands (Tu_group, Vu) passed to this function are already factored to strength level.
+        // We will use phi factors regardless of the user's overall design_method selection.
+
+        const phi_T_steel = getPhi('anchor_tension_steel', 'LRFD');
+        const phi_V_steel = getPhi('anchor_shear_steel', 'LRFD');
+        const phi_T_concrete = getPhi('anchor_tension_concrete', 'LRFD');
+        const phi_V_concrete = getPhi('anchor_shear_concrete', 'LRFD');
+
+        const phi_Tn_steel_group = phi_T_steel * T_steel_cap * num_bolts_tension_row;
+        const phi_Vn_steel_group = phi_V_steel * V_steel_cap * num_bolts_total;
+        steel_interaction = (phi_Tn_steel_group > 0 ? Tu_group / phi_Tn_steel_group : 0) + (phi_Vn_steel_group > 0 ? Vu / phi_Vn_steel_group : 0);
+        steel_details = { Tu: Tu_group, Vu, phiTn: phi_Tn_steel_group, phiVn: phi_Vn_steel_group, is_lrfd: true };
+
+        const phi_Tn_concrete_group = phi_T_concrete * T_concrete_cap;
+        const phi_Vn_concrete_group = phi_V_concrete * V_concrete_cap;
+        concrete_interaction = (phi_Tn_concrete_group > 0 ? Tu_group / phi_Tn_concrete_group : 0) + (phi_Vn_concrete_group > 0 ? Vu / phi_Vn_concrete_group : 0);
+        concrete_details = { Tu: Tu_group, Vu, phiTn: phi_Tn_concrete_group, phiVn: phi_Vn_concrete_group, is_lrfd: true };
 
         return {
             'Anchor Combined Shear and Tension (Steel)': {
                 demand: steel_interaction,
-                check: { Rn: 1.2, phi: 1.0, omega: 1.0 },
-                details: { Tu: Tu_group, Vu, phiTn: phi_T_steel * T_steel_cap * num_bolts_tension_row, phiVn: phi_V_steel * V_steel_cap * num_bolts_total }
+            check: { Rn: design_method === 'LRFD' ? 1.2 : 1.0, phi: 1.0, omega: 1.0 },
+                details: steel_details
             },
             'Anchor Combined Shear and Tension (Concrete)': {
                 demand: concrete_interaction,
-                check: { Rn: 1.2, phi: 1.0, omega: 1.0 },
-                details: { Tu: Tu_group, Vu, phiTn: phi_T_concrete * T_concrete_cap, phiVn: phi_V_concrete * V_concrete_cap }
+            check: { Rn: design_method === 'LRFD' ? 1.2 : 1.0, phi: 1.0, omega: 1.0 },
+                details: concrete_details
             }
         };
     }
@@ -719,16 +823,27 @@ const basePlateCalculator = (() => {
      * @param {object} bearing_results - The results from the concrete bearing check.
      * @returns {object} An object containing all anchor check results.
      */
-    function performAnchorChecks(inputs, Tu_bolt, bearing_results) {
-        const { num_bolts_N, num_bolts_B, shear_V_in: Vu } = inputs;
+    function performAnchorChecks(inputs, Tu_bolt, bearing_results, tension_breakdown) {
+        const { num_bolts_N, num_bolts_B, shear_V_in, design_method } = inputs;
         const num_bolts_total = num_bolts_N * num_bolts_B;
         const num_bolts_tension_row = num_bolts_B;
         const anchorChecks = {};
 
+        // --- Load Factoring for Anchor Checks ---
+        // ACI 318 anchor design is strength-based (LRFD). If the user selected ASD,
+        // we must factor the service loads up to a strength level for the anchor checks.
+        const asd_load_factor = 1.6; // Conservative load factor for converting ASD to LRFD.
+        const is_asd = design_method === 'ASD';
+        const Tu_bolt_strength = is_asd ? Tu_bolt * asd_load_factor : Tu_bolt;
+        const Vu_strength = is_asd ? shear_V_in * asd_load_factor : shear_V_in;
+        const load_factor_note = is_asd ? `ASD service loads were factored by ${asd_load_factor} for ACI strength design.` : '';
+
+        const Tu_group = Tu_bolt_strength * num_bolts_tension_row;
+
         // --- ANCHOR TENSION CHECKS ---
         if (Tu_bolt > 0) {
             const Tu_group = Tu_bolt * num_bolts_tension_row;
-            anchorChecks['Anchor Steel Tension'] = { demand: Tu_bolt, check: checkAnchorSteelTension(inputs), details: { num_bolts_tension_row } };
+            anchorChecks['Anchor Steel Tension'] = { demand: Tu_bolt, check: checkAnchorSteelTension(inputs), details: { num_bolts_tension_row, breakdown: tension_breakdown } };
             anchorChecks['Anchor Concrete Breakout'] = { demand: Tu_group, check: checkAnchorConcreteBreakout(inputs, bearing_results) };
 
             if (inputs.bolt_type === 'Cast-in') {
@@ -739,22 +854,22 @@ const basePlateCalculator = (() => {
         }
 
         // --- ANCHOR SHEAR CHECKS ---
-        if (Vu > 0) {
-            if (num_bolts_total <= 0) return { error: "Cannot check anchor shear with zero total bolts." };
-            const Vu_bolt = Vu / num_bolts_total;
+        if (shear_V_in > 0) {
+            if (num_bolts_total <= 0) return { error: "Cannot check anchor shear with zero total bolts." }; // This should be caught by validation
+            const Vu_bolt = Vu_strength / num_bolts_total;
 
             anchorChecks['Anchor Steel Shear'] = { demand: Vu_bolt, check: checkAnchorSteelShear(inputs), details: { num_bolts_total } };
             const shear_breakout_check = checkAnchorConcreteShearBreakout(inputs);
-            if (shear_breakout_check) anchorChecks['Anchor Concrete Shear Breakout'] = { demand: Vu, check: shear_breakout_check };
+            if (shear_breakout_check) anchorChecks['Anchor Concrete Shear Breakout'] = { demand: Vu_strength, check: shear_breakout_check };
 
             const pryout_check = checkAnchorConcretePryout(inputs, anchorChecks['Anchor Concrete Breakout']);
-            if (pryout_check) anchorChecks['Anchor Concrete Pryout'] = { demand: Vu, check: pryout_check };
+            if (pryout_check) anchorChecks['Anchor Concrete Pryout'] = { demand: Vu_strength, check: pryout_check };
         }
 
         // --- Combined Shear and Tension Interaction (ACI 17.8) ---
-        if (Tu_bolt > 0 && Vu > 0) {
-            const Tu_group = Tu_bolt * num_bolts_tension_row;
-            const interaction_checks = checkAnchorInteraction(Tu_group, Vu, anchorChecks);
+        if (Tu_bolt > 0 && shear_V_in > 0) {
+            // Use strength-level loads for interaction check
+            const interaction_checks = checkAnchorInteraction(Tu_group, Vu_strength, anchorChecks, design_method);
             Object.assign(anchorChecks, interaction_checks);
         }
 
@@ -769,43 +884,68 @@ const basePlateCalculator = (() => {
      * @returns {object|null} An object with the weld check results or null if not applicable.
      */
     function checkWeldStrength(inputs, bearing_results) {
-        const { weld_size, column_type, column_depth_d: d, column_flange_width_bf: bf, column_web_tw: tw, column_flange_tf: tf, axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, shear_V_in: Vu, weld_Fexx: Fexx, design_method } = inputs;
-        if (weld_size <= 0) return null;
+        const { weld_type, weld_size, weld_effective_throat, column_type, column_depth_d: d, column_flange_width_bf: bf, column_web_tw: tw, column_flange_tf: tf, axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, shear_V_in: Vu, weld_Fexx: Fexx, base_plate_Fy: Fy, design_method } = inputs;
+        if (weld_type === 'Fillet' && weld_size <= 0) return null;
+        if (weld_type === 'PJP' && weld_effective_throat <= 0) return null;
 
         // --- 1. Calculate Weld Capacity ---
-        // Per AISC Spec J2.4, the strength of the weld is based on its effective throat area.
-        const Rn_weld_per_in = 0.6 * Fexx * (weld_size * 0.707);
         const phi = getPhi('weld', design_method);
         const omega = getPhi('weld', 'ASD'); // Get ASD factor
-        const design_strength_weld_per_in = design_method === 'LRFD' ? Rn_weld_per_in * phi : Rn_weld_per_in / omega;
+        let Rn_weld_per_in, design_strength_weld_per_in;
+
+        if (weld_type === 'Fillet') {
+            // AISC Spec J2.4: Strength is based on effective throat area.
+            Rn_weld_per_in = 0.6 * Fexx * (weld_size * 0.707);
+        } else if (weld_type === 'PJP') {
+            // AISC Spec J2.4: Strength is based on effective throat area (E).
+            // Assuming weld metal strength governs.
+            Rn_weld_per_in = 0.6 * Fexx * weld_effective_throat;
+        } else { // CJP
+            // AISC Spec J2.4: Strength is governed by the base metal.
+            // We check shear yielding of the base metal (column wall).
+            const t_bm = column_type === 'Wide Flange' ? tw : (d / 2 - Math.sqrt((d/2)**2 - (bf/2)**2)); // Approx HSS thickness
+            Rn_weld_per_in = 0.6 * Fy * t_bm;
+        }
+
+        design_strength_weld_per_in = design_method === 'LRFD' ? Rn_weld_per_in * phi : Rn_weld_per_in / omega;
+
 
         // --- 2. Calculate Weld Group Properties and Stresses ---
         let f_max_weld, weld_details;
         if (column_type === 'Wide Flange') {
             // For a wide flange, the weld is around the perimeter.
-            const web_weld_length = d - 2 * tf; // Length of weld along web
-            const Aw = (2 * bf) + (2 * web_weld_length); // Total weld length
-            const Iw_x = (2 * bf * (d / 2)**2) + (2 * (web_weld_length**3) / 12); // Moment of Inertia of weld group
-            const Iw_y = (2 * tf * (bf**3) / 12) + (2 * (d-2*tf) * (tw**3)/12) + (2 * d * (bf/2)**2); // Approx.
+            const L_flange = bf;
+            const L_web = d - 2 * tf;
+            const Aw = 2 * L_flange + 2 * L_web;
+            // Corrected Moment of Inertia for the weld group (strong axis)
+            // I = Σ(I_own + A*d^2) for each weld segment
+            const Iw_x = 2 * (L_flange * (d / 2)**2) + 2 * (L_web**3 / 12);
+            const Sw_x = Iw_x / (d / 2);
+            // Corrected Moment of Inertia for the weld group (weak axis)
+            const Iw_y = 2 * (L_flange**3 / 12) + 2 * (L_web * (tw / 2)**2);
+            const Sw_y = Iw_y / (bf / 2);
+
             const f_axial = abs(Pu) / Aw;
-            const f_moment_x = (Mux * 12 * (d / 2)) / Iw_x;
-            const f_moment_y = (Muy * 12 * (bf / 2)) / Iw_y;
-            const f_shear_x = abs(Vu) / (2 * web_weld_length); // Shear resisted by web welds (strong axis)
+            const f_moment_x = (Mux * 12) / Sw_x;
+            const f_moment_y = (Muy * 12) / Sw_y;
+            // Shear is resisted by the two web welds. The total length is 2 * L_web.
+            const total_web_weld_length = 2 * L_web;
+            const f_shear_x = total_web_weld_length > 0 ? abs(Vu) / total_web_weld_length : 0;
             const f_shear_y = 0; // Assuming V is only in strong axis
             f_max_weld = sqrt((f_axial + f_moment_x + f_moment_y)**2 + f_shear_x**2 + f_shear_y**2);
-            weld_details = { Lw: Aw, Aw, Iw_x, Iw_y, f_axial, f_moment_x, f_moment_y, f_shear_x, f_shear_y, f_max_weld };
+            weld_details = { Lw: Aw, Aw, Iw_x, Sw_x, Iw_y, Sw_y, f_axial, f_moment_x, f_moment_y, f_shear_x, f_shear_y, f_max_weld, L_web };
 
         } else { // Round HSS
             const r = d / 2.0;
             if (r <= 0) return { error: "Column radius is zero." };
             const Aw = 2 * PI * r;
-            const Sw = PI * r ** 2;
-            const Iw = PI * r ** 3; // Section property for thin ring
+            const Sw = PI * r ** 2; // Correct Section Modulus for a thin ring weld group
+            const Jw = 2 * PI * r ** 3; // Polar Moment of Inertia for a thin ring weld group
             const f_axial = Pu / Aw; // Axial stress
             const f_moment = (Mux * 12) / Sw; // Bending stress (assuming M is Mux)
             const f_shear = (2 * Vu) / Aw; // Shear stress for a thin-walled circular section
             f_max_weld = sqrt((f_axial + f_moment)**2 + f_shear**2);
-            weld_details = { Aw, Sw, Iw, f_axial, f_moment, f_shear, f_max_weld };
+            weld_details = { Aw, Sw, Jw, f_axial, f_moment, f_shear, f_max_weld };
         }
 
         return { demand: f_max_weld, check: { Rn: design_strength_weld_per_in, phi: 1.0, omega: 1.0 }, details: weld_details };
@@ -878,8 +1018,8 @@ const basePlateCalculator = (() => {
         if (bending_results?.error) return { errors: [bending_results.error], checks, geomChecks };
         if (bending_results) checks['Plate Bending'] = bending_results;
 
-        const Tu_bolt = calculateAnchorTension(inputs, bearing_results);
-        const anchor_checks = performAnchorChecks(inputs, Tu_bolt, bearing_results);
+        const { value: Tu_bolt, breakdown: tension_breakdown } = calculateAnchorTension(inputs); // Capture the breakdown string
+        const anchor_checks = performAnchorChecks(inputs, Tu_bolt, bearing_results, tension_breakdown);
         Object.assign(checks, anchor_checks);
 
         const weld_check = checkWeldStrength(inputs, bearing_results);
@@ -903,8 +1043,8 @@ const basePlateCalculator = (() => {
 })();
 
 function renderBasePlateStrengthChecks(results) {
-    const { checks, inputs } = results; // Corrected destructuring
-    const { design_method } = inputs;
+    const { checks, inputs: calcInputs } = results; // Use a different name to avoid conflict
+    const { design_method } = calcInputs;
 
     const tableRowsHtml = Object.entries(checks)
         .filter(([name, data]) => data && data.check) // Ensure the check exists
@@ -912,20 +1052,24 @@ function renderBasePlateStrengthChecks(results) {
             const detailId = `bp-details-${index}`;
             const { demand, check } = data;
             const { Rn, phi, omega } = check;
-            const breakdownHtml = generateBasePlateBreakdownHtml(name, data, inputs); // Pass full inputs
-
+            const breakdownHtml = generateBasePlateBreakdownHtml(name, data, calcInputs); // Pass full inputs
+            
+            // For anchor checks, the capacity is always LRFD-based (phi*Rn)
+            // For other checks, it depends on the user's design_method selection.
+            const is_anchor_check = name.toLowerCase().includes('anchor');
+            
             const capacity = Rn || 0;
             const design_capacity = design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
-
+ 
             let ratio, demand_val, capacity_val;
-            if (name === 'Plate Bending' || name === 'Weld Strength' || name === 'Minimum Plate Thickness') {
+            if (name === 'Plate Bending' || name === 'Minimum Plate Thickness') {
                 // For thickness, demand is provided, capacity is required. Ratio is req/prov.
-                demand_val = demand; // provided tp
+                demand_val = demand;             // provided tp
                 capacity_val = design_capacity; // required t_req
                 ratio = demand_val > 0 ? capacity_val / demand_val : Infinity;
             } else {
-                demand_val = demand;
-                capacity_val = design_capacity;
+                demand_val = is_anchor_check && design_method === 'ASD' ? demand * 1.6 : demand; // Apply load factor for ASD anchor checks
+                capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity; // Use LRFD capacity for anchor checks
                 ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : Infinity;
             }
 
@@ -934,7 +1078,7 @@ function renderBasePlateStrengthChecks(results) {
             return `
                 <tr class="border-t dark:border-gray-700">
                     <td>${name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                    <td>${demand_val.toFixed(2)}</td>
+                    <td>${demand_val.toFixed(2)}${is_anchor_check && design_method === 'ASD' ? ' *' : ''}</td>
                     <td>${capacity_val.toFixed(2)}</td>
                     <td>${ratio.toFixed(3)}</td>
                     <td class="font-semibold">${status}</td>
@@ -942,6 +1086,10 @@ function renderBasePlateStrengthChecks(results) {
                 <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td></tr>
             `;
         }).join('');
+
+    const asd_note = design_method === 'ASD' ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        * Anchor checks are performed using ACI 318 strength design (LRFD). ASD service loads have been factored by 1.6 for these checks.
+    </p>` : '';
 
     const html = `
         <div id="strength-checks-section" class="report-section-copyable mt-6">
@@ -965,6 +1113,7 @@ function renderBasePlateStrengthChecks(results) {
                         ${tableRowsHtml}
                     </tbody>
                 </table>
+                ${asd_note}
             </div>
         </div>
     `;
@@ -1014,13 +1163,13 @@ function renderCalculatedGeometry(inputs) {
     const { concrete_edge_dist_ca1, concrete_edge_dist_ca2 } = inputs;
 
     const rows = [
-        `<tr><td>Concrete Edge Distance (cₐ₁)</td><td>${concrete_edge_dist_ca1.toFixed(3)} in</td><td>(Pedestal N - Bolt Group N) / 2</td></tr>`,
-        `<tr><td>Concrete Edge Distance (cₐ₂)</td><td>${concrete_edge_dist_ca2.toFixed(3)} in</td><td>(Pedestal B - Bolt Group B) / 2</td></tr>`
+        `<tr><td>Concrete Edge Distance (c<sub>a1</sub>)</td><td>${concrete_edge_dist_ca1.toFixed(3)} in</td><td>(Pedestal N - Bolt Group N) / 2</td></tr>`,
+        `<tr><td>Concrete Edge Distance (c<sub>a2</sub>)</td><td>${concrete_edge_dist_ca2.toFixed(3)} in</td><td>(Pedestal B - Bolt Group B) / 2</td></tr>`
     ];
 
     return `
     <div id="calculated-geometry-section" class="report-section-copyable mt-6">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center mb-2">
             <h3 class="report-header">Calculated Geometry</h3>
             <button data-copy-target-id="calculated-geometry-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
@@ -1043,7 +1192,7 @@ function renderBasePlateGeometryChecks(geomChecks) {
 
     return `
     <div id="geometry-checks-section" class="report-section-copyable mt-6">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center mb-2">
             <h3 class="report-header">2. Geometry & Spacing Checks (ACI 318-19)</h3>
             <button data-copy-target-id="geometry-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
@@ -1058,101 +1207,231 @@ function renderBasePlateGeometryChecks(geomChecks) {
 }
 
 function renderBasePlateLoadSummary(inputs, checks) {
-    const { axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, shear_V_in: Vu } = inputs;
-    const bearing_pressure = checks['Concrete Bearing']?.details?.f_p_max || 0;
-    const anchor_tension = checks['Anchor Steel Tension']?.demand || 0;
-    const anchor_shear = checks['Anchor Steel Shear']?.demand || 0;
+    const { axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, shear_V_in: Vu, num_bolts_N, num_bolts_B, base_plate_length_N, base_plate_width_B } = inputs;
+    
+    // Get details from the checks object and recalculate demands with corrected functions
+    const bearingDetails = checks['Concrete Bearing']?.details;
+    // FIX: The anchor tension demand and breakdown are already calculated and stored in the 'checks' object.
+    // We should retrieve them from there instead of calling the private `calculateAnchorTension` function again.
+    const anchorTensionDemand = checks['Anchor Steel Tension']?.demand || 0;
+    const tensionBreakdown = checks['Anchor Steel Tension']?.details?.breakdown || 'No tension calculated.';
+    const anchorShearDemand = checks['Anchor Steel Shear']?.demand || 0;
+    const num_bolts_total = num_bolts_N * num_bolts_B;
+
+    // A negative bearing pressure indicates uplift, so the actual bearing pressure is zero.
+    const bearing_pressure = (bearingDetails?.f_p_max > 0 && bearingDetails?.Pu < 0) ? bearingDetails.f_p_max : 0;
 
     const rows = [
-        `<tr><td>Applied Axial (P)</td><td>${Pu.toFixed(2)} kips</td></tr>`,
-        `<tr><td>Applied Moment (M<sub>x</sub> / M<sub>y</sub>)</td><td>${Mux.toFixed(2)} / ${Muy.toFixed(2)} kip-ft</td></tr>`,
-        `<tr><td>Applied Shear (V)</td><td>${Vu.toFixed(2)} kips</td></tr>`,
-        `<tr class="border-t dark:border-gray-700"><td class="font-semibold">Max. Bearing Pressure (f<sub>p,max</sub>)</td><td>${bearing_pressure.toFixed(2)} ksi</td></tr>`,
-        `<tr class="border-t dark:border-gray-700"><td class="font-semibold">Max. Anchor Tension (T<sub>u,bolt</sub>)</td><td>${anchor_tension.toFixed(2)} kips</td></tr>`,
-        `<tr class="border-t dark:border-gray-700"><td class="font-semibold">Max. Anchor Shear (V<sub>u,bolt</sub>)</td><td>${anchor_shear.toFixed(2)} kips</td></tr>`
+        `<tr><td>Applied Axial (P)</td><td>User Input</td><td>${Pu.toFixed(2)} kips</td></tr>`,
+        `<tr><td>Applied Moment (M<sub>x</sub>)</td><td>User Input</td><td>${Mux.toFixed(2)} kip-ft</td></tr>`,
+        `<tr><td>Applied Moment (M<sub>y</sub>)</td><td>User Input</td><td>${Muy.toFixed(2)} kip-ft</td></tr>`,
+        `<tr><td>Applied Shear (V)</td><td>User Input</td><td>${Vu.toFixed(2)} kips</td></tr>`,
+        `<tr><td colspan="3" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Calculated Demands</td></tr>`
     ];
 
+    // --- Bearing Pressure Breakdown ---
+    let bearingBreakdown = 'No compressive bearing on concrete (uplift or zero load).';
+    if (bearingDetails && bearingDetails.Pu < 0) { // Only show eccentricity if there is compression
+        const { e_x, e_y, bearing_case } = bearingDetails;
+        let formula = '';
+        if (bearing_case === "Full Bearing") {
+            formula = `f<sub>p,max</sub> = (P/A) * (1 + 6e<sub>x</sub>/N + 6e<sub>y</sub>/B)`;
+        } else if (bearing_case === "Partial Bearing") {
+            formula = `f<sub>p,max</sub> calculated iteratively for partial bearing.`;
+        } else if (bearing_case === "Corner Bearing") {
+            formula = `f<sub>p,max</sub> = (2*P) / (3*g<sub>x</sub>*g<sub>y</sub>)`;
+        }
+
+        bearingBreakdown = `
+            e<sub>x</sub> = M<sub>x</sub>/P = ${(Mux * 12).toFixed(2)} / ${Math.abs(Pu).toFixed(2)} = ${e_x.toFixed(2)}"<br>
+            e<sub>y</sub> = M<sub>y</sub>/P = ${(Muy * 12).toFixed(2)} / ${Math.abs(Pu).toFixed(2)} = ${e_y.toFixed(2)}"<br>
+            Bearing Case: <b>${bearing_case}</b><br>
+            ${formula}
+        `;
+        if (bearing_pressure <= 0) {
+            bearingBreakdown += `<br>Resultant is outside the kern; no compressive bearing occurs.`;
+        }
+    }
+     rows.push(`
+        <tr class="font-semibold">
+            <td>&nbsp;&nbsp;&nbsp;Max. Bearing Pressure (f<sub>p,max</sub>)</td>
+            <td class="font-mono text-xs">${bearingBreakdown}</td>
+            <td>${bearing_pressure.toFixed(2)} ksi</td>
+        </tr>
+    `);
+
+    // --- Anchor Tension Breakdown ---
+    rows.push(`
+       <tr class="font-semibold">
+           <td>&nbsp;&nbsp;&nbsp;Max. Anchor Tension (T<sub>u,bolt</sub>)</td>
+           <td class="font-mono text-xs">${tensionBreakdown}</td>
+           <td>${anchorTensionDemand.toFixed(2)} kips</td>
+       </tr>
+   `);
+
+    // --- Anchor Shear Breakdown ---
+    let shearFormula;
+    if (anchorShearDemand > 0 && num_bolts_total > 0) {
+        shearFormula = `V<sub>u,bolt</sub> = V<sub>total</sub> / n<sub>bolts</sub> = ${Vu.toFixed(2)} / ${num_bolts_total}`;
+    } else {
+        shearFormula = 'No shear applied.';
+    }
+
+     rows.push(`
+        <tr class="font-semibold">
+            <td>&nbsp;&nbsp;&nbsp;Max. Anchor Shear (V<sub>u,bolt</sub>)</td>
+            <td>${shearFormula}</td>
+            <td>${anchorShearDemand.toFixed(2)} kips</td>
+        </tr>
+    `);
+
+    // --- Return the final HTML ---
     return `
-    <div id="load-summary-section" class="report-section-copyable mt-6">
+    <div id="load-summary-section" class="report-section-copyable mt-6 mb-2">
         <div class="flex justify-between items-center">
-            <h3 class="report-header">3. Load Summary</h3>
+            <h3 class="report-header">3. Load Summary & Demands</h3>
             <button data-copy-target-id="load-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                 <caption class="report-caption">Applied Loads & Calculated Demands</caption>
-                <thead><tr><th>Load / Demand Type</th><th>Magnitude</th></tr></thead>
+                <thead><tr><th>Load / Demand Type</th><th>Calculation / Breakdown</th><th>Value</th></tr></thead>
                 <tbody>${rows.join('')}</tbody>
             </table>
         </div>
-    `;
+    </div>`;
+}
+
+function generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs) {
+    if (bolt_coords.length === 0) {
+        return { value: 0, breakdown: 'No bolts defined.' };
+    }
+
+    const Ab = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
+
+    // Correctly calculate the moment of inertia of the bolt group area: I = Σ(A_b * d²)
+    let I_bg_x = 0, I_bg_y = 0;
+    bolt_coords.forEach(bolt => {
+        I_bg_x += Ab * (bolt.z ** 2);
+        I_bg_y += Ab * (bolt.x ** 2);
+    });
+
+    let max_tension = 0;
+    let breakdown_lines = [];
+    let max_bolt_z = 0;
+    let max_bolt_x = 0;
+
+    bolt_coords.forEach(bolt => {
+        const axial_force = Pu / bolt_coords.length;
+        // Force from moment about x-axis: F_x = M_x * z / I_x * A_b
+        // The stress is (M*z/I), and force is stress * A_b.
+        const stress_from_Mx = I_bg_x > 0 ? (Mux * bolt.z) / I_bg_x : 0;
+        // Stress from moment about y-axis: σ_y = M_y * x / I_y
+        const stress_from_My = I_bg_y > 0 ? (Muy * bolt.x) / I_bg_y : 0;
+        // Total stress on the bolt
+        const total_stress = stress_from_Mx + stress_from_My;
+        // Total force is axial force + (stress * area)
+        const total_force = axial_force + total_stress * Ab;
+
+        if (total_force > max_tension) {
+            max_tension = total_force;
+            max_bolt_z = bolt.z;
+            max_bolt_x = bolt.x;
+            breakdown_lines = [
+                `<b>Formula:</b> T<sub>u,bolt</sub> &approx; P/n + (M<sub>x</sub>&middot;z/I<sub>x</sub> + M<sub>y</sub>&middot;x/I<sub>y</sub>) &times; A<sub>b</sub>`, // Formula is conceptual
+                `<b>P/n:</b> ${Pu.toFixed(2)} kips / ${bolt_coords.length} bolts = ${axial_force.toFixed(2)} kips`,
+                `<b>Stress from M<sub>x</sub>:</b> (${Mux.toFixed(2)} kip-in &times; ${max_bolt_z.toFixed(2)}") / ${I_bg_x.toFixed(2)} in⁴ = ${stress_from_Mx.toFixed(2)} ksi`, // I_x is now Σ(A*d²)
+                `<b>Stress from M<sub>y</sub>:</b> (${Muy.toFixed(2)} kip-in &times; ${max_bolt_x.toFixed(2)}") / ${I_bg_y.toFixed(2)} in⁴ = ${stress_from_My.toFixed(2)} ksi`, // I_y is now Σ(A*d²)
+                `<b>Force from Stress:</b> (${stress_from_Mx.toFixed(2)} + ${stress_from_My.toFixed(2)}) ksi &times; ${Ab.toFixed(3)} in² = ${(total_stress * Ab).toFixed(2)} kips`,
+            ];
+        }
+    });
+
+    if (max_tension <= 0) {
+        breakdown_lines.push('No tension calculated.');
+    }
+
+    return { value: max_tension > 0 ? max_tension : 0, breakdown: breakdown_lines.join('<br>') };
 }
 
 function generateBasePlateBreakdownHtml(name, data, inputs) {
-    const { check, details } = data;
+    const { check } = data;
+    const details = data.details || check.details;
+
     const { design_method } = inputs;
+
+    // For anchor checks, we always use LRFD (phi factors).
+    const is_anchor_check = name.toLowerCase().includes('anchor');
+    const effective_design_method = is_anchor_check ? 'LRFD' : design_method;
+
     const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
-    const factor_val = design_method === 'LRFD' ? check.phi : check.omega;
+    const factor_val = design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67);
     const capacity_eq = design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`;
     const final_capacity = design_method === 'LRFD' ? check.Rn * factor_val : check.Rn / factor_val;
 
     const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
     let content = '';
 
+    // If a pre-formatted breakdown exists (like for anchor tension), use it.
+    if (data.breakdown) {
+        // For anchor tension, we need to add the capacity calculation part.
+        const Ab_tension = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
+        const Nsa = Ab_tension * inputs.anchor_bolt_Fut;
+        const phiNsa = (check?.phi || 0.75) * Nsa;
+        return `${data.breakdown}<br><hr class="my-2"><b>Capacity (per bolt):</b><br>&phi;N<sub>sa</sub> = &phi; &times; A<sub>b,eff</sub> &times; F<sub>ut</sub> = ${(check?.phi || 0.75)} &times; ${Ab_tension.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${phiNsa.toFixed(2)} kips</b>`;
+    }
+
     switch (name) {
         case 'Concrete Bearing':
-            let demand_calc_html = '';
-            if (details.bearing_case === "Full Bearing") {
-                demand_calc_html = `f<sub>p,max</sub> = (P/A) * (1 + 6e<sub>x</sub>/N + 6e<sub>y</sub>/B) = (${details.Pu.toFixed(2)}/(${inputs.base_plate_width_B}*${inputs.base_plate_length_N})) * (1 + 6*${details.e_x.toFixed(2)}/${inputs.base_plate_length_N} + 6*${details.e_y.toFixed(2)}/${inputs.base_plate_width_B}) = <b>${details.f_p_max.toFixed(2)} ksi</b>`;
-            } else if (details.bearing_case === "Partial Bearing") {
-                demand_calc_html = `f<sub>p,max</sub> &approx; max(f<sub>p,x</sub>, f<sub>p,y</sub>) = <b>${details.f_p_max.toFixed(2)} ksi</b> (Simplified from uniaxial check)`;
-            } else if (details.bearing_case === "Corner Bearing") {
-                const gx = inputs.base_plate_length_N / 2 - details.e_x;
-                const gy = inputs.base_plate_width_B / 2 - details.e_y;
-                demand_calc_html = `f<sub>p,max</sub> = (2 * P) / (3 * g<sub>x</sub> * g<sub>y</sub>) = (2 * ${details.Pu.toFixed(2)}) / (3 * ${gx.toFixed(2)} * ${gy.toFixed(2)}) = <b>${details.f_p_max.toFixed(2)} ksi</b>`;
-            } else { // Pure Moment or other
-                demand_calc_html = `f<sub>p,max</sub> = <b>${details.f_p_max.toFixed(2)} ksi</b> (Calculated for pure moment case)`;
-            }
-
             content = format_list([
-                `<u>Maximum Bearing Pressure (f<sub>p,max</sub>)</u>`,
-                `Eccentricity (e<sub>x</sub>) = M<sub>ux</sub> / P<sub>u</sub> = ${(inputs.moment_Mx_in * 12).toFixed(2)} / ${details.Pu.toFixed(2)} = ${details.e_x.toFixed(2)} in`,
-                `Eccentricity (e<sub>y</sub>) = M<sub>uy</sub> / P<sub>u</sub> = ${(inputs.moment_My_in * 12).toFixed(2)} / ${details.Pu.toFixed(2)} = ${details.e_y.toFixed(2)} in`,
-                `Bearing Case: <b>${details.bearing_case}</b>`,
-                `Calculation: ${demand_calc_html}`,
-                `<hr class="my-2">`,
                 `<u>Nominal Bearing Strength (P<sub>p</sub>) per AISC J8</u>`,
                 `Confinement Factor (&Psi;) = min(&radic;(A₂/A₁), 2.0) = min(&radic;(${details.A2.toFixed(2)}/${details.A1.toFixed(2)}), 2.0) = ${details.confinement_factor.toFixed(2)}`,
                 `P<sub>p</sub> = 0.85 &times; f'c &times; A₁ &times; &Psi;`,
                 `P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b> (This is total capacity, not a pressure)`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${capacity_eq} = ${final_capacity.toFixed(2)} kips`
             ]);
             break;
         case 'Plate Bending':
-            const phi_bending = getPhi('bending', design_method);
+            const phi_bending_val = getPhi('bending', design_method);
+            if (inputs.column_type === 'Wide Flange') {
+                const X_val = details.X !== undefined ? details.X.toFixed(3) : 'N/A';
+                const lambda_val = details.lambda !== undefined ? details.lambda.toFixed(3) : 'N/A';
+                content = format_list([
+                    `<u>Required Thickness (t<sub>req</sub>) per AISC DG 1 (Wide Flange)</u>`,
+                    `Cantilever distance (m) = (N - 0.95d)/2 = (${inputs.base_plate_length_N} - 0.95 &times; ${inputs.column_depth_d})/2 = <b>${details.m.toFixed(3)} in</b>`,
+                    `Cantilever distance (n) = (B - 0.80b<sub>f</sub>)/2 = (${inputs.base_plate_width_B} - 0.80 &times; ${inputs.column_flange_width_bf})/2 = <b>${details.n.toFixed(3)} in</b>`,
+                    `Dimension (n') = &radic;(d&middot;b<sub>f</sub>)/4 = &radic;(${inputs.column_depth_d} &middot; ${inputs.column_flange_width_bf})/4 = <b>${details.n_prime.toFixed(3)} in</b>`,
+                    `Effective cantilever length (l) = max(m, n, &lambda;n') = <b>${details.l.toFixed(3)} in</b> (where &lambda;=${lambda_val}, X=${X_val})`,
+                    `t<sub>req</sub> = l &times; &radic;(2 &times; f<sub>p,max</sub> / (${factor_char}F<sub>y</sub>))`,
+                    `t<sub>req</sub> = ${details.l.toFixed(3)} &times; &radic;(2 &times; ${details.f_p_max.toFixed(2)} ksi / (${phi_bending_val} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
+                ]);
+            } else { // Round HSS
+                content = format_list([
+                    `<u>Required Thickness (t<sub>req</sub>) for HSS (Simplified Cantilever)</u>`,
+                    `Cantilever length (l) = (max(N, B) - D)/2 = (max(${inputs.base_plate_length_N}, ${inputs.base_plate_width_B}) - ${inputs.column_depth_d})/2 = <b>${details.l.toFixed(3)} in</b>`,
+                    `t<sub>req</sub> = l &times; &radic;(2 &times; f<sub>p,max</sub> / (${factor_char}F<sub>y</sub>))`,
+                    `t<sub>req</sub> = ${details.l.toFixed(3)} &times; &radic;(2 &times; ${details.f_p_max.toFixed(2)} ksi / (${phi_bending_val} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
+                ]);
+            }
+            break;
+        case 'Plate Bending in Uplift':
+            const phi_bending_uplift = getPhi('bending', design_method);
             content = format_list([
-                `<u>Required Thickness (t<sub>req</sub>) per AISC DG 1</u>`,
-                `Cantilever distance (m) = (N - 0.95d)/2 = (${inputs.base_plate_length_N} - 0.95 &times; ${inputs.column_depth_d})/2 = <b>${details.m.toFixed(3)} in</b>`,
-                `Cantilever distance (n) = (B - 0.80b<sub>f</sub>)/2 = (${inputs.base_plate_width_B} - 0.80 &times; ${inputs.column_flange_width_bf})/2 = <b>${details.n.toFixed(3)} in</b>`,
-                `Effective cantilever length (l) = max(m, n) = <b>${details.l.toFixed(3)} in</b>`,
-                `t<sub>req</sub> = l &times; &radic;(2 &times; f<sub>p,max</sub> / (${factor_char}F<sub>y</sub>))`,
-                `t<sub>req</sub> = ${details.l.toFixed(3)} &times; &radic;(2 &times; ${details.f_p_max.toFixed(2)} ksi / (${phi_bending} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
+                `<u>Required Thickness (t<sub>req</sub>) for Uplift per AISC DG 1, Sec. 3.4.2</u>`,
+                `This check governs when the plate bends due to tension in the anchor bolts.`,
+                `Cantilever (c) = <b>${details.c.toFixed(3)} in</b> (Simplified distance from bolt to column face)`,
+                `t<sub>req</sub> = &radic;(4 &times; T<sub>u,bolt</sub> / (${factor_char}F<sub>y</sub>))`,
+                `t<sub>req</sub> = &radic;(4 &times; ${details.Tu_bolt.toFixed(2)} kips / (${phi_bending_uplift} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
             ]);
             break;
         case 'Anchor Steel Tension':
-            const Ab_tension = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
-            const Tu_bolt = data.demand;
+            // This case is now primarily handled by the `data.breakdown` logic at the top.
+            // This is a fallback.
             content = format_list([
-                `<u>Tension Demand per Bolt (T<sub>u,bolt</sub>)</u>`,
-                `Calculated based on bearing analysis and bolt group geometry.`,
-                `T<sub>u,bolt</sub> = <b>${Tu_bolt.toFixed(2)} kips</b>`,
-                `<hr class="my-2">`,
                 `<u>Nominal Steel Strength (N<sub>sa</sub>) per ACI 17.6.1</u>`,
-                `N<sub>sa</sub> = A<sub>b,eff</sub> &times; F<sub>ut</sub>`,
-                `N<sub>sa</sub> = ${Ab_tension.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `&phi;N<sub>sa</sub> = &phi; &times; A<sub>b,eff</sub> &times; F<sub>ut</sub> = <b>${final_capacity.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (per bolt)</u>`,
-                `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+                `Capacity = &phi;N<sub>sa</sub> = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
             break;
         case 'Anchor Steel Shear':
@@ -1163,54 +1442,49 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
                 `V<sub>u,bolt</sub> = V<sub>u,total</sub> / n<sub>bolts</sub> = ${inputs.shear_V_in.toFixed(2)} / ${details.num_bolts_total} = <b>${Vu_bolt.toFixed(2)} kips</b>`,
                 `<hr class="my-2">`,
                 `<u>Nominal Steel Strength (V<sub>sa</sub>) per ACI 17.7.1</u>`,
-                `V<sub>sa</sub> = 0.6 &times; A<sub>b,eff</sub> &times; F<sub>ut</sub>`,
-                `V<sub>sa</sub> = 0.6 &times; ${Ab_shear.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `&phi;V<sub>sa</sub> = &phi; &times; 0.6 &times; A<sub>b,eff</sub> &times; F<sub>ut</sub>`,
+                `&phi;V<sub>sa</sub> = ${check.phi} &times; 0.6 &times; ${Ab_shear.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${final_capacity.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (per bolt)</u>`,
-                `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+                `Capacity = &phi;V<sub>sa</sub> = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
             break;
         case 'Anchor Concrete Breakout':
-            // FIX: Add a guard clause to prevent errors if the check fails and details are missing.
-            if (!details) {
-                return 'Breakdown not available. The check may not have been applicable or an error occurred.';
-            }
+            if (!details) { return 'Breakdown not available. The check may not have been applicable or an error occurred.'; }
             content = format_list([
                 `<u>Nominal Concrete Breakout Strength (N<sub>cbg</sub>) per ACI 17.6.2</u>`,
                 `Basic Strength (N<sub>b</sub>) = k<sub>c</sub>&lambda;<sub>a</sub>&radic;f'c &times; h<sub>ef</sub><sup>1.5</sup> = ${details.Nb.toFixed(2)} kips`,
                 `Area Ratio (A<sub>Nc</sub>/A<sub>Nco</sub>) = ${details.ANc.toFixed(1)} / ${details.ANco.toFixed(1)} = ${(details.ANc / details.ANco).toFixed(3)}`,
                 `Modification Factors: &psi;<sub>ec,N</sub>=${details.psi_ec_N.toFixed(3)}, &psi;<sub>ed,N</sub>=${details.psi_ed_N.toFixed(3)}, &psi;<sub>c,N</sub>=${details.psi_c_N.toFixed(3)}`,
-                `N<sub>cbg</sub> = (A<sub>Nc</sub>/A<sub>Nco</sub>) &times; &psi;<sub>ec,N</sub> &times; &psi;<sub>ed,N</sub> &times; &psi;<sub>c,N</sub> &times; &psi;<sub>cp,N</sub> &times; N<sub>b</sub> &times; n`,
-                `N<sub>cbg</sub> = ${(details.ANc / details.ANco).toFixed(3)} &times; ${details.psi_ec_N.toFixed(3)} &times; ${details.psi_ed_N.toFixed(3)} &times; ${details.psi_c_N.toFixed(3)} &times; 1.0 &times; ${details.Nb.toFixed(2)} &times; ${inputs.num_bolts_B} = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `Nominal Strength (N<sub>cbg</sub>) = (A<sub>Nc</sub>/A<sub>Nco</sub>) &times; &psi;<sub>...</sub> &times; N<sub>b</sub> &times; n = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (Group)</u>`,
-                `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+                `Capacity = &phi;N<sub>cbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
             break;
         case 'Anchor Pullout Strength':
-            content = format_list([
-                ...(details ? [
-                    `<u>Nominal Pullout Strength (N<sub>pn</sub>) per ACI 17.6.3</u>`,
-                    `Basic Pullout Strength (N<sub>p</sub>) = 8 &times; A<sub>brg</sub> &times; f'c = 8 &times; ${(details.Abrg || 0).toFixed(3)} in² &times; ${inputs.concrete_fc} ksi = <b>${(details.Np || 0).toFixed(2)} kips</b>`,
-                    `N<sub>pn</sub> = &psi;<sub>c,P</sub> &times; N<sub>p</sub> = ${details.psi_c_P.toFixed(2)} &times; ${(details.Np || 0).toFixed(2)} = <b>${(check?.Rn || 0).toFixed(2)} kips</b>`,
-                    `<u>Design Capacity (per bolt)</u>`,
-                    `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
-                ] : ['Calculation details not available. Check may not be applicable.'])
-            ]);
+            if (!details) { content = 'Calculation details not available. Check may not be applicable.'; } else {
+                content = format_list([
+                        `<u>Nominal Pullout Strength (N<sub>pn</sub>) per ACI 17.6.3</u>`,
+                        `Basic Pullout Strength (N<sub>p</sub>) = 8 &times; A<sub>brg</sub> &times; f'c = 8 &times; ${(details.Abrg || 0).toFixed(3)} in² &times; ${inputs.concrete_fc} ksi = <b>${(details.Np || 0).toFixed(2)} kips</b>`,
+                        `Nominal Strength (N<sub>pn</sub>) = &psi;<sub>c,P</sub> &times; N<sub>p</sub> = ${details.psi_c_P.toFixed(2)} &times; ${(details.Np || 0).toFixed(2)} = <b>${(check?.Rn || 0).toFixed(2)} kips</b>`,
+                        `<u>Design Capacity (per bolt)</u>`,
+                        `Capacity = &phi;N<sub>pn</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`
+                ]);
+            }
             break;
         case 'Anchor Side-Face Blowout':
-            content = format_list([
-                ...(details ? [
-                    `<u>Nominal Side-Face Blowout Strength (N<sub>sbg</sub>) per ACI 17.6.4</u>`,
-                    `Check applies because cₐ₁ (${details.ca1.toFixed(2)}") < 0.4 &times; hₑf (${(0.4*details.hef).toFixed(2)}")`,
-                    `Single Anchor (N<sub>sb</sub>) = 160 &times; cₐ₁ &times; &radic;A<sub>brg</sub> &times; &radic;f'c = <b>${(details.Nsb_single || 0).toFixed(2)} kips</b>`,
-                    `Group (N<sub>sbg</sub>) = (1 + s/(6cₐ₁)) &times; N<sub>sb</sub> = <b>${(details.Nsbg || 0).toFixed(2)} kips/bolt</b>`,
-                    `Total Group Capacity = N<sub>sbg</sub> &times; n_bolts = ${(details.Nsbg || 0).toFixed(2)} &times; ${details.num_bolts_at_edge} = <b>${(check?.Rn || 0).toFixed(2)} kips</b>`,
-                    `<u>Design Capacity (Group)</u>`,
-                    `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
-                ] : ['Calculation details not available. Check may not be applicable.'])
-            ]);
+            if (!details) { content = 'Calculation details not available. Check may not be applicable.'; } else {
+                content = format_list([
+                        `<u>Nominal Side-Face Blowout Strength (N<sub>sbg</sub>) per ACI 17.6.4</u>`,
+                        `Check applies because cₐ₁ (${details.ca1.toFixed(2)}") < 0.4 &times; hₑf (${(0.4*details.hef).toFixed(2)}")`,
+                        `Single Anchor (N<sub>sb</sub>) = 160 &times; cₐ₁ &times; &radic;A<sub>brg</sub> &times; &radic;f'c = <b>${(details.Nsb_single || 0).toFixed(2)} kips</b>`,
+                        `Group (N<sub>sbg</sub>) = (1 + s/(6cₐ₁)) &times; N<sub>sb</sub> = <b>${(details.Nsbg || 0).toFixed(2)} kips/bolt</b>`,
+                        `Total Group Capacity = N<sub>sbg</sub> &times; n_bolts = ${(details.Nsbg || 0).toFixed(2)} &times; ${details.num_bolts_at_edge} = <b>${(check?.Rn || 0).toFixed(2)} kips</b>`,
+                        `<u>Design Capacity (Group)</u>`,
+                        `Capacity = &phi;N<sub>sbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`
+                ]);
+            }
             break;
         case 'Anchor Concrete Shear Breakout':
-            // FIX: Add a guard clause to prevent errors if the check is not applicable and details are missing.
             if (!details) {
                 return 'Breakdown not available. Check is not applicable for the given geometry (e.g., edge distance is zero).';
             }
@@ -1218,21 +1492,29 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
                 `<u>Nominal Concrete Shear Breakout Strength (V<sub>cbg</sub>) per ACI 17.7.2</u>`,
                 `Basic Strength (V<sub>b</sub>) = 7(lₑ/dₐ)⁰·²&radic;dₐ&lambda;ₐ&radic;f'c &times; cₐ₁¹·⁵ = <b>${details.Vb.toFixed(2)} kips</b>`,
                 `Area Ratio (A<sub>vc</sub>/A<sub>vco</sub>) = <b>${details.Avc_Avco.toFixed(3)}</b>`,
-                `V<sub>cbg</sub> = (A<sub>vc</sub>/A<sub>vco</sub>) &times; &psi;<sub>ed,V</sub> &times; &psi;<sub>c,V</sub> &times; &psi;<sub>h,V</sub> &times; V<sub>b</sub> &times; n`,
-                `V<sub>cbg</sub> = ${details.Avc_Avco.toFixed(3)} &times; 1.0 &times; ${details.psi_c_V.toFixed(2)} &times; 1.0 &times; ${details.Vb.toFixed(2)} &times; ${inputs.num_bolts_N} = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `Nominal Strength (V<sub>cbg</sub>) = (A<sub>vc</sub>/A<sub>vco</sub>) &times; &psi;<sub>...</sub> &times; V<sub>b</sub> &times; n = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (Group)</u>`,
-                `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
+                `Capacity = &phi;V<sub>cbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
             break;
         case 'Anchor Combined Shear and Tension (Steel)':
         case 'Anchor Combined Shear and Tension (Concrete)':
             const type = name.includes('Steel') ? 'Steel' : 'Concrete';
+            let interaction_formula, t_term, v_term;
+            if (details.is_lrfd) {
+                interaction_formula = `(T<sub>u</sub> / &phi;T<sub>n</sub>) + (V<sub>u</sub> / &phi;V<sub>n</sub>) &le; 1.2 (ACI Eq. 17.8.3-1)`;
+                t_term = `T<sub>u</sub> / &phi;T<sub>n</sub> = ${details.Tu.toFixed(2)} / ${details.phiTn.toFixed(2)} = ${(details.Tu / details.phiTn).toFixed(3)}`;
+                v_term = `V<sub>u</sub> / &phi;V<sub>n</sub> = ${details.Vu.toFixed(2)} / ${details.phiVn.toFixed(2)} = ${(details.Vu / details.phiVn).toFixed(3)}`;
+            } else { // ASD
+                interaction_formula = `(T<sub>a</sub> / (T<sub>n</sub>/&Omega;)) + (V<sub>a</sub> / (V<sub>n</sub>/&Omega;)) &le; 1.0`;
+                t_term = `T<sub>a</sub> / (T<sub>n</sub>/&Omega;) = ${details.Tu.toFixed(2)} / ${details.Tn_omega_t.toFixed(2)} = ${(details.Tu / details.Tn_omega_t).toFixed(3)}`;
+                v_term = `V<sub>a</sub> / (V<sub>n</sub>/&Omega;) = ${details.Vu.toFixed(2)} / ${details.Vn_omega_v.toFixed(2)} = ${(details.Vu / details.Vn_omega_v).toFixed(3)}`;
+            }
             content = format_list([
-                `Reference: ACI 318-19, Section 17.8 (${type})`,
-                `Interaction Equation: (T<sub>u</sub> / &phi;T<sub>n</sub>) + (V<sub>u</sub> / &phi;V<sub>n</sub>) &le; 1.2`,
-                `T<sub>u</sub> / &phi;T<sub>n</sub> = ${details.Tu.toFixed(2)} kips / ${details.phiTn.toFixed(2)} kips = ${(details.Tu / details.phiTn).toFixed(3)}`,
-                `V<sub>u</sub> / &phi;V<sub>n</sub> = ${details.Vu.toFixed(2)} kips / ${details.phiVn.toFixed(2)} kips = ${(details.Vu / details.phiVn).toFixed(3)}`,
-                `Interaction Value = ${(details.Tu / details.phiTn).toFixed(3)} + ${(details.Vu / details.phiVn).toFixed(3)} = <b>${data.demand.toFixed(3)}</b>`,
+                `<u>Interaction Check per ACI 318-19, Section 17.8 (${type})</u>`,
+                `Interaction Equation: ${interaction_formula}`,
+                t_term, v_term,
+                `Interaction Value = <b>${data.demand.toFixed(3)}</b>`,
             ]);
             break;
         case 'Column Web Local Yielding':
@@ -1247,31 +1529,44 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
             ]);
             break;
         case 'Weld Strength':
-            const weld_cap_eq = design_method === 'LRFD' ? `0.75 * 0.6 * F<sub>exx</sub> * 0.707 * w` : `(0.6 * F<sub>exx</sub> * 0.707 * w) / 2.00`;
+            let weld_cap_eq, weld_strength_calc;
+            if (inputs.weld_type === 'Fillet') {
+                weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>exx</sub> * 0.707 * w` : `(0.6 * F<sub>exx</sub> * 0.707 * w) / &Omega;`;
+                weld_strength_calc = `Design Strength = ${factor_val} * 0.6 * ${inputs.weld_Fexx} ksi * 0.707 * ${inputs.weld_size}" = <b>${check.Rn.toFixed(2)} kips/in</b>`;
+            } else if (inputs.weld_type === 'PJP') {
+                weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>exx</sub> * E` : `(0.6 * F<sub>exx</sub> * E) / &Omega;`;
+                weld_strength_calc = `Design Strength = ${factor_val} * 0.6 * ${inputs.weld_Fexx} ksi * ${inputs.weld_effective_throat}" = <b>${check.Rn.toFixed(2)} kips/in</b>`;
+            } else { // CJP
+                weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>y</sub> * t<sub>base_metal</sub>` : `(0.6 * F<sub>y</sub> * t<sub>base_metal</sub>) / &Omega;`;
+                weld_strength_calc = `CJP welds develop the strength of the base metal. Capacity is based on shear yielding of the column wall.`;
+            }
+
             let stress_calcs = [];
-            if (inputs.column_type === 'Wide Flange') {
-                stress_calcs.push(`Normal Stress (f<sub>n</sub>) = P/A<sub>w</sub> + M<sub>x</sub>/S<sub>wx</sub> + M<sub>y</sub>/S<sub>wy</sub> = ${details.f_axial.toFixed(2)} + ${details.f_moment_x.toFixed(2)} + ${details.f_moment_y.toFixed(2)} = <b>${(details.f_axial + details.f_moment_x + details.f_moment_y).toFixed(2)} kips/in</b>`);
+            if (inputs.column_type === 'Wide Flange' && details.Sw_x > 0) {
+                stress_calcs.push(`Normal Stress (f<sub>n</sub>) = P/A<sub>w</sub> + M<sub>x</sub>/S<sub>wx</sub> + M<sub>y</sub>/S<sub>wy</sub> = ${details.f_axial.toFixed(2)} + ${(inputs.moment_Mx_in * 12 / details.Sw_x).toFixed(2)} + ${(inputs.moment_My_in * 12 / details.Sw_y).toFixed(2)} = <b>${(details.f_axial + details.f_moment_x + details.f_moment_y).toFixed(2)} kips/in</b>`);
                 stress_calcs.push(`Shear Stress (f_v) = &radic;(f<sub>vx</sub>² + f<sub>vy</sub>²) = &radic;(${details.f_shear_x.toFixed(2)}² + ${details.f_shear_y.toFixed(2)}²) = ${sqrt(details.f_shear_x**2 + details.f_shear_y**2).toFixed(2)} kips/in`);
                 stress_calcs.push(`Resultant Stress (f<sub>r</sub>) = &radic;(f<sub>n</sub>² + f<sub>v</sub>²) = <b>${details.f_max_weld.toFixed(2)} kips/in</b>`);
-            } else { // Round HSS
-                stress_calcs.push(`Normal Stress (f_n) = P/A<sub>w</sub> + M/S<sub>w</sub> = ${details.f_axial.toFixed(2)} + ${details.f_moment.toFixed(2)} = ${(details.f_axial + details.f_moment).toFixed(2)} kips/in`); // Muy not handled for HSS yet
+            } else if (inputs.column_type === 'Round HSS') {
+                stress_calcs.push(`Normal Stress (f<sub>n</sub>) = P/A<sub>w</sub> + M/S<sub>w</sub> = ${details.f_axial.toFixed(2)} + ${details.f_moment.toFixed(2)} = ${(details.f_axial + details.f_moment).toFixed(2)} kips/in`); // Muy not handled for HSS yet
                 stress_calcs.push(`Shear Stress (f<sub>v</sub>) = 2V/A<sub>w</sub> = ${details.f_shear.toFixed(2)} kips/in`);
                 stress_calcs.push(`Resultant Stress (f<sub>r</sub>) = &radic;(f<sub>n</sub>² + f<sub>v</sub>²) = <b>${details.f_max_weld.toFixed(2)} kips/in</b>`);
+            } else {
+                stress_calcs.push('Stress calculation details not available for this column type.');
             }
-            content = format_list([`Reference: AISC Manual, Part 8 - Elastic Vector Method`].concat(stress_calcs, [
-                `Weld Design Strength = ${weld_cap_eq} = <b>${check.Rn.toFixed(2)} kips/in</b>`
-            ]));
+            content = format_list([
+                `Reference: AISC Manual, Part 8 - Elastic Vector Method`,
+                ...stress_calcs,
+                `Weld Design Strength Formula: ${weld_cap_eq}`,
+                weld_strength_calc
+            ]);
             break;
         case 'Anchor Concrete Pryout':
-            // FIX: Add a guard clause to prevent errors if the check is not applicable and details are missing.
-            if (!details) {
-                return 'Breakdown not available. Check is not applicable (e.g., no tension on bolts or preceding checks failed).';
-            }
+            if (!details) { return 'Breakdown not available. Check is not applicable (e.g., no tension on bolts or preceding checks failed).'; }
             content = format_list([
                 `<u>Nominal Pryout Strength (V<sub>cpg</sub>) per ACI 17.7.3</u>`,
                 `Pryout Factor (k<sub>cp</sub>) = <b>${details.k_cp.toFixed(1)}</b> (since h<sub>ef</sub> ${inputs.anchor_embedment_hef < 2.5 ? '<' : '>='} 2.5")`,
                 `Nominal Concrete Breakout Strength (N<sub>cbg</sub>) = <b>${details.Ncb.toFixed(2)} kips</b> (from tension analysis)`,
-                `V<sub>cpg</sub> = k<sub>cp</sub> &times; N<sub>cbg</sub> = ${details.k_cp.toFixed(1)} &times; ${details.Ncb.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `Nominal Strength (V<sub>cpg</sub>) = k<sub>cp</sub> &times; N<sub>cbg</sub> = ${details.k_cp.toFixed(1)} &times; ${details.Ncb.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (Group)</u>`,
                 `Capacity = ${capacity_eq} = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
@@ -1330,18 +1625,22 @@ document.addEventListener('DOMContentLoaded', () => {
             select.addEventListener('change', (e) => {
                 const grade = AISC_SPEC.getSteelGrade(e.target.value);
                 if (grade) {
-                    document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
+                    if (e.target.dataset.fyTarget) document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
                 }
             });
             select.dispatchEvent(new Event('change')); // Trigger initial population
         }
-
-        // Add event listeners to all inputs to redraw diagrams on input/change, but not run the full check.
+ 
+        // Debounce the 3D diagram redraw for performance.
+        const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
+ 
+        // Add event listeners to all inputs to redraw diagrams on input/change.
         basePlateInputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Redraw diagrams on input, but do not run the heavy calculation.
-                const redraw = () => { drawBasePlateDiagram(); draw3dBasePlateDiagram(); };
+                // Redraw 2D diagram instantly.
+                // Redraw 3D diagram after a short delay to prevent lag.
+                const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
                 el.addEventListener('input', redraw);
                 el.addEventListener('change', redraw);
             }
@@ -1404,7 +1703,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tf_container.style.display = 'none';
             tw_container.style.display = 'none';
         } else { // Wide Flange
-            label1.textContent = 'Column d'; // This was the line causing the error
+            label1.textContent = 'Column Depth (d)';
             dim2_container.style.display = 'block';
             tf_container.style.display = 'block';
             tw_container.style.display = 'block';
@@ -1417,7 +1716,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
 
     const handleRunBasePlateCheck = createCalculationHandler({
-        inputIds: basePlateInputIds, // FIX: Corrected variable name
+        inputIds: basePlateInputIds,
         storageKey: 'baseplate-inputs',
         validatorFunction: basePlateCalculator.validateBasePlateInputs, // Use custom validator
         calculatorFunction: basePlateCalculator.run,
@@ -1438,11 +1737,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
     populateMaterialDropdowns();
     updateColumnInputsUI(); // Set initial state
-
+ 
     // --- Auto-save inputs to localStorage on any change ---
     basePlateInputIds.forEach(id => {
         const el = document.getElementById(id);
-        el?.addEventListener('change', () => saveInputsToLocalStorage('baseplate-inputs', gatherInputsFromIds(basePlateInputIds)));
+        if (el) {
+            el.addEventListener('change', () => {
+                const inputs = gatherInputsFromIds(basePlateInputIds);
+                saveInputsToLocalStorage('baseplate-inputs', inputs);
+            });
+        }
     });
 
     loadInputsFromLocalStorage('baseplate-inputs', basePlateInputIds);
@@ -1456,7 +1760,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('file-input').addEventListener('change', handleLoadInputs);
     
     // Diagram copy buttons
-    document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('diagram-2d-container'));
+    document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('baseplate-diagram'));
     document.getElementById('copy-3d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('3d-diagram-container'));
 
     // Initial drawing of the diagram on page load

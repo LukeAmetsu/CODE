@@ -397,18 +397,18 @@ function checkBoltShearTensionInteraction(Tu, Vu, Fnv, grade, db, design_method)
 
     let F_nt_prime;
     if (design_method === 'LRFD') {
-        const phi_v = 0.75; // phi for bolt shear
-        F_nt_prime = 1.3 * Fnt - (Fnt / (phi_v * Fnv)) * fv;
+        // AISC Eq. J3-3a
+        F_nt_prime = 1.3 * Fnt - (Fnt / (0.75 * Fnv)) * fv;
     } else { // ASD
-        const omega_v = 2.00; // omega for bolt shear
-        F_nt_prime = 1.3 * Fnt - (omega_v * Fnt / Fnv) * fv;
+        // AISC Eq. J3-3b
+        F_nt_prime = 1.3 * Fnt - ((2.00 / 0.75) * Fnt / Fnv) * fv;
     }
     
     F_nt_prime = Math.min(F_nt_prime, Fnt); // Per J3.9, F'nt shall not exceed Fnt
     F_nt_prime = Math.max(0, F_nt_prime); // Ensure tensile strength is not negative
 
     const Rn = F_nt_prime * Ab; // Nominal tensile strength adjusted for shear
-    return { Rn, phi: 0.75, omega: 2.00, Fnt, Fnv, Ab, fv, F_nt_prime, Tu, Vu }; // phi/omega for tension are used
+    return { Rn, phi: 0.75, omega: 2.00, Fnt, Fnv, Ab, fv, F_nt_prime, Tu, Vu }; // phi/omega for tension are used for the final check
 }
 
 /**
