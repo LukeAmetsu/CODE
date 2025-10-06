@@ -123,6 +123,59 @@
                                     <div><label for="Axial_load" class="block text-sm">Axial (P, kips)</label><input type="number" id="Axial_load" value="0"></div>
                                 </div>
                             </div>
+                            <div class="form-section">
+                                <h2>Web Splice Plates</h2>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="num_web_plates" class="block text-sm font-medium mb-1"># of Plates</label>
+                                        <select id="num_web_plates"><option value="1">1</option><option value="2" selected>2</option></select>
+                                    </div>
+                                    <div class="col-span-1">
+                                        <label for="optimize_web_plates_check" class="flex items-center text-sm font-medium">
+                                            <input type="checkbox" id="optimize_web_plates_check" class="h-4 w-4 rounded mr-2"
+                                                   data-ui-toggle-controller
+                                                   data-ui-toggle-target="#H_wp, #t_wp"
+                                                   data-ui-toggle-type="disable">
+                                            Optimize Plate Dimensions?
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mt-4">
+                                    <div><label for="H_wp" class="block text-sm">Height (H)</label><input type="number" id="H_wp" value="12"></div>
+                                    <div><label for="t_wp" class="block text-sm">Thick (t)</label><input type="number" id="t_wp" value="0.375"></div>
+                                    <div><label for="L_wp" class="block text-sm">Total Length (L)</label><input type="number" id="L_wp" value="12"></div>
+                                    <div class="col-span-2">
+                                        <label for="web_plate_material" class="block text-sm">Material</label>
+                                        <select id="web_plate_material" data-fy-target="web_plate_Fy" data-fu-target="web_plate_Fu">
+                                            <!-- Options will be populated by JS -->
+                                        </select>
+                                        <input type="hidden" id="web_plate_Fy" value="36">
+                                        <input type="hidden" id="web_plate_Fu" value="58">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-section">
+                                <h2>Web Bolts</h2>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label for="D_wp" class="block text-sm">Diameter</label><input type="number" id="D_wp" value="0.875"></div>
+                                    <div>
+                                        <label for="bolt_grade_wp" class="block text-sm">Grade</label>
+                                        <select id="bolt_grade_wp">
+                                            <!-- Options will be populated by JS -->
+                                        </select>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label for="threads_included_wp" class="flex items-center text-sm font-medium">
+                                            <input type="checkbox" id="threads_included_wp" class="h-4 w-4 rounded mr-2" checked> Threads included in shear plane?
+                                        </label>
+                                    </div>
+                                    <div><label for="Nc_wp" class="block text-sm">Cols (Nc)</label><input type="number" id="Nc_wp" value="2"></div>
+                                    <div><label for="Nr_wp" class="block text-sm">Rows (Nr)</label><input type="number" id="Nr_wp" value="3"></div>
+                                    <div><label for="S4_col_spacing_wp" class="block text-sm">Col Spacing (S4)</label><input type="number" id="S4_col_spacing_wp" value="3"></div>
+                                    <div><label for="S5_row_spacing_wp" class="block text-sm">Row Spacing (S5)</label><input type="number" id="S5_row_spacing_wp" value="3"></div>
+                                    <div><label for="S6_end_dist_wp" class="block text-sm">End Dist (S6)</label><input type="number" id="S6_end_dist_wp" value="1.5"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Column 2: Flange Splice -->
@@ -202,59 +255,6 @@
                                     <div><label for="S2_row_spacing_fp" class="block text-sm">Row Spacing (S2)</label><input type="number" id="S2_row_spacing_fp" value="3"></div>
                                     <div><label for="S3_end_dist_fp" class="block text-sm">End Dist (S3)</label><input type="number" id="S3_end_dist_fp" value="1.5"></div>
                                     <div><label for="g_gage_fp" class="block text-sm">Gage (g)</label><input type="number" id="g_gage_fp" value="5.5"></div>
-                                </div>
-                            </div>
-                            <div class="form-section">
-                                <h2>Web Splice Plates</h2>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="num_web_plates" class="block text-sm font-medium mb-1"># of Plates</label>
-                                        <select id="num_web_plates"><option value="1">1</option><option value="2" selected>2</option></select>
-                                    </div>
-                                    <div class="col-span-1">
-                                        <label for="optimize_web_plates_check" class="flex items-center text-sm font-medium">
-                                            <input type="checkbox" id="optimize_web_plates_check" class="h-4 w-4 rounded mr-2"
-                                                   data-ui-toggle-controller
-                                                   data-ui-toggle-target="#H_wp, #t_wp"
-                                                   data-ui-toggle-type="disable">
-                                            Optimize Plate Dimensions?
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4 mt-4">
-                                    <div><label for="H_wp" class="block text-sm">Height (H)</label><input type="number" id="H_wp" value="12"></div>
-                                    <div><label for="t_wp" class="block text-sm">Thick (t)</label><input type="number" id="t_wp" value="0.375"></div>
-                                    <div><label for="L_wp" class="block text-sm">Total Length (L)</label><input type="number" id="L_wp" value="12"></div>
-                                    <div class="col-span-2">
-                                        <label for="web_plate_material" class="block text-sm">Material</label>
-                                        <select id="web_plate_material" data-fy-target="web_plate_Fy" data-fu-target="web_plate_Fu">
-                                            <!-- Options will be populated by JS -->
-                                        </select>
-                                        <input type="hidden" id="web_plate_Fy" value="36">
-                                        <input type="hidden" id="web_plate_Fu" value="58">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-section">
-                                <h2>Web Bolts</h2>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label for="D_wp" class="block text-sm">Diameter</label><input type="number" id="D_wp" value="0.875"></div>
-                                    <div>
-                                        <label for="bolt_grade_wp" class="block text-sm">Grade</label>
-                                        <select id="bolt_grade_wp">
-                                            <!-- Options will be populated by JS -->
-                                        </select>
-                                    </div>
-                                    <div class="col-span-2">
-                                        <label for="threads_included_wp" class="flex items-center text-sm font-medium">
-                                            <input type="checkbox" id="threads_included_wp" class="h-4 w-4 rounded mr-2" checked> Threads included in shear plane?
-                                        </label>
-                                    </div>
-                                    <div><label for="Nc_wp" class="block text-sm">Cols (Nc)</label><input type="number" id="Nc_wp" value="2"></div>
-                                    <div><label for="Nr_wp" class="block text-sm">Rows (Nr)</label><input type="number" id="Nr_wp" value="3"></div>
-                                    <div><label for="S4_col_spacing_wp" class="block text-sm">Col Spacing (S4)</label><input type="number" id="S4_col_spacing_wp" value="3"></div>
-                                    <div><label for="S5_row_spacing_wp" class="block text-sm">Row Spacing (S5)</label><input type="number" id="S5_row_spacing_wp" value="3"></div>
-                                    <div><label for="S6_end_dist_wp" class="block text-sm">End Dist (S6)</label><input type="number" id="S6_end_dist_wp" value="1.5"></div>
                                 </div>
                             </div>
                         </div>

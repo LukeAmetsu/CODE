@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.target.id === 'download-pdf-btn') {
                 handleDownloadPdf('wind-report-content', 'Wind-Load-Report.pdf');
             }
+            if (event.target.id === 'download-word-btn') {
+                handleDownloadWord('wind-report-content', 'Wind-Load-Report.doc');
+            }
             const button = event.target.closest('.toggle-details-btn');
             if (button) {
                 const detailId = button.dataset.toggleId;
@@ -2077,6 +2080,7 @@ function renderWindResults(results) {
     let html = `<div id="wind-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">`;
     html += `<div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
                     <button id="send-to-combos-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm print-hidden">Send to Combos</button>
+                    <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
                     <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
                     <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
                    </div>`;

@@ -237,13 +237,13 @@
         <div id="footer-placeholder"></div>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            injectHeader({
+        document.addEventListener('DOMContentLoaded', async () => {
+            await injectHeader({
                 activePage: 'snow',
                 pageTitle: 'ASCE Snow Load Calculator',
                 headerPlaceholderId: 'header-placeholder'
             });
-            injectFooter({
+            await injectFooter({
                 footerPlaceholderId: 'footer-placeholder'
             });
         });

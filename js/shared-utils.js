@@ -52,6 +52,7 @@ function initializeSharedUI() {
  * - `data-ui-toggle-condition-value`: The value the controller must have to trigger the action.
  * - `data-ui-toggle-condition-value`: The value(s) the controller must have to trigger the action (comma-separated for multiple values).
  * - `data-ui-toggle-condition-checked`: 'true' or 'false' for checkboxes.
+ * - `data-ui-toggle-target-for`: The ID of the controller. Used on the target element.
  * - `data-ui-toggle-class`: The class to toggle for visibility (default: 'hidden').
  * - `data-ui-toggle-invert`: 'true' to invert the condition's result.
  */
@@ -59,54 +60,41 @@ function initializeUiToggles() {
     const controllers = document.querySelectorAll('[data-ui-toggle-controller], [data-ui-toggle-target-for]');
 
     controllers.forEach(controller => {
-        const targetSelector = controller.dataset.uiToggleTarget;
-        const conditionValue = controller.dataset.uiToggleConditionValue;
-        // A single element can be a controller for its own targets, and a target for another controller.
         const isController = controller.hasAttribute('data-ui-toggle-controller');
         const isControlled = controller.hasAttribute('data-ui-toggle-target-for');
 
-        // If it's a controller, set up its listener
         if (isController) {
             const targetSelector = controller.dataset.uiToggleTarget;
             if (targetSelector) {
                 setupController(controller, targetSelector);
             }
         }
-
-        // If it's controlled by another element, find that controller and set up the listener
         if (isControlled) {
             const controllerId = controller.dataset.uiToggleTargetFor;
             const mainController = document.getElementById(controllerId);
             if (mainController) {
-                // Pass the target element itself as the selector
                 setupController(mainController, `#${controller.id}`);
             }
         }
     });
 
     function setupController(controller, targetSelector) {
-        const targetElement = document.querySelector(targetSelector);
-        if (!targetElement) return;
-
-        const conditionValue = targetElement.dataset.uiToggleConditionValue || controller.dataset.uiToggleConditionValue;
-        const conditionChecked = controller.dataset.uiToggleConditionChecked;
-        const toggleType = controller.dataset.uiToggleType || 'visibility';
-        const toggleClass = controller.dataset.uiToggleClass || 'hidden';
-        const invert = (targetElement.dataset.uiToggleInvert || controller.dataset.uiToggleInvert) === 'true';
-
         const updateUi = () => {
             const targets = document.querySelectorAll(targetSelector);
             if (targets.length === 0) return;
 
-            let conditionMet = false;
-            if (controller.type === 'checkbox') {
-                const isChecked = controller.checked;
-                if (conditionChecked) {
-                    conditionMet = String(isChecked) === conditionChecked;
-                } else {
-                    conditionMet = isChecked;
-                }
-            } else { // Handles select, text, number inputs
+            targets.forEach(target => {
+                const conditionValue = target.dataset.uiToggleConditionValue || controller.dataset.uiToggleConditionValue;
+                const conditionChecked = target.dataset.uiToggleConditionChecked || controller.dataset.uiToggleConditionChecked;
+                const toggleType = target.dataset.uiToggleType || controller.dataset.uiToggleType || 'visibility';
+                const toggleClass = target.dataset.uiToggleClass || controller.dataset.uiToggleClass || 'hidden';
+                const invert = (target.dataset.uiToggleInvert || controller.dataset.uiToggleInvert) === 'true';
+
+                let conditionMet = false;
+                if (controller.type === 'checkbox') {
+                    const isChecked = controller.checked;
+                    conditionMet = conditionChecked ? String(isChecked) === conditionChecked : isChecked;
+                } else { // Handles select, text, number inputs
                 if (conditionValue === 'all') {
                     conditionMet = true; // Always show for 'all'
                 } else if (conditionValue) {
@@ -114,14 +102,12 @@ function initializeUiToggles() {
                     conditionMet = conditionValues.includes(controller.value);
                 }
             }
+                const finalCondition = invert ? !conditionMet : conditionMet;
 
-            const finalCondition = invert ? !conditionMet : conditionMet;
-
-            targets.forEach(target => {
                 if (toggleType === 'visibility') target.classList.toggle(toggleClass, !finalCondition);
                 else if (toggleType === 'disable') target.disabled = finalCondition;
             });
-        };
+        }; // End of updateUi
 
         controller.addEventListener('change', updateUi);
         controller.addEventListener('input', updateUi);
@@ -373,20 +359,25 @@ function getAllCssStyles() {
  * @returns {Promise<HTMLImageElement|null>} A promise that resolves with an HTML <img> element or null on failure.
  */
 async function convertSvgToPng(svg) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try {
             const clone = svg.cloneNode(true);
             const rect = svg.getBoundingClientRect();
             const viewBox = svg.viewBox.baseVal;
 
-            // Prioritize dimensions in this order: rendered size, viewBox, fallback
+            // Prioritize dimensions: rendered size, viewBox, fallback. Ensure non-zero dimensions.
             const width = rect.width || (viewBox && viewBox.width) || 500;
             const height = rect.height || (viewBox && viewBox.height) || 300;
 
             clone.setAttribute('width', width);
             clone.setAttribute('height', height);
 
-            // Embed all page styles into the SVG for correct rendering
+            // Determine background color from theme
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const backgroundColor = isDarkMode ? '#1f2937' : '#f9fafb'; // Corresponds to .diagram bg colors
+            const backgroundRect = `<rect width="100%" height="100%" fill="${backgroundColor}"></rect>`;
+
+            // Embed all page styles into the SVG for correct rendering.
             const styles = getAllCssStyles();
             const defs = document.createElementNS("http://www.w3.org/2000/svg", 'defs');
             defs.innerHTML = styles;
@@ -394,7 +385,8 @@ async function convertSvgToPng(svg) {
 
             clone.setAttribute('width', width);
             clone.setAttribute('height', height);
-
+            // Prepend the background rectangle to the cloned SVG's innerHTML
+            clone.innerHTML = backgroundRect + clone.innerHTML;
             const xml = new XMLSerializer().serializeToString(clone);
             const svg64 = btoa(unescape(encodeURIComponent(xml)));
             const dataUrl = 'data:image/svg+xml;base64,' + svg64;
@@ -406,8 +398,6 @@ async function convertSvgToPng(svg) {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
 
-                // Fill background with white for better compatibility
-                ctx.fillStyle = 'white';
                 ctx.fillRect(0, 0, width, height);
                 ctx.drawImage(image, 0, 0);
 
@@ -435,19 +425,57 @@ async function convertSvgToPng(svg) {
  * @param {string} title - The title for the report header.
  * @returns {string} A full HTML document string formatted for MS Word.
  */
-function createWordCompatibleHTML(content, title) {
+function createWordCompatibleHTML(content, title, cssStyles) {
     return `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'><title>${title}</title></head>
+        <head>
+            <meta charset='utf-8'>
+            <title>${title}</title>
+            <style>
+                /* Basic styles for Word compatibility */
+                body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+                th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
+                th { background-color: #f0f0f0; font-weight: bold; }
+                caption { font-weight: bold; text-align: center; margin-bottom: 0.5em; }
+                h1, h2, h3, h4 { font-family: 'Arial', sans-serif; }
+                h1 { font-size: 16pt; text-align: center; }
+                h2 { font-size: 14pt; border-bottom: 1px solid #000; margin-top: 1.5em; }
+                h3 { font-size: 13pt; }
+                .pass { color: #008000; font-weight: bold; }
+                .fail { color: #ff0000; font-weight: bold; }
+                /* Embed all page styles for better fidelity */
+                ${cssStyles}
+            </style>
+        </head>
         <body>
-            <div style="margin-bottom: 24px; text-align: center;">
-                <p style="font-size: 16pt; font-family: 'Times New Roman', Times, serif; font-weight: bold; margin: 0;">${title}</p>
-                <p style="font-size: 12pt; font-family: 'Times New Roman', Times, serif; margin: 4px 0 0 0;">Date: ${new Date().toLocaleDateString()}</p>
-            </div>
-            <hr>
             ${content}
         </body>
         </html>`;
+}
+
+/**
+ * Converts an HTML element to a structured plain text string.
+ * @param {HTMLElement} element - The HTML element to convert.
+ * @returns {string} A plain text representation of the element's content.
+ */
+function convertElementToPlainText(element) {
+    const textParts = [];
+    element.querySelectorAll('h1, h2, h3, h4, p, li, tr, caption').forEach(el => {
+        const tagName = el.tagName.toLowerCase();
+        let line = el.innerText.trim();
+        if (tagName === 'h1') textParts.push(`\n# ${line}\n`);
+        else if (tagName === 'h2') textParts.push(`\n## ${line}\n`);
+        else if (tagName === 'h3') textParts.push(`\n### ${line}\n`);
+        else if (tagName === 'h4') textParts.push(`\n#### ${line}\n`);
+        else if (tagName === 'caption') textParts.push(`\n--- ${line} ---\n`);
+        else if (tagName === 'li') textParts.push(`* ${line}`);
+        else if (tagName === 'tr') {
+            const cells = Array.from(el.querySelectorAll('th, td')).map(cell => cell.innerText.trim());
+            textParts.push(cells.join('\t|\t')); // Tab-separated for better column alignment
+        } else if (tagName === 'p') textParts.push(line);
+    });
+    return textParts.join('\n').replace(/\n{3,}/g, '\n\n'); // Collapse multiple blank lines
 }
 
 /**
@@ -466,14 +494,12 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
         showFeedback('Preparing report for copying...', false, feedbackElId);
         const clone = container.cloneNode(true);
 
-        // --- Get Title and Date ---
+        // --- Prepare Header ---
         const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
         const reportDate = new Date().toLocaleDateString();
-        const headerHtml = `<h1 style="font-size: 16pt; font-family: 'Times New Roman', Times, serif; font-weight: bold; text-align: center;">${reportTitle}</h1><p style="font-size: 12pt; font-family: 'Times New Roman', Times, serif; text-align: center;">Date: ${reportDate}</p><hr>`;
-        const headerText = `${reportTitle}\nDate: ${reportDate}\n\n---\n\n`;
+        const headerHtml = `<h1>${reportTitle}</h1><p style="text-align: center;">Date: ${reportDate}</p><hr>`;
 
-        // Prepare the clone for copying: remove interactive elements and expand details.
-        clone.classList.add('copy-friendly');
+        // Prepare the clone for copying: remove interactive elements, expand details, and remove empty rows.
         clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
         clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
 
@@ -488,7 +514,7 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
                     const pngImage = await convertSvgToPng(svg);
                     if (pngImage && svg.parentNode) {
                         svg.parentNode.replaceChild(pngImage, svg);
-                    }
+                    } else if (svg.parentNode) { svg.parentNode.remove(); }
                 } catch (error) {
                     console.warn("SVG to PNG conversion failed:", error);
                     conversionFailures++;
@@ -496,10 +522,21 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
                 }
             }));
         }
+        
+        // Remove empty table rows that might be left after removing buttons
+        clone.querySelectorAll('tr').forEach(tr => {
+            if (tr.innerText.trim() === '') {
+                tr.remove();
+            }
+        });
 
         showFeedback('Copying to clipboard...', false, feedbackElId);
-        const htmlContent = headerHtml + clone.innerHTML;
-        const plainTextContent = headerText + (clone.innerText || clone.textContent);
+
+        // Generate final HTML and Text content
+        const bodyContent = headerHtml + clone.innerHTML;
+        const allCss = getAllCssStyles();
+        const htmlContent = createWordCompatibleHTML(bodyContent, reportTitle, allCss);
+        const plainTextContent = convertElementToPlainText(clone);
 
         const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
         const textBlob = new Blob([plainTextContent], { type: 'text/plain' });
@@ -589,7 +626,13 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
     const clone = reportContainer.cloneNode(true);
     clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
     clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
-
+    
+    // Remove empty table rows that might be left after removing buttons
+    clone.querySelectorAll('tr').forEach(tr => {
+        if (tr.innerText.trim() === '') {
+            tr.remove();
+        }
+    });
     // Convert SVGs to PNGs
     const svgElements = Array.from(clone.querySelectorAll('svg'));
     if (svgElements.length > 0) {
@@ -707,11 +750,15 @@ function gatherInputsFromIds(inputIds) { // Updated for better validation
  * @param {Object} data - The JavaScript object to save.
  * @param {string} filename - The name of the file to download.
  */
-function saveInputsToFile(data, filename) {
-    const dataStr = JSON.stringify(data, null, 2);
+function saveInputsToFile(data, filename, appVersion = '1.0') {
+    const dataToSave = {
+        _appVersion: appVersion,
+        ...data
+    };
+    const dataStr = JSON.stringify(dataToSave, null, 2);
     const blob = new Blob([dataStr], {type: "text/plain;charset=utf-8"});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement('a'); 
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
@@ -736,11 +783,33 @@ function initiateLoadInputsFromFile(fileInputId = 'file-input') {
  * @returns {function} An event handler function.
  */
 function createSaveInputsHandler(inputIds, filename, feedbackElId = 'feedback-message') {
-    return function() {
+    return function() { 
         const inputs = gatherInputsFromIds(inputIds);
-        saveInputsToFile(inputs, filename);
+        // Pass a version number when saving
+        saveInputsToFile(inputs, filename, '1.1');
         showFeedback(`Inputs saved to ${filename}`, false, feedbackElId);
     };
+}
+
+/**
+ * Applies a given set of input values to the DOM elements.
+ * @param {object} inputs - The key-value pairs of input IDs and their values.
+ * @param {string[]} inputIds - The array of all possible input IDs for the form.
+ */
+function applyInputsToDOM(inputs, inputIds) {
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && inputs[id] !== undefined) {
+            if (el.type === 'checkbox') {
+                el.checked = !!inputs[id];
+            } else {
+                el.value = inputs[id];
+            }
+            // Trigger change/input events to update any dependent UI or calculations
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
 }
 
 /**
@@ -748,38 +817,28 @@ function createSaveInputsHandler(inputIds, filename, feedbackElId = 'feedback-me
  * @param {string[]} inputIds - The array of input IDs to populate.
  * @param {function} onComplete - A callback function to run after inputs are loaded (e.g., re-run calculation).
  * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ * @param {string} [appVersion='1.1'] - The current application version to check against.
  * @returns {function} An event handler function that takes the file input event.
  */
-function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-message') {
+function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-message', appVersion = '1.1') {
     return function(event) {
         const displayEl = document.getElementById('file-name-display');
         const file = event.target.files[0];
         if (!file) {
-            // User cancelled the dialog, clear the display if it exists
-            if (displayEl) displayEl.textContent = ''; 
+            if (displayEl) displayEl.textContent = ''; // User cancelled, clear display
             return;
         }
 
         if (displayEl) displayEl.textContent = `Loaded: ${sanitizeHTML(file.name)}`;
-
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const inputs = JSON.parse(e.target.result);
-                inputIds.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el && inputs[id] !== undefined) { // Check for undefined, not just truthiness
-                        if (el.type === 'checkbox') {
-                            el.checked = !!inputs[id];
-                        } else {
-                            el.value = inputs[id];
-                        }
-                        // Trigger change event for selects to update UI
-                        if (el.tagName === 'SELECT') {
-                            el.dispatchEvent(new Event('change', { bubbles: true }));
-                        }
-                    }
-                });
+                if (inputs._appVersion !== appVersion) {
+                    showFeedback(`Warning: File is from an older version (v${inputs._appVersion || '?'}). Some inputs may not load correctly.`, true, feedbackElId);
+                }
+
+                applyInputsToDOM(inputs, inputIds);
                 showFeedback('Inputs loaded successfully!', false, feedbackElId);
                 if (typeof onComplete === 'function') onComplete();
             } catch (err) {
@@ -800,9 +859,13 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
  * @param {string} storageKey - The key to use for storing the data.
  * @param {object} inputs - The input data object to be stringified and saved.
  */
-function saveInputsToLocalStorage(storageKey, inputs) {
+function saveInputsToLocalStorage(storageKey, inputs, appVersion = '1.0') {
     try {
-        const dataStr = JSON.stringify(inputs);
+        const dataToSave = {
+            _version: appVersion,
+            ...inputs
+        };
+        const dataStr = JSON.stringify(dataToSave);
         localStorage.setItem(storageKey, dataStr);
     } catch (error) {
         console.error('Could not save inputs to local storage:', error);
@@ -814,14 +877,23 @@ function saveInputsToLocalStorage(storageKey, inputs) {
  * @param {string} storageKey - The key to retrieve data from.
  * @param {string[]} inputIds - An array of input element IDs to populate.
  * @param {function} [onComplete] - An optional callback to run after inputs are loaded.
+ * @param {string} [appVersion='1.0'] - The current version of the application's data structure.
  */
-function loadInputsFromLocalStorage(storageKey, inputIds, onComplete) {
+function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion = '1.0') {
     const dataStr = localStorage.getItem(storageKey);
     if (!dataStr) {
         return; // No saved data found, do not proceed.
     }
     try {
         const inputs = JSON.parse(dataStr);
+
+        // Version check: If the saved data has no version or a different version, discard it.
+        if (inputs._version !== appVersion) {
+            console.warn(`LocalStorage data for '${storageKey}' is outdated (v${inputs._version} vs current v${appVersion}). Discarding.`);
+            localStorage.removeItem(storageKey);
+            return;
+        }
+
         inputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el && inputs[id] !== undefined) {
@@ -843,6 +915,24 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete) {
     }
 }
 
+/**
+ * Clears the local storage for a given key and resets the UI fields to their default state.
+ * @param {string} storageKey - The local storage key to clear.
+ * @param {string[]} inputIds - The array of input IDs to reset.
+ * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ */
+function clearLocalStorageAndResetUI(storageKey, inputIds, feedbackElId = 'feedback-message') {
+    localStorage.removeItem(storageKey);
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            // This will reset the form to its initial HTML state
+            el.form.reset();
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+    showFeedback('Inputs have been cleared and reset.', false, feedbackElId);
+}
 /**
  * Creates a standardized calculation handler to reduce boilerplate code.
  * This function encapsulates the common pattern: gather, validate, calculate, render.
@@ -873,7 +963,7 @@ function createCalculationHandler(config) { // This is the function being called
         buttonId
     } = config;
 
-    return async function() {
+    return async function() { // This function is already async, which is good.
         if (buttonId) setLoadingState(true, buttonId);
         showFeedback('Gathering inputs...', false, feedbackElId);
 
@@ -883,7 +973,7 @@ function createCalculationHandler(config) { // This is the function being called
         
         showFeedback('Validating inputs...', false, feedbackElId);
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
-        
+
         let validation;
         if (typeof validatorFunction === 'function') {
             validation = validatorFunction(inputs);

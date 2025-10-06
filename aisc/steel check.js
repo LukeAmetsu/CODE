@@ -58,10 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGeometryInputsUI(); // Initial call
     populateMaterialDropdowns();
 
-    // --- Auto-save inputs to localStorage on any change ---
+    // --- Auto-save inputs to localStorage on any input change, with debouncing ---
+    const debouncedSave = debounce(() => {
+        saveInputsToLocalStorage('steel-check-inputs', gatherInputsFromIds(steelCheckInputIds));
+    }, 300); // Wait 300ms after the user stops typing to save.
+
     steelCheckInputIds.forEach(id => {
         const el = document.getElementById(id);
-        el?.addEventListener('change', () => saveInputsToLocalStorage('steel-check-inputs', gatherInputsFromIds(steelCheckInputIds)));
+        el?.addEventListener('input', debouncedSave);
     });
     loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
 
@@ -79,6 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (event.target.id === 'download-pdf-btn') {
             handleDownloadPdf('steel-check-report-content', 'Steel-Check-Report.pdf');
         } else if (event.target.id === 'toggle-all-details-btn') {
+            handleToggleAllDetails(event.target, '#steel-results-container');
+        } else if (event.target.id === 'download-word-btn') {
+            handleDownloadWord('steel-check-report-content', 'Steel-Check-Report.doc');
             handleToggleAllDetails(event.target, '#steel-results-container');
         }
 
@@ -1385,9 +1392,9 @@ const baseSteelBreakdownGenerators = {
             return common.format_list([
                 `<u>Elastic Buckling Stress (F<sub>e</sub>)</u>`,
                 `Governing Buckling Mode = <b>${check.buckling_mode}</b>`,
-                `F<sub>e</sub> = <b>${common.fmt(check.Fe)} ksi</b>`,
+                `F<sub>e</sub> = <b>${common.fmt(check.Fe, 2)} ksi</b>`,
                 `<u>Critical Buckling Stress (F<sub>cr</sub>)</u>`,
-                `F<sub>cr</sub> = [0.658<sup>(Q&times;F<sub>y</sub>/F<sub>e</sub>)</sup>] &times; Q &times; F<sub>y</sub> = [0.658<sup>(${common.fmt(check.Q, 3)}&times;${common.fmt(common.inputs.Fy)}/${common.fmt(check.Fe)})</sup>] &times; ${common.fmt(check.Q, 3)} &times; ${common.fmt(common.inputs.Fy)} = <b>${common.fmt(check.Fcr)} ksi</b>`,
+                `F<sub>cr</sub> = [0.658<sup>(Q&times;F<sub>y</sub>/F<sub>e</sub>)</sup>] &times; Q &times; F<sub>y</sub> = [0.658<sup>(${common.fmt(check.Q, 3)}&times;${common.fmt(common.inputs.Fy, 1)}/${common.fmt(check.Fe, 2)})</sup>] &times; ${common.fmt(check.Q, 3)} &times; ${common.fmt(common.inputs.Fy, 1)} = <b>${common.fmt(check.Fcr, 2)} ksi</b>`,
                 `<u>Nominal Capacity (P<sub>n</sub>)</u>`,
                 `P<sub>n</sub> = F<sub>cr</sub> &times; A<sub>g</sub> = ${common.fmt(check.Fcr)} ksi &times; ${common.fmt(properties.Ag, 2)} in² = <b>${common.fmt(check.Pn)} kips</b>`,
                 `<u>Design Capacity</u>`,
@@ -1493,17 +1500,20 @@ function generateSteelCheckBreakdownHtml(name, data, inputs, all_results) {
     const { check, details, reference } = data;
     if (!check && !details) return 'Breakdown not available.';
 
-    const { design_method } = inputs;
+    const { design_method } = inputs;    // Use the specific phi/omega from the check data, with a fallback.
+    const phi = check?.phi ?? 0.9;
+    const omega = check?.omega ?? 1.67;
+
     const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
-    const factor_val = design_method === 'LRFD' ? (check?.phi || 0.9) : (check?.omega || 1.67);
+    const factor_val = design_method === 'LRFD' ? phi : omega;
 
     const common_params = {
         inputs,
         design_method,
         factor_char,
-        factor_val,
-        capacity_eq: design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`,
-        final_capacity: design_method === 'LRFD' ? (check?.Rn || 0) * factor_val : (check?.Rn || 0) / factor_val,
+        factor_val,        capacity_eq: design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`,
+        // FIX: Calculate final_capacity using the correct, specific factor_val for this check.
+        final_capacity: design_method === 'LRFD' ? (check?.Rn || 0) * (check?.phi ?? 0.9) : (check?.Rn || 0) / (check?.omega ?? 1.67),
         axial: all_results.axial, // Pass full axial results for combined checks
         flexure: all_results.flexure, // Pass full flexure results
         flexure_y: all_results.flexure_y, // Pass minor axis flexure results
@@ -1619,7 +1629,7 @@ function renderSteelStrengthChecks(results) {
         const demand_val = checkData.demand || 0;
         const capacity_val = checkData.capacity || 0;
         const ratio_val = ratio || 0;
-        const status = ratio_val <= 1.0 ? '<span class="status-pass">Pass</span>' : '<span class="status-fail">Fail</span>';
+        const status = ratio_val <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
         const breakdownHtml = generateSteelCheckBreakdownHtml(name, checkData.data, inputs, results);
 
         rows.push(`
@@ -1696,6 +1706,7 @@ function renderSteelResults(results) {
         ` : ''}
         <div id="steel-check-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
             <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
+                <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
                 <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Show All Details</button>
                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
                 <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>

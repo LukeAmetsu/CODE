@@ -144,36 +144,36 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div class="md:col-span-2 font-semibold text-center text-gray-600 dark:text-gray-400">Wind Perpendicular to L</div>
                 <div>
-                    <label for="combo_wind_wall_ww_max" class="block text-sm font-medium mb-1">Windward Wall Max (W)</label>
-                    <input type="number" id="combo_wind_wall_ww_max" value="15.0">
+                    <label for="combo_wind_wall_ww_max" class="block text-sm font-medium mb-1">Windward Wall Max (W)</label> 
+                    <input type="number" id="combo_wind_wall_ww_max" value="15.0"> 
                 </div>
                 <div>
-                    <label for="combo_wind_wall_ww_min" class="block text-sm font-medium mb-1">Windward Wall Min (W)</label>
-                    <input type="number" id="combo_wind_wall_ww_min" value="3.5">
+                    <label for="combo_wind_wall_ww_min" class="block text-sm font-medium mb-1">Windward Wall Min (W)</label> 
+                    <input type="number" id="combo_wind_wall_ww_min" value="3.5"> 
                 </div>
                 <div>
-                    <label for="combo_wind_wall_lw_max" class="block text-sm font-medium mb-1">Leeward Wall Max (W)</label>
-                    <input type="number" id="combo_wind_wall_lw_max" value="8.8">
+                    <label for="combo_wind_wall_lw_max" class="block text-sm font-medium mb-1">Leeward Wall Max (W)</label> 
+                    <input type="number" id="combo_wind_wall_lw_max" value="8.8"> 
                 </div>
                 <div>
-                    <label for="combo_wind_wall_lw_min" class="block text-sm font-medium mb-1">Leeward Wall Min (W)</label>
-                    <input type="number" id="combo_wind_wall_lw_min" value="-21.5">
+                    <label for="combo_wind_wall_lw_min" class="block text-sm font-medium mb-1">Leeward Wall Min (W)</label> 
+                    <input type="number" id="combo_wind_wall_lw_min" value="-21.5"> 
                 </div>
                 <div>
-                    <label for="combo_wind_roof_ww_max" class="block text-sm font-medium mb-1">Windward Roof Max (W)</label>
-                    <input type="number" id="combo_wind_roof_ww_max" value="-5.0">
+                    <label for="combo_wind_roof_ww_max" class="block text-sm font-medium mb-1">Windward Roof Max (W)</label> 
+                    <input type="number" id="combo_wind_roof_ww_max" value="-5.0"> 
                 </div>
                 <div>
-                    <label for="combo_wind_roof_ww_min" class="block text-sm font-medium mb-1">Windward Roof Min (W)</label>
-                    <input type="number" id="combo_wind_roof_ww_min" value="-18.0">
+                    <label for="combo_wind_roof_ww_min" class="block text-sm font-medium mb-1">Windward Roof Min (W)</label> 
+                    <input type="number" id="combo_wind_roof_ww_min" value="-18.0"> 
                 </div>
                 <div>
-                    <label for="combo_wind_roof_lw_max" class="block text-sm font-medium mb-1">Leeward Roof Max (W)</label>
-                    <input type="number" id="combo_wind_roof_lw_max" value="0.0">
+                    <label for="combo_wind_roof_lw_max" class="block text-sm font-medium mb-1">Leeward Roof Max (W)</label> 
+                    <input type="number" id="combo_wind_roof_lw_max" value="0.0"> 
                 </div>
                 <div>
-                    <label for="combo_wind_roof_lw_min" class="block text-sm font-medium mb-1">Leeward Roof Min (W)</label>
-                    <input type="number" id="combo_wind_roof_lw_min" value="-15.0">
+                    <label for="combo_wind_roof_lw_min" class="block text-sm font-medium mb-1">Leeward Roof Min (W)</label> 
+                    <input type="number" id="combo_wind_roof_lw_min" value="-15.0"> 
                 </div>
             </div>
         </div>
@@ -182,7 +182,7 @@
             <div class="grid grid-cols-1 gap-4">
                 <div>
                     <label for="combo_seismic_load_e" class="block text-sm font-medium mb-1">Seismic Load (E)</label>
-                    <input type="number" id="combo_seismic_load_e" value="0">
+                    <input type="number" id="combo_seismic_load_e" value="0" data-validate="numeric">
                 </div>
             </div>
           </div>
@@ -204,15 +204,18 @@
 
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            injectHeader({
+        document.addEventListener('DOMContentLoaded', async () => {
+            await injectHeader({
                 activePage: 'combos',
                 pageTitle: 'ASCE Load Combination Calculator',
                 headerPlaceholderId: 'header-placeholder'
             });
-            injectFooter({
+            await injectFooter({
                 footerPlaceholderId: 'footer-placeholder'
             });
+
+            // Initialize the app's event listeners after the templates are injected.
+            initializeApp();
         });
     </script>
 </body>

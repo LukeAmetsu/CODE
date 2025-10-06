@@ -842,7 +842,7 @@ const basePlateCalculator = (() => {
 
         // --- ANCHOR TENSION CHECKS ---
         if (Tu_bolt > 0) {
-            const Tu_group = Tu_bolt * num_bolts_tension_row;
+            // const Tu_group = Tu_bolt * num_bolts_tension_row; // This variable is defined but not used here. It's used in the interaction check later.
             anchorChecks['Anchor Steel Tension'] = { demand: Tu_bolt, check: checkAnchorSteelTension(inputs), details: { num_bolts_tension_row, breakdown: tension_breakdown } };
             anchorChecks['Anchor Concrete Breakout'] = { demand: Tu_group, check: checkAnchorConcreteBreakout(inputs, bearing_results) };
 
@@ -1093,13 +1093,12 @@ function renderBasePlateStrengthChecks(results) {
 
     const html = `
         <div id="strength-checks-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center">
-                <h3 class="report-header">4. Strength Checks (${design_method})</h3>
+            <div class="flex justify-between items-center">                <h3 class="report-header">C. Strength Checks (${design_method})</h3>
                 <button data-copy-target-id="strength-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
                 <table class="w-full mt-2 results-table">
-                    <caption class="font-bold text-center bg-gray-200 dark:bg-gray-700 p-2">Strength Checks (${design_method})</caption>
+                    <caption class="report-caption">Strength Checks (${design_method})</caption>
                     <thead>
                         <tr>
                             <th class="w-2/5">Limit State</th>
@@ -1185,10 +1184,10 @@ function renderCalculatedGeometry(inputs) {
 function renderBasePlateGeometryChecks(geomChecks) {
     if (Object.keys(geomChecks).length === 0) return '';
 
-    const rows = Object.entries(geomChecks).map(([name, data]) => {
+    const rows = Object.entries(geomChecks).map(([name, data]) => { // FIX: Corrected variable name
         const status = data.pass ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
         return `<tr><td>${name}</td><td>${data.actual.toFixed(3)}</td><td>${data.min.toFixed(3)}</td><td>${status}</td></tr>`;
-    }).join(''); // FIX: Corrected variable name
+    }).join('');
 
     return `
     <div id="geometry-checks-section" class="report-section-copyable mt-6">
@@ -1198,7 +1197,7 @@ function renderBasePlateGeometryChecks(geomChecks) {
         </div>
         <div class="copy-content">
             <table class="w-full mt-2 summary-table">
-                <caption class="report-caption">Anchor Geometry Checks</caption>
+                    <caption class="report-caption">A. Anchor Geometry Checks</caption>
                 <thead><tr><th>Item</th><th>Actual (in)</th><th>Required Min (in)</th><th>Status</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -1288,8 +1287,7 @@ function renderBasePlateLoadSummary(inputs, checks) {
     // --- Return the final HTML ---
     return `
     <div id="load-summary-section" class="report-section-copyable mt-6 mb-2">
-        <div class="flex justify-between items-center">
-            <h3 class="report-header">3. Load Summary & Demands</h3>
+        <div class="flex justify-between items-center">            <h3 class="report-header">B. Load Summary & Demands</h3>
             <button data-copy-target-id="load-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1597,8 +1595,7 @@ function renderResults(results) {
             <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
                 <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Show All Details</button>
                 <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Report</button>
+                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>
             </div>
             <h2 class="report-title text-center">Base Plate & Anchorage Check Results</h2>
             ${inputSummaryHtml}
@@ -1738,15 +1735,15 @@ document.addEventListener('DOMContentLoaded', () => {
     populateMaterialDropdowns();
     updateColumnInputsUI(); // Set initial state
  
-    // --- Auto-save inputs to localStorage on any change ---
+    // --- Auto-save inputs to localStorage on any input change, with debouncing ---
+    const debouncedSave = debounce(() => {
+        const inputs = gatherInputsFromIds(basePlateInputIds);
+        saveInputsToLocalStorage('baseplate-inputs', inputs);
+    }, 300); // Wait 300ms after the user stops typing to save.
+
     basePlateInputIds.forEach(id => {
         const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', () => {
-                const inputs = gatherInputsFromIds(basePlateInputIds);
-                saveInputsToLocalStorage('baseplate-inputs', inputs);
-            });
-        }
+        el?.addEventListener('input', debouncedSave);
     });
 
     loadInputsFromLocalStorage('baseplate-inputs', basePlateInputIds);

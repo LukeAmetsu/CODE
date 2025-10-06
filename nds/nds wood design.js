@@ -26,6 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSharedUI(); // This was correct
     loadInputsFromLocalStorage('wood-design-inputs', inputIds);
 
+    // --- Auto-save inputs to localStorage on any change ---
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('change', () => saveInputsToLocalStorage('wood-design-inputs', gatherInputsFromIds(inputIds)));
+    });
+
     document.getElementById('wood-results-container').addEventListener('click', (event) => {
         if (event.target.id === 'copy-report-btn') handleCopyToClipboard('wood-report-content', 'feedback-message');
         
@@ -334,11 +340,11 @@ function renderWoodResults(calculationOutput) {
                 </thead>
                 <tbody>`;
     summary_data.forEach((row, index) => {
-        const statusClass = row.status === 'Pass' ? 'pass' : 'fail';
+        const statusHtml = row.status === 'Pass' ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
         const detailId = `wood-detail-${index}`;
         html += `<tr>
                     <td>${row.name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                    <td>${row.actual}</td><td>${row.allowable}</td><td>${row.ratio}</td><td class="${statusClass}">${row.status}</td>
+                    <td>${row.actual}</td><td>${row.allowable}</td><td>${row.ratio}</td><td>${statusHtml}</td>
                  </tr>
                  <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${row.breakdown}</div></td></tr>`;
     });

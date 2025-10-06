@@ -1,201 +1,161 @@
-// --- Diagram Drawing Functions (Global Scope) ---
+let flangeEngine, flangeScene;
+let webEngine, webScene;
 
 /**
- * Factory function to create a generic SVG diagram drawer.
- * This reduces code duplication between the flange and web diagram functions.
- * @param {object} config - Configuration object for the specific diagram.
- * @returns {function} A function that draws the configured diagram.
+ * Factory function to create a 3D diagram drawer using Babylon.js.
+ * @param {object} config - Configuration for the 3D scene.
+ * @returns {function} A function that draws the configured 3D diagram.
  */
-function createDiagramDrawer(config) {
-    return function() {
-        const svg = document.getElementById(config.svgId);
-        if (!svg) return;
-        svg.innerHTML = ''; // Clear previous drawing
+function create3dDiagramDrawer(config) {
+    let engine, scene;
 
-        const getVal = id => parseFloat(document.getElementById(id).value) || 0;
-        
-        // Gather all inputs defined in the config
+    return function() {
+        const canvas = document.getElementById(config.canvasId);
+        if (!canvas || typeof BABYLON === 'undefined') return;
+
+        const getVal = id => parseFloat(document.getElementById(id)?.value) || 0;
         const inputs = {};
         config.inputIds.forEach(id => {
             inputs[id] = getVal(id);
         });
 
-        // Drawing parameters
-        const { W, H } = config.viewBox;
-        const pad = 40;
-        const cx = W / 2;
-        const cy = H / 2;
+        // --- Initialize Scene (only once) ---
+        if (!engine) {
+            engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+            scene = new BABYLON.Scene(engine);
+            const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, config.cameraRadius, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.lowerRadiusLimit = 10;
+            camera.upperRadiusLimit = 200;
 
-        // Calculate scale using a provided function
-        const { total_len, total_h } = config.getScaleDimensions(inputs);
-        const scale = Math.min((W - 2 * pad) / total_len, (H - 2 * pad) / total_h);
-        if (!isFinite(scale) || scale <= 0) return;
+            engine.runRenderLoop(() => scene.render());
+            window.addEventListener('resize', () => engine.resize());
+        }
 
-        const ns = "http://www.w3.org/2000/svg";
-        const createEl = (tag, attrs) => {
-            const el = document.createElementNS(ns, tag);
-            for (const k in attrs) el.setAttribute(k, attrs[k]);
-            return el;
-        };
+        // --- Clear and Re-setup Scene ---
+        scene.meshes.forEach(mesh => mesh.dispose());
+        scene.lights.forEach(light => light.dispose());
 
-        // Create a drawing context to pass to the specific drawing functions
-        const drawContext = { svg, inputs, W, H, cx, cy, scale, createEl };
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        scene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.25), scene);
+        light.intensity = 1.0;
 
-        // Call the specific drawing functions from the configuration
-        config.drawMember(drawContext);
-        config.drawPlate(drawContext);
-        config.drawBolts(drawContext);
-        config.drawDimensions(drawContext);
+        // --- Materials ---
+        const memberMaterial = new BABYLON.PBRMaterial("memberMat", scene);
+        memberMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#2c5282" : "#36454F");
+        memberMaterial.metallic = 0.7;
+        memberMaterial.roughness = 0.5;
+
+        const plateMaterial = new BABYLON.PBRMaterial("plateMat", scene);
+        plateMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#4a5568" : "#A8A8A8");
+        plateMaterial.metallic = 0.8;
+        plateMaterial.roughness = 0.6;
+
+        const boltMaterial = new BABYLON.PBRMaterial("boltMat", scene);
+        boltMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#718096" : "#C0C0C0");
+        boltMaterial.metallic = 0.9;
+        boltMaterial.roughness = 0.4;
+
+        // --- Create Meshes ---
+        config.drawMeshes(scene, inputs, { memberMaterial, plateMaterial, boltMaterial });
     };
 }
 
-const drawFlangeDiagram = createDiagramDrawer({
-    svgId: 'flange-svg',
-    viewBox: { W: 500, H: 250 },
-    inputIds: ['H_fp', 'member_bf', 'gap', 'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp', 'D_fp', 'L_fp'],
-    getScaleDimensions: (i) => ({
-        total_len: i.gap + i.L_fp, // L_fp is total length
-        total_h: Math.max(i.H_fp, i.member_bf)
-    }),
-    drawMember: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sg = inputs.gap * scale;
-        const sbf = inputs.member_bf * scale;
-        svg.appendChild(createEl('rect', { x: 0, y: cy - sbf / 2, width: cx - sg / 2, height: sbf, class: 'svg-member' }));
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sbf / 2, width: 500 - (cx + sg / 2), height: sbf, class: 'svg-member' }));
-    },
-    drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sH_fp = inputs.H_fp * scale;
-        const total_plate_len = inputs.L_fp * scale;
-        svg.appendChild(createEl('rect', { x: cx - total_plate_len / 2, y: cy - sH_fp / 2, width: total_plate_len, height: sH_fp, class: 'svg-plate' }));
-    },
-    drawBolts: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const { gap, Nc_fp, Nr_fp, S1_col_spacing_fp, S2_row_spacing_fp, S3_end_dist_fp, g_gage_fp, D_fp } = inputs;
-        const sg = gap * scale;
-        const bolt_r = Math.max(0, (D_fp * scale) / 2) || 0;
+const draw3dFlangeDiagram = create3dDiagramDrawer({
+    canvasId: 'flange-3d-canvas',
+    cameraRadius: 60,
+    inputIds: ['H_fp', 't_fp', 'L_fp', 'member_bf', 'member_tf', 'gap', 'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp', 'D_fp'],
+    drawMeshes: (scene, i, materials) => {
+        const { H_fp, t_fp, L_fp, member_bf, member_tf, gap, Nc_fp, Nr_fp, S1_col_spacing_fp, S2_row_spacing_fp, S3_end_dist_fp, g_gage_fp, D_fp } = i;
 
-        // Iterate through each of the four symmetric quadrants
-        const sides = [-1, 1]; // -1 for left, 1 for right
-        const verticalPositions = [-1, 1]; // -1 for above centerline, 1 for below
+        // Member Flanges
+        const flangeLeft = BABYLON.MeshBuilder.CreateBox("flangeL", { width: member_bf, height: member_tf, depth: 20 }, scene);
+        flangeLeft.material = materials.memberMaterial;
+        flangeLeft.position.z = -(gap / 2 + 10);
 
-        for (const side of sides) {
-            for (let i = 0; i < Nc_fp; i++) { // For each column
-                const x_offset = i * S1_col_spacing_fp * scale;
-                const bolt_cx = cx + side * (sg / 2 + S3_end_dist_fp * scale + x_offset);
+        const flangeRight = flangeLeft.clone("flangeR");
+        flangeRight.position.z = gap / 2 + 10;
 
-                for (const y_pos of verticalPositions) {
-                    for (let j = 0; j < Nr_fp; j++) { // For each row away from the gage
-                        const y_offset = j * S2_row_spacing_fp * scale;
-                        const bolt_cy = cy + y_pos * ((g_gage_fp * scale / 2) + y_offset);
-                        svg.appendChild(createEl('circle', { cx: bolt_cx, cy: bolt_cy, r: bolt_r, class: 'svg-bolt' }));
-                    }
+        // Splice Plate
+        const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: H_fp, height: t_fp, depth: L_fp }, scene);
+        plate.material = materials.plateMaterial;
+        plate.position.y = (t_fp + member_tf) / 2;
+
+        // Bolts
+        const boltLength = t_fp + member_tf + D_fp;
+        const startX = -(g_gage_fp / 2 + (Nr_fp > 1 ? (Nr_fp - 1) * S2_row_spacing_fp : 0));
+        const startZ = -(gap / 2 + S3_end_dist_fp + (Nc_fp > 1 ? (Nc_fp - 1) * S1_col_spacing_fp : 0));
+
+        for (let side of [-1, 1]) { // Left/Right of gap
+            for (let r = 0; r < Nr_fp; r++) { // Rows from gage
+                for (let c = 0; c < Nc_fp; c++) { // Columns from gap
+                    const bolt = BABYLON.MeshBuilder.CreateCylinder("bolt", { diameter: D_fp, height: boltLength }, scene);
+                    bolt.material = materials.boltMaterial;
+                    bolt.rotation.x = Math.PI / 2;
+
+                    const xPos = startX + r * S2_row_spacing_fp;
+                    const zPos = side * (gap / 2 + S3_end_dist_fp + c * S1_col_spacing_fp);
+
+                    // Create bolts on both sides of the flange centerline
+                    const bolt1 = bolt.clone();
+                    bolt1.position = new BABYLON.Vector3(xPos, (t_fp - member_tf) / 2, zPos);
+                    const bolt2 = bolt.clone();
+                    bolt2.position = new BABYLON.Vector3(-xPos, (t_fp - member_tf) / 2, zPos);
                 }
             }
         }
-    },
-    drawDimensions: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const { gap, H_fp, L_fp, Nc_fp, S1_col_spacing_fp, S3_end_dist_fp, g_gage_fp } = inputs;
-        const sg = gap * scale;
-        const sH_fp = H_fp * scale;
-        const plate_len = (L_fp / 2.0) * scale;
-        const dim_y = cy + sH_fp / 2 + 20;
-        const x_plate_edge_gap = cx + sg / 2;
-        const x_first_bolt = x_plate_edge_gap + S3_end_dist_fp * scale;
-        const x_last_bolt = x_first_bolt + (Nc_fp > 1 ? (Nc_fp - 1) * S1_col_spacing_fp * scale : 0);
-        const x_plate_end = x_plate_edge_gap + plate_len;
-        const end_dist_from_last_bolt = (x_plate_end - x_last_bolt) / scale;
-
-        // S3
-        svg.appendChild(createEl('line', { x1: x_plate_edge_gap, y1: dim_y - 5, x2: x_first_bolt, y2: dim_y - 5, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: x_plate_edge_gap + (x_first_bolt - x_plate_edge_gap) / 2, y: dim_y - 10, class: 'svg-dim-text' })).textContent = `S3=${S3_end_dist_fp}"`;
-        // S1
-        if (Nc_fp > 1) {
-            svg.appendChild(createEl('line', { x1: x_first_bolt, y1: dim_y - 5, x2: x_last_bolt, y2: dim_y - 5, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: x_first_bolt + (x_last_bolt - x_first_bolt) / 2, y: dim_y - 10, class: 'svg-dim-text' })).textContent = `${Nc_fp - 1}@${S1_col_spacing_fp}"`;
-        }
-        // End distance
-        svg.appendChild(createEl('line', { x1: x_last_bolt, y1: dim_y - 5, x2: x_plate_end, y2: dim_y - 5, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: x_last_bolt + (x_plate_end - x_last_bolt) / 2, y: dim_y - 10, class: 'svg-dim-text' })).textContent = `${end_dist_from_last_bolt.toFixed(3)}"`
-        // Gage
-        const dim_x = cx - sg / 2 - plate_len - 20;
-        svg.appendChild(createEl('line', { x1: dim_x, y1: cy - g_gage_fp * scale / 2, x2: dim_x, y2: cy + g_gage_fp * scale / 2, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: dim_x - 10, y: cy, class: 'svg-dim-text', transform: `rotate(-90 ${dim_x - 10},${cy})` })).textContent = `g=${g_gage_fp}"`;
     }
 });
 
-const drawWebDiagram = createDiagramDrawer({
-    svgId: 'web-svg',
-    viewBox: { W: 500, H: 300 },
-    inputIds: ['H_wp', 'member_d', 'member_tf', 'member_tw', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp', 'L_wp'],
-    getScaleDimensions: (i) => ({
-        total_len: i.gap + i.L_wp, // L_wp is total length
-        total_h: i.member_d
-    }),
-    drawMember: ({ svg, inputs, W, cx, cy, scale, createEl }) => {
-        const sg = inputs.gap * scale;
-        const sd = inputs.member_d * scale;
-        const stf = inputs.member_tf * scale;
-        const stw = inputs.member_tw * scale;
-        const member_len_left = cx - sg / 2;
-        const member_len_right = W - (cx + sg / 2); // FIX: Corrected web drawing logic
-        // Draw left member
-        svg.appendChild(createEl('rect', { x: 0, y: cy - sd / 2, width: member_len_left, height: stf, class: 'svg-member' })); // Top flange
-        svg.appendChild(createEl('rect', { x: 0, y: cy + sd / 2 - stf, width: member_len_left, height: stf, class: 'svg-member' })); // Bottom flange
-        svg.appendChild(createEl('rect', { x: -cx - sg/2 , y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
-        // Draw right member
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy - sd / 2, width: member_len_right, height: stf, class: 'svg-member' })); // Top flange
-        svg.appendChild(createEl('rect', { x: cx + sg / 2, y: cy + sd / 2 - stf, width: member_len_right, height: stf, class: 'svg-member' })); // Bottom flange
-        svg.appendChild(createEl('rect', { x: cx + sg/2, y: cy - sd / 2 + stf, width: 500, height: sd - 2 * stf, class: 'svg-member' })); // Web (as a line)
-    },
-    drawPlate: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const sH_wp = inputs.H_wp * scale;
-        const total_plate_len = inputs.L_wp * scale;
-        svg.appendChild(createEl('rect', { x: cx - total_plate_len / 2, y: cy - sH_wp / 2, width: total_plate_len, height: sH_wp, class: 'svg-plate' }));
-    },
-    drawBolts: ({ svg, inputs, W, cx, cy, scale, createEl }) => {
-        const { gap, Nc_wp, Nr_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp, D_wp } = inputs;
-        const sg = gap * scale;
-        const bolt_r = Math.max(0, (D_wp * scale) / 2) || 0;
-        const x_first_bolt_col_right = cx + sg / 2 + S6_end_dist_wp * scale;
-        const start_y = cy - ((Nr_wp - 1) * S5_row_spacing_wp * scale) / 2;
-        for (let i = 0; i < Nc_wp; i++) {
-            const bolt_cx_right = x_first_bolt_col_right + i * S4_col_spacing_wp * scale;
-            const bolt_cx_left = cx - sg / 2 - S6_end_dist_wp * scale - i * S4_col_spacing_wp * scale;
-            for (let j = 0; j < Nr_wp; j++) {
-                const bolt_cy = start_y + j * S5_row_spacing_wp * scale;
-                svg.appendChild(createEl('circle', { cx: bolt_cx_right, cy: bolt_cy, r: bolt_r, class: 'svg-bolt' }));
-                svg.appendChild(createEl('circle', { cx: bolt_cx_left, cy: bolt_cy, r: bolt_r, class: 'svg-bolt' }));
-            }
-        }
-    },
-    drawDimensions: ({ svg, inputs, cx, cy, scale, createEl }) => {
-        const { gap, member_d, L_wp, Nc_wp, Nr_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp } = inputs;
-        const sg = gap * scale;
-        const sd = member_d * scale;
-        const plate_len = (L_wp / 2.0) * scale;
-        const dim_y = cy + sd / 2 + 20;
-        const x_plate_edge_gap_right = cx + sg / 2;
-        const x_first_bolt = x_plate_edge_gap_right + S6_end_dist_wp * scale;
-        const x_last_bolt = x_first_bolt + (Nc_wp > 1 ? (Nc_wp - 1) * S4_col_spacing_wp * scale : 0);
-        const x_plate_end = x_plate_edge_gap_right + plate_len;
-        const end_dist_from_last_bolt = (x_plate_end - x_last_bolt) / scale;
+const draw3dWebDiagram = create3dDiagramDrawer({
+    canvasId: 'web-3d-canvas',
+    cameraRadius: 80,
+    inputIds: ['H_wp', 't_wp', 'L_wp', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp'],
+    drawMeshes: (scene, i, materials) => {
+        const { H_wp, t_wp, L_wp, member_d, member_bf, member_tf, member_tw, gap, Nc_wp, Nr_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp, D_wp } = i;
 
-        // S6
-        svg.appendChild(createEl('line', { x1: x_plate_edge_gap_right, y1: dim_y, x2: x_first_bolt, y2: dim_y, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: x_plate_edge_gap_right + (x_first_bolt - x_plate_edge_gap_right) / 2, y: dim_y - 5, class: 'svg-dim-text' })).textContent = `S6=${S6_end_dist_wp}"`;
-        // S4
-        if (Nc_wp > 1) {
-            svg.appendChild(createEl('line', { x1: x_first_bolt, y1: dim_y, x2: x_last_bolt, y2: dim_y, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: x_first_bolt + (x_last_bolt - x_first_bolt) / 2, y: dim_y - 5, class: 'svg-dim-text' })).textContent = `${Nc_wp - 1}@${S4_col_spacing_wp}"`;
-        }
-        // End distance
-        svg.appendChild(createEl('line', { x1: x_last_bolt, y1: dim_y, x2: x_plate_end, y2: dim_y, class: 'svg-dim' }));
-        svg.appendChild(createEl('text', { x: x_last_bolt + (x_plate_end - x_last_bolt) / 2, y: dim_y - 5, class: 'svg-dim-text' })).textContent = `${end_dist_from_last_bolt.toFixed(3)}"`
-        // S5
-        const dim_x = cx - sg / 2 - plate_len - 20;
-        if (Nr_wp > 1) {
-            const start_y = cy - ((Nr_wp - 1) * S5_row_spacing_wp * scale) / 2;
-            svg.appendChild(createEl('line', { x1: dim_x, y1: start_y, x2: dim_x, y2: start_y + S5_row_spacing_wp * scale, class: 'svg-dim' }));
-            svg.appendChild(createEl('text', { x: dim_x - 10, y: start_y + (S5_row_spacing_wp * scale) / 2, class: 'svg-dim-text', transform: `rotate(-90 ${dim_x - 10},${start_y + (S5_row_spacing_wp * scale) / 2})` })).textContent = `${Nr_wp - 1}@S5=${S5_row_spacing_wp}"`;
+        // --- Member (I-beam) ---
+        const createMemberHalf = (side) => {
+            const flange_y = (member_d - member_tf) / 2;
+            const topFlange = BABYLON.MeshBuilder.CreateBox(`tf_${side}`, { width: member_bf, height: member_tf, depth: 20 }, scene);
+            topFlange.position.y = flange_y;
+            const botFlange = topFlange.clone(`bf_${side}`);
+            botFlange.position.y = -flange_y;
+            const web = BABYLON.MeshBuilder.CreateBox(`web_${side}`, { width: member_tw, height: member_d - 2 * member_tf, depth: 20 }, scene);
+            const memberHalf = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
+            if (memberHalf) {
+                memberHalf.material = materials.memberMaterial;
+                memberHalf.position.z = side * (gap / 2 + 10);
+            }
+            return memberHalf;
+        };
+        createMemberHalf(-1); // Left
+        createMemberHalf(1);  // Right
+
+        // --- Web Splice Plates ---
+        const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: t_wp, height: H_wp, depth: L_wp }, scene);
+        plate.material = materials.plateMaterial;
+        plate.position.x = (member_tw + t_wp) / 2;
+        const plate2 = plate.clone("plate2");
+        plate2.position.x = -(member_tw + t_wp) / 2;
+
+        // --- Bolts ---
+        const boltLength = member_tw + 2 * t_wp + D_wp;
+        const startY = -((Nr_wp - 1) * S5_row_spacing_wp) / 2;
+
+        for (let side of [-1, 1]) { // Left/Right of gap
+            for (let r = 0; r < Nr_wp; r++) { // Rows
+                for (let c = 0; c < Nc_wp; c++) { // Columns
+                    const bolt = BABYLON.MeshBuilder.CreateCylinder("bolt", { diameter: D_wp, height: boltLength }, scene);
+                    bolt.material = materials.boltMaterial;
+                    bolt.rotation.z = Math.PI / 2;
+
+                    const yPos = startY + r * S5_row_spacing_wp;
+                    const zPos = side * (gap / 2 + S6_end_dist_wp + c * S4_col_spacing_wp);
+                    bolt.position = new BABYLON.Vector3(0, yPos, zPos);
+                }
+            }
         }
     }
 });
@@ -574,10 +534,10 @@ function performPlateChecks(plateName, inputs, config) {
 
     const plateChecks = {};
 
-    // --- FIX: Calculate bolt group geometry here to get the edge distance ---
-    const { le_long } = calculateBoltGroupGeometry({
+    const { le_long, le_tran, edge_dist_gap, bolt_pattern_height } = calculateBoltGroupGeometry({
         L_plate: L_p, H_plate: H_p, Nc, Nr, S_col, S_row,
-        S_end_gap: S_end, gage
+        S_end_gap: S_end, 
+        gage
     });
 
     // 1. Gross Section Yielding & Compression
@@ -1731,7 +1691,7 @@ function renderResults(results, rawInputs) {
         <div id="splice-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
                 <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
                     <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
-                    <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
+                    <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>                    <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
                 </div>
                 <h2 class="report-title text-center">Splice Check Results</h2>
                 ${renderSpliceInputSummary(rawInputs)}
@@ -1820,8 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFunction: (results, rawInputs) => renderResults(results, rawInputs),
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'
-    });
-    // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
+    });    // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
     populateDropdowns();
     loadInputsFromLocalStorage('splice-inputs', inputIds);
 
@@ -1881,14 +1840,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.id === 'download-pdf-btn') {
             handleDownloadPdf('results-container', 'Splice-Report.pdf');
         }
+        if (event.target.id === 'download-word-btn') {
+            handleDownloadWord('splice-report-content', 'Splice-Report.doc');
+        }
     });
 
-    const flangeInputsToWatch = ['H_fp', 'member_bf', 'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'gap', 'g_gage_fp', 'D_fp', 'L_fp'];
-    flangeInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', drawFlangeDiagram));
+    const flangeInputsToWatch = ['H_fp', 't_fp', 'L_fp', 'member_bf', 'member_tf', 'gap', 'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp', 'D_fp'];
+    flangeInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', draw3dFlangeDiagram));
 
-    const webInputsToWatch = ['H_wp', 'member_d', 'member_tf', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'gap', 'D_wp', 'L_wp'];
-    webInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', drawWebDiagram));
+    const webInputsToWatch = ['H_wp', 't_wp', 'L_wp', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'gap', 'Nc_wp', 'Nr_wp', 'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'D_wp'];
+    webInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', draw3dWebDiagram));
 
-    drawFlangeDiagram();
-    drawWebDiagram();
+    draw3dFlangeDiagram();
+    draw3dWebDiagram();
 });

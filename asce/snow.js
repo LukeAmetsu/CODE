@@ -343,6 +343,9 @@ function attachSnowReportEventListeners() {
         if (event.target.id === 'download-pdf-btn') {
             handleDownloadPdf('snow-report-content', 'Snow-Load-Report.pdf');
         }
+        if (event.target.id === 'download-word-btn') {
+            handleDownloadWord('snow-report-content', 'Snow-Load-Report.doc');
+        }
         if (event.target.id === 'send-to-combos-btn' && lastSnowRunResults) {
             sendSnowToCombos(lastSnowRunResults);
         }
@@ -359,9 +362,9 @@ function attachSnowReportEventListeners() {
 function renderSnowReportHeader(inputs) {
     return `
         <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
+            <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
             <button id="send-to-combos-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm print-hidden">Send to Combos</button>
-            <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-            <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
+            <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>            <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
         </div>
         <div class="text-center border-b pb-4">
             <h2 class="text-2xl font-bold">SNOW LOAD CALCULATION REPORT (${inputs.asce_standard})</h2>
@@ -391,7 +394,7 @@ function renderSnowDesignParameters(inputs, intermediate, units) {
     return `
         <div id="snow-design-parameters-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">1. Design Parameters</h3>
+                <h3 class="report-header flex-grow">A. Design Parameters</h3>
                 <button data-copy-target-id="snow-design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -434,7 +437,7 @@ function renderSnowCalculationBreakdown(inputs, intermediate, is_nycbc_min_gover
     return `
         <div id="snow-calc-breakdown-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">2. Detailed Calculation Breakdown</h3>
+                <h3 class="report-header flex-grow">B. Detailed Calculation Breakdown</h3>
                 <button data-copy-target-id="snow-calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -466,7 +469,7 @@ function renderSnowDiagrams(inputs, unbalanced, drift, units) {
     return `
         <div id="snow-diagrams-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">3. Load Case Diagrams</h3>
+                <h3 class="report-header flex-grow">C. Load Case Diagrams</h3>
                 <button data-copy-target-id="snow-diagrams-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -556,7 +559,7 @@ function renderSnowLoadSummary(inputs, results, unbalanced, drift, sliding, unit
     return `
         <div id="snow-summary-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">4. Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
+                <h3 class="report-header flex-grow">D. Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
                 <button data-copy-target-id="snow-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -573,7 +576,7 @@ function renderSnowPartialLoading(partial, units) {
     return `
         <div id="snow-partial-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">Partial Loading (Continuous Beams)</h3>
+                <h3 class="report-header flex-grow">E. Partial Loading (Continuous Beams)</h3>
                 <button data-copy-target-id="snow-partial-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
