@@ -263,9 +263,19 @@ const handleRunComboCalculation = createCalculationHandler({
         const scenarios_data = {};
         for(const key in scenarios) {
             const { S, W_max, W_min } = scenarios[key];
-            const base_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S, E: inputs.combo_seismic_load_e, unit_system: inputs.combo_unit_system };
-            scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...base_loads, W: W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-            scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...base_loads, W: W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            const isWallScenario = key.includes('wall');
+
+            // Create a copy of base loads for this scenario
+            const scenario_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S, E: inputs.combo_seismic_load_e, unit_system: inputs.combo_unit_system };
+
+            // If it's a wall scenario, zero out roof-specific loads
+            if (isWallScenario) {
+                scenario_loads.Lr = 0;
+                scenario_loads.R = 0;
+                scenario_loads.S = 0; // This will also zero out the specific S from the scenario object
+            }
+            scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
         }
         return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
     },

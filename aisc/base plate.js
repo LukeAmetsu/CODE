@@ -1801,5 +1801,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.id === 'download-word-btn') {
             handleDownloadWord('baseplate-report-content', 'Base-Plate-Report.doc');
         }
+
+        // Handle individual section copy buttons
+        const copyBtn = event.target.closest('.copy-section-btn');
+        if (copyBtn) {
+            const targetId = copyBtn.dataset.copyTargetId;
+            if (targetId) {
+                handleCopyToClipboard(targetId, 'feedback-message');
+            }
+        }
     });
 });

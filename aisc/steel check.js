@@ -74,12 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const detailRow = document.getElementById(detailId);
             detailRow?.classList.toggle('is-visible');
             button.textContent = detailRow?.classList.contains('is-visible') ? '[Hide]' : '[Show]';
-        } else if (event.target.id === 'copy-report-btn') {
-            handleCopyToClipboard('steel-results-container', 'feedback-message');
+        } else if (event.target.id === 'copy-report-btn') { // This is the "Copy Full Report" button
+            handleCopyToClipboard('steel-check-report-content', 'feedback-message');
         } else if (event.target.id === 'download-pdf-btn') {
-            handleDownloadPdf('steel-results-container', 'Steel-Check-Report.pdf');
+            handleDownloadPdf('steel-check-report-content', 'Steel-Check-Report.pdf');
         } else if (event.target.id === 'toggle-all-details-btn') {
             handleToggleAllDetails(event.target, '#steel-results-container');
+        }
+
+        // Handle individual section copy buttons
+        const copyBtn = event.target.closest('.copy-section-btn');
+        if (copyBtn) {
+            const targetId = copyBtn.dataset.copyTargetId;
+            if (targetId) {
+                handleCopyToClipboard(targetId, 'feedback-message');
+            }
         }
     });
 });
@@ -142,7 +151,20 @@ function calculateAndDisplayBuiltUpProperties() {
     // --- Render Results ---
     resultsDiv.innerHTML = `
         <h4 class="font-semibold border-t dark:border-gray-600 pt-3">Calculated Built-Up Properties:</h4>
-        <table class="text-sm w-full mt-2"><tbody><tr><td class="py-1">Total Area (A<sub>g,total</sub>):</td><td class="text-right font-mono">${bu_props.Ag.toFixed(2)} in²</td></tr><tr><td class="py-1">Total Strong Axis I<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Ix.toFixed(2)} in⁴</td></tr><tr><td class="py-1">Total Strong Axis S<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Sx.toFixed(2)} in³</td></tr><tr><td class="py-1">Total Strong Axis Z<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Zx.toFixed(2)} in³</td></tr><tr class="border-t border-dashed dark:border-gray-600"><td class="py-1 font-semibold">Total Weak Axis I<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Iy.toFixed(2)} in⁴</td></tr><tr><td class="py-1">Total Weak Axis S<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Sy.toFixed(2)} in³</td></tr><tr><td class="py-1">Weak Axis Radius of Gyration (r<sub>y,total</sub>):</td><td class="text-right font-mono">${bu_props.ry.toFixed(2)} in</td></tr></tbody></table>
+        <table class="text-sm w-full mt-2">
+            <tbody>
+                <tr><td class="py-1">Total Area (A<sub>g,total</sub>):</td><td class="text-right font-mono">${bu_props.Ag.toFixed(2)} in²</td></tr>
+                <tr><td class="py-1">Total Strong Axis I<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Ix.toFixed(2)} in⁴</td></tr>
+                <tr><td class="py-1">Total Strong Axis S<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Sx.toFixed(2)} in³</td></tr>
+                <tr><td class="py-1">Total Strong Axis Z<sub>x,total</sub>:</td><td class="text-right font-mono">${bu_props.Zx.toFixed(2)} in³</td></tr>
+                <tr class="border-t border-dashed dark:border-gray-600">
+                    <td class="py-1 font-semibold">Total Weak Axis I<sub>y,total</sub>:</td>
+                    <td class="text-right font-mono">${bu_props.Iy.toFixed(2)} in⁴</td>
+                </tr>
+                <tr><td class="py-1">Total Weak Axis S<sub>y,total</sub>:</td><td class="text-right font-mono">${bu_props.Sy.toFixed(2)} in³</td></tr>
+                <tr><td class="py-1">Weak Axis Radius of Gyration (r<sub>y,total</sub>):</td><td class="text-right font-mono">${bu_props.ry.toFixed(2)} in</td></tr>
+            </tbody>
+        </table>
     `;
 }
 
@@ -209,7 +231,7 @@ function getSectionProperties(inputs) {
         const h = d - 2 * tf;
         const Sy = Iy / (bf / 2);
         const Zy = (tf * bf**2 / 2) + (tw**3 * (d - 2*tf) / 4);
-        const J = (1/3) * (2 * bf * tf**3 + (d - 2 * tf) * tw**3);
+        const J = (1 / 3) * (2 * bf * tf**3 + (d - 2 * tf) * tw**3);
         const Cw = (Iy * h**2) / 4;
         const rts = (Cw > 0 && Sx > 0) ? Math.sqrt(Math.sqrt(Iy * Cw) / Sx) : 0; // Corrected per AISC F2-7
         const rx = Math.sqrt(Ix / Ag);
@@ -253,7 +275,7 @@ function getSectionProperties(inputs) {
         const { d: L1, bf: L2, tf: t } = inputs; // d=long leg, bf=short leg, tf=thickness
         const Ag = (L1 + L2 - t) * t;
         // Properties for angles are complex (principal axes). Using geometric for now.
-        return { type: 'angle', Ag, d: L1, bf: L2, tf: t, tw: t, J: (1/3)*(L1+L2)*t**3 };
+        return { type: 'angle', Ag, d: L1, bf: L2, tf: t, tw: t, J: (1 / 3) * (L1 + L2) * t**3 };
     }
     return {}; // Should not happen
 }
@@ -592,24 +614,26 @@ const steelChecker = (() => {
         const slenderness_y = (Lc / ry);
         const Fey = (Math.PI**2 * E) / (slenderness_y**2); // Minor axis typically governs flexural
 
-        if (type === 'I-Shape' || type === 'Rectangular HSS' || type === 'HSS-round' || !type) { // Doubly symmetric
+        if (type === 'HSS-round') {
+            // For doubly-symmetric round sections, only flexural buckling needs to be checked.
+            // Torsional buckling does not govern.
+            Fe = Fey; // Since rx = ry for round sections, Fex = Fey
+            buckling_mode = 'Flexural Buckling (E3)';
+        } else if (type === 'I-Shape' || type === 'Rectangular HSS' || !type) { // Other doubly symmetric sections
             const Kz = K; // Assume same as flexural K for torsional
             const Lz = Lc;
             const Fez_num = (Math.PI**2 * E * Cw) / ((Kz * Lz)**2) + (G * J);
             const Fez_den = Ix + Iy;
             const Fez = Fez_num / Fez_den;
 
-            const Fex = (Math.PI**2 * E) / (slenderness_x**2);
-            const Fe_flex = Math.min(Fex, Fey);
-
-            if (Fe_flex <= Fez) {
-                Fe = Fe_flex;
+            if (Fey <= Fez) { // Check if flexural buckling governs over torsional
+                Fe = Fey;
                 buckling_mode = 'Flexural Buckling (E3)';
             } else {
                 Fe = Fez;
                 buckling_mode = 'Torsional Buckling (E4)';
             }
-        } else if (type === 'channel' || type === 'angle') { // Singly symmetric
+        }  else if (type === 'channel' || type === 'angle') { // Singly symmetric
             const rx = props.rx || Math.sqrt(Ix / Ag);
             const Fex = (Math.PI**2 * E) / Math.pow(Lc / rx, 2);
             const Fey = (Math.PI**2 * E) / Math.pow(Lc / ry, 2);
@@ -1344,212 +1368,190 @@ const steelChecker = (() => {
     return { run };
 })(); // steelChecker
 
-function generateSteelCheckBreakdownHtml(name, data, inputs) {
-    const { check, details, reference, slenderness, governing_limit_state, Cr, h_tw, L_bf } = data;
-    if (!check && !details && !governing_limit_state) return 'Breakdown not available.';
+// --- Breakdown Generators (NEW REFACTORED SECTION) ---
+const baseSteelBreakdownGenerators = {
+    'Axial': (data, common) => {
+        const { check, type, properties } = data;
+        if (type === 'Tension') {
+            return common.format_list([
+                `<b>Yielding (D2a):</b>`,
+                `P<sub>n</sub> = F<sub>y</sub> &times; A<sub>g</sub> = ${common.fmt(common.inputs.Fy)} ksi &times; ${common.fmt(check.details.yield.Ag, 2)} in² = ${common.fmt(check.details.yield.Pn)} kips`,
+                `<b>Rupture (D2b):</b>`,
+                `P<sub>n</sub> = F<sub>u</sub> &times; A<sub>e</sub> = ${common.fmt(common.inputs.Fu)} ksi &times; ${common.fmt(check.details.rupture.Ae, 2)} in² = ${common.fmt(check.details.rupture.Pn)} kips`,
+                `Governing Limit State = <b>${check.governing_limit_state}</b>`,
+                `Design Capacity (${common.capacity_eq}) = <b>${common.fmt(check.phiPn_or_Pn_omega)} kips</b>`
+            ]);
+        } else { // Compression
+            return common.format_list([
+                `<u>Elastic Buckling Stress (F<sub>e</sub>)</u>`,
+                `Governing Buckling Mode = <b>${check.buckling_mode}</b>`,
+                `F<sub>e</sub> = <b>${common.fmt(check.Fe)} ksi</b>`,
+                `<u>Critical Buckling Stress (F<sub>cr</sub>)</u>`,
+                `F<sub>cr</sub> = [0.658<sup>(Q&times;F<sub>y</sub>/F<sub>e</sub>)</sup>] &times; Q &times; F<sub>y</sub> = [0.658<sup>(${common.fmt(check.Q, 3)}&times;${common.fmt(common.inputs.Fy)}/${common.fmt(check.Fe)})</sup>] &times; ${common.fmt(check.Q, 3)} &times; ${common.fmt(common.inputs.Fy)} = <b>${common.fmt(check.Fcr)} ksi</b>`,
+                `<u>Nominal Capacity (P<sub>n</sub>)</u>`,
+                `P<sub>n</sub> = F<sub>cr</sub> &times; A<sub>g</sub> = ${common.fmt(check.Fcr)} ksi &times; ${common.fmt(properties.Ag, 2)} in² = <b>${common.fmt(check.Pn)} kips</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq} = ${common.fmt(check.Pn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+            ]);
+        }
+    },
+    'Flexure (Major)': (data, common) => {
+        const { check, slenderness } = data;
+        const f_sl = slenderness;
 
-    const { design_method } = inputs;
-    let content = '';
-
-    const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
-    const phi = check?.phi || (design_method === 'LRFD' ? 0.9 : null);
-    const omega = check?.omega || (design_method === 'ASD' ? 1.67 : null);
-    const factor_val = design_method === 'LRFD' ? phi : omega;
-    const capacity_eq = design_method === 'LRFD' ? `&phi;R<sub>n</sub>` : `R<sub>n</sub> / &Omega;`;
-    const final_capacity_kips = design_method === 'LRFD' ? (check?.Rn || 0) * factor_val : (check?.Rn || 0) / factor_val;
-    const final_capacity_kipft = final_capacity_kips / 12;
-
-    const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
-
-    switch (name) {
-        case 'Axial':
-            if (data.type === 'Tension') {
-                // Use the final capacity directly from the check data
-                const final_cap = data.check.phiPn_or_Pn_omega;
-                if (!data.details || !data.details.yield) return 'Breakdown not available (missing tension details).';
-                content = format_list([
-                    `<b>Yielding (D2a):</b> Pn = Fy * Ag = ${inputs.Fy} ksi * ${data.details.yield.Ag.toFixed(2)} in² = ${(data.details.yield.Pn).toFixed(2)} kips`,
-                    `<b>Rupture (D2b):</b> Pn = Fu * Ae = ${inputs.Fu} ksi * ${data.details.rupture.Ae.toFixed(2)} in² = ${(data.details.rupture.Pn).toFixed(2)} kips`,
-                    `Governing Limit State = <b>${governing_limit_state}</b>`,
-                    `Design Capacity (${capacity_eq}) = <b>${final_cap.toFixed(2)} kips</b>`
-                ]);
-            } else { // Compression
-                // Use the final capacity directly from the check data
-                const final_cap = data.check.phiPn_or_Pn_omega;
-                if (!check) return 'Breakdown not available (missing compression details).';
-                content = format_list([
-                    `Slender Element Factor (Q) = <b>${check.Q.toFixed(3)}</b>`,
-                    `Governing Buckling Mode = <b>${check.buckling_mode}</b>`,
-                    `Elastic Buckling Stress (F<sub>e</sub>) = <b>${(check.Fe).toFixed(2)} ksi</b>`,
-                    `Critical Buckling Stress (F<sub>cr</sub>) = <b>${(check.Fcr).toFixed(2)} ksi</b>`,
-                    `Nominal Capacity (P<sub>n</sub> = F<sub>cr</sub> * A<sub>g</sub>) = ${check.Fcr.toFixed(2)} ksi * ${data.properties.Ag.toFixed(2)} in² = <b>${check.Pn.toFixed(2)} kips</b>`,
-                    `Design Capacity (${capacity_eq}) = <b>${final_cap.toFixed(2)} kips</b>`
-                ]);
-            }
-            break;
-
-        case 'Flexure (Major)':
-            // Use the final capacity directly from the check data, which is already in kip-ft
-            const final_cap_flex = data.check.phiMn_or_Mn_omega;
-            const f_sl = slenderness;
-            content = format_list([
-                `Flange Slenderness (λ<sub>f</sub>) = <b>${f_sl.lambda_f.toFixed(2)}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_f.toFixed(2)}, λ<sub>r</sub>=${f_sl.lambda_r_f.toFixed(2)})`,
-                `Web Slenderness (λ<sub>w</sub>) = <b>${f_sl.lambda_w ? f_sl.lambda_w.toFixed(2) : 'N/A'}</b> (Limits: λ<sub>p</sub>=${f_sl.lambda_p_w ? f_sl.lambda_p_w.toFixed(2) : 'N/A'}, λ<sub>r</sub>=${f_sl.lambda_r_w ? f_sl.lambda_r_w.toFixed(2) : 'N/A'})`,
-                `Unbraced Length (L<sub>b</sub>) = <b>${check.Lb.toFixed(2)} in</b>`,
-                `LTB Limiting Lengths: L<sub>p</sub> = <b>${check.Lp.toFixed(2)} in</b>, L<sub>r</sub> = <b>${check.Lr.toFixed(2)} in</b>`,
-                `Nominal Capacity (M<sub>n</sub>) = <b>${(check.Mn).toFixed(2)} kip-in</b> = <b>${(check.Mn / 12).toFixed(2)} kip-ft</b>`,
-                (check.Rpg < 1.0 ? `Web Plastification Factor (Rpg) = <b>${check.Rpg.toFixed(3)}</b> (due to slender web)` : ''),
-                `Governing Limit State = <b>${governing_limit_state || 'N/A'}</b>`,
-                `Design Capacity (${capacity_eq.replace('R', 'M')}) = <b>${final_cap_flex.toFixed(2)} kip-ft</b>`
+        if (common.inputs.section_type === 'I-Shape') {
+            return common.format_list([
+                `<u>Slenderness Checks</u>`,
+                `Flange: &lambda;<sub>f</sub> = <b>${common.fmt(f_sl.lambda_f)}</b> (Limits: &lambda;<sub>p</sub>=${common.fmt(f_sl.lambda_p_f)}, &lambda;<sub>r</sub>=${common.fmt(f_sl.lambda_r_f)})`,
+                `Web: &lambda;<sub>w</sub> = <b>${f_sl.lambda_w ? common.fmt(f_sl.lambda_w) : 'N/A'}</b> (Limits: &lambda;<sub>p</sub>=${f_sl.lambda_p_w ? common.fmt(f_sl.lambda_p_w) : 'N/A'}, &lambda;<sub>r</sub>=${f_sl.lambda_r_w ? common.fmt(f_sl.lambda_r_w) : 'N/A'})`,
+                `<u>Lateral-Torsional Buckling (LTB)</u>`,
+                `L<sub>b</sub> = <b>${common.fmt(check.Lb)} in</b>, L<sub>p</sub> = <b>${common.fmt(check.Lp)} in</b>, L<sub>r</sub> = <b>${common.fmt(check.Lr)} in</b>`,
+                `<u>Nominal Capacity (M<sub>n</sub>)</u>`,
+                `M<sub>n</sub> = <b>${common.fmt(check.Mn)} kip-in</b> = <b>${common.fmt(check.Mn / 12)} kip-ft</b>`,
+                `Governing Limit State = <b>${check.governing_limit_state || 'N/A'}</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq.replace('R', 'M')} = ${common.fmt(check.Mn / 12)} / ${common.factor_val} = <b>${common.fmt(check.phiMn_or_Mn_omega)} kip-ft</b>`
             ].filter(Boolean));
-            break;
-
-        case 'Shear':
-            content = format_list([
-                `Web Slenderness (h/t<sub>w</sub>) = <b>${check.h_tw.toFixed(2)}</b>`,
-                `Web Shear Coefficient (C<sub>v</sub>) = <b>${check.Cv.toFixed(3)}</b>`,
-                `Nominal Capacity (V<sub>n</sub> = 0.6*F<sub>y</sub>*A<sub>w</sub>*C<sub>v</sub>) = 0.6 * ${inputs.Fy} * ${(data.properties.d * data.properties.tw).toFixed(2)} * ${check.Cv.toFixed(3)} = <b>${check.Vn.toFixed(2)} kips</b>`,
-                `Governing Limit State = <b>${governing_limit_state || 'N/A'}</b>`,
-                `Design Capacity (${capacity_eq.replace('R', 'V')}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
-            ]);
-            break;
-
-        case 'Combined Forces':
-            // Add a guard clause to prevent crash if interaction check didn't run
-            if (!details) return 'Breakdown not available (no combined forces to check).';
-
-            content = format_list([
-                `Reference: <b>${reference}</b>`,
-                (details && details.B1x ? `Moment Amplification Factor (B1x) = <b>${details.B1x.toFixed(3)}</b>` : ''),
-                (details && details.B1y ? `Moment Amplification Factor (B1y) = <b>${details.B1y.toFixed(3)}</b>` : ''),
-                `Equation: ${check.equation === 'H1-1a' ? 'P<sub>r</sub>/P<sub>c</sub> + 8/9 * (M<sub>rx</sub>/M<sub>cx</sub> + M<sub>ry</sub>/M<sub>cy</sub>)' : 'P<sub>r</sub>/(2*P<sub>c</sub>) + (M<sub>rx</sub>/M<sub>cx</sub> + M<sub>ry</sub>/M<sub>cy</sub>)'}`,
-                `<li class="mt-2 text-sm text-gray-600 dark:text-gray-400"><em>Note: This check does not include interaction with shear. Shear interaction is checked separately where applicable per AISC Chapter H.</em></li>`
+        } else { // HSS Sections
+            const slenderness_label = common.inputs.section_type === 'HSS/Pipe (Circular)' ? 'D/t' : 'h/t';
+            return common.format_list([
+                `<u>Slenderness Check</u>`,
+                `Slenderness (${slenderness_label}) = <b>${common.fmt(f_sl.lambda)}</b> (Limits: &lambda;<sub>p</sub>=${common.fmt(f_sl.lambda_p)}, &lambda;<sub>r</sub>=${common.fmt(f_sl.lambda_r)})`,
+                `Section is <b>${check.isCompact ? 'Compact' : 'Noncompact'}</b>`,
+                `<u>Nominal Capacity (M<sub>n</sub>)</u>`,
+                `M<sub>n</sub> = <b>${common.fmt(check.Mn)} kip-in</b> = <b>${common.fmt(check.Mn / 12)} kip-ft</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq.replace('R', 'M')} = ${common.fmt(check.Mn / 12)} / ${common.factor_val} = <b>${common.fmt(check.phiMn_or_Mn_omega)} kip-ft</b>`
             ].filter(Boolean));
-            break;
-
-        case 'Torsion':
-            // Add a guard clause to prevent crash if torsion check didn't run
-            if (!details) return 'Breakdown not available (no torsion to check).';
-
-            content = format_list([
-                `Reference: <b>${reference}</b>`,
-                (details.sigma_w > 0 ? `Max Warping Normal Stress (σ<sub>w</sub>) = <b>${details.sigma_w.toFixed(2)} ksi</b>` : ''),
-                `Governing Limit State: <b>${governing_limit_state}</b>`,
-                `Design Capacity (${capacity_eq.replace('R', 'T')}) = <b>${(final_capacity_kips).toFixed(2)} kip-in</b>`
-            ].filter(Boolean));
-            break;
-
-        case 'Web Crippling':
-            // Add a guard clause to prevent crash if web crippling check didn't run
-            if (!details) return 'Breakdown not available (no bearing length provided).';
-
-            content = format_list([
-                `Reference: <b>${reference}</b>`,
-                `Web Local Yielding Capacity (R<sub>n</sub>) = <b>${details.Rn_yield.toFixed(2)} kips</b>`,
-                `Web Local Crippling Capacity (R<sub>n</sub>) = <b>${details.Rn_crippling.toFixed(2)} kips</b>`,
-                `Governing Limit State = <b>${governing_limit_state}</b>`,
-                `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+        }
+    },
+    'Shear': (data, common) => {
+        const { check, properties } = data;
+        if (common.inputs.section_type.includes('HSS')) {
+            const area_label = common.inputs.section_type === 'HSS/Pipe (Circular)' ? 'A<sub>g</sub>/2' : 'A<sub>w</sub>';
+            const area_val = common.inputs.section_type === 'HSS/Pipe (Circular)' ? properties.Ag / 2 : 2 * properties.tf * properties.d;
+            return common.format_list([
+                `<u>Nominal Capacity (V<sub>n</sub>)</u>`,
+                `V<sub>n</sub> = F<sub>cr</sub> &times; ${area_label} = <b>${common.fmt(check.Vn)} kips</b>`,
+                `Governing Limit State = <b>${check.governing_limit_state || 'N/A'}</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq.replace('R', 'V')} = ${common.fmt(check.Vn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
             ]);
-            break;
-
-        case 'Web Sidesway Buckling':
-            content = format_list([
-                `Reference: <b>${reference}</b>`,
-                `h/t<sub>w</sub> = <b>${h_tw.toFixed(2)}</b>`,
-                `L<sub>b</sub>/b<sub>f</sub> = <b>${L_bf.toFixed(2)}</b>`,
-                `Coefficient (C<sub>r</sub>) from Table G4.1 = <b>${Cr.toFixed(0)}</b>`,
-                `Nominal Capacity (R<sub>n</sub>) = (C<sub>r</sub> * A<sub>w</sub> * F<sub>y</sub>) / (h/t<sub>w</sub>)² = <b>${check.Rn.toFixed(2)} kips</b>`,
-                `Design Capacity (${capacity_eq}) = <b>${final_capacity_kips.toFixed(2)} kips</b>`
+        } else { // I-Shape
+            const Aw = properties.d * properties.tw;
+            return common.format_list([
+                `<u>Nominal Capacity (V<sub>n</sub>)</u>`,
+                `Web Shear Coefficient (C<sub>v</sub>) = <b>${common.fmt(check.Cv, 3)}</b>`,
+                `V<sub>n</sub> = 0.6 &times; F<sub>y</sub> &times; A<sub>w</sub> &times; C<sub>v</sub> = 0.6 &times; ${common.fmt(common.inputs.Fy)} &times; ${common.fmt(Aw)} &times; ${common.fmt(check.Cv, 3)} = <b>${common.fmt(check.Vn)} kips</b>`,
+                `Governing Limit State = <b>${check.governing_limit_state || 'N/A'}</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq.replace('R', 'V')} = ${common.fmt(check.Vn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
             ]);
-            break;
+        }
+    },
+    'Combined Forces': (data, common) => {
+        const { check, details } = data;
+        const { Pc, Mcx, Mcy } = { Pc: common.axial.phiPn_or_Pn_omega, Mcx: common.flexure.phiMn_or_Mn_omega, Mcy: common.flexure_y.phiMny_or_Mny_omega };
+        const { Pr, Mrx, Mry } = { Pr: Math.abs(common.inputs.Pu_or_Pa), Mrx: Math.abs(common.inputs.Mux_or_Max), Mry: Math.abs(common.inputs.Muy_or_May) };
+        if (!details) return 'Breakdown not available.';
+        const pr_pc = Pc > 0 ? Pr/Pc : 0;
+        const mrx_mcx_term = Mcx > 0 ? `(B<sub>1x</sub>&times;M<sub>rx</sub>/M<sub>cx</sub>)` : '0';
+        const mry_mcy_term = Mcy > 0 ? `(B<sub>1y</sub>&times;M<sub>ry</sub>/M<sub>cy</sub>)` : '0';
+        const mrx_mcx_vals = Mcx > 0 ? `(${common.fmt(details.B1x, 3)}&times;${common.fmt(Mrx)}/${common.fmt(Mcx)})` : '0';
+        const mry_mcy_vals = Mcy > 0 ? `(${common.fmt(details.B1y, 3)}&times;${common.fmt(Mry)}/${common.fmt(Mcy)})` : '0';
 
-        case 'Deflection':
-            content = format_list([
-                `Reference: <b>Serviceability Requirement</b>`,
-                `Actual Deflection = <b>${details.actual.toFixed(3)} in</b>`,
-                `Allowable Deflection (L / ${inputs.deflection_limit}) = <b>${details.allowable.toFixed(3)} in</b>`
-            ]);
-            break;
+        let equation_html = '';
+        if (check.equation === 'H1-1a') {
+            equation_html = `P<sub>r</sub>/P<sub>c</sub> + 8/9 &times; (${mrx_mcx_term} + ${mry_mcy_term}) = ${common.fmt(pr_pc, 3)} + 8/9 &times; (${mrx_mcx_vals} + ${mry_mcy_vals}) = <b>${common.fmt(check.ratio, 3)}</b>`;
+        } else {
+            equation_html = `P<sub>r</sub>/(2&times;P<sub>c</sub>) + ${mrx_mcx_term} + ${mry_mcy_term} = ${common.fmt(pr_pc, 3)}/2 + ${mrx_mcx_vals} + ${mry_mcy_vals} = <b>${common.fmt(check.ratio, 3)}</b>`;
+        }
+        return common.format_list([
+            `Reference: <b>${check.reference}</b>`,
+            `Moment Amplification Factors: B<sub>1x</sub> = <b>${common.fmt(details.B1x, 3)}</b>, B<sub>1y</sub> = <b>${common.fmt(details.B1y, 3)}</b>`,
+            `Required Ratio (P<sub>r</sub>/P<sub>c</sub>) = ${common.fmt(pr_pc, 3)}`,
+            `Governing Equation: <b>${check.equation}</b>`,
+            `Interaction: ${equation_html}`
+        ]);
+    },
+    // Add other generators here...
+    'Deflection': (data, common) => {
+        const { check, details } = data; // Keep consistent destructuring
+        return common.format_list([
+            `Reference: <b>Serviceability Requirement</b>`,
+            `Actual Deflection = <b>${common.fmt(details.actual, 3)} in</b>`,
+            `Allowable Deflection = L / ${common.inputs.deflection_limit} = ${common.fmt(common.inputs.deflection_span * 12)} in / ${common.inputs.deflection_limit} = <b>${common.fmt(details.allowable, 3)} in</b>`
+        ]);
+    },
+};
 
-        case 'Combined Shear + Torsion':
-            content = format_list([
-                `Reference: <b>${reference}</b>`,
-                `Interaction Ratio = <b>${check.ratio.toFixed(3)}</b>`
-            ]);
-            break;
-
-        case 'Combined Stresses (H3.3)':
-             content = format_list([
-                `Reference: <b>${reference}</b>`,
-                `Total Required Normal Stress (f<sub>a</sub>+f<sub>b</sub>+σ<sub>w</sub>) = <b>${details.total_normal_stress.toFixed(2)} ksi</b>`,
-                `Total Required Shear Stress (f<sub>v</sub>+τ<sub>sv</sub>) = <b>${details.total_shear_stress.toFixed(2)} ksi</b>`,
-                `Design Stress Capacity = <b>${details.capacity.toFixed(2)} ksi</b>`,
-                `Interaction Ratio = <b>${check.ratio.toFixed(3)}</b>`
-            ]);
-            break;
-
-        default:
-            content = 'Breakdown not available for this check.';
-    }
-    return `<h4 class="font-semibold">${name} (${reference || 'N/A'})</h4>${content}`;
+function getSteelBreakdownGenerator(name) {
+    return baseSteelBreakdownGenerators[name] || (() => 'Breakdown not available for this check.');
 }
 
+function generateSteelCheckBreakdownHtml(name, data, inputs, all_results) {
+    const { check, details, reference } = data;
+    if (!check && !details) return 'Breakdown not available.';
+
+    const { design_method } = inputs;
+    const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
+    const factor_val = design_method === 'LRFD' ? (check?.phi || 0.9) : (check?.omega || 1.67);
+
+    const common_params = {
+        inputs,
+        design_method,
+        factor_char,
+        factor_val,
+        capacity_eq: design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`,
+        final_capacity: design_method === 'LRFD' ? (check?.Rn || 0) * factor_val : (check?.Rn || 0) / factor_val,
+        axial: all_results.axial, // Pass full axial results for combined checks
+        flexure: all_results.flexure, // Pass full flexure results
+        flexure_y: all_results.flexure_y, // Pass minor axis flexure results
+        format_list: (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`,
+        fmt: (x, n = 2) => (typeof x === "number" && isFinite(x)) ? x.toFixed(n) : "-"
+    };
+
+    const generator = getSteelBreakdownGenerator(name);
+    return `<h4 class="font-semibold">${name} (${reference || 'N/A'})</h4>${generator(data, common_params)}`;
+}
+
+
 function renderInputSummary(inputs, properties) {
-    let html = `
+    return `
     <div id="input-summary-section" class="report-section-copyable">
         <div class="flex justify-between items-center">
-            <h3 class="report-header">Input Summary</h3>
+            <h3 class="report-header">1. Input Summary</h3>
             <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
-            <table class="results-container">
-                <caption class="report-caption">Design Parameters</caption>
+            <table class="w-full mt-2 summary-table">
+                <caption class="report-caption">Design & Material Properties</caption>
                 <tbody>
                     <tr><td>Design Method</td><td>${inputs.design_method}</td></tr>
                     <tr><td>AISC Standard</td><td>${inputs.aisc_standard}</td></tr>
-                </tbody>
-            </table>
-            <table class="results-container">
-                <caption class="report-caption">Material Properties</caption>
-                <tbody>
-                    <tr><td>Yield Strength (Fy)</td><td>${inputs.Fy} ksi</td></tr>
-                    <tr><td>Ultimate Strength (Fu)</td><td>${inputs.Fu} ksi</td></tr>
+                    <tr><td>Yield Strength (F<sub>y</sub>)</td><td>${inputs.Fy} ksi</td></tr>
+                    <tr><td>Ultimate Strength (F<sub>u</sub>)</td><td>${inputs.Fu} ksi</td></tr>
                     <tr><td>Modulus of Elasticity (E)</td><td>${inputs.E} ksi</td></tr>
                 </tbody>
             </table>
-             <table class="results-container">
+            <table class="w-full mt-4 summary-table">
                 <caption class="report-caption">Calculated Section Properties</caption>
                 <tbody>
-                    <tr>
-                        <td>Radius of Gyration (r<sub>y</sub>)</td><td>${properties.ry.toFixed(2)} in</td>
-                        <td>Effective Radius of Gyration (r<sub>ts</sub>)</td><td>${properties.rts ? properties.rts.toFixed(2) + ' in' : 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td>Torsional Constant (J)</td><td>${properties.J ? properties.J.toFixed(2) + ' in⁴' : 'N/A'}</td>
-                        <td>Warping Constant (C<sub>w</sub>)</td><td>${properties.Cw ? properties.Cw.toExponential(2) + ' in⁶' : 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="4" class="p-0 h-1 bg-gray-200 dark:bg-gray-700 border-0"></td>
-                    </tr>
-                    <tr>
-                        <td>Gross Area (A<sub>g</sub>)</td><td>${properties.Ag.toFixed(3)} in²</td>
-                        <td>Depth (d)</td><td>${properties.d.toFixed(3)} in</td>
-                    </tr>
-                    <tr>
-                        <td>Moment of Inertia (I<sub>x</sub>)</td><td>${properties.Ix.toFixed(2)} in⁴</td>
-                        <td>Moment of Inertia (I<sub>y</sub>)</td><td>${properties.Iy.toFixed(2)} in⁴</td>
-                    </tr>
-                    <tr>
-                        <td>Section Modulus (S<sub>x</sub>)</td><td>${properties.Sx.toFixed(2)} in³</td>
-                        <td>Section Modulus (S<sub>y</sub>)</td><td>${properties.Sy.toFixed(2)} in³</td>
-                    </tr>
-                    <tr>
-                        <td>Plastic Modulus (Z<sub>x</sub>)</td><td>${properties.Zx.toFixed(2)} in³</td>
-                        <td>Plastic Modulus (Z<sub>y</sub>)</td><td>${properties.Zy.toFixed(2)} in³</td>
-                    </tr>
+                    <tr><td>Gross Area (A<sub>g</sub>)</td><td>${properties.Ag.toFixed(3)} in²</td></tr>
+                    <tr><td>Depth (d)</td><td>${properties.d.toFixed(3)} in</td></tr>
+                    <tr><td>Moment of Inertia (I<sub>x</sub>)</td><td>${properties.Ix.toFixed(2)} in⁴</td></tr>
+                    <tr><td>Moment of Inertia (I<sub>y</sub>)</td><td>${properties.Iy.toFixed(2)} in⁴</td></tr>
+                    <tr><td>Section Modulus (S<sub>x</sub>)</td><td>${properties.Sx.toFixed(2)} in³</td></tr>
+                    <tr><td>Section Modulus (S<sub>y</sub>)</td><td>${properties.Sy.toFixed(2)} in³</td></tr>
+                    <tr><td>Plastic Modulus (Z<sub>x</sub>)</td><td>${properties.Zx.toFixed(2)} in³</td></tr>
+                    <tr><td>Plastic Modulus (Z<sub>y</sub>)</td><td>${properties.Zy.toFixed(2)} in³</td></tr>
+                    <tr><td>Radius of Gyration (r<sub>y</sub>)</td><td>${properties.ry.toFixed(2)} in</td></tr>
+                    <tr><td>Effective Radius of Gyration (r<sub>ts</sub>)</td><td>${properties.rts ? properties.rts.toFixed(2) + ' in' : 'N/A'}</td></tr>
+                    <tr><td>Torsional Constant (J)</td><td>${properties.J ? properties.J.toFixed(2) + ' in⁴' : 'N/A'}</td></tr>
+                    <tr><td>Warping Constant (C<sub>w</sub>)</td><td>${properties.Cw ? properties.Cw.toExponential(2) + ' in⁶' : 'N/A'}</td></tr>
                 </tbody>
             </table>
-            <table class="results-container">
+            <table class="w-full mt-4 summary-table">
                 <caption class="report-caption">Applied Loads</caption>
                 <tbody>
                     <tr><td>Axial Load (${inputs.design_method === 'LRFD' ? 'P<sub>u</sub>' : 'P<sub>a</sub>'})</td><td>${inputs.Pu_or_Pa} kips</td></tr>
@@ -1564,62 +1566,14 @@ function renderInputSummary(inputs, properties) {
                 </tbody>
             </table>
         </div>
-    </div>
-    `;
-    return html;
+    </div>`;
 }
 
-
-function renderSteelResults(results) {
-    const resultsContainer = document.getElementById('steel-results-container');
-
-    // Early exit if there are errors, preventing crashes.
-    if (results.errors && results.errors.length > 0) {
-        resultsContainer.innerHTML = `
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md my-4">
-                <p class="font-bold">Input Errors Found:</p>
-                <ul class="list-disc list-inside mt-2">${results.errors.map(e => `<li>${e}</li>`).join('')}</ul>
-                <p class="mt-2">Please correct the errors and run the check again.</p>
-            </div>`;
-        return;
-    }    
-
-    const { inputs, properties, warnings, flexure, flexure_y, axial, shear, web_crippling, web_sidesway_buckling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
+function renderSteelStrengthChecks(results) {
+    const { inputs, properties, flexure, axial, shear, web_crippling, web_sidesway_buckling, interaction, torsion, deflection, shear_torsion_interaction, combined_stress_H33 } = results;
     const method = inputs.design_method;
     const Pu = Math.abs(inputs.Pu_or_Pa);
 
-    let html = `
-        ${(warnings && warnings.length > 0) ? `
-            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
-                <p class="font-bold">Input Warnings:</p>
-                <ul class="list-disc list-inside mt-2">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
-            </div>
-        ` : ''}
-        <div id="steel-check-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
-            <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
-            <div class="flex justify-end gap-2 -mt-2 -mr-2">
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
-            </div>
-            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
-                <strong>Disclaimer:</strong> This tool provides preliminary design checks based on AISC ${inputs.aisc_standard}.
-                For final designs, verify results using certified software or manual calculations per the current AISC Specification.
-                Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
-            </div>
-            <div"flex justify-between items-center">
-                <h2 class="report-title text-center">Steel Check Results (${inputs.aisc_standard})</h2>
-            </div>
-            ${renderInputSummary(inputs, properties)}
-            <table id="steel-check-summary" class="report-section-copyable mt-6 results-table">
-                <caption class="report-caption">Summary of Design Checks (${method})</caption>
-                <thead><tr><th class="w-2/5">Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
-                <tbody>
-                </tbody>
-            </table>
-        </div>
-    `;
-
-    // --- Dynamically build and inject the results table ---
     const checks = {};
 
     if (axial && axial.type) {
@@ -1647,31 +1601,28 @@ function renderSteelResults(results) {
         checks['Web Sidesway Buckling'] = { demand: Pu, capacity: web_sidesway_buckling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_sidesway_buckling, check: web_sidesway_buckling } };
     }
     if (web_crippling && web_crippling.phiRn_or_Rn_omega) {
-        checks['Web Crippling'] = { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling, details: web_crippling.details, reference: web_crippling.reference, governing_limit_state: web_crippling.governing_limit_state } };
+        checks['Web Crippling'] = { demand: inputs.Vu_or_Va, capacity: web_crippling.phiRn_or_Rn_omega, unit: 'kips', data: { ...web_crippling, check: web_crippling.details, reference: web_crippling.reference, governing_limit_state: web_crippling.governing_limit_state } };
     }
     if (deflection && deflection.allowable) {
         checks['Deflection'] = { demand: deflection.actual, capacity: deflection.allowable, unit: 'in', data: { ...deflection, check: deflection, details: deflection } };
     }
 
-
-    const tableBody = document.createElement('tbody');
+    const rows = [];
     let checkCounter = 0;
 
     for (const [name, checkData] of Object.entries(checks)) {
-
         checkCounter++;
         const detailId = `details-${checkCounter}`;
-        const isInteraction = name.includes('Combined') || name === 'Deflection';
+        const isInteraction = name.includes('Combined');
         const ratio = isInteraction ? checkData.demand : (checkData.capacity > 0 ? Math.abs(checkData.demand) / checkData.capacity : Infinity);
 
-        // Defensively handle potentially undefined values before calling .toFixed()
         const demand_val = checkData.demand || 0;
         const capacity_val = checkData.capacity || 0;
         const ratio_val = ratio || 0;
         const status = ratio_val <= 1.0 ? '<span class="status-pass">Pass</span>' : '<span class="status-fail">Fail</span>';
-        const breakdownHtml = generateSteelCheckBreakdownHtml(name, checkData.data, inputs);
+        const breakdownHtml = generateSteelCheckBreakdownHtml(name, checkData.data, inputs, results);
 
-        const rowHtml = `
+        rows.push(`
             <tr class="border-t dark:border-gray-700">
                 <td>${name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                 <td>${demand_val.toFixed(2)} ${checkData.unit}</td>
@@ -1681,11 +1632,83 @@ function renderSteelResults(results) {
             </tr>
             <tr id="${detailId}" class="details-row">
                 <td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td>
-            </tr>`;
-        tableBody.insertAdjacentHTML('beforeend', rowHtml);
+            </tr>`);
     }
 
+    // Helper function for creating report tables
+    function createReportTable(config) {
+        const { id, caption, headers, rows } = config;
+        if (!rows || rows.length === 0) return '';
+
+        let tableHtml = `
+            <div id="${id}" class="report-section-copyable mt-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="report-header">${caption}</h3>
+                    <button data-copy-target-id="${id}" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+                </div>
+                <div class="copy-content">
+                    <table class="w-full mt-2 results-table">
+                        <caption class="font-bold text-center bg-gray-200 dark:bg-gray-700 p-2">${caption}</caption>
+                        <thead>
+                            <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>
+                            ${rows.join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        return tableHtml;
+    }
+
+    return createReportTable({
+        id: 'steel-check-summary',
+        caption: `2. Summary of Design Checks (${method})`,
+        headers: ['Limit State', 'Demand', 'Capacity', 'Ratio', 'Status'],
+        rows: rows
+    });
+}
+
+
+function renderSteelResults(results) {
+    const resultsContainer = document.getElementById('steel-results-container');
+
+    // Early exit if there are errors, preventing crashes.
+    if (results.errors && results.errors.length > 0) {
+        resultsContainer.innerHTML = `
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md my-4">
+                <p class="font-bold">Input Errors Found:</p>
+                <ul class="list-disc list-inside mt-2">${results.errors.map(e => `<li>${e}</li>`).join('')}</ul>
+                <p class="mt-2">Please correct the errors and run the check again.</p>
+            </div>`;
+        return;
+    }
+
+    const { inputs, properties, warnings } = results;
+
+    // --- Report Header and Warnings ---
+    let html = `
+        ${(warnings && warnings.length > 0) ? `
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md my-4 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
+                <p class="font-bold">Input Warnings:</p>
+                <ul class="list-disc list-inside mt-2">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>
+            </div>
+        ` : ''}
+        <div id="steel-check-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+            <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
+                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Show All Details</button>
+                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
+                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>
+            </div>
+            <h2 class="report-title text-center">Steel Check Results (${inputs.aisc_standard})</h2>
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-600">
+                <strong>Disclaimer:</strong> This tool provides preliminary design checks based on AISC ${inputs.aisc_standard}.
+                For final designs, verify results using certified software or manual calculations per the current AISC Specification.
+                Some limit states may not be fully implemented. Always consult a licensed structural engineer for critical applications. For non-uniform loading in LTB, adjust Cb manually; variable cross-sections and stiffened elements are not supported.
+            </div>
+            ${renderInputSummary(inputs, properties)}
+            ${renderSteelStrengthChecks(results)}
+        </div>`;
+
     resultsContainer.innerHTML = html;
-    const tableElement = resultsContainer.querySelector('#steel-check-summary');
-    if (tableElement) tableElement.appendChild(tableBody);
 }
