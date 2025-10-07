@@ -373,7 +373,7 @@ const handleRunComboCalculation = createCalculationHandler({
             if (isWallScenario) {
                 scenario_loads.Lr = 0;
                 scenario_loads.R = 0;
-                scenario_loads.S = 0; // Walls don't have direct snow load.
+                scenario_loads.S = 0; // Walls don't have direct snow, rain, or roof live load.
             }
             
             scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);

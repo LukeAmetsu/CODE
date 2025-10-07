@@ -385,8 +385,8 @@ const steelChecker = (() => {
         Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(term1 + Math.sqrt(term2 + term3));
     } else { // AISC 360-16
         const ho = d - tf;
-        const term_inside_sqrt = Math.pow(J * 1.0 / (Sx * ho), 2) + 6.76 * Math.pow(0.7 * Fy / E, 2);
-        Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt((J * 1.0 / (Sx * ho)) + Math.sqrt(term_inside_sqrt));
+            const term_inside_sqrt = Math.pow(J * 1.0 / (Sx * ho), 2) + 6.76 * Math.pow(0.7 * Fy / E, 2);
+            Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt((J * 1.0 / (Sx * ho)) + Math.sqrt(term_inside_sqrt));
     }
 
     // --- Calculate Nominal Capacities for Each Limit State ---

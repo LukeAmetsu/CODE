@@ -514,15 +514,15 @@ function checkFlangeNetSection({ bf, tf, Fu, num_bolts_in_cs, hole_dia_net_area 
     return { Rn, phi: 0.75, omega: 2.00, An, Ag, A_holes, Fu };
 }
 
-function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows, num_shear_paths = 1 }) {
+function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows, num_shear_paths = 1, hole_dia_net_area }) {
     // AISC 360-22 Eq J4-5
     const Ubs = (num_tension_rows || 1) > 1 ? 0.5 : 1.0;
 
     // --- Path 1: Shear along bolt lines, tension across the end of the plate ---
     const Agv1 = num_shear_paths * L_gv * t_p;
     const Anv1 = num_shear_paths * L_nv * t_p;
-    // The tension area for path 1 is also a net area, calculated from the gross tension path length.
-    const Ant1 = L_gt * t_p; // For tear-out from the end, the net tension path is often the same as the gross path.
+    // CORRECTED: Calculate net tension area for Path 1 by deducting half a bolt hole.
+    const Ant1 = (L_gt - (0.5 * hole_dia_net_area)) * t_p;
 
     const tension_term1 = Ubs * Fu * Ant1;
     const path1_rupture = (0.6 * Fu * Anv1) + tension_term1;
@@ -530,6 +530,8 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     const Rn1 = Math.min(path1_rupture, path1_yield) || 0;
 
     // --- Path 2: Shear along bolt lines, tension between bolt lines ---
+    const Agv2 = Agv1; // Same shear path
+    const Anv2 = Anv1;
     const Agv2 = Agv1; // Same shear path
     const Anv2 = Anv1;
     const Ant2 = L_nt * t_p; // Net tension path between bolt lines
@@ -843,7 +845,7 @@ function performPlateChecks(plateName, inputs, config) {
 
     plateChecks[`${plateName} Block Shear`] = {
         demand: demand,
-        check: checkBlockShear({ L_gv, L_nv, L_gt: L_gt_path1, L_nt: L_nt_path2, t_p, Fu, Fy, num_tension_rows: Nr, num_shear_paths: 2 }),
+        check: checkBlockShear({ L_gv, L_nv, L_gt: L_gt_path1, L_nt: L_nt_path2, t_p, Fu, Fy, num_tension_rows: Nr, num_shear_paths: 2, hole_dia_net_area: hole_for_net_area }),
         details: { t_p, hole_dia: hole_for_net_area }
     };
 
@@ -992,7 +994,7 @@ function performFlangeChecks(inputs, demands) {
         check: checkBlockShear({ 
             L_gv: L_gv_beam_f, L_nv: L_nv_beam_f, L_gt: L_gt_beam_f, L_nt: L_nt_beam_f, 
             t_p: inputs.member_tf, Fu: inputs.member_Fu, Fy: inputs.member_Fy, 
-            num_tension_rows: inputs.Nr_fp, num_shear_paths: 2
+            num_tension_rows: inputs.Nr_fp, num_shear_paths: 2, hole_dia_net_area: hole_for_net_area_fp
         }),
         details: { t_p: inputs.member_tf, hole_dia: hole_for_net_area_fp }
     };
