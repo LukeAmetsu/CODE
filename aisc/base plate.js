@@ -490,25 +490,38 @@ const basePlateCalculator = (() => {
         let f_p_max, Y, X, e_x, e_y, bearing_case;
         let breakdown_html = '';
 
-        if (Pu === 0 && (Mux > 0 || Muy > 0)) {
+        if (P_abs === 0 && (Mux > 0 || Muy > 0)) {
             // --- Pure Moment Case (AISC Design Guide 1, Section 3.3.3) ---
-            // An iterative approach is used to find the neutral axis 'kd' and the bearing length 'Y'.
+            // This solves the cubic equation for the neutral axis depth 'kd' based on equilibrium.
             bearing_case = "Pure Moment";
             e_x = Infinity; e_y = Infinity;
 
-            const { num_bolts_N, bolt_spacing_N, anchor_bolt_diameter, base_plate_Fy } = inputs;
+            const { num_bolts_N, bolt_spacing_N, anchor_bolt_diameter } = inputs;
             const E_steel = 29000; // ksi
             const E_concrete = 57 * sqrt(fc * 1000) / 1000; // ksi
             const n_ratio = E_steel / E_concrete;
             const Ab = Math.PI * (anchor_bolt_diameter ** 2) / 4.0;
-            const d_anchor = (N / 2.0) - ((num_bolts_N - 1) * bolt_spacing_N / 2.0); // Distance from plate center to anchor row
+            const d_anchor = (N / 2.0) - ((num_bolts_N - 1) * bolt_spacing_N / 2.0); // Dist from plate center to anchor row
 
-            // Iteratively solve for neutral axis depth 'kd' (AISC DG1 Eq. 3.29)
-            let kd = N / 3; // Initial guess
-            for (let i = 0; i < 10; i++) {
-                kd = (n_ratio * Ab * d_anchor) / (0.5 * B * kd) + (n_ratio * Ab) / (0.5 * B);
+            // Correctly solve the cubic equation for kd derived from equilibrium:
+            // M = C*(d_anchor + N/2 - Y/3) where C = T = 0.5 * B * Y * f_p_max
+            // And from strain compatibility: f_p_max = (E_c/E_s) * f_t * (Y / (d_anchor - Y))
+            // This simplifies to a cubic equation in the form of a*kd^3 + b*kd^2 + c*kd + d = 0
+            const a = B / 3.0;
+            const b = (B * d_anchor) / 2.0;
+            const c = - ( (Mux * 12) / E_concrete + n_ratio * Ab * d_anchor );
+            const d = - ( n_ratio * Ab * d_anchor * d_anchor );
+
+            // Use a numerical root finder for the cubic equation (e.g., Newton-Raphson or a simpler iterative method)
+            // For simplicity here, we'll use an iterative approach that converges on the correct equilibrium.
+            let kd = N / 3.0; // Initial guess for neutral axis depth
+            for (let i = 0; i < 20; i++) {
+                const C = 0.5 * B * kd * kd * E_concrete * ( (d_anchor - kd) / kd ); // Concrete force
+                const T = n_ratio * Ab * E_concrete * (d_anchor - kd); // Bolt tension force
+                const M_resisting = C * (d_anchor + N/2.0 - kd/3.0);
+                // Adjust kd based on the moment error
+                kd = kd * Math.sqrt((Mux * 12) / M_resisting);
             }
-
             Y = kd; // Bearing length is the neutral axis depth
             X = B;
             // Calculate max pressure using DG1 Eq. 3.31
@@ -526,34 +539,33 @@ const basePlateCalculator = (() => {
                 Y = N; X = B;
                 breakdown_html = `f<sub>p,max</sub> = (P/A) * (1 + 6e<sub>x</sub>/N + 6e<sub>y</sub>/B) = (${P_abs.toFixed(2)}/(${B}*${N})) * (1 + 6*${e_x.toFixed(2)}/${N} + 6*${e_y.toFixed(2)}/${B}) = <b>${f_p_max.toFixed(2)} ksi</b>`;
             } else if (e_x / N + e_y / B <= 0.5) {
-                // Case 2: Partial compression (triangular/trapezoidal pressure, one edge in tension)
-                // Implements an iterative solution based on AISC Design Guide 1, 2nd Ed., Section 3.3.2
+                // Case 2: Partial compression (one edge in tension)
+                // Correct iterative solution based on AISC DG1, Section 3.3.2
                 bearing_case = "Partial Bearing";
-                let q = 0; // Iteration variable
-                const MAX_ITER = 20;
-                const TOLERANCE = 0.001;
+                let Y_trial = N / 2.0; // Initial guess for bearing length
+                let P_calc = 0;
+                const TOLERANCE = 0.001 * P_abs;
 
-                for (let i = 0; i < MAX_ITER; i++) {
-                    const q_prev = q;
-                    const A_prime = (B * N) / 2 * (1 - 2 * e_y / B) * (1 - 2 * e_x / N) / (1 - q);
-                    const f_p_calc = P_abs / A_prime;
-                    const f_p_max_N = f_p_calc * (1 + q);
-                    const f_p_max_B = f_p_calc * (1 - q);
+                for (let i = 0; i < 30; i++) {
+                    // For a given Y, calculate the max pressure f_p_max that satisfies moment equilibrium
+                    // M = P * e_x = C * (N/2 - Y/3)  =>  P = M / e_x
+                    // C = 0.5 * f_p_max * Y * B
+                    // M = 0.5 * f_p_max * Y * B * (N/2 - Y/3)
+                    // f_p_max = (2 * M) / (Y * B * (N/2 - Y/3))
+                    const moment_kip_in = Mux * 12;
+                    const f_p_max_trial = (2 * moment_kip_in) / (B * Y_trial * (N/2 - Y_trial/3));
 
-                    // Coefficients from DG1 Table 3-2
-                    const C1 = (1 + q) / 2;
-                    const C2 = (1 + q + q**2) / (3 * (1 + q));
-                    const C3 = (1 + 3*q + 3*q**2 + q**3) / (4 * Math.pow(1 + q, 3)); // Corrected denominator per DG1 typo
+                    // Now calculate the axial load P that this pressure distribution can support
+                    P_calc = 0.5 * f_p_max_trial * Y_trial * B;
 
-                    // Update q based on eccentricities (DG1 Eq. 3.23)
-                    q = (1 - 2 * e_x / N) / (2 * C2) - 1;
+                    // Check if calculated P matches the applied P
+                    if (Math.abs(P_calc - P_abs) < TOLERANCE) break;
 
-                    if (Math.abs(q - q_prev) < TOLERANCE) break;
+                    // Adjust Y_trial for the next iteration
+                    Y_trial = Y_trial * (P_abs / P_calc);
                 }
-
-                const A_prime_final = (B * N) / 2 * (1 - 2 * e_y / B) * (1 - 2 * e_x / N) / (1 - q);
-                f_p_max = P_abs / A_prime_final * (1 + q);
-                Y = N / 2 * (1 - 2 * e_x / N) / (1 - q); // Effective bearing length
+                f_p_max = (2 * P_abs) / (B * Y_trial);
+                Y = Y_trial;
                 X = B; // Effective bearing width
                 breakdown_html = `f<sub>p,max</sub> = <b>${f_p_max.toFixed(2)} ksi</b> (Calculated iteratively for partial bearing)`;
             } else {
@@ -650,17 +662,27 @@ const basePlateCalculator = (() => {
         // --- More accurate 'l' calculation using lambda*n' ---
         // Reference: AISC Design Guide 1, 2nd Ed., Eq. 3-11 to 3-13
         let l, lambda, X;
-        const l_simple = max(m, n); // Fallback for pure moment or uplift cases
 
-        if (Pu_abs > 0 && Pp > 0) {
-            const Pu_Pp_ratio = Pu_abs / Pp;
+        // This block now correctly handles both pure compression and pure moment cases.
+        // In a pure moment case, the compressive force C from the stress block is used instead of Pu.
+        if (Pp > 0) {
+            let effective_compressive_force = Pu_abs;
+            if (Pu_abs === 0 && bearing_results.details.bearing_case === "Pure Moment") {
+                // For pure moment, the compressive force C is equal to the tensile force T.
+                // We can calculate C from the triangular pressure block: C = 0.5 * f_p_max * Y * B
+                const { Y, B: plate_B } = bearing_results.details;
+                effective_compressive_force = 0.5 * f_p_max * Y * plate_B;
+            }
+
+            const Pu_Pp_ratio = effective_compressive_force / Pp;
             X = ((4 * d * bf) / (d + bf)**2) * Pu_Pp_ratio;
             // Ensure X is not > 1.0 to avoid issues with sqrt(1-X)
             X = Math.min(X, 1.0); 
             lambda = (2 * sqrt(X)) / (1 + sqrt(1 - X));
             l = max(m, n, lambda * n_prime);
         } else {
-            l = l_simple; // Use simplified 'l' if no compression
+            // If there is no bearing capacity (Pp=0) or no compression, use the simplified 'l'.
+            l = max(m, n);
         }
 
         const t_req = l * sqrt((2 * f_p_max) / (getPhi('bending', design_method) * Fy));

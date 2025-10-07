@@ -521,9 +521,9 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     // --- Path 1: Shear along bolt lines, tension across the end of the plate ---
     const Agv1 = num_shear_paths * L_gv * t_p;
     const Anv1 = num_shear_paths * L_nv * t_p;
-    const Ant1 = L_gt * t_p; // Gross tension path at the end
+    const Agt1 = L_gt * t_p; // Gross tension path at the end
 
-    const tension_term1 = Ubs * Fu * Ant1; // FIX: Use Ant1 for the first tension term
+    const tension_term1 = Ubs * Fu * Agt1; // Path 1 uses the gross tension area at the end of the plate.
     const path1_rupture = (0.6 * Fu * Anv1) + tension_term1;
     const path1_yield = (0.6 * Fy * Agv1) + tension_term1;
     const Rn1 = Math.min(path1_rupture, path1_yield) || 0;
@@ -531,9 +531,9 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     // --- Path 2: Shear along bolt lines, tension between bolt lines ---
     const Agv2 = Agv1; // Same shear path
     const Anv2 = Anv1;
-    const Ant2 = L_nt * t_p; // Net tension path between bolts
+    const Ant2 = L_nt * t_p; // Net tension path between bolt lines
 
-    const tension_term2 = Ubs * Fu * Ant2; // FIX: Use Ant2 for the second tension term
+    const tension_term2 = Ubs * Fu * Ant2; // Path 2 uses the net tension area between bolts.
     const path2_rupture = (0.6 * Fu * Anv2) + tension_term2;
     const path2_yield = (0.6 * Fy * Agv2) + tension_term2;
     const Rn2 = Math.min(path2_rupture, path2_yield) || 0;
@@ -543,7 +543,7 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
 
     return { 
         Rn, phi: 0.75, omega: 2.00, Ubs, governing_path,
-        path1: { Rn: Rn1, Agv: Agv1, Anv: Anv1, Ant: Ant1, path_yield: path1_yield, path_rupture: path1_rupture },
+        path1: { Rn: Rn1, Agv: Agv1, Anv: Anv1, Ant: Agt1, path_yield: path1_yield, path_rupture: path1_rupture },
         path2: { Rn: Rn2, Agv: Agv2, Anv: Anv2, Ant: Ant2, path_yield: path2_yield, path_rupture: path2_rupture }
     };
 }
@@ -824,21 +824,25 @@ function performPlateChecks(plateName, inputs, config) {
     };
 
     // 3. Block Shear
-    // The block shear failure path involves two shear planes (one along each line of bolts)
-    // and one tension plane (across the gage between the bolt lines).
-    // The lengths calculated here are for a SINGLE shear path. The `checkBlockShear` function handles the two paths.
+    // --- FIX: Calculate parameters for BOTH potential block shear paths ---
+    // Path 1: Tear-out from the end of the plate.
+    // Path 2: Tear-out between the bolt lines.
     
-    // Shear Path (along one line of bolts)
-    const L_gv_fp = S_end + (Nc - 1) * S_col; // Gross length of one shear path
-    const L_nv_fp = L_gv_fp - (Nc - 0.5) * hole_for_net_area; // Net length of one shear path
+    // Shear path parameters are the same for both failure modes.
+    // This is the length of a single shear path along one line of bolts.
+    const L_gv = S_end + (Nc - 1) * S_col;
+    const L_nv = L_gv - (Nc - 0.5) * hole_for_net_area;
     
-    // Tension Path (across the gage)
-    const L_gt_fp = gage; // Gross length of the tension path
-    const L_nt_fp = gage - (2 * Nr * hole_for_net_area); // Net length, deducting all bolts on the tension line
+    // Tension path parameters differ for each failure mode.
+    // Path 1: Tension across the end of the plate.
+    const L_gt_path1 = le_tran; // Gross tension length is the transverse edge distance.
+    // Path 2: Tension between the bolt lines.
+    const L_gt_path2 = gage; // Gross tension length is the gage.
+    const L_nt_path2 = gage - (2 * Nr * hole_for_net_area); // Net length deducts bolts.
 
     plateChecks[`${plateName} Block Shear`] = {
         demand: demand,
-        check: checkBlockShear({ L_gv: L_gv_fp, L_nv: L_nv_fp, L_gt: L_gt_fp, L_nt: L_nt_fp, t_p: t_p, Fu: Fu, Fy: Fy, num_tension_rows: Nr, num_shear_paths: 2 }),
+        check: checkBlockShear({ L_gv, L_nv, L_gt: L_gt_path1, L_nt: L_nt_path2, t_p, Fu, Fy, num_tension_rows: Nr, num_shear_paths: 2 }),
         details: { t_p, hole_dia: hole_for_net_area }
     };
 
@@ -1844,12 +1848,12 @@ function renderSpliceInputSummary(inputs) {
 function renderResults(results, rawInputs) {
     const { checks, geomChecks, inputs, final_loads, demands } = results; // `inputs` here are the potentially modified ones from the calc
     let optimizationHtml = '';
-    if (results.optimizationLog && results.optimizationLog.length > 0) {
-        optimizationHtml = `<div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 my-4 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-600">
-            <p class="font-bold">Optimization Log:</p>
-            <ul class="list-disc list-inside mt-2 text-sm">${results.optimizationLog.map(log => `<li>${log}</li>`).join('')}</ul>
-        </div>`;
-    }
+	if (results.optimizationLog && results.optimizationLog.length > 0) {
+		optimizationHtml = `<div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 my-4 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-600" id="optimization-log-section">
+			<p class="font-bold">Optimization Log:</p>
+			<ul class="list-disc list-inside mt-2 text-sm">${results.optimizationLog.map(log => `<li>${log}</li>`).join('')}</ul>
+		</div>`;
+	}
 
     // --- Geometry Checks Table ---
     const geomRows = [];
@@ -2006,7 +2010,7 @@ function renderResults(results, rawInputs) {
                 </div>
                 <h2 class="report-title text-center">Splice Check Results</h2>
                 ${renderSpliceInputSummary(rawInputs)}
-                ${optimizationHtml}
+                ${optimizationHtml} 
                 ${geometryTableHtml}
                 ${loadSummaryHtml}
                 ${strengthTableHtml}
