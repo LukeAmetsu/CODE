@@ -514,38 +514,43 @@ function checkFlangeNetSection({ bf, tf, Fu, num_bolts_in_cs, hole_dia_net_area 
     return { Rn, phi: 0.75, omega: 2.00, An, Ag, A_holes, Fu };
 }
 
-function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows, num_shear_paths = 1, hole_dia_net_area }) {
+/**
+ * Calculates block shear rupture strength for a connection per AISC 360-22 Eq J4-5.
+ * @param {object} params - Parameters for the check.
+ * @param {number} params.Agv - Gross area along the shear path.
+ * @param {number} params.Anv - Net area along the shear path.
+ * @param {number} params.Agt - Gross area along the tension path.
+ * @param {number} params.Ant - Net area along the tension path.
+ * @param {number} params.Fu - Specified minimum tensile strength of the material (ksi).
+ * @param {number} params.Fy - Specified minimum yield strength of the material (ksi).
+ * @param {number} params.Ubs - Shear lag factor for the tension plane (typically 1.0 or 0.5).
+ * @param {number} params.num_shear_paths - The number of parallel shear planes (e.g., 2 for a flange splice).
+ * @returns {object} An object containing the nominal block shear capacity (Rn).
+ */
+function checkBlockShear({ Agv, Anv, Ant, Fu, Fy, Ubs = 1.0 }) {
     // AISC 360-22 Eq J4-5
-    const Ubs = (num_tension_rows || 1) > 1 ? 0.5 : 1.0;
+    // The nominal strength Rn is the lesser of two failure modes:
+    // 1. Shear rupture + Tension yielding
+    // 2. Shear yielding + Tension rupture
+    const shear_rupture_term = 0.6 * Fu * Anv;
+    const tension_rupture_term = Ubs * Fu * Ant;
+    const shear_yield_term = 0.6 * Fy * Agv;
 
-    // --- Path 1: Shear along bolt lines, tension across the end of the plate ---
-    const Agv1 = num_shear_paths * L_gv * t_p;
-    const Anv1 = num_shear_paths * L_nv * t_p;
-    // CORRECTED: Calculate net tension area for Path 1 by deducting half a bolt hole.
-    const Ant1 = (L_gt - (0.5 * hole_dia_net_area)) * t_p;
-
-    const tension_term1 = Ubs * Fu * Ant1;
-    const path1_rupture = (0.6 * Fu * Anv1) + tension_term1;
-    const path1_yield = (0.6 * Fy * Agv1) + tension_term1;
-    const Rn1 = Math.min(path1_rupture, path1_yield) || 0;
-
-    // --- Path 2: Shear along bolt lines, tension between bolt lines ---
-    const Agv2 = Agv1; // Same shear path
-    const Anv2 = Anv1;
-    const Ant2 = L_nt * t_p; // Net tension path between bolt lines
-
-    const tension_term2 = Ubs * Fu * Ant2;
-    const path2_rupture = (0.6 * Fu * Anv2) + tension_term2;
-    const path2_yield = (0.6 * Fy * Agv2) + tension_term2;
-    const Rn2 = Math.min(path2_rupture, path2_yield) || 0;
-
-    const Rn = Math.min(Rn1, Rn2);
-    const governing_path = Rn1 < Rn2 ? 1 : 2;
-
+    // AISC Eq. J4-5
+    const Rn = Math.min(shear_rupture_term + tension_rupture_term, shear_yield_term + tension_rupture_term);
+    
     return { 
-        Rn, phi: 0.75, omega: 2.00, Ubs, governing_path,
-        path1: { Rn: Rn1, Agv: Agv1, Anv: Anv1, Ant: Ant1, path_yield: path1_yield, path_rupture: path1_rupture },
-        path2: { Rn: Rn2, Agv: Agv2, Anv: Anv2, Ant: Ant2, path_yield: path2_yield, path_rupture: path2_rupture }
+        Rn, 
+        phi: 0.75, 
+        omega: 2.00, 
+        details: {
+            shear_rupture_term,
+            tension_rupture_term,
+            shear_yield_limit: shear_yield_term + tension_rupture_term,
+            Anv,
+            Ant,
+            Ubs
+        } 
     };
 }
 
@@ -694,45 +699,55 @@ function calculateWebSpliceEccentricity(V_load, H_load, gap, Nc, Nr, S_pitch, S_
 }
 
 /**
- * Checks for prying action on a bolt connection.
+ * Checks for prying action on a bolt connection based on AISC Manual Part 9.
+ * This function calculates the total required tensile force per bolt, including prying.
  * @param {object} params - Parameters for prying action check.
  * @param {number} params.t_plate - Thickness of the connected plate (in).
  * @param {number} params.Fy_plate - Yield strength of the connected plate (ksi).
- * @param {number} params.b - Distance from bolt centerline to toe of fillet or edge of plate (in).
- * @param {number} params.a - Distance from bolt centerline to point of contraflexure (in).
- * @param {number} params.p - Bolt pitch (spacing along the line of force) (in).
+ * @param {number} params.b - Distance from bolt centerline to bolt line (in).
+ * @param {number} params.a - Distance from bolt centerline to edge of plate or fillet toe (in).
+ * @param {number} params.p - Bolt pitch (spacing parallel to the member length) (in).
  * @param {number} params.d_bolt - Nominal bolt diameter (in).
  * @param {number} params.d_hole - Nominal hole diameter (in).
- * @param {number} params.B_bolt - Required tensile force per bolt (demand) (kips).
- * @returns {object} An object containing the total required tensile force (including prying), prying force, and critical thickness.
+ * @param {number} params.B_bolt - The applied tensile force demand per bolt (kips).
+ * @returns {object} An object containing the total required force (T_req), prying force (Q), and critical thickness (tc).
  */
 function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt }) {
-    // Per AISC Manual Part 9, simplified for T-stub or similar flexural elements
-    // This function is designed for bolts in tension.
-    if (p <= 0 || Fy_plate <= 0 || B_bolt < 0) return { Q_prime: 0, T_req: B_bolt, tc: Infinity, alpha_prime: 0, b_prime: b, a_prime: a, rho: 0, delta: 0 };
+    // B_bolt is the required tension demand per bolt (e.g., Tu / num_bolts)
+    if (p <= 0 || Fy_plate <= 0 || B_bolt < 0) {
+        return { T_req: B_bolt, Q: 0, tc: Infinity, alpha_prime: 0 };
+    }
     
     const b_prime = b - d_bolt / 2.0;
-    const a_prime = min(a + d_bolt / 2.0, 1.25 * b_prime); // AISC Manual Part 9, Eq. 9-28
+    const a_prime = Math.min(a + d_bolt / 2.0, 1.25 * b);
 
-    if (a_prime <= 0 || b_prime < 0) return { Q_prime: 0, T_req: B_bolt, tc: Infinity, alpha_prime: 0, b_prime, a_prime, rho: 0, delta: 0 };
+    if (a_prime <= 0 || b_prime < 0) {
+        return { T_req: B_bolt, Q: 0, tc: Infinity, alpha_prime: 0 };
+    }
 
     const rho = b_prime / a_prime;
     const delta = 1 - (d_hole / p);
 
-    if (delta <= 0) return { Q_prime: Infinity, T_req: Infinity, tc: 0, alpha_prime: 0, b_prime, a_prime, rho, delta }; // Invalid geometry or holes too close
-
-    // Critical thickness tc is calculated based on the applied demand B, per AISC Eq. 9-27.
-    const tc = sqrt((4 * B_bolt * b_prime) / (p * Fy_plate));
-
-    let Q_prime = 0;
-    let alpha_prime = 0;
-    if (t_plate < tc) { // Prying occurs if actual thickness is less than critical thickness
-        alpha_prime = (1 / delta) * (((t_plate / tc)**2) - 1); // AISC Manual Part 9, Eq. 9-29
-        alpha_prime = max(0, min(alpha_prime, 1.0)); // alpha' cannot be negative or > 1
-        Q_prime = B_bolt * delta * alpha_prime * rho; // AISC Manual Part 9, Eq. 9-30
+    if (delta < 0) {
+        return { T_req: Infinity, Q: Infinity, tc: 0, alpha_prime: 0 };
     }
-    const T_req = B_bolt + Q_prime;
-    return { T_req, Q_prime, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
+
+    // Critical thickness tc required to eliminate prying, based on the applied DEMAND B_bolt (AISC Eq. 9-27).
+    const tc = Math.sqrt((4 * B_bolt * b_prime) / (p * Fy_plate));
+
+    let Q = 0;
+    let alpha_prime = 0;
+    if (t_plate < tc) { // Prying occurs if the actual plate thickness is less than the critical thickness
+        alpha_prime = (1 / (delta * (1 + rho))) * (((t_plate / tc)**2) - 1);
+        alpha_prime = Math.max(0, Math.min(alpha_prime, 1.0));
+        
+        // Prying force Q per bolt, based on the demand B_bolt.
+        Q = B_bolt * delta * alpha_prime * rho;
+    }
+
+    const T_req = B_bolt + Q; // Total required tension in the bolt is the initial demand plus the prying force.
+    
+    return { T_req, Q, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
 }
 
 function getGeometryChecks({ db, s_col, s_row, le_long, le_tran, t_thinner }) { 
@@ -795,74 +810,33 @@ function performPlateChecks(plateName, inputs, config) {
 
     const plateChecks = {};
 
-    const { le_long, le_tran, edge_dist_gap, bolt_pattern_height } = calculateBoltGroupGeometry({
-        L_plate: L_p, H_plate: H_p, Nc, Nr, S_col, S_row,
-        S_end_gap: S_end, 
-        gage
+    const { le_long, le_tran } = calculateBoltGroupGeometry({
+        L_plate: L_p, H_plate: H_p, Nc, Nr, S_col, S_row, S_end_gap: S_end, gage
     });
 
     // 1. Gross Section Yielding & Compression
     const Ag = H_p * t_p;
-    plateChecks[`${plateName} GSY`] = {
-        demand: demand,
-        check: checkGrossSectionYielding({ Ag, Fy }),
-        details: { H_p, t_p }
-    };
-    plateChecks[`${plateName} Compression`] = {
-        demand: demand_comp,
-        check: checkPlateCompression({ Ag, Fy, t: t_p, unbraced_length: S_col })
-    };
+    plateChecks[`${plateName} GSY`] = { demand, check: checkGrossSectionYielding({ Ag, Fy }) };
+    plateChecks[`${plateName} Compression`] = { demand: demand_comp, check: checkPlateCompression({ Ag, Fy, t: t_p, unbraced_length: S_col }) };
 
     // 2. Net Section Fracture
     const bolts_in_critical_section = 2 * Nr;
-    plateChecks[`${plateName} NSF`] = { 
-        demand: demand, 
-        check: checkFlangeNetSection({ 
-            bf: H_p, tf: t_p, Fu: Fu, 
-            num_bolts_in_cs: bolts_in_critical_section, 
-            hole_dia_net_area: hole_for_net_area 
-        }) 
-    };
+    plateChecks[`${plateName} NSF`] = { demand, check: checkFlangeNetSection({ bf: H_p, tf: t_p, Fu, num_bolts_in_cs: bolts_in_critical_section, hole_dia_net_area: hole_for_net_area }) };
 
-    // 3. Block Shear
-    // --- FIX: Calculate parameters for BOTH potential block shear paths ---
-    // Path 1: Tear-out from the end of the plate.
-    // Path 2: Tear-out between the bolt lines.
-    
-    // Shear path parameters are the same for both failure modes.
-    // This is the length of a single shear path along one line of bolts.
-    const L_gv = S_end + (Nc - 1) * S_col;
-    const L_nv = L_gv - (Nc - 0.5) * hole_for_net_area;
-    
-    // Tension path parameters differ for each failure mode.
-    // Path 1: Tension across the end of the plate.
-    const L_gt_path1 = le_tran; // Gross tension length is the transverse edge distance.
-    // Path 2: Tension between the bolt lines.
-    const L_gt_path2 = gage; // Gross tension length is the gage.
-    const L_nt_path2 = gage - (2 * Nr * hole_for_net_area); // Net length deducts bolts.
+    // 3. Block Shear (Corrected Area Calculations)
+    const Agv = (S_end + (Nc - 1) * S_col) * t_p * 2; // Gross shear area (2 paths)
+    const Anv = Agv - (Nc * 2) * hole_for_net_area * t_p; // Net shear area (2 paths)
+    const Ant = (gage - Nr * hole_for_net_area) * t_p; // Net tension area (1 path across gage)
 
-    plateChecks[`${plateName} Block Shear`] = {
-        demand: demand,
-        check: checkBlockShear({ L_gv, L_nv, L_gt: L_gt_path1, L_nt: L_nt_path2, t_p, Fu, Fy, num_tension_rows: Nr, num_shear_paths: 2, hole_dia_net_area: hole_for_net_area }),
-        details: { t_p, hole_dia: hole_for_net_area }
-    };
+    plateChecks[`${plateName} Block Shear`] = { demand, check: checkBlockShear({ Agv, Anv, Ant, Fu, Fy, Ubs: 1.0 }) };
 
     // 4. Bolt Bearing
-    // --- FIX: Use the calculated 'le_long' for the edge distance ---
     const bearing_edge = checkBoltBearing({ db: D_bolt, t_ply: t_p, Fu_ply: Fu, le: le_long, s: S_col, isEdgeBolt: true, deformationIsConsideration: inputs.deformation_is_consideration, hole_dia: hole_for_bearing });
     const bearing_int = checkBoltBearing({ db: D_bolt, t_ply: t_p, Fu_ply: Fu, le: le_long, s: S_col, isEdgeBolt: false, deformationIsConsideration: inputs.deformation_is_consideration, hole_dia: hole_for_bearing });
-    
-    // This assumes bolts are mirrored across the gage line.
-    // The "edge" bolts are the ones in the first column (Nc=1).
-    const num_edge_bolts = 2 * Nr; 
+    const num_edge_bolts = 2 * Nr;
     const num_int_bolts = (Nc - 1) * 2 * Nr;
-    
     const total_bearing = bearing_edge.Rn * num_edge_bolts + bearing_int.Rn * num_int_bolts;
-    plateChecks[`${plateName} Bolt Bearing`] = {
-        demand: demand,
-        check: { Rn: total_bearing, phi: bearing_edge.phi, omega: bearing_edge.omega },
-        details: { edge: bearing_edge, int: bearing_int, num_edge: num_edge_bolts, num_int: num_int_bolts }
-    };
+    plateChecks[`${plateName} Bolt Bearing`] = { demand, check: { Rn: total_bearing, phi: 0.75, omega: 2.00 }, details: { edge: bearing_edge, int: bearing_int, num_edge: num_edge_bolts, num_int: num_int_bolts } };
 
     return plateChecks;
 }
@@ -983,74 +957,74 @@ function performFlangeChecks(inputs, demands) {
     const L_gv_beam_f = inputs.S3_end_dist_fp + (inputs.Nc_fp - 1) * inputs.S1_col_spacing_fp; // Gross length of one shear path
     const L_nv_beam_f = L_gv_beam_f - (inputs.Nc_fp - 0.5) * hole_for_net_area_fp; // Net length of one shear path
     
-    // Tension Path (across the gage)
-    const L_gt_beam_f = inputs.g_gage_fp; // Gross length of the tension path
-    const L_nt_beam_f = inputs.g_gage_fp - (2 * inputs.Nr_fp * hole_for_net_area_fp); // Net length, deducting all bolts on the tension line
+    // Tension path is across the gage.
+    const Ant_beam_f = (inputs.g_gage_fp - (2 * inputs.Nr_fp * hole_for_net_area_fp)) * inputs.member_tf;
+    const Agt_beam_f = inputs.g_gage_fp * inputs.member_tf;
 
     checks['Beam Flange Block Shear'] = { 
         demand: total_flange_demand_tension, 
         check: checkBlockShear({ 
-            L_gv: L_gv_beam_f, L_nv: L_nv_beam_f, L_gt: L_gt_beam_f, L_nt: L_nt_beam_f, 
-            t_p: inputs.member_tf, Fu: inputs.member_Fu, Fy: inputs.member_Fy, 
-            num_tension_rows: inputs.Nr_fp, num_shear_paths: 2, hole_dia_net_area: hole_for_net_area_fp
+            Agv: L_gv_beam_f * inputs.member_tf,
+            Anv: L_nv_beam_f * inputs.member_tf,
+            Ant: Ant_beam_f,
+            Fu: inputs.member_Fu, Fy: inputs.member_Fy,
+            Ubs: 1.0, num_shear_paths: 2
         }),
-        details: { t_p: inputs.member_tf, hole_dia: hole_for_net_area_fp }
+        details: { t_p: inputs.member_tf, hole_dia: hole_for_net_area_fp, Agv: L_gv_beam_f * inputs.member_tf, Anv: L_nv_beam_f * inputs.member_tf, Agt: Agt_beam_f, Ant: Ant_beam_f }
     };
 
+    // --- Beam Flange Bolt Bearing Check ---
+    Object.assign(checks, performBeamConnectionChecks("Flange", inputs, {
+        demand: total_flange_demand_tension,
+        t_beam: inputs.member_tf, Fu_beam: inputs.member_Fu, Fy_beam: inputs.member_Fy,
+        Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S_col: inputs.S1_col_spacing_fp, S_row: inputs.S2_row_spacing_fp, S_end: inputs.S3_end_dist_fp,
+        gage: inputs.g_gage_fp, D_bolt: inputs.D_fp,
+        hole_for_net_area: hole_for_net_area_fp, hole_for_bearing: hole_for_bearing_fp
+    }));
     // --- Prying Action Check ---
     // --- FIX: Corrected and Consolidated Prying Action Check ---
     // (inside performFlangeChecks function)
 
     const B_per_bolt = num_flange_bolts_per_side > 0 ? total_flange_demand_tension / num_flange_bolts_per_side : 0;
-    const d_hole_pry = AISC_SPEC.getNominalHoleDiameter(inputs.D_fp, inputs.hole_calc_method, 'standard');
+    const d_hole_pry = hole_for_bearing_fp; // Use the same hole diameter as bearing
 
-    let T_req_total = B_per_bolt;
-    let prying_details_combined = {};
-    let outer_plate_tc = 0;
-
+    let T_req = B_per_bolt; // Start with the direct tension demand
+    let Q_total = 0;
+    let prying_details = {};
+    
     if (B_per_bolt > 0) {
-        let Q_total = 0;
-        
-        // --- Outer Plate Prying ---
-        const B_plate_outer = inputs.num_flange_plates === 2 ? B_per_bolt * 0.5 : B_per_bolt;
-        const b_pry_outer = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
-        const a_pry_outer = (inputs.H_fp - bolt_pattern_height_fp) / 2.0;
-        
-        const prying_outer_details = checkPryingAction({
-            t_plate: inputs.t_fp, 
-            Fy_plate: inputs.flange_plate_Fy, 
-            b: b_pry_outer, a: a_pry_outer, 
-            p: inputs.S1_col_spacing_fp, 
-            d_bolt: inputs.D_fp, d_hole: d_hole_pry, 
-            B_bolt: B_plate_outer 
-        });
-        Q_total += prying_outer_details.Q_prime;
-        prying_details_combined.outer = { ...prying_outer_details, B_bolt: B_plate_outer }; // Include B_bolt for the breakdown
-        outer_plate_tc = prying_outer_details.tc;
-
-        // --- Inner Plate Prying ---
         if (inputs.num_flange_plates === 2) {
-            const B_plate_inner = B_per_bolt * 0.5;
+            // Each plate sees half the bolt force
+            const B_per_plate = B_per_bolt / 2;
+            const b_pry_outer = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
+            const a_pry_outer = (inputs.H_fp - bolt_pattern_height_fp) / 2.0;
+            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry_outer, a: a_pry_outer, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_plate /* ✅ Half the bolt force */ });
+            
             const b_pry_inner = inputs.g_gage_fp / 2.0;
             const a_pry_inner = (inputs.g_gage_fp / 2.0) + (inputs.member_bf - inputs.member_tw) / 2.0;
-
-            const prying_inner_details = checkPryingAction({
-                t_plate: inputs.t_fp_inner, Fy_plate: inputs.flange_plate_Fy_inner, 
-                b: b_pry_inner, a: a_pry_inner, p: inputs.S1_col_spacing_fp, 
-                d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_plate_inner
-            });
-            Q_total += prying_inner_details.Q_prime;
-            prying_details_combined.inner = prying_inner_details;
+            const prying_inner = checkPryingAction({ t_plate: inputs.t_fp_inner, Fy_plate: inputs.flange_plate_Fy_inner, b: b_pry_inner, a: a_pry_inner, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_plate /* ✅ Half the bolt force */ });
+            
+            Q_total = prying_outer.Q + prying_inner.Q;
+            prying_details = { outer: prying_outer, inner: prying_inner };
+        } else {
+            // Single plate system - full bolt force
+            const b_pry_outer = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
+            const a_pry_outer = (inputs.H_fp - bolt_pattern_height_fp) / 2.0;
+            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry_outer, a: a_pry_outer, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_bolt /* ✅ Full bolt force */ });
+            Q_total = prying_outer.Q;
+            prying_details = { outer: prying_outer };
         }
-
-        T_req_total = B_per_bolt + Q_total;
+    
+        T_req += Q_total; // Add total prying force to the initial demand
 
         checks['Flange Bolt Tension with Prying'] = {
-            demand: T_req_total,
-            check: checkBoltTension(inputs.bolt_grade_fp, inputs.D_fp),
-            details: { ...prying_details_combined, B_per_bolt, Q_total, T_req: T_req_total }
+            demand: T_req, // The demand is the total required force including prying
+            check: checkBoltTension(inputs.bolt_grade_fp, inputs.D_fp), // Check against bolt's nominal capacity
+            details: { ...prying_details, B_per_bolt, Q_total, T_req }
         };
     }
+
+    const outer_plate_tc = prying_details.outer?.tc || 0;
 
     checks['Plate Thickness for Prying'] = {
         demand: inputs.t_fp, // Provided thickness
@@ -1058,7 +1032,7 @@ function performFlangeChecks(inputs, demands) {
         // Pass the correct details object to the breakdown generator.
         // The breakdown needs the `B_per_bolt` value which is not inside `prying_details_combined`.
         // We create a new object that includes both for the breakdown function to use.
-        details: { ...prying_details_combined, B_per_bolt }
+        details: { ...prying_details, B_per_bolt }
     };
     
     const t_thinner_flange = min(inputs.member_tf, inputs.t_fp, inputs.num_flange_plates === 2 ? inputs.t_fp_inner : Infinity);
@@ -1092,12 +1066,13 @@ function performWebChecks(inputs, demands) {
         Nc: inputs.Nc_wp,
         Nr: inputs.Nr_wp,
         S_col: inputs.S4_col_spacing_wp,
-        S_row: inputs.S5_row_spacing_wp,
-        S_end_gap: inputs.S6_end_dist_wp
+        S_row: inputs.S5_row_spacing_wp, S_end_gap: inputs.S6_end_dist_wp
     });
-
+    
     const num_web_bolts_per_side = inputs.Nc_wp * inputs.Nr_wp;
     if (num_web_bolts_per_side === 0) return { checks, geomChecks, inputs };
+
+    const { max_R: max_bolt_demand } = calculateWebSpliceEccentricity(V_load, Hw, inputs.gap, inputs.Nc_wp, inputs.Nr_wp, inputs.S4_col_spacing_wp, inputs.S5_row_spacing_wp, inputs.S6_end_dist_wp);
 
     const fastenerPatternLength_web = (inputs.Nr_wp > 1) ? ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) : 0;
     const single_web_bolt_shear_check = checkBoltShear({
@@ -1107,18 +1082,37 @@ function performWebChecks(inputs, demands) {
         numPlanes: inputs.num_web_plates, 
         fastenerPatternLength: fastenerPatternLength_web
     });
-
-    // The demand on the bolt group is the vector sum of Vertical Shear (V) and Horizontal Force (Hw)
-    const total_demand_on_group = Math.sqrt(V_load**2 + Hw**2);
-    const total_bolt_group_capacity = single_web_bolt_shear_check.Rn * num_web_bolts_per_side;
     
-    checks['Web Bolt Group Shear'] = { 
-        demand: total_demand_on_group, 
-        check: { ...single_web_bolt_shear_check, Rn: total_bolt_group_capacity }, // Store total capacity
-        details: { Rn_single: single_web_bolt_shear_check.Rn, num_bolts: num_web_bolts_per_side, V_load, Hw }
+    checks['Web Bolt Group Shear'] = {
+        demand: max_bolt_demand, // Demand is the max force on the critical bolt
+        check: single_web_bolt_shear_check, // Capacity is for a single bolt
+        details: { Rn_single: single_web_bolt_shear_check.Rn, V_load, Hw, max_R: max_bolt_demand }
     };
 
-    const avg_force_per_bolt = total_demand_on_group / num_web_bolts_per_side;
+    // --- Web Bolt Shear/Tension Interaction (AISC J3.9) ---
+    // This logic is now inlined from the old checkBoltShearTensionInteraction function.
+    const Tu_per_bolt = Hw > 0 ? Hw / num_web_bolts_per_side : 0; // Tension demand per bolt
+    const Vu_per_bolt = V_load > 0 ? V_load / num_web_bolts_per_side : 0; // Simplified vertical shear per bolt
+
+    if (Tu_per_bolt > 0) {
+        const Fnv = single_web_bolt_shear_check.Fnv;
+        const Fnt = AISC_SPEC.getFnt(inputs.bolt_grade_wp);
+        const Ab = PI * (inputs.D_wp**2) / 4.0;
+        const fv = Ab > 0 ? Vu_per_bolt / Ab : 0; // Required shear stress
+
+        let F_nt_prime;
+        if (inputs.design_method === 'LRFD') {
+            F_nt_prime = 1.3 * Fnt - (Fnt / (0.75 * Fnv)) * fv; // AISC Eq. J3-3a
+        } else { // ASD
+            F_nt_prime = 1.3 * Fnt - ((2.00 / 0.75) * Fnt / Fnv) * fv; // AISC Eq. J3-3b
+        }
+        F_nt_prime = Math.min(F_nt_prime, Fnt);
+        F_nt_prime = Math.max(0, F_nt_prime);
+
+        const Rn_interaction = F_nt_prime * Ab;
+
+        checks['Web Bolt Shear/Tension Interaction'] = { demand: Tu_per_bolt, check: { Rn: Rn_interaction, phi: 0.75, omega: 2.00 }, details: { Tu_per_bolt, Vu_per_bolt, Fnt, Fnv, Ab, fv, F_nt_prime } };
+    }
 
     const total_t_wp = inputs.t_wp * inputs.num_web_plates;
     const Agv_wp = inputs.H_wp * total_t_wp;
@@ -1134,21 +1128,18 @@ function performWebChecks(inputs, demands) {
         details: { H_wp: inputs.H_wp, Nr_wp: inputs.Nr_wp, hole_dia: hole_for_net_area_wp, t_total: total_t_wp }
     };
     
-    // --- FIX: Correct Web Plate Block Shear Area Calculations ---
-    // Gross area in shear (horizontal path)
-    const L_gv_wp = inputs.S6_end_dist_wp + (inputs.Nc_wp - 1) * inputs.S4_col_spacing_wp;
-    const Agv_wp_bs = L_gv_wp * total_t_wp;
-    // Net area in shear (deduct 1/2 hole at start and end, and full holes in between)
-    const Anv_wp_bs = Agv_wp_bs - ((inputs.Nc_wp - 1) + 0.5) * hole_for_net_area_wp * total_t_wp;
+    // --- Corrected Web Plate Block Shear ---
+    const total_t_wp_bs_calc = inputs.t_wp * inputs.num_web_plates; // Total thickness of web plates
+    // Shear occurs along the bolt lines (longitudinal)
+    const L_gv_single_path = inputs.S6_end_dist_wp + (inputs.Nc_wp - 1) * inputs.S4_col_spacing_wp;
+    // Two shear paths (top and bottom of the bolt group)
+    const Agv_bs = 2 * L_gv_single_path * total_t_wp_bs_calc;
+    const Anv_bs = Agv_bs - (2 * inputs.Nc_wp * hole_for_net_area_wp * total_t_wp_bs_calc); // Deduct holes from both paths
+    const Ant_bs = (inputs.H_wp - inputs.Nr_wp * hole_for_net_area_wp) * total_t_wp_bs_calc; // Tension path is transverse
 
-    // Gross area in tension (vertical path)
-    const Agt_wp_bs = le_tran_wp * total_t_wp;
-    // Net area in tension (deduct 1/2 hole)
-    const Ant_wp_bs = Agt_wp_bs - (0.5 * hole_for_net_area_wp * total_t_wp);
-
-    checks['Web Plate Block Shear'] = { 
-        demand: V_load, 
-        check: checkBlockShear({ L_gv: L_gv_wp, L_nv: Anv_wp_bs / total_t_wp, L_gt: Agt_wp_bs / total_t_wp, L_nt: Ant_wp_bs / total_t_wp, t_p: total_t_wp, Fu: inputs.web_plate_Fu, Fy: inputs.web_plate_Fy, num_tension_rows: 1, num_shear_paths: 1 })
+    checks['Web Plate Block Shear'] = {
+        demand: V_load,
+        check: checkBlockShear({ Agv: Agv_bs, Anv: Anv_bs, Ant: Ant_bs, Fu: inputs.web_plate_Fu, Fy: inputs.web_plate_Fy, Ubs: 1.0 })
     };
 
     // --- Web Plate Bolt Bearing (Full Group) ---
@@ -1168,20 +1159,13 @@ function performWebChecks(inputs, demands) {
     const total_bearing_capacity_plate = (bearing_wp_plate_edge.Rn * num_edge_bolts_web) + (bearing_wp_plate_int.Rn * num_int_bolts_web);
     checks['Web Plate Bolt Bearing'] = { demand: V_load, check: { ...bearing_wp_plate_edge, Rn: total_bearing_capacity_plate }, details: { edge: bearing_wp_plate_edge, int: bearing_wp_plate_int, num_edge: num_edge_bolts_web, num_int: num_int_bolts_web } };
     
-    // --- Beam Web Bolt Bearing (Full Group) ---
-    const bearing_web_beam_edge = checkBoltBearing({
-        db: inputs.D_wp, t_ply: inputs.member_tw, Fu_ply: inputs.member_Fu,
-        le: le_long_wp, s: inputs.S4_col_spacing_wp,
-        isEdgeBolt: true, deformationIsConsideration: inputs.deformation_is_consideration,
-        hole_dia: hole_for_bearing_wp
-    });
-    const bearing_web_beam_int = checkBoltBearing({
-        db: inputs.D_wp, t_ply: inputs.member_tw, Fu_ply: inputs.member_Fu,
-        le: Infinity, s: inputs.S4_col_spacing_wp, isEdgeBolt: false,
-        deformationIsConsideration: inputs.deformation_is_consideration, hole_dia: hole_for_bearing_wp
-    });
-    const total_bearing_capacity_beam_web = (bearing_web_beam_edge.Rn * num_edge_bolts_web) + (bearing_web_beam_int.Rn * num_int_bolts_web);
-    checks['Beam Web Bolt Bearing'] = { demand: V_load, check: { ...bearing_web_beam_edge, Rn: total_bearing_capacity_beam_web }, details: { edge: bearing_web_beam_edge, int: bearing_web_beam_int, num_edge: num_edge_bolts_web, num_int: num_int_bolts_web } };
+    // --- Beam Web Bolt Bearing Check ---
+    Object.assign(checks, performBeamConnectionChecks("Web", inputs, {
+        demand: V_load,
+        t_beam: inputs.member_tw, Fu_beam: inputs.member_Fu, Fy_beam: inputs.member_Fy,
+        Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S_col: inputs.S4_col_spacing_wp, S_row: inputs.S5_row_spacing_wp, S_end: inputs.S6_end_dist_wp,
+        D_bolt: inputs.D_wp, hole_for_bearing: hole_for_bearing_wp
+    }));
 
     const t_thinner_web = min(inputs.member_tw, inputs.t_wp * inputs.num_web_plates);
     geomChecks['Web Bolts'] = getGeometryChecks({
@@ -1490,16 +1474,13 @@ const baseBreakdownGenerators = {
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Block Shear': ({ check }, common) => common.format_list([
-        `<u>Path 1: Tear-out from Plate End (Governing Path: ${check.governing_path === 1 ? '<b>Yes</b>' : 'No'})</u>`,
-        `R<sub>n1</sub> = min(0.6*F<sub>y</sub>*A<sub>gv</sub> + U<sub>bs</sub>*F<sub>u</sub>*A<sub>nt</sub>, 0.6*F<sub>u</sub>*A<sub>nv</sub> + U<sub>bs</sub>*F<sub>u</sub>*A<sub>nt</sub>)`,
-        `R<sub>n1</sub> = min(${common.fmt(check.path1.path_yield)}, ${common.fmt(check.path1.path_rupture)}) = ${common.fmt(check.path1.Rn)} kips`,
-        `<u>Path 2: Tear-out between Bolt Lines (Governing Path: ${check.governing_path === 2 ? '<b>Yes</b>' : 'No'})</u>`,
-        `R<sub>n2</sub> = min(0.6*F<sub>y</sub>*A<sub>gv</sub> + U<sub>bs</sub>*F<sub>u</sub>*A<sub>nt</sub>, 0.6*F<sub>u</sub>*A<sub>nv</sub> + U<sub>bs</sub>*F<sub>u</sub>*A<sub>nt</sub>)`,
-        `R<sub>n2</sub> = min(${common.fmt(check.path2.path_yield)}, ${common.fmt(check.path2.path_rupture)}) = ${common.fmt(check.path2.Rn)} kips`,
-        `<u>Nominal Strength (R<sub>n</sub>)</u>`,
-        `R<sub>n</sub> = min(R<sub>n1</sub>, R<sub>n2</sub>) = <b>${common.fmt(check.Rn)} kips</b>`,
+        `<u>Nominal Strength per AISC J4-5</u>`,
+        `Shear Rupture Path: 0.6 × F<sub>u</sub> × A<sub>nv</sub> = ${common.fmt(check.details.shear_rupture_term)} kips`,
+        `Tension Rupture Path: U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.details.tension_rupture_term)} kips`,
+        `Shear Yield Limit: 0.6 × F<sub>y</sub> × A<sub>gv</sub> + U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.details.shear_yield_limit)} kips`,
+        `R<sub>n</sub> = min(paths) = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
-        `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+        `Capacity = ${common.capacity_eq} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Bolt Bearing': ({ check, details, demand }, common) => {
         const tearout_coeff = common.inputs.deformation_is_consideration ? 1.2 : 1.5;
@@ -1525,15 +1506,11 @@ const baseBreakdownGenerators = {
         ]);
     },
     'Web Bolt Group Shear': ({ check, details, demand }, common) => common.format_list([
-        `Simplified bolt group analysis.`,
-        `<u>Total Demand on Bolt Group</u>`,
-        `Vertical Force (V) = ${common.fmt(details.V_load)} kips`,
-        `Horizontal Force (H<sub>w</sub>) = ${common.fmt(details.Hw)} kips`,
-        `Resultant Demand (R<sub>u</sub>) = &radic;(V² + H<sub>w</sub>²) = <b>${common.fmt(demand)} kips</b>`,
-        `<u>Total Capacity of Bolt Group</u>`,
-        `Capacity per Bolt = ${common.fmt(details.Rn_single)} kips`,
-        `Total Nominal Capacity (R<sub>n</sub>) = Capacity per Bolt &times; n<sub>bolts</sub>`,
-        `R<sub>n</sub> = ${common.fmt(details.Rn_single)} &times; ${details.num_bolts} = <b>${common.fmt(check.Rn)} kips</b>`,
+        `<u>Demand on Critical Bolt (Elastic Method)</u>`,
+        `Max Resultant Force (R<sub>u,max</sub>) = <b>${common.fmt(details.max_R)} kips</b>`,
+        `<u>Capacity of Single Bolt</u>`,
+        `Nominal Shear Strength (R<sub>n</sub>) = F<sub>nv</sub> &times; A<sub>b</sub> &times; n<sub>planes</sub>`,
+        `R<sub>n</sub> = ${common.fmt(check.Fnv, 1)} &times; ${common.fmt(check.Ab, 3)} &times; ${check.num_planes} = <b>${common.fmt(check.Rn)} kips</b>`,
         `Design Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Shear Yield': ({ check }, common) => common.format_list([
@@ -1569,16 +1546,18 @@ const baseBreakdownGenerators = {
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Flange Bolt Tension with Prying': (data, common) => {
-        const { demand, check, details } = data;
-        const outer_pry = details.outer ? `Outer Plate Q' = ${common.fmt(details.outer.Q_prime)} kips (t<sub>c</sub>=${common.fmt(details.outer.tc, 3)} in)` : '';
-        const inner_pry = details.inner ? `Inner Plate Q' = ${common.fmt(details.inner.Q_prime)} kips (t<sub>c</sub>=${common.fmt(details.inner.tc, 3)} in)` : '';
+        const { demand, check, details } = data; // demand is T_req
+        const outer_pry = details.outer ? `Outer Plate Q = ${common.fmt(details.outer.Q)} kips (t<sub>c</sub>=${common.fmt(details.outer.tc, 3)} in)` : '';
+        const inner_pry = details.inner ? `Inner Plate Q = ${common.fmt(details.inner.Q)} kips (t<sub>c</sub>=${common.fmt(details.inner.tc, 3)} in)` : '';
         return common.format_list([
             `Prying action per AISC Manual Part 9.`,
+            outer_pry,
+            inner_pry,
             `<u>Total Bolt Tension Demand (T<sub>req</sub>)</u>`,
-            `T<sub>req</sub> = B + Q' = ${common.fmt(details.B_per_bolt)} + ${common.fmt(details.Q_total)} = <b>${common.fmt(demand)} kips</b>`,
+            `T<sub>req</sub> = B + Q = ${common.fmt(details.B_per_bolt)} + ${common.fmt(details.Q_total)} = <b>${common.fmt(demand)} kips</b>`,
             `<u>Bolt Tensile Capacity (R<sub>n</sub>)</u>`,
             `R<sub>n</sub> = F<sub>nt</sub> &times; A<sub>b</sub>`,
-            `R<sub>n</sub> = ${common.fmt(check.Fnt, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² = ${common.fmt(check.Rn)} kips`,
+            `R<sub>n</sub> = ${common.fmt(check.Fnt, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
             `<u>Design Capacity</u>`,
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
@@ -1605,8 +1584,8 @@ const baseBreakdownGenerators = {
         ]);
     },
     'Plate Thickness for Prying': ({ check, details }, common) => {
-        const outer_pry = details.outer;
-        if (!outer_pry) return 'Prying details for outer plate not available.';
+        const outer_details = details.outer;
+        if (!outer_details) return 'Prying details for outer plate not available.';
 
         // B_bolt is the demand on the bolts for the outer plate
         const B_bolt = common.inputs.num_flange_plates === 2 
@@ -1616,7 +1595,7 @@ const baseBreakdownGenerators = {
         return common.format_list([
             `<u>Required Thickness (t<sub>c</sub>) per AISC Eq. 9-27</u>`,
             `t<sub>c</sub> = &radic;[ (4 &times; B &times; b') / (p &times; F<sub>y,plate</sub>) ]`,
-            `t<sub>c</sub> = &radic;[ (4 &times; ${common.fmt(B_bolt)} kips &times; ${common.fmt(details.outer.b_prime, 3)}") / (${common.fmt(common.inputs.S1_col_spacing_fp)}" &times; ${common.fmt(details.outer.Fy_plate)} ksi) ] = <b>${common.fmt(check.Rn, 3)} in</b>`,
+            `t<sub>c</sub> = &radic;[ (4 &times; ${common.fmt(B_bolt)} kips &times; ${common.fmt(outer_details.b_prime, 3)}") / (${common.fmt(common.inputs.S1_col_spacing_fp)}" &times; ${common.fmt(outer_details.Fy_plate)} ksi) ] = <b>${common.fmt(check.Rn, 3)} in</b>`,
             `<em>Note: This check is based on the outer plate geometry and its portion of the bolt tension demand (B). The provided plate thickness should be greater than this required thickness.</em>`
         ]);
     },
@@ -1667,6 +1646,34 @@ function getBreakdownGenerator(name) {
 
     // Fallback
     return () => 'Breakdown not available for this check.';
+}
+
+/**
+ * Generates the HTML for a specific check's breakdown.
+ * This function acts as a bridge between the rendering logic and the individual breakdown generators.
+ * @param {string} name - The name of the check.
+ * @param {object} data - The data object for the check, containing demand, check results, and details.
+ * @param {object} inputs - The full user inputs object.
+ * @returns {string} The generated HTML string for the breakdown.
+ */
+function generateSpliceBreakdownHtml(name, data, inputs) {
+    const { check } = data;
+    const { design_method } = inputs;
+
+    // Create a common context object to pass to the breakdown generators.
+    const common = {
+        inputs,
+        fmt: (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A',
+        format_list: (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`,
+        factor_char: design_method === 'LRFD' ? '&phi;' : '&Omega;',
+        factor_val: design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67),
+        capacity_eq: design_method === 'LRFD' ? `&phi;R<sub>n</sub>` : `R<sub>n</sub> / &Omega;`,
+        final_capacity: design_method === 'LRFD' ? (check?.Rn || 0) * (check?.phi ?? 0.75) : (check?.Rn || 0) / (check?.omega || 2.00)
+    };
+
+    // Get the specific generator function for this check name and execute it.
+    const generator = getBreakdownGenerator(name);
+    return generator(data, common);
 }
 
 function validateSpliceInputs(inputs) {
@@ -2101,14 +2108,24 @@ document.addEventListener('DOMContentLoaded', () => {
         buttonId: 'run-check-btn'
     });
 
-	document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
-	document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(allCalcInputIds, 'splice-inputs.txt'));
-	document.getElementById('load-inputs-btn').addEventListener('click', () => {
-		initiateLoadInputsFromFile('file-input', (loadedInputs) => {
-			handleRunCheck(); // Run check after loading
-			draw3dSpliceDiagram(); // Redraw diagram after loading
-		});
+    // --- Attach main event listeners ---
+    document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
+    document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(allCalcInputIds, 'splice-inputs.txt'));
+    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
+
+    // --- Correctly handle file loading ---
+    const handleLoadAndRedraw = () => {
+        handleRunCheck();
+        draw3dSpliceDiagram();
+    };
+    const handleLoadInputs = createLoadInputsHandler(allCalcInputIds, handleLoadAndRedraw);
+    document.getElementById('file-input').addEventListener('change', handleLoadInputs);
+
+    // --- Auto-save to Local Storage (with debouncing) ---
+    const debouncedSave = debounce(() => {
+        saveInputsToLocalStorage('splice-inputs', gatherInputsFromIds(allCalcInputIds));
     });
+    allCalcInputIds.forEach(id => document.getElementById(id)?.addEventListener('input', debouncedSave));
     
     // --- Attach event listeners for DYNAMIC diagram updates with debouncing ---
     const debouncedRedraw3D = debounce(draw3dSpliceDiagram, 300);

@@ -24,7 +24,6 @@
         <main id="steel-calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                <!-- Column 1: Design, Material, and Loads -->
                 <div class="space-y-6">
                     <div class="form-section">
                         <h2>Design Parameters</h2>
@@ -58,8 +57,7 @@
                             <div class="col-span-2">
                                 <label for="steel_material" class="block text-sm font-medium mb-1">Steel Material</label>
                                 <select id="steel_material" data-fy-target="Fy" data-fu-target="Fu">
-                                    <!-- Options populated by JS -->
-                                </select>
+                                    </select>
                             </div>
                             <input type="hidden" id="Fy" value="50">
                             <input type="hidden" id="Fu" value="65">
@@ -97,7 +95,6 @@
                     </div>
                 </div>
 
-                <!-- Column 2: Section & Geometry -->
                 <div class="space-y-6">
                     <div class="form-section">
                         <h2>Section Type & Geometry</h2>
@@ -160,7 +157,7 @@
                                 <input type="number" id="lb_bearing" value="4">
                             </div>
                             <div>
-                                <label for="k_des" class="block text-sm font-medium mb-1">k&lt;sub&gt;des&lt;/sub&gt;</label>
+                                <label for="k_des" class="block text-sm font-medium mb-1">k<sub>des</sub></label>
                                 <input type="number" id="k_des" value="1.18">
                             </div>
                              <div class="col-span-2">
@@ -174,7 +171,6 @@
                     </div>
                 </div>
 
-                <!-- Column 3: Serviceability & Advanced -->
                 <div class="space-y-6">
                     <div class="form-section">
                         <h2>Serviceability (Deflection)</h2>
@@ -200,21 +196,6 @@
                             <div><label for="Sy_manual" class="block text-sm">Sy</label><input type="number" id="Sy_manual" value="40.4"></div>
                             <div><label for="Zy_manual" class="block text-sm">Zy</label><input type="number" id="Zy_manual" value="61.7"></div>
                          </div>
-                    </div>
-                    <div class="form-section">
-                        <h2>Built-Up Section Calculator</h2>
-                        <p class="text-xs mb-2">Calculates properties for multiple identical sections placed side-by-side.</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="num_beams" class="block text-sm font-medium mb-1">Number of Beams</label>
-                                <input type="number" id="num_beams" value="1" min="1" step="1">
-                            </div>
-                            <div>
-                                <label for="beam_spacing" class="block text-sm font-medium mb-1">Spacing (in)</label>
-                                <input type="number" id="beam_spacing" value="12">
-                            </div>
-                        </div>
-                        <div id="built-up-results" class="mt-4 text-sm"></div>
                     </div>
                 </div>
             </div>

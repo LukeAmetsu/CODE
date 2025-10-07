@@ -99,25 +99,6 @@
                                 </div>
                             </div>
                             <div class="form-section">
-                                <h2>Member Properties</h2>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label for="member_d" class="block text-sm">Depth (d)</label><input type="number" id="member_d" value="18"></div>
-                                    <div><label for="member_bf" class="block text-sm">Flange (bf)</label><input type="number" id="member_bf" value="7.5"></div>
-                                    <div><label for="member_tf" class="block text-sm">Flange (tf)</label><input type="number" id="member_tf" value="0.57"></div>
-                                    <div><label for="member_tw" class="block text-sm">Web (tw)</label><input type="number" id="member_tw" value="0.355"></div>
-                                    <div class="col-span-2">
-                                        <label for="member_material" class="block text-sm">Material</label>
-                                        <select id="member_material" data-fy-target="member_Fy" data-fu-target="member_Fu">
-                                            <!-- Options will be populated by JS -->
-                                        </select>
-                                        <input type="hidden" id="member_Fy" value="50">
-                                        <input type="hidden" id="member_Fu" value="65">
-                                    </div>
-                                    <div><label for="member_Zx" class="block text-sm">Zx</label><input type="number" id="member_Zx" value="101"></div>
-                                    <div><label for="member_Sx" class="block text-sm">Sx</label><input type="number" id="member_Sx" value="88.9"></div>
-                                </div>
-                            </div>
-                            <div class="form-section">
                                 <h2>Applied Loads</h2>
                                 <div class="space-y-4">
                                     <div><label for="M_load" class="block text-sm">Moment (M, kip-ft)</label><input type="number" id="M_load" value="150"></div>
@@ -182,6 +163,25 @@
 
                         <!-- Column 2: Flange Splice -->
                         <div>
+                            <div class="form-section">
+                                <h2>Member Properties</h2>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label for="member_d" class="block text-sm">Depth (d)</label><input type="number" id="member_d" value="18"></div>
+                                    <div><label for="member_bf" class="block text-sm">Flange (bf)</label><input type="number" id="member_bf" value="7.5"></div>
+                                    <div><label for="member_tf" class="block text-sm">Flange (tf)</label><input type="number" id="member_tf" value="0.57"></div>
+                                    <div><label for="member_tw" class="block text-sm">Web (tw)</label><input type="number" id="member_tw" value="0.355"></div>
+                                    <div class="col-span-2">
+                                        <label for="member_material" class="block text-sm">Material</label>
+                                        <select id="member_material" data-fy-target="member_Fy" data-fu-target="member_Fu">
+                                            <!-- Options will be populated by JS -->
+                                        </select>
+                                        <input type="hidden" id="member_Fy" value="50">
+                                        <input type="hidden" id="member_Fu" value="65">
+                                    </div>
+                                    <div><label for="member_Zx" class="block text-sm">Zx</label><input type="number" id="member_Zx" value="101"></div>
+                                    <div><label for="member_Sx" class="block text-sm">Sx</label><input type="number" id="member_Sx" value="88.9"></div>
+                                </div>
+                            </div>
                             <div class="form-section">
                                 <h2>Flange Splice Plates</h2>
                                 <div class="grid grid-cols-2 gap-4">
