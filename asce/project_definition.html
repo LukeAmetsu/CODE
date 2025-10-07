@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCE Project Definition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script src="../js/template.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="project_definition.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder"></div>
+
+        <main id="project-definition-form">
+            <div class="lg:flex lg:gap-8">
+                <div class="flex-grow lg:w-1/2">
+                    <div class="form-section">
+                        <h2>1. General Project Parameters</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="asce_standard" class="block text-sm font-medium mb-1">ASCE Standard</label>
+                                <select id="asce_standard">
+                                    <option value="ASCE 7-16" selected>ASCE 7-16</option>
+                                    <option value="ASCE 7-22">ASCE 7-22</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="risk_category" class="block text-sm font-medium mb-1">Risk Category</label>
+                                <select id="risk_category">
+                                    <option value="I">I</option>
+                                    <option value="II" selected>II</option>
+                                    <option value="III">III</option>
+                                    <option value="IV">IV</option>
+                                </select>
+                            </div>
+                             <div>
+                                <label for="jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
+                                <select id="jurisdiction">
+                                    <option value="ASCE 7" selected>ASCE 7</option>
+                                    <option value="NYCBC 2022">NYCBC 2022</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>2. Building Geometry</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="building_length_L" class="block text-sm font-medium mb-1">Length (L)</label>
+                                <input type="number" id="building_length_L" value="100">
+                            </div>
+                            <div>
+                                <label for="building_width_B" class="block text-sm font-medium mb-1">Width (B)</label>
+                                <input type="number" id="building_width_B" value="60">
+                            </div>
+                            <div>
+                                <label for="mean_roof_height" class="block text-sm font-medium mb-1">Mean Roof Height (h)</label>
+                                <input type="number" id="mean_roof_height" value="50">
+                            </div>
+                            <div>
+                                <label for="eave_height" class="block text-sm font-medium mb-1">Eave Height</label>
+                                <input type="number" id="eave_height" value="40">
+                            </div>
+                             <div>
+                                <label for="roof_type" class="block text-sm font-medium mb-1">Roof Type</label>
+                                <select id="roof_type">
+                                    <option value="flat">Flat</option>
+                                    <option value="gable" selected>Gable</option>
+                                    <option value="hip">Hip</option>
+                                    <option value="monoslope">Monoslope</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="roof_slope_deg" class="block text-sm font-medium mb-1">Roof Slope (°)</label>
+                                <input type="number" id="roof_slope_deg" value="30">
+                            </div>
+                        </div>
+                    </div>
+                     <div class="mt-8 flex justify-center">
+                        <button id="save-project-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700">
+                            Save Project & Proceed to Calculators
+                        </button>
+                    </div>
+                </div>
+
+                <div class="hidden lg:block lg:w-1/2">
+                    <div class="sticky top-8">
+                        <div class="form-section mt-6 lg:mt-0">
+                            <h2>Building Visualization</h2>
+                            <div class="diagram">
+                                <canvas id="building-canvas" class="w-full h-[500px]"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="feedback-message" class="text-center mt-4 text-sm h-5"></div>
+        <div id="footer-placeholder"></div>
+    </div>
+</body>
+</html>

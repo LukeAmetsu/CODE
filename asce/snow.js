@@ -313,6 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonId: 'run-snow-calculation-btn',
         });
 
+        // Load shared project data first
+        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
+
         // Attach all event listeners
         initializeSharedUI();
         document.getElementById('run-snow-calculation-btn').addEventListener('click', handleRunSnowCalculation);

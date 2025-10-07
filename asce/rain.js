@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Attach all event listeners ---
     initializeSharedUI();
 
+    // Load shared project data first
+    loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
+
     // Main calculation and file handling
     document.getElementById('run-rain-calculation-btn').addEventListener('click', handleRunRainCalculation);
     document.getElementById('save-rain-inputs-btn').addEventListener('click', createSaveInputsHandler(rainInputIds, 'rain-inputs.txt'));

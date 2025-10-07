@@ -91,6 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeApp() {
         initializeSharedUI();
         attachEventListeners();
+
+        // Load shared project data first
+        loadInputsFromLocalStorage('buildingProjectData', windInputIds);
         addRangeIndicators();
         // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
         setTimeout(() => {
