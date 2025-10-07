@@ -66,10 +66,19 @@ async function injectHeader(options) {
         </a>
     `).join('');
 
-    const mainNavHtml = Object.values(mainNavLinks).map(link => `
-        <a href="${link.href}" class="px-4 py-2 text-sm font-medium rounded-md transition-colors ${link.key === activeMainKey ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}">
-            ${link.text}
-        </a>
+    // Filter main navigation links based on the active context
+    let linksToDisplay = [];
+    if (activeMainKey === 'home') {
+        linksToDisplay = Object.values(mainNavLinks); // Show all on home page
+    } else {
+        linksToDisplay.push(mainNavLinks.home); // Always show Home
+        if (mainNavLinks[activeMainKey]) {
+            linksToDisplay.push(mainNavLinks[activeMainKey]); // Show the active category
+        }
+    }
+
+    const mainNavHtml = linksToDisplay.map(link => `
+        <a href="${link.href}" class="px-4 py-2 text-sm font-medium rounded-md transition-colors ${link.key === activeMainKey ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}">${link.text}</a>
     `).join('');
 
     // Only render the sub-navigation container if there are links to show.
