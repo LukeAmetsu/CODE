@@ -361,83 +361,76 @@ const steelChecker = (() => {
     }
 
     function checkFlexure_IShape(props, inputs, isHighShear = false) {
-        const { Fy, E, Cb, Lb_input, K, aisc_standard } = inputs;
-        const { Zx, Sx, rts, h, J, Cw, tw, bf, tf, d } = props;
-        const Lb = Lb_input * 12; // to inches
+    const { Fy, E, Cb, Lb_input, K, aisc_standard } = inputs;
+    const { Zx, Sx, rts, h, J, Cw, tw, bf, tf, d } = props;
+    const Lb = Lb_input * 12; // to inches
 
-        // --- Slenderness Checks (AISC B4) ---
-        const lambda_f = bf / (2 * tf);
-        const lambda_p_f = 0.38 * Math.sqrt(E / Fy);
-        const lambda_r_f = 1.0 * Math.sqrt(E / Fy);
-        const lambda_w = h / tw;
-        const lambda_p_w = 3.76 * Math.sqrt(E / Fy);
-        const lambda_r_w = 5.70 * Math.sqrt(E / Fy);
-        const isCompact = (lambda_f <= lambda_p_f) && (lambda_w <= lambda_p_w);
+    // --- Slenderness Checks (AISC B4) ---
+    const lambda_f = bf / (2 * tf);
+    const lambda_p_f = 0.38 * Math.sqrt(E / Fy);
+    const lambda_r_f = 1.0 * Math.sqrt(E / Fy);
+    const lambda_w = h / tw;
+    const lambda_p_w = 3.76 * Math.sqrt(E / Fy);
+    const lambda_r_w = 5.70 * Math.sqrt(E / Fy);
+    const isCompact = (lambda_f <= lambda_p_f) && (lambda_w <= lambda_p_w);
 
-        // --- LTB Parameters (AISC F2) ---
-        const Lp = 1.76 * rts * Math.sqrt(E / Fy); // F2-5
-        let Lr;
-        if (aisc_standard === '360-22') {
-            const ho = d - tf;
-            const term1 = J / (Sx * ho);
-            const term2 = Math.pow(term1, 2);
-            const term3 = 6.76 * Math.pow(0.7 * Fy / E, 2);
-            Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(term1 + Math.sqrt(term2 + term3));
-        } else { // AISC 360-16
-            const ho = d - tf;
-            const term_inside_sqrt = Math.pow(J * 1.0 / (Sx * ho), 2) + 6.76 * Math.pow(0.7 * Fy / E, 2);
-            Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(J * 1.0 / (Sx * ho) + Math.sqrt(term_inside_sqrt));
-        }
-
-        // --- Calculate Nominal Capacities for Each Limit State ---
-        const Mp = calculate_Mn_yield(Fy, Zx);
-        const My = Fy * Sx;
-        let Rpg = 1.0;
-
-        const limit_states = {
-            'Yielding (F2.1)': Mp,
-            'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(Mp, My, Lb, Lp, Lr, Cb, E, Sx, rts, J, d, tf, aisc_standard),
-            'Flange Local Buckling (F3)': calculate_Mn_flb(Mp, My, lambda_f, lambda_p_f, lambda_r_f, E, Sx),
-            'Web Local Buckling (F4)': checkWebLocalBuckling(props, inputs, Mp, My),
-            'Compression Flange Yielding (F5)': (lambda_w > lambda_r_w) ? checkSlenderWebFlexure(props, inputs, Mp, My) : Infinity,
-        };
-
-        let Mn = Math.min(...Object.values(limit_states));
-
-        // --- G2.1: Interaction of Flexure and Shear for I-Shapes ---
-        // This reduction applies when Vu > 0.6 * phi_v * Vy
-        let R_pv = 1.0; // Reduction factor for high shear
-        if (isHighShear) {
-            const Aw = d * tw;
-            const h_tw = h / tw;
-            const limit = 1.10 * Math.sqrt(E / Fy); // Simplified limit from G2.1
-            if (h_tw <= limit) {
-                const Cvx = 1.0; // Assuming Cv1 from G2.1 is 1.0
-                R_pv = (1 - (0.6 * inputs.Vu_or_Va) / (0.6 * Fy * Aw * Cvx));
-                Mn *= R_pv;
-            }
-        }
-
-        let governing_limit_state = '';
-        for (const [name, value] of Object.entries(limit_states)) {
-            if (value === Mn) {
-                governing_limit_state = name;
-                break;
-            }
-        }
-
-        const phi_b = 0.9;
-        const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
-        const phiMn_or_Mn_omega = Mn * factor;
-
-        return {
-            phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, // Corrected to kip-ft (from kip-in)
-            isCompact, Mn, Lb, Lp, Lr, Rpg, R_pv, governing_limit_state,
-            reference: "AISC F2, F3, F4, F5",
-            slenderness: { lambda_f, lambda_p_f, lambda_r_f, lambda_w, lambda_p_w, lambda_r_w }
-        };
+    // --- LTB Parameters (AISC F2) ---
+    const Lp = 1.76 * rts * Math.sqrt(E / Fy); // F2-5
+    let Lr;
+    if (aisc_standard === '360-22') {
+        const ho = d - tf;
+        const term1 = J / (Sx * ho);
+        const term2 = Math.pow(term1, 2);
+        const term3 = 6.76 * Math.pow(0.7 * Fy / E, 2);
+        Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(term1 + Math.sqrt(term2 + term3));
+    } else { // AISC 360-16
+        const ho = d - tf;
+        const term_inside_sqrt = Math.pow(J * 1.0 / (Sx * ho), 2) + 6.76 * Math.pow(0.7 * Fy / E, 2);
+        Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt((J * 1.0 / (Sx * ho)) + Math.sqrt(term_inside_sqrt));
     }
+
+    // --- Calculate Nominal Capacities for Each Limit State ---
+    const Mp = calculate_Mn_yield(Fy, Zx);
+    const My = Fy * Sx;
+    
+    const limit_states = {
+        'Yielding (F2.1)': Mp,
+        'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(Mp, My, Lb, Lp, Lr, Cb, E, Sx, rts, J, d, tf, aisc_standard),
+        'Flange Local Buckling (F3)': calculate_Mn_flb(Mp, My, lambda_f, lambda_p_f, lambda_r_f, E, Sx),
+        'Web Local Buckling (F4)': checkWebLocalBuckling(props, inputs, Mp, My),
+        'Compression Flange Yielding (F5)': (lambda_w > lambda_r_w) ? checkSlenderWebFlexure(props, inputs, Mp, My) : Infinity,
+    };
+
+    // --- Determine Governing Capacity and Apply Factors ---
+    let Mn = Math.min(...Object.values(limit_states));
+    let governing_limit_state = Object.keys(limit_states).find(key => limit_states[key] === Mn) || 'Unknown';
+
+    // --- G2.1: Interaction of Flexure and Shear for I-Shapes ---
+    let R_pv = 1.0; // Reduction factor for high shear
+    if (isHighShear) {
+        const Aw = d * tw;
+        const h_tw = h / tw;
+        const limit = 1.10 * Math.sqrt(E / Fy); // Simplified limit from G2.1
+        if (h_tw <= limit) {
+            const Cvx = 1.0; // Assuming Cv1 from G2.1 is 1.0
+            R_pv = (1 - (0.6 * inputs.Vu_or_Va) / (0.6 * Fy * Aw * Cvx));
+            Mn *= R_pv;
+            governing_limit_state += " (Reduced for High Shear)";
+        }
+    }
+
+    const phi_b = 0.9;
+    const omega_b = 1.67;
+    const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+    const phiMn_or_Mn_omega = Mn * factor;
+
+    return {
+        phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, // to kip-ft
+        isCompact, Mn, Lb, Lp, Lr, Rpg: 1.0, R_pv, governing_limit_state,
+        reference: "AISC F2, F3, F4, F5",
+        slenderness: { lambda_f, lambda_p_f, lambda_r_f, lambda_w, lambda_p_w, lambda_r_w }
+    }
+}
 
     function checkFlexure_HSS(props, inputs) {
         const { Fy, E } = inputs;

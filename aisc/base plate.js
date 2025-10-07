@@ -529,68 +529,40 @@ const basePlateCalculator = (() => {
             const d_anchor = (N / 2.0) - ((num_bolts_N - 1) * bolt_spacing_N / 2.0); // Dist from plate center to anchor row
 
             // Correctly solve the cubic equation for kd derived from equilibrium:
-            // M = C*(d_anchor + N/2 - Y/3) where C = T = 0.5 * B * Y * f_p_max
-            // And from strain compatibility: f_p_max = (E_c/E_s) * f_t * (Y / (d_anchor - Y))
-            // This simplifies to a cubic equation in the form of a*kd^3 + b*kd^2 + c*kd + d = 0
-            const a = B / 3.0;
-            const b = (B * d_anchor) / 2.0;
-            const c = - ( (Mux * 12) / E_concrete + n_ratio * Ab * d_anchor );
-            const d = - ( n_ratio * Ab * d_anchor * d_anchor );
-
-            // Use a numerical root finder for the cubic equation (e.g., Newton-Raphson or a simpler iterative method)
-            // For simplicity here, we'll use an iterative approach that converges on the correct equilibrium.
             let kd = N / 3.0; // Initial guess for neutral axis depth
             for (let i = 0; i < 20; i++) {
-                const C = 0.5 * B * kd * kd * E_concrete * ( (d_anchor - kd) / kd ); // Concrete force
-                const T = n_ratio * Ab * E_concrete * (d_anchor - kd); // Bolt tension force
-                const M_resisting = C * (d_anchor + N/2.0 - kd/3.0);
-                // Adjust kd based on the moment error
-                kd = kd * Math.sqrt((Mux * 12) / M_resisting);
+                const C = 0.5 * B * kd * ( (2 * Mux * 12) / (B * kd * (N/2 - kd/3 + d_anchor)) ); // Concrete Force
+                const T = n_ratio * Ab * ( (2 * Mux * 12) / (B * kd * (N/2 - kd/3 + d_anchor)) ) * ((d_anchor - kd)/kd) ; // Bolt Tension
+                if (Math.abs(C - T) < 0.01 * C) break;
+                kd = kd * Math.sqrt(T / C); // Adjust kd based on force imbalance
             }
             Y = kd; // Bearing length is the neutral axis depth
             X = B;
             // Calculate max pressure using DG1 Eq. 3.31
-            f_p_max = (2 * Mux * 12) / (B * kd * (N / 2 - kd / 3 + d_anchor));
+            f_p_max = (2 * Mux * 12) / (B * Y * (N / 2 - Y / 3 + d_anchor));
             breakdown_html = `f<sub>p,max</sub> = <b>${f_p_max.toFixed(2)} ksi</b> (Calculated iteratively for pure moment)`;
         } else {
             // --- Combined Axial and Bending Case ---
             e_x = (Mux * 12) / P_abs;
             e_y = (Muy * 12) / P_abs;
 
-            if (e_x <= N / 6 && e_y <= B / 6) {
+            if (e_x <= N / 6.0 && e_y <= B / 6.0) {
                 // Case 1: Full compression (trapezoidal pressure)
                 bearing_case = "Full Bearing";
                 f_p_max = (P_abs / (B * N)) * (1 + (6 * e_x) / N + (6 * e_y) / B);
                 Y = N; X = B;
                 breakdown_html = `f<sub>p,max</sub> = (P/A) * (1 + 6e<sub>x</sub>/N + 6e<sub>y</sub>/B) = (${P_abs.toFixed(2)}/(${B}*${N})) * (1 + 6*${e_x.toFixed(2)}/${N} + 6*${e_y.toFixed(2)}/${B}) = <b>${f_p_max.toFixed(2)} ksi</b>`;
-            } else if (e_x / N + e_y / B <= 0.5) {
+            } else if ((e_x / N + e_y / B) <= 0.5) {
                 // Case 2: Partial compression (one edge in tension)
-                // Correct iterative solution based on AISC DG1, Section 3.3.2
                 bearing_case = "Partial Bearing";
-                let Y_trial = N / 2.0; // Initial guess for bearing length
-                let P_calc = 0;
-                const TOLERANCE = 0.001 * P_abs;
-
-                for (let i = 0; i < 30; i++) {
-                    // For a given Y, calculate the max pressure f_p_max that satisfies moment equilibrium
-                    // M = P * e_x = C * (N/2 - Y/3)  =>  P = M / e_x
-                    // C = 0.5 * f_p_max * Y * B
-                    // M = 0.5 * f_p_max * Y * B * (N/2 - Y/3)
-                    // f_p_max = (2 * M) / (Y * B * (N/2 - Y/3))
-                    const moment_kip_in = Mux * 12;
-                    const f_p_max_trial = (2 * moment_kip_in) / (B * Y_trial * (N/2 - Y_trial/3));
-
-                    // Now calculate the axial load P that this pressure distribution can support
-                    P_calc = 0.5 * f_p_max_trial * Y_trial * B;
-
-                    // Check if calculated P matches the applied P
-                    if (Math.abs(P_calc - P_abs) < TOLERANCE) break;
-
-                    // Adjust Y_trial for the next iteration
-                    Y_trial = Y_trial * (P_abs / P_calc);
+                let Y = N / 2; // Initial guess
+                for (let i = 0; i < 30; i++) { // Iteratively solve for Y
+                    const M_resisting = P_abs * (N / 2 - Y / 3);
+                    const M_applied = Mux * 12; // kip-in
+                    if (Math.abs(M_resisting - M_applied) < 0.01 * M_applied || M_resisting <= 0) break;
+                    Y = Y * (M_applied / M_resisting);
                 }
-                f_p_max = (2 * P_abs) / (B * Y_trial);
-                Y = Y_trial;
+                f_p_max = (2 * P_abs) / (B * Y);
                 X = B; // Effective bearing width
                 breakdown_html = `f<sub>p,max</sub> = <b>${f_p_max.toFixed(2)} ksi</b> (Calculated iteratively for partial bearing)`;
             } else {

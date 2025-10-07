@@ -521,9 +521,10 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     // --- Path 1: Shear along bolt lines, tension across the end of the plate ---
     const Agv1 = num_shear_paths * L_gv * t_p;
     const Anv1 = num_shear_paths * L_nv * t_p;
-    const Agt1 = L_gt * t_p; // Gross tension path at the end
+    // The tension area for path 1 is also a net area, calculated from the gross tension path length.
+    const Ant1 = L_gt * t_p; // For tear-out from the end, the net tension path is often the same as the gross path.
 
-    const tension_term1 = Ubs * Fu * Agt1; // Path 1 uses the gross tension area at the end of the plate.
+    const tension_term1 = Ubs * Fu * Ant1;
     const path1_rupture = (0.6 * Fu * Anv1) + tension_term1;
     const path1_yield = (0.6 * Fy * Agv1) + tension_term1;
     const Rn1 = Math.min(path1_rupture, path1_yield) || 0;
@@ -533,7 +534,7 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     const Anv2 = Anv1;
     const Ant2 = L_nt * t_p; // Net tension path between bolt lines
 
-    const tension_term2 = Ubs * Fu * Ant2; // Path 2 uses the net tension area between bolts.
+    const tension_term2 = Ubs * Fu * Ant2;
     const path2_rupture = (0.6 * Fu * Anv2) + tension_term2;
     const path2_yield = (0.6 * Fy * Agv2) + tension_term2;
     const Rn2 = Math.min(path2_rupture, path2_yield) || 0;
@@ -543,7 +544,7 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
 
     return { 
         Rn, phi: 0.75, omega: 2.00, Ubs, governing_path,
-        path1: { Rn: Rn1, Agv: Agv1, Anv: Anv1, Ant: Agt1, path_yield: path1_yield, path_rupture: path1_rupture },
+        path1: { Rn: Rn1, Agv: Agv1, Anv: Anv1, Ant: Ant1, path_yield: path1_yield, path_rupture: path1_rupture },
         path2: { Rn: Rn2, Agv: Agv2, Anv: Anv2, Ant: Ant2, path_yield: path2_yield, path_rupture: path2_rupture }
     };
 }
