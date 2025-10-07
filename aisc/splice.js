@@ -1924,8 +1924,7 @@ function renderResults(results, rawInputs) {
         if (name === 'Plate Thickness for Prying') { demand_unit = 'in'; capacity_unit = 'in (req)'; }
         if (name === 'Beam Flexural Rupture') { display_demand /= 12.0; display_capacity /= 12.0; demand_unit = 'kip-ft'; capacity_unit = 'kip-ft'; }
 
-        const common_params = { inputs: rawInputs, design_method: inputs.design_method, factor_char: inputs.design_method === 'LRFD' ? '&phi;' : '&Omega;', factor_val: inputs.design_method === 'LRFD' ? check.phi : check.omega, capacity_eq: inputs.design_method === 'LRFD' ? `&phi; R<sub>n</sub>` : `R<sub>n</sub> / &Omega;`, final_capacity: design_capacity_raw, format_list: (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`, fmt: (x, n = 2) => (typeof x === "number" && isFinite(x)) ? x.toFixed(n) : "-" };
-        const breakdownHtml = `<h4 class="font-semibold">${name}</h4>` + getBreakdownGenerator(name)(data, common_params); // data is passed here
+        const breakdownHtml = generateSpliceBreakdownHtml(name, data, inputs);
 
         strengthRows.push(`
             <tr class="border-t dark:border-gray-700">
