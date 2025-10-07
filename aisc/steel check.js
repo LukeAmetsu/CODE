@@ -1311,6 +1311,15 @@ const steelChecker = (() => {
             warnings.push("Very high moment - verify units (kip-ft expected).");
         }
 
+        // Logical geometry checks for I-shapes
+        if (inputs.section_type === 'I-Shape') {
+            if (inputs.d < 2 * inputs.tf) {
+                errors.push("Depth (d) must be greater than twice the flange thickness (tf).");
+            }
+            if (inputs.bf < inputs.tw) {
+                errors.push("Flange width (bf) must be greater than the web thickness (tw).");
+            }
+        }
         return { errors, warnings };
     }
 

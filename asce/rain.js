@@ -6,6 +6,22 @@ const rainInputIds = [
 ];
 
 const rainLoadCalculator = (() => {
+    function validateRainInputs(inputs) {
+        const { errors, warnings } = validateInputs(inputs, validationRules.rain);
+
+        if (inputs.dh_auto_calc_toggle) {
+            if (inputs.rain_drain_type === 'scupper' && inputs.rain_scupper_width <= 0) {
+                errors.push("Scupper width must be a positive value to auto-calculate hydraulic head.");
+            }
+            if (inputs.rain_drain_type === 'drain' && inputs.rain_drain_diameter <= 0) {
+                errors.push("Drain diameter must be a positive value to auto-calculate hydraulic head.");
+            }
+        }
+
+        return { errors, warnings };
+    }
+
+
     function run(inputs) {
         // Use default values to prevent NaN errors if optional fields are empty
         const {
@@ -79,8 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleRunRainCalculation = createCalculationHandler({
         inputIds: rainInputIds,
         storageKey: 'rain-calculator-inputs',
-        validationRuleKey: 'rain',
-    calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
+        validatorFunction: rainLoadCalculator.validateRainInputs,
+        calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
         renderFunction: renderRainResults,
         resultsContainerId: 'rain-results-container',
         buttonId: 'run-rain-calculation-btn'

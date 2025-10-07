@@ -1070,6 +1070,11 @@ function validateWindInputs(inputs) {
         warnings.push(`Wind speed ${inputs.basic_wind_speed} ${isImperial ? 'mph' : 'm/s'} is outside the typical ASCE 7 range (${vRange[0]}-${vRange[1]}).`);
     }
 
+    // Logical geometry checks
+    if (inputs.eave_height > inputs.mean_roof_height) {
+        errors.push("Eave height cannot be greater than the mean roof height.");
+    }
+
     return { errors, warnings };
 }
 

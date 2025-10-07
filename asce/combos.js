@@ -192,20 +192,13 @@ function buildFormulaString(formula_def) {
 
 const comboStrategies = {
     'ASCE 7-16': {
-        prepareLoads: (loads, level) => {
-            // --- FIX: Correctly handle ASCE 7-16 wind load levels ---
-            // ASCE 7-16 LRFD combinations (e.g., 1.0W) expect a STRENGTH-level wind load.
-            // ASCE 7-16 ASD combinations (e.g., 0.6W) expect a NOMINAL-level wind load.
-            // If the user provides a NOMINAL load but requests LRFD combinations, we must convert it.
-            // W_strength = W_nominal / 0.6
+        prepareLoads: (loads, level, method) => {
+            // Correctly adjusts nominal wind to strength level ONLY for LRFD,
+            // as ASD combinations in ASCE 7-16 already use a 0.6 factor on nominal wind.
             const newScope = { ...loads };
             const adjustment_notes = {};
 
-            if (level === 'Nominal (Service/ASD)' && newScope.W) {
-                // This conversion is only needed for LRFD, but we apply it here and the ASD formulas
-                // will correctly factor it back down (e.g., 0.6 * (W_nom / 0.6) = W_nom).
-                // This is simpler than branching the logic for LRFD/ASD inside this function.
-                // The LRFD formulas will now correctly use the strength-level wind load.
+            if (level === 'Nominal (Service/ASD)' && method === 'LRFD' && newScope.W) {
                 newScope.W = newScope.W / 0.6;
                 adjustment_notes['Wind Load'] = `Input nominal wind load (W) was divided by 0.6 to get the required strength-level wind load for ASCE 7-16 LRFD combinations.`;
             }
@@ -216,15 +209,15 @@ const comboStrategies = {
             };
         },
         lrfdDefs: {
-            '1': [{ factor: 1.4, load: 'D' }],
-            '2': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '3': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'S', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
-            '4': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 0.2, load: 'S' }],
-            '6': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'W' }],
-            '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+            '1. 1.4D': [{ factor: 1.4, load: 'D' }],
+            '2. 1.2D + 1.6L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '3. 1.2D + 1.6(Lr|S|R) + (L|0.5W)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'S', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '4. 1.2D + W + L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '5. 1.2D + E + L + 0.2S': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 0.2, load: 'S' }],
+            '6. 0.9D + W': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'W' }],
+            '7. 0.9D + E': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
         },
-        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
+        // CORRECT ASD DEFINITIONS FOR ASCE 7-16
         asdDefs: {
             '1. D': [{ factor: 1.0, load: 'D' }],
             '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
@@ -239,25 +232,21 @@ const comboStrategies = {
         }
     },
     'ASCE 7-22': {
-        prepareLoads: (loads, level) => {
-            // All formulas in ASCE 7-22 LRFD and ASD use nominal-level loads directly with factors.
+        prepareLoads: (loads, level, method) => {
             // No pre-adjustment is necessary.
-            return {
-                scope: { ...loads },
-                adjustment_notes: {}
-            };
+            return { scope: { ...loads }, adjustment_notes: {} };
         },
         lrfdDefs: {
-            '1': [{ factor: 1.4, load: 'D' }],
-            '2': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '3a': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
-            '3b': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'S' }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
-            '4': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }], // Note: 1.0S, not 0.2S as in 7-16
-            '6': [{ factor: 0.9, load: 'D' }, { factor: 1.6, load: 'W' }],
-            '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+            '1. 1.4D': [{ factor: 1.4, load: 'D' }],
+            '2. 1.2D + 1.6L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '3a. 1.2D + 1.6(Lr|R) + (L|0.5W)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '3b. 1.2D + S + (L|0.5W)': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'S' }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '4. 1.2D + 1.6W + L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '5. 1.2D + E + L + S': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }],
+            '6. 0.9D + 1.6W': [{ factor: 0.9, load: 'D' }, { factor: 1.6, load: 'W' }],
+            '7. 0.9D + E': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
         },
-        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
+        // CORRECT ASD DEFINITIONS FOR ASCE 7-22
         asdDefs: {
             '1. D': [{ factor: 1.0, load: 'D' }],
             '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
@@ -307,8 +296,8 @@ const comboLoadCalculator = (() => {
             throw new Error(`Unsupported standard: ${standard}`);
         }
 
-        // The prepareLoads function is now much simpler but retained for future-proofing.
-        const { scope, adjustment_notes } = strategy.prepareLoads(loads, level);
+        // The prepareLoads function now correctly handles the LRFD/ASD distinction for ASCE 7-16
+        const { scope, adjustment_notes } = strategy.prepareLoads(loads, level, method);
         
         // **FIXED**: Directly choose the correct definition set and remove old dynamic generation logic.
         let formulaDefs;

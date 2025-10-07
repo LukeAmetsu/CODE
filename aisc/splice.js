@@ -1668,6 +1668,39 @@ function getBreakdownGenerator(name) {
     return () => 'Breakdown not available for this check.';
 }
 
+function validateSpliceInputs(inputs) {
+    const { errors, warnings } = validateInputs(inputs, validationRules.splice);
+
+    // --- Flange Splice ---
+    if (inputs.H_fp < inputs.g_gage_fp) {
+        errors.push("Flange plate width (H_fp) must be greater than or equal to the bolt gage (g).");
+    }
+    const flange_bolt_pattern_length = inputs.S3_end_dist_fp + (inputs.Nc_fp > 1 ? (inputs.Nc_fp - 1) * inputs.S1_col_spacing_fp : 0);
+    if (flange_bolt_pattern_length > inputs.L_fp / 2) {
+        errors.push("Flange bolt pattern length exceeds half the plate length (L_fp/2). Increase L_fp or reduce bolt spacing/end distance.");
+    }
+    if (inputs.H_fp > inputs.member_bf) {
+        warnings.push("Flange plate width (H_fp) is wider than the member flange (bf). This is unusual.");
+    }
+
+    // --- Web Splice ---
+    const web_bolt_pattern_height = (inputs.Nr_wp > 1 ? (inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp : 0);
+    if (web_bolt_pattern_height > inputs.H_wp) {
+        errors.push("Web bolt pattern height exceeds the web plate height (H_wp).");
+    }
+    const web_bolt_pattern_length = inputs.S6_end_dist_wp + (inputs.Nc_wp > 1 ? (inputs.Nc_wp - 1) * inputs.S4_col_spacing_wp : 0);
+    if (web_bolt_pattern_length > inputs.L_wp / 2) {
+        errors.push("Web bolt pattern length exceeds half the plate length (L_wp/2). Increase L_wp or reduce bolt spacing/end distance.");
+    }
+    const clear_web_depth = inputs.member_d - 2 * inputs.member_tf;
+    if (inputs.H_wp > clear_web_depth) {
+        errors.push(`Web plate height (H_wp = ${inputs.H_wp}") cannot be greater than the clear web depth of the member (${clear_web_depth.toFixed(2)}").`);
+    }
+
+    return { errors, warnings };
+}
+
+
 function populateMaterialDropdowns() {
     const materialOnChange = (e) => {
         const grade = AISC_SPEC.getSteelGrade(e.target.value);
@@ -2058,6 +2091,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleRunCheck = createCalculationHandler({
         inputIds: allCalcInputIds,
         storageKey: 'splice-inputs',
+        validatorFunction: validateSpliceInputs,
         validationRuleKey: 'splice',
         gatherInputsFunction: () => gatherInputsFromIds(allCalcInputIds),
         calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),

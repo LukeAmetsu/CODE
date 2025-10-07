@@ -10,6 +10,21 @@ const snowInputIds = [
 ];
 
 const snowLoadCalculator = (() => {
+    function validateSnowInputs(inputs) {
+        const { errors, warnings } = validateInputs(inputs, validationRules.snow);
+
+        if (inputs.calculate_drift === 'Yes') {
+            if (inputs.lower_roof_length_ll <= 0) {
+                errors.push("Lower roof length (ll) must be positive to calculate drift loads.");
+            }
+            if (inputs.upper_roof_length_lu <= 0) {
+                errors.push("Upper roof length (lu) must be positive to calculate drift loads.");
+            }
+        }
+
+        return { errors, warnings };
+    }
+
     function calculateSlopeFactor(slope_deg, is_slippery, Ct, standard) {
         if (standard === "ASCE 7-22") {
             if (is_slippery) {
@@ -200,7 +215,7 @@ const snowLoadCalculator = (() => {
 
 
 function run(inputs, validation) {
-    const validationResult = { warnings: [], ...validation };
+    const validationResult = validateSnowInputs(inputs);
 
     // Add jurisdiction-specific warnings
     if (inputs.jurisdiction === "NYCBC 2022") {
@@ -208,6 +223,11 @@ function run(inputs, validation) {
         if (inputs.ground_snow_load < nycbc_min_pg) {
             validationResult.warnings.push(`The input ground snow load (p_g = ${inputs.ground_snow_load} psf) is less than the NYCBC 2022 minimum of ${nycbc_min_pg} psf. Verify the correct jurisdictional value.`);
         }
+    }
+
+    // If initial validation fails, return immediately
+    if (validationResult.errors.length > 0) {
+        return { ...validationResult, success: false };
     }
     
     // Ensure factors have default values
@@ -306,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleRunSnowCalculation = createCalculationHandler({
             inputIds: snowInputIds,
             storageKey: 'snow-calculator-inputs',
-            validationRuleKey: 'snow',
+        validatorFunction: snowLoadCalculator.validateSnowInputs,
             calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
             renderFunction: renderSnowResults,
             resultsContainerId: 'snow-results-container',

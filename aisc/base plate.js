@@ -191,19 +191,19 @@ function draw3dBasePlateDiagram() {
 
     // --- Materials ---
     const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
-    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#4a5568" : "#A8A8A8");
-    plateMaterial.metallic = 0.8;
-    plateMaterial.roughness = 0.6;
+    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#ff8800"); // Standardized: Orange
+    plateMaterial.metallic = 0.6;
+    plateMaterial.roughness = 0.4;
 
     const columnMaterial = new BABYLON.PBRMaterial("colMat", bjsScene);
-    columnMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#2c5282" : "#36454F");
-    columnMaterial.metallic = 0.7;
-    columnMaterial.roughness = 0.5;
+    columnMaterial.albedoColor = new BABYLON.Color3.FromHexString("#003cff"); // Standardized: Blue
+    columnMaterial.metallic = 0.6;
+    columnMaterial.roughness = 0.45;
 
     const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
-    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#718096" : "#C0C0C0");
-    boltMaterial.metallic = 0.9;
-    boltMaterial.roughness = 0.4;
+    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5"); // Standardized: Light Gray
+    boltMaterial.metallic = 0.6;
+    boltMaterial.roughness = 0.35;
     
     const concreteMaterial = new BABYLON.PBRMaterial("concreteMat", bjsScene);
     concreteMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#3b475c" : "#A9A9A9");
@@ -211,16 +211,15 @@ function draw3dBasePlateDiagram() {
     concreteMaterial.roughness = 0.9;
     
     const weldMaterial = new BABYLON.PBRMaterial("weldMat", bjsScene);
-    weldMaterial.albedoColor = new BABYLON.Color3.FromHexString("#DAA520"); // Gold color for weld
+    weldMaterial.albedoColor = new BABYLON.Color3.FromHexString("#DAA520");
     weldMaterial.metallic = 0.5;
     weldMaterial.roughness = 0.7;
 
-    // --- Helper for creating GUI labels ---
-    function createLabel(text, meshLink, isDarkMode) {
-        // Function content remains the same
+    // --- Standardized Helper for creating GUI labels ---
+    const createLabel = (text, anchorMesh) => {
         const label = new BABYLON.GUI.Rectangle();
-        label.height = "20px";
-        label.width = `${text.length * 8}px`; // Auto-width
+        label.height = "18px";
+        label.width = `${text.length * 7}px`;
         label.cornerRadius = 5;
         label.thickness = 1;
         label.background = isDarkMode ? "rgba(40, 40, 40, 0.7)" : "rgba(255, 255, 255, 0.7)";
@@ -229,14 +228,39 @@ function draw3dBasePlateDiagram() {
 
         const textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
-        textBlock.fontSize = 12;
+        textBlock.fontSize = 10;
         label.addControl(textBlock);
         
-        if (meshLink) {
-            label.linkWithMesh(meshLink);
+        if (anchorMesh) {
+            label.linkWithMesh(anchorMesh);
         }
         return label;
-    }
+    };
+
+    // --- Standardized Helper for creating Dimension Lines ---
+    const createDimensionLine = (name, value, start, end, offset) => {
+        if (!value || value <= 0) return;
+        const lineMat = new BABYLON.StandardMaterial(`${name}_mat`, bjsScene);
+        lineMat.emissiveColor = isDarkMode ? new BABYLON.Color3.White() : new BABYLON.Color3.Black();
+        lineMat.disableLighting = true;
+
+        const mainLinePoints = [start.add(offset), end.add(offset)];
+        const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: mainLinePoints }, bjsScene);
+        mainLine.material = lineMat;
+
+        const extLine1Points = [start, start.add(offset.scale(1.1))];
+        const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: extLine1Points }, bjsScene);
+        extLine1.material = lineMat;
+
+        const extLine2Points = [end, end.add(offset.scale(1.1))];
+        const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: extLine2Points }, bjsScene);
+        extLine2.material = lineMat;
+
+        const labelAnchor = new BABYLON.AbstractMesh(`${name}_label_anchor`, bjsScene);
+        labelAnchor.position = BABYLON.Vector3.Center(start, end).add(offset.scale(1.2));
+        createLabel(`${name}=${value}"`, labelAnchor);
+    };
+
 
     // --- Geometries (Pedestal, Plate, etc.) ---
     // This part remains mostly the same...
@@ -329,42 +353,29 @@ function draw3dBasePlateDiagram() {
     }
 
     // (Dimensioning and camera auto-fit logic from previous response goes here)
-    const lineMat = new BABYLON.StandardMaterial("lineMat", bjsScene);
-    lineMat.emissiveColor = isDarkMode ? BABYLON.Color3.White() : BABYLON.Color3.Black();
-    lineMat.disableLighting = true;
+    const B = inputs.base_plate_width_B;
+    const N = inputs.base_plate_length_N;
+    const tp = inputs.provided_plate_thickness_tp;
+    const y_pos = tp / 2; // Dimensions will be on the top surface of the plate
 
-    // Plate Dimension N
-    const dimLine_N = BABYLON.MeshBuilder.CreateLines("dimLine_N", { points: [
-        new BABYLON.Vector3(inputs.base_plate_width_B/2 + 2, 0, -inputs.base_plate_length_N/2),
-        new BABYLON.Vector3(inputs.base_plate_width_B/2 + 2, 0, inputs.base_plate_length_N/2)
-    ]}, bjsScene);
-    dimLine_N.material = lineMat;
-    const nLabelAnchor = new BABYLON.TransformNode("n_label_anchor", bjsScene);
-    nLabelAnchor.position = new BABYLON.Vector3(inputs.base_plate_width_B/2 + 4, 0, 0);
-    createLabel(`N = ${inputs.base_plate_length_N}"`, nLabelAnchor, isDarkMode);
-    
-    // Plate Dimension B
-    const dimLine_B = BABYLON.MeshBuilder.CreateLines("dimLine_B", { points: [
-        new BABYLON.Vector3(-inputs.base_plate_width_B/2, 0, inputs.base_plate_length_N/2 + 2),
-        new BABYLON.Vector3(inputs.base_plate_width_B/2, 0, inputs.base_plate_length_N/2 + 2)
-    ]}, bjsScene);
-    dimLine_B.material = lineMat;
-    const bLabelAnchor = new BABYLON.TransformNode("b_label_anchor", bjsScene);
-    bLabelAnchor.position = new BABYLON.Vector3(0, 0, inputs.base_plate_length_N/2 + 4);
-    createLabel(`B = ${inputs.base_plate_width_B}"`, bLabelAnchor, isDarkMode);
+    // Plate Dimension N (along Z-axis)
+    createDimensionLine("N", N, new BABYLON.Vector3(B / 2, y_pos, -N / 2), new BABYLON.Vector3(B / 2, y_pos, N / 2), new BABYLON.Vector3(4, 0, 0));
+
+    // Plate Dimension B (along X-axis)
+    createDimensionLine("B", B, new BABYLON.Vector3(-B / 2, y_pos, N / 2), new BABYLON.Vector3(B / 2, y_pos, N / 2), new BABYLON.Vector3(0, 0, 4));
 
     // Bolt Spacing B
     if (inputs.num_bolts_B > 1) {
-        const bSpacingLabelAnchor = new BABYLON.TransformNode("b_spacing_anchor", bjsScene);
-        bSpacingLabelAnchor.position = new BABYLON.Vector3(0, inputs.provided_plate_thickness_tp/2 + 1, startZ);
-        createLabel(`${inputs.bolt_spacing_B}"`, bSpacingLabelAnchor, isDarkMode);
+        const start = new BABYLON.Vector3(startX, y_pos, startZ);
+        const end = new BABYLON.Vector3(startX + inputs.bolt_spacing_B, y_pos, startZ);
+        createDimensionLine("s_B", inputs.bolt_spacing_B, start, end, new BABYLON.Vector3(0, 0, -4));
     }
     
     // Bolt Spacing N
     if (inputs.num_bolts_N > 1) {
-        const nSpacingLabelAnchor = new BABYLON.TransformNode("n_spacing_anchor", bjsScene);
-        nSpacingLabelAnchor.position = new BABYLON.Vector3(startX, inputs.provided_plate_thickness_tp/2 + 1, 0);
-        createLabel(`${inputs.bolt_spacing_N}"`, nSpacingLabelAnchor, isDarkMode);
+        const start = new BABYLON.Vector3(startX, y_pos, startZ);
+        const end = new BABYLON.Vector3(startX, y_pos, startZ + inputs.bolt_spacing_N);
+        createDimensionLine("s_N", inputs.bolt_spacing_N, start, end, new BABYLON.Vector3(-4, 0, 0));
     }
 
     if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
@@ -409,6 +420,20 @@ const basePlateCalculator = (() => {
             if (inputs.column_flange_width_bf >= inputs.base_plate_width_B) {
                 errors.push("Column flange width (bf) must be less than base plate width (B).");
             }
+        } else if (inputs.column_type === 'Round HSS') {
+            if (inputs.column_depth_d >= inputs.base_plate_length_N || inputs.column_depth_d >= inputs.base_plate_width_B) {
+                errors.push("HSS diameter (D) must be less than both plate dimensions (N and B).");
+            }
+        }
+
+        // Bolt pattern must fit on the plate
+        const bolt_group_length = (inputs.num_bolts_N - 1) * inputs.bolt_spacing_N;
+        if (bolt_group_length >= inputs.base_plate_length_N) {
+            errors.push("Bolt pattern length (along N) is larger than the base plate length (N).");
+        }
+        const bolt_group_width = (inputs.num_bolts_B - 1) * inputs.bolt_spacing_B;
+        if (bolt_group_width >= inputs.base_plate_width_B) {
+            errors.push("Bolt pattern width (along B) is larger than the base plate width (B).");
         }
 
         // Add a serviceability check for minimum plate thickness
