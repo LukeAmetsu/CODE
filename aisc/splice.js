@@ -1,65 +1,114 @@
 // --- Global variables for the 3D scene ---
 let bjsEngine, bjsScene, bjsGuiTexture;
 
+// --- Define all Input IDs that affect the diagram's geometry ---
+const diagramInputIds = [
+    'gap', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'num_flange_plates',
+    'H_fp', 't_fp', 'L_fp', 'H_fp_inner', 't_fp_inner', 'L_fp_inner', 'D_fp', 'Nc_fp',
+    'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp',
+    'num_web_plates', 'H_wp', 't_wp', 'L_wp', 'D_wp', 'Nc_wp', 'Nr_wp',
+    'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp'
+];
+
+
+/**
+ * Creates a detailed bolt mesh with a hexagonal head and nut.
+ * @param {string} name - The base name for the bolt mesh.
+ * @param {object} options - Bolt dimensions.
+ * @param {number} options.diameter - The diameter of the bolt shank.
+ * @param {number} options.length - The length of the bolt shank.
+ * @param {BABYLON.Scene} scene - The Babylon.js scene.
+ * @returns {BABYLON.Mesh} The merged bolt mesh.
+ */
+function createBoltMesh(name, options, scene) {
+	const { diameter, length } = options;
+	if (!diameter || !length || isNaN(diameter) || isNaN(length)) return null;
+	const headDiameter = diameter * 1.8;
+	const headHeight = diameter * 0.65;
+
+	const shank = BABYLON.MeshBuilder.CreateCylinder(`${name}_shank`, { diameter, height: length }, scene);
+	const head = BABYLON.MeshBuilder.CreateCylinder(`${name}_head`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
+	head.position.y = (length / 2);
+	head.rotation.y = Math.PI / 6;
+
+	const nut = BABYLON.MeshBuilder.CreateCylinder(`${name}_nut`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
+	nut.position.y = -(length / 2);
+	nut.rotation.y = Math.PI / 6;
+
+	const boltMesh = BABYLON.Mesh.MergeMeshes([shank, head, nut], true, false, null, false, true);
+	if (boltMesh) boltMesh.name = name;
+	return boltMesh;
+}
+
+
 /**
  * Draws an interactive 3D visualization of the splice connection using Babylon.js.
  */
 function draw3dSpliceDiagram() {
-    const canvas = document.getElementById("splice-3d-canvas");
-    if (!canvas || typeof BABYLON === 'undefined') return;
+    const canvas = document.getElementById("splice-3d-canvas");    if (!canvas || typeof BABYLON === 'undefined') return;
 
-    // --- 1. Gather Inputs ---
-    const inputs = gatherInputsFromIds(inputIds);
+    // --- 1. Gather All Relevant Inputs ---
+	const inputs = gatherInputsFromIds(diagramInputIds);    
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     // --- 2. Initialize Scene (if needed) ---
     if (!bjsEngine) {
         bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
         bjsScene = new BABYLON.Scene(bjsEngine);
-        bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
-
-        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.2, Math.PI / 2.5, 50, BABYLON.Vector3.Zero(), bjsScene);
+        
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.5, Math.PI / 2.8, 60, BABYLON.Vector3.Zero(), bjsScene);
         camera.attachControl(canvas, true);
-        camera.lowerRadiusLimit = 10;
+        camera.lowerRadiusLimit = 20;
         camera.upperRadiusLimit = 400;
+        camera.wheelPrecision = 20;
+
+		const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, bjsScene, [camera]);
+		pipeline.samples = 4;
+		pipeline.ssaoEnabled = true;
+		pipeline.ssaoRatio = 0.5;
 
         bjsEngine.runRenderLoop(() => {
-            if (bjsScene.isReady()) {
+            if (bjsScene && bjsScene.isReady()) {
                 bjsScene.render();
             }
         });
         window.addEventListener('resize', () => bjsEngine.resize());
     }
 
-    // --- Clear previous elements ---
-    bjsScene.meshes.forEach(mesh => mesh.dispose());
-    bjsScene.lights.forEach(light => light.dispose());
-    bjsGuiTexture.getChildren().forEach(control => control.dispose());
+    // --- [THE FIX] Robustly Clear Previous Scene Elements ---
+    while (bjsScene.meshes.length > 0) {
+        bjsScene.meshes[0].dispose(false, true);
+    }
+    while (bjsScene.materials.length > 0) {
+        bjsScene.materials[0].dispose(true, false);
+    }
+    if (bjsScene.environmentTexture) {
+        bjsScene.environmentTexture.dispose();
+    }
 
 
     // --- 3. Lighting & Materials ---
     bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
-    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.25), bjsScene);
-    light.intensity = 1.0;
+    bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
+    bjsScene.environmentIntensity = 1.2;
 
     const memberMaterial = new BABYLON.PBRMaterial("memberMat", bjsScene);
-    memberMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#2c5282" : "#36454F");
-    memberMaterial.metallic = 0.8;
-    memberMaterial.roughness = 0.6;
-
+    memberMaterial.albedoColor = new BABYLON.Color3.FromHexString("#455A64");
+    memberMaterial.metallic = 0.85;
+    memberMaterial.roughness = 0.45;
+    
     const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
-    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#4a5568" : "#A8A8A8");
-    plateMaterial.metallic = 0.7;
-    plateMaterial.roughness = 0.5;
+    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#78909C");
+    plateMaterial.metallic = 0.8;
+    plateMaterial.roughness = 0.4;
 
     const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
-    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#718096" : "#C0C0C0");
+    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5");
     boltMaterial.metallic = 0.9;
-    boltMaterial.roughness = 0.4;
+    boltMaterial.roughness = 0.35;
+
 
     // --- 4. Geometry Creation ---
-
-    // Function to create a single I-beam member
     const createBeamMember = (name, length) => {
         const { member_d: d, member_bf: bf, member_tf: tf, member_tw: tw } = inputs;
         const topFlange = BABYLON.MeshBuilder.CreateBox(`${name}_tf`, { width: bf, height: tf, depth: length }, bjsScene);
@@ -68,29 +117,33 @@ function draw3dSpliceDiagram() {
         botFlange.position.y = -(d - tf) / 2;
         const web = BABYLON.MeshBuilder.CreateBox(`${name}_web`, { width: tw, height: d - 2 * tf, depth: length }, bjsScene);
         const member = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
-        if (member) {
-            member.material = memberMaterial;
-        }
+        if (member) member.material = memberMaterial;
         return member;
     };
 
-    const beamLength = Math.max(inputs.L_fp, inputs.L_wp, 24);
+    const beamLength = Math.max(inputs.L_fp, inputs.L_wp, 24) || 24;
     const beam1 = createBeamMember("beam1", beamLength);
-    beam1.position.z = -(inputs.gap / 2 + beamLength / 2);
+    if(beam1) beam1.position.z = -(inputs.gap / 2 + beamLength / 2);
 
     const beam2 = createBeamMember("beam2", beamLength);
-    beam2.position.z = (inputs.gap / 2 + beamLength / 2);
+    if(beam2) beam2.position.z = (inputs.gap / 2 + beamLength / 2);
 
-    // --- Splice Plates ---
     // Flange Plates
-    const outerFlangePlate = BABYLON.MeshBuilder.CreateBox("outer_fp", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
-    outerFlangePlate.material = plateMaterial;
-    outerFlangePlate.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
+    const outerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("outer_fp_top", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
+    outerFlangePlateTop.material = plateMaterial;
+    outerFlangePlateTop.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
+    
+    const outerFlangePlateBot = outerFlangePlateTop.clone("outer_fp_bot");
+    outerFlangePlateBot.position.y = -(inputs.member_d / 2 + inputs.t_fp / 2);
 
-    if (inputs.num_flange_plates === 2) {
-        const innerFlangePlate = BABYLON.MeshBuilder.CreateBox("inner_fp", { width: inputs.H_fp_inner, height: inputs.t_fp_inner, depth: inputs.L_fp_inner }, bjsScene);
-        innerFlangePlate.material = plateMaterial;
-        innerFlangePlate.position.y = inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2;
+
+    if (inputs.num_flange_plates == 2) {
+        const innerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("inner_fp_top", { width: inputs.H_fp_inner, height: inputs.t_fp_inner, depth: inputs.L_fp_inner }, bjsScene);
+        innerFlangePlateTop.material = plateMaterial;
+        innerFlangePlateTop.position.y = inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2;
+
+        const innerFlangePlateBot = innerFlangePlateTop.clone("inner_fp_bot");
+        innerFlangePlateBot.position.y = -(inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2);
     }
     
     // Web Plates
@@ -101,52 +154,82 @@ function draw3dSpliceDiagram() {
         webPlate.position.x = offset;
     }
 
-    // --- Bolts ---
-    const createBoltArray = (params) => {
-        const { D, L, Nc, Nr, S_col, S_row, S_end, gage, y_pos, thickness_to_penetrate } = params;
-        const boltLength = thickness_to_penetrate + 1.5 * D; // Bolt length
-        const headHeight = 0.6 * D;
+    // --- Bolt Creation ---
+    const createWebBoltGroup = () => {
+        const { D_wp: D, Nc_wp: Nc, Nr_wp: Nr, S4_col_spacing_wp: S_col, S5_row_spacing_wp: S_row, S6_end_dist_wp: S_end } = inputs;
+        if (!D || !Nc || !Nr) return;
+        
+        const thickness = inputs.member_tw + inputs.num_web_plates * inputs.t_wp;
+        const startY = -((Nr - 1) * S_row) / 2; 
 
-        for (let side = -1; side <= 1; side += 2) { // Left and right side of the gap
+        for (let side = -1; side <= 1; side += 2) {
             for (let i = 0; i < Nc; i++) {
                 const z_pos = side * (inputs.gap / 2 + S_end + i * S_col);
                 for (let j = 0; j < Nr; j++) {
-                    const x_pos_base = gage / 2 + j * S_row;
-                    // Bolts on both sides of the centerline for flanges
-                    const x_positions = gage > 0 ? [-x_pos_base, x_pos_base] : [0];
-                     for (const x_pos of x_positions) {
-                        const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${i}_${j}_${side}`, { diameter: D, height: boltLength }, bjsScene);
+                    const y_pos = startY + j * S_row;
+                    const bolt = createBoltMesh(`web_bolt_${side}_${i}_${j}`, { diameter: D, length: thickness }, bjsScene);
+                    if (bolt) {
                         bolt.material = boltMaterial;
-                        bolt.position = new BABYLON.Vector3(x_pos, y_pos, z_pos);
-                        bolt.rotation.z = Math.PI / 2;
-                     }
+                        bolt.position = new BABYLON.Vector3(0, y_pos, z_pos);
+                        bolt.rotation.z = Math.PI / 2; // Orient horizontally
+                    }
                 }
             }
         }
     };
-    
-    // Flange Bolts
-    createBoltArray({
-        D: inputs.D_fp, L: inputs.L_fp, Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S_col: inputs.S1_col_spacing_fp,
-        S_row: inputs.S2_row_spacing_fp, S_end: inputs.S3_end_dist_fp, gage: inputs.g_gage_fp,
-        y_pos: inputs.member_d / 2, thickness_to_penetrate: inputs.t_fp + inputs.member_tf
-    });
 
-    // Web Bolts
-    createBoltArray({
-        D: inputs.D_wp, L: inputs.L_wp, Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S_col: inputs.S4_col_spacing_wp,
-        S_row: inputs.S5_row_spacing_wp, S_end: inputs.S6_end_dist_wp, gage: 0,
-        y_pos: 0, thickness_to_penetrate: inputs.member_tw + inputs.num_web_plates * inputs.t_wp
-    });
-    
-    // Auto-fit camera
+    const createFlangeBoltGroup = () => {
+        const { D_fp: D, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, g_gage_fp: gage, S3_end_dist_fp: S_end } = inputs;
+        if (!D || !Nc || !Nr) return;
+
+        const thickness = inputs.t_fp + inputs.member_tf + (inputs.num_flange_plates == 2 ? inputs.t_fp_inner : 0);
+        
+        for (let side = -1; side <= 1; side += 2) {
+            for (let i = 0; i < Nc; i++) {
+                const z_pos = side * (inputs.gap / 2 + S_end + i * S_col);
+                
+                // This logic handles multiple rows (Nr) of bolts across the flange, spaced by the gage and row spacing.
+                for (let j = 0; j < Nr; j++) {
+                    const x_positions = gage > 0 ? [-gage/2, gage/2] : [0];
+
+                    for(const x_p of x_positions) {
+                         // Top Flange Bolt
+                        const bolt_top = createBoltMesh(`top_flange_bolt_${side}_${i}`, { diameter: D, length: thickness }, bjsScene);
+                        if(bolt_top) {
+                            bolt_top.material = boltMaterial;
+                            bolt_top.position = new BABYLON.Vector3(x_p, inputs.member_d / 2, z_pos);
+                        }
+                        
+                        // Bottom Flange Bolt
+                        const bolt_bot = createBoltMesh(`bot_flange_bolt_${side}_${i}`, { diameter: D, length: thickness }, bjsScene);
+                        if(bolt_bot) {
+                            bolt_bot.material = boltMaterial;
+                            bolt_bot.position = new BABYLON.Vector3(x_p, -inputs.member_d / 2, z_pos);
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    createWebBoltGroup();
+    createFlangeBoltGroup();
+
+    // --- [FIX #2] Final Camera Adjustment ---
     if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
-        const allMeshes = bjsScene.meshes;
-        const boundingInfo = BABYLON.BoundingInfo.Merge(allMeshes.map(m => m.getBoundingInfo()));
-        bjsScene.activeCamera.setTarget(boundingInfo.boundingSphere.center);
-        bjsScene.activeCamera.radius = boundingInfo.boundingSphere.radius * 2.5;
+		const allMeshes = bjsScene.meshes.filter(m => m.isVisible && m.getBoundingInfo());
+        if (allMeshes.length > 0) {
+            // Correct way to merge BoundingInfo in Babylon.js
+            let boundingInfo = allMeshes[0].getBoundingInfo();
+            for (let i = 1; i < allMeshes.length; i++) {
+                boundingInfo = BABYLON.BoundingInfo.Merge([boundingInfo, allMeshes[i].getBoundingInfo()]);
+            }
+            bjsScene.activeCamera.setTarget(boundingInfo.boundingSphere.center);
+            bjsScene.activeCamera.radius = boundingInfo.boundingSphere.radius * 2.5;
+        }
     }
 }
+
 // --- Main Calculator Logic (DOM interaction and event handling) ---
 const spliceCalculator = (() => {
     // --- PRIVATE HELPER & CALCULATION FUNCTIONS ---
@@ -1182,16 +1265,19 @@ function run(rawInputs) {
     return { run, __test_exports__ };
 })();
 const baseBreakdownGenerators = {
-    'Flange Bolt Shear': ({ check, details }, common) => common.format_list([
-        `<u>Nominal Shear Strength per bolt (R<sub>n,bolt</sub>)</u>`,
-        `R<sub>n,bolt</sub> = F<sub>nv</sub> &times; A<sub>b</sub> &times; n<sub>planes</sub>`,
-        `R<sub>n,bolt</sub> = ${common.fmt(check.Fnv, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² &times; ${check.num_planes} = ${common.fmt(details.Rn_single)} kips`,
-        `<u>Total Nominal Strength (R<sub>n</sub>)</u>`,
-        `R<sub>n</sub> = R<sub>n,bolt</sub> &times; n<sub>bolts</sub>`,
-        `R<sub>n</sub> = ${common.fmt(details.Rn_single)} kips &times; ${details.num_bolts} = <b>${common.fmt(check.Rn)} kips</b>`,
-        `<u>Design Capacity</u>`,
-        `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
-    ]),
+    'Flange Bolt Shear': ({ check, details }, common) => {
+        const wasReducedText = check.wasReduced ? `<br><span class="text-yellow-600">Note: F<sub>nv</sub> was reduced by 20% for long joint length.</span>` : '';
+        return common.format_list([
+            `<u>Nominal Shear Strength per bolt (R<sub>n,bolt</sub>)</u>`,
+            `R<sub>n,bolt</sub> = F<sub>nv</sub> &times; A<sub>b</sub> &times; n<sub>planes</sub>`,
+            `R<sub>n,bolt</sub> = ${common.fmt(check.Fnv, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² &times; ${check.num_planes} = ${common.fmt(details.Rn_single)} kips${wasReducedText}`,
+            `<u>Total Nominal Strength (R<sub>n</sub>)</u>`,
+            `R<sub>n</sub> = R<sub>n,bolt</sub> &times; n<sub>bolts</sub>`,
+            `R<sub>n</sub> = ${common.fmt(details.Rn_single)} kips &times; ${details.num_bolts} = <b>${common.fmt(check.Rn)} kips</b>`,
+            `<u>Design Capacity</u>`,
+            `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+        ]);
+    },
     'GSY': ({ check }, common) => common.format_list([
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4-1</u>`,
         `R<sub>n</sub> = F<sub>y</sub> &times; A<sub>g</sub>`,
@@ -1387,6 +1473,54 @@ function getBreakdownGenerator(name) {
     // Fallback
     return () => 'Breakdown not available for this check.';
 }
+
+function populateMaterialDropdowns() {
+    const materialOnChange = (e) => {
+        const grade = AISC_SPEC.getSteelGrade(e.target.value);
+        if (grade) {
+            if (e.target.dataset.fyTarget) document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
+            if (e.target.dataset.fuTarget) document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
+        }
+    };
+
+    const configs = [
+        { ids: ['member_material'], options: AISC_SPEC.structuralSteelGrades, defaultValue: 'A992', onChange: materialOnChange },
+        { ids: ['flange_plate_material', 'flange_plate_material_inner', 'web_plate_material'], options: AISC_SPEC.structuralSteelGrades, defaultValue: 'A36', onChange: materialOnChange },
+    ];
+
+    configs.forEach(config => {
+        const optionsHtml = Object.keys(config.options).map(key => `<option value="${key}">${key}</option>`).join('');
+        config.ids.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                select.innerHTML = optionsHtml;
+                if (config.defaultValue) select.value = config.defaultValue;
+                if (config.onChange) {
+                    select.addEventListener('change', config.onChange);
+                    select.dispatchEvent(new Event('change'));
+                }
+            }
+        });
+    });
+}
+
+function populateBoltGradeDropdowns() {
+    const boltGradeOptions = Object.keys(AISC_SPEC.boltGrades).map(grade => `<option value="${grade}">${grade}</option>`).join('');
+    ['bolt_grade_fp', 'bolt_grade_wp'].forEach(id => {
+        const select = document.getElementById(id);
+        if (select) {
+            select.innerHTML = boltGradeOptions;
+            select.value = 'A325';
+        }
+    });
+}
+
+function getAllInputIdsOnPage() {
+    const ids = new Set();
+    document.querySelectorAll('input[id], select[id]').forEach(el => ids.add(el.id));
+    return Array.from(ids);
+}
+
 
 function createReportTable(config) {
     const { id, caption, headers, rows } = config;
@@ -1691,7 +1825,7 @@ function renderResults(results, rawInputs) {
     document.getElementById('results-container').innerHTML = `<div id="report-wrapper">${finalHtml}</div>`;
 }
 
-// --- Input Gathering and Orchestration ---
+// --- Input Gathering and Orchestration (Legacy, kept for reference) ---
 const inputIds = [
     'design_method', 'gap', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'member_Fy', 'member_Fu',
     'member_material', 'member_Zx', 'member_Sx', 'M_load', 'V_load', 'Axial_load', 'develop_capacity_check', 'deformation_is_consideration', 'g_gage_fp', 'optimize_bolts_check', 'optimize_diameter_check',
@@ -1704,86 +1838,57 @@ const inputIds = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Attach Event Listeners ---
-
-    function populateDropdowns() {
-        const materialOnChange = (e) => {
-            const grade = AISC_SPEC.getSteelGrade(e.target.value);
-            if (grade) {
-                if (e.target.dataset.fyTarget) document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
-                if (e.target.dataset.fuTarget) document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
-            }
-        };
-
-        const configs = [
-            // Material Dropdowns
-            { ids: ['member_material'], options: AISC_SPEC.structuralSteelGrades, defaultValue: 'A992', onChange: materialOnChange },
-            { ids: ['flange_plate_material', 'flange_plate_material_inner', 'web_plate_material'], options: AISC_SPEC.structuralSteelGrades, defaultValue: 'A36', onChange: materialOnChange },
-            // Bolt Grade Dropdowns
-            { ids: ['bolt_grade_fp', 'bolt_grade_wp'], options: AISC_SPEC.boltGrades, defaultValue: 'A325' }
-        ];
-
-        configs.forEach(config => {
-            const optionsHtml = Object.keys(config.options).map(key => `<option value="${key}">${key}</option>`).join('');
-
-            config.ids.forEach(id => {
-                const select = document.getElementById(id);
-                if (select) {
-                    select.innerHTML = optionsHtml;
-                    if (config.defaultValue) {
-                        select.value = config.defaultValue;
-                    }
-                    if (config.onChange) {
-                        select.addEventListener('change', config.onChange);
-                        select.dispatchEvent(new Event('change')); // Trigger initial population
-                    }
-                }
-            });
-        });
-    }
+    // --- Standard page setup ---
+    injectHeader({ activePage: 'splice', pageTitle: 'AISC Splice Connection Checker', headerPlaceholderId: 'header-placeholder' });
+    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+    initializeSharedUI();
+    populateMaterialDropdowns();
+    populateBoltGradeDropdowns();
+    
+    // --- Get all input IDs for the main calculation logic ---
+    const allCalcInputIds = getAllInputIdsOnPage();
 
     const handleRunCheck = createCalculationHandler({
-        inputIds: inputIds, // Pass the array to the handler
+        inputIds: allCalcInputIds,
         storageKey: 'splice-inputs',
         validationRuleKey: 'splice',
-        calculatorFunction: (rawInputs) => {
-            draw3dSpliceDiagram(); // Add this call
-            const results = spliceCalculator.run(rawInputs);
-            if (results.inputs.develop_capacity_check) {
-                document.getElementById('M_load').value = results.final_loads.M_load.toFixed(2);
-                document.getElementById('V_load').value = results.final_loads.V_load.toFixed(2);
-            }
-            if (results.inputs.optimize_bolts_check) {
-                document.getElementById('Nc_fp').value = results.inputs.Nc_fp;
-                document.getElementById('Nr_fp').value = results.inputs.Nr_fp;
-                document.getElementById('Nc_wp').value = results.inputs.Nc_wp;
-                document.getElementById('Nr_wp').value = results.inputs.Nr_wp;
-                document.getElementById('D_fp').value = results.inputs.D_fp;
-                document.getElementById('D_wp').value = results.inputs.D_wp;
-            }
-            return { ...results, rawInputs };
-        },
-        renderFunction: (results, rawInputs) => renderResults(results, rawInputs),
+        gatherInputsFunction: () => gatherInputsFromIds(allCalcInputIds),
+        calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),
+        renderFunction: renderResults,
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'
-    });    // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
-    populateDropdowns();
-    loadInputsFromLocalStorage('splice-inputs', inputIds);
-
-    // --- Auto-save inputs to localStorage on any change ---
-    inputIds.forEach(id => {
-        const el = document.getElementById(id);
-        el?.addEventListener('change', () => saveInputsToLocalStorage('splice-inputs', gatherInputsFromIds(inputIds)));
     });
 
-    const handleSaveInputs = createSaveInputsHandler(inputIds, 'splice-inputs.txt', 'feedback-message');
-    const handleLoadInputs = createLoadInputsHandler(inputIds, null, 'feedback-message');
+	document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
+	document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(allCalcInputIds, 'splice-inputs.txt'));
+	document.getElementById('load-inputs-btn').addEventListener('click', () => {
+		initiateLoadInputsFromFile('file-input', (loadedInputs) => {
+			handleRunCheck(); // Run check after loading
+			draw3dSpliceDiagram(); // Redraw diagram after loading
+		});
+    });
     
-    document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
-    document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);
-    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
-    document.getElementById('file-input').addEventListener('change', handleLoadInputs);
-    document.getElementById('results-container').addEventListener('click', (event) => {
+    // --- Attach event listeners for DYNAMIC diagram updates ---
+    diagramInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', draw3dSpliceDiagram);
+            el.addEventListener('change', draw3dSpliceDiagram); // For select dropdowns
+        }
+    });
+
+    // --- Load saved data and perform initial draw ---
+    loadInputsFromLocalStorage('splice-inputs', allCalcInputIds, () => {
+        handleRunCheck();
+        setTimeout(draw3dSpliceDiagram, 100); // Initial draw after a short delay
+    });
+
+    // If no data is loaded from local storage, draw the initial state
+    if (!localStorage.getItem('splice-inputs')) {
+         setTimeout(draw3dSpliceDiagram, 100);
+    }
+    
+	document.getElementById('results-container').addEventListener('click', (event) => {
         const button = event.target.closest('.toggle-details-btn');
         if (button) {
             const detailId = button.dataset.toggleId;
@@ -1829,12 +1934,5 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.id === 'download-word-btn') {
             handleDownloadWord('splice-report-content', 'Splice-Report.doc');
         }
-    });
-
-    // Add listeners for the 3D diagram
-    const allInputsToWatch = [...inputIds]; // Or a more specific list
-    allInputsToWatch.forEach(id => document.getElementById(id)?.addEventListener('input', draw3dSpliceDiagram));
-
-    // Initial draw
-    draw3dSpliceDiagram();
+	});
 });
