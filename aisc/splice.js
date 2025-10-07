@@ -1,5 +1,5 @@
 // --- Global variables for the 3D scene ---
-let bjsEngine, bjsScene, bjsGuiTexture;
+let bjsEngine, bjsScene, bjsGuiTexture, dimensionElements = { meshes: [], labels: [] };
 
 // --- Define all Input IDs that affect the diagram's geometry ---
 const diagramInputIds = [
@@ -12,32 +12,55 @@ const diagramInputIds = [
 
 
 /**
- * Creates a detailed bolt mesh with a hexagonal head and nut.
+ * Creates a detailed bolt mesh with a hexagonal head, nut, and washers, positioned and scaled correctly.
  * @param {string} name - The base name for the bolt mesh.
- * @param {object} options - Bolt dimensions.
+ * @param {object} options - Bolt dimensions and position.
  * @param {number} options.diameter - The diameter of the bolt shank.
- * @param {number} options.length - The length of the bolt shank.
+ * @param {number} options.thickness - The total thickness of the material being clamped.
+ * @param {BABYLON.Vector3} options.position - The geometric center of the material being clamped.
  * @param {BABYLON.Scene} scene - The Babylon.js scene.
  * @returns {BABYLON.Mesh} The merged bolt mesh.
  */
 function createBoltMesh(name, options, scene) {
-	const { diameter, length } = options;
-	if (!diameter || !length || isNaN(diameter) || isNaN(length)) return null;
-	const headDiameter = diameter * 1.8;
-	const headHeight = diameter * 0.65;
+    const { diameter, thickness, position } = options;
+    if (!diameter || !thickness || isNaN(diameter) || isNaN(thickness)) return null;
 
-	const shank = BABYLON.MeshBuilder.CreateCylinder(`${name}_shank`, { diameter, height: length }, scene);
-	const head = BABYLON.MeshBuilder.CreateCylinder(`${name}_head`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
-	head.position.y = (length / 2);
-	head.rotation.y = Math.PI / 6;
+    // Dimensions
+    const headDiameter = diameter * 1.8;
+    const headHeight = diameter * 0.65;
+    const washerDiameter = diameter * 2.2;
+    const washerHeight = diameter * 0.15;
+    // Shank should be long enough to go through material, washers, and engage the nut
+    const shankLength = thickness + 2 * washerHeight + headHeight;
 
-	const nut = BABYLON.MeshBuilder.CreateCylinder(`${name}_nut`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
-	nut.position.y = -(length / 2);
-	nut.rotation.y = Math.PI / 6;
+    // Create parts at the origin before merging and moving
+    const shank = BABYLON.MeshBuilder.CreateCylinder(`${name}_shank`, { diameter, height: shankLength }, scene);
 
-	const boltMesh = BABYLON.Mesh.MergeMeshes([shank, head, nut], true, false, null, false, true);
-	if (boltMesh) boltMesh.name = name;
-	return boltMesh;
+    // Position washer ON TOP of the clamped material surface
+    const washer1 = BABYLON.MeshBuilder.CreateCylinder(`${name}_washer1`, { diameter: washerDiameter, height: washerHeight }, scene);
+    washer1.position.y = thickness / 2 + washerHeight / 2;
+
+    // Position head ON TOP of the washer
+    const head = BABYLON.MeshBuilder.CreateCylinder(`${name}_head`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
+    head.position.y = thickness / 2 + washerHeight + headHeight / 2;
+    head.rotation.y = Math.PI / 6;
+
+    // Position second washer BELOW the clamped material surface
+    const washer2 = BABYLON.MeshBuilder.CreateCylinder(`${name}_washer2`, { diameter: washerDiameter, height: washerHeight }, scene);
+    washer2.position.y = -thickness / 2 - washerHeight / 2;
+
+    // Position nut BELOW the second washer
+    const nut = BABYLON.MeshBuilder.CreateCylinder(`${name}_nut`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
+    nut.position.y = -thickness / 2 - washerHeight - headHeight / 2;
+    nut.rotation.y = Math.PI / 6;
+
+    // Merge all parts into a single mesh
+    const boltMesh = BABYLON.Mesh.MergeMeshes([shank, head, nut, washer1, washer2], true, false, null, false, true);
+    if (boltMesh) {
+        boltMesh.name = name;
+        boltMesh.position = position; // Move the entire assembly to its final position
+    }
+    return boltMesh;
 }
 
 
@@ -45,27 +68,34 @@ function createBoltMesh(name, options, scene) {
  * Draws an interactive 3D visualization of the splice connection using Babylon.js.
  */
 function draw3dSpliceDiagram() {
-    const canvas = document.getElementById("splice-3d-canvas");    if (!canvas || typeof BABYLON === 'undefined') return;
+    const canvas = document.getElementById("splice-3d-canvas");
+    if (!canvas || typeof BABYLON === 'undefined') return;
 
     // --- 1. Gather All Relevant Inputs ---
-	const inputs = gatherInputsFromIds(diagramInputIds);    
+    const inputs = gatherInputsFromIds(diagramInputIds);
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     // --- 2. Initialize Scene (if needed) ---
     if (!bjsEngine) {
         bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
         bjsScene = new BABYLON.Scene(bjsEngine);
+        bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
         
         const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.5, Math.PI / 2.8, 60, BABYLON.Vector3.Zero(), bjsScene);
         camera.attachControl(canvas, true);
         camera.lowerRadiusLimit = 20;
         camera.upperRadiusLimit = 400;
-        camera.wheelPrecision = 20;
+        camera.wheelPrecision = 10;
+
+        // Prevent page scroll when zooming canvas
+        canvas.addEventListener("wheel", (event) => {
+            event.preventDefault();
+        }, { passive: false });
 
 		const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, bjsScene, [camera]);
-		pipeline.samples = 4;
+		pipeline.samples = 1;
 		pipeline.ssaoEnabled = true;
-		pipeline.ssaoRatio = 0.5;
+		pipeline.ssaoRatio = 0.1;
 
         bjsEngine.runRenderLoop(() => {
             if (bjsScene && bjsScene.isReady()) {
@@ -75,7 +105,7 @@ function draw3dSpliceDiagram() {
         window.addEventListener('resize', () => bjsEngine.resize());
     }
 
-    // --- [THE FIX] Robustly Clear Previous Scene Elements ---
+    // --- Robustly Clear Previous Scene Elements ---
     while (bjsScene.meshes.length > 0) {
         bjsScene.meshes[0].dispose(false, true);
     }
@@ -85,6 +115,16 @@ function draw3dSpliceDiagram() {
     if (bjsScene.environmentTexture) {
         bjsScene.environmentTexture.dispose();
     }
+    while (bjsScene.lights.length > 0) {
+        bjsScene.lights[0].dispose();
+    }
+    if (bjsGuiTexture) {
+        bjsGuiTexture.getChildren().forEach(control => control.dispose());
+    }
+    // Clear the dimension elements tracker
+    dimensionElements.meshes = [];
+    dimensionElements.labels = [];
+
 
 
     // --- 3. Lighting & Materials ---
@@ -92,86 +132,162 @@ function draw3dSpliceDiagram() {
     bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
     bjsScene.environmentIntensity = 1.2;
 
+    // Add a directional light to cast shadows
+    const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
+    light.position = new BABYLON.Vector3(20, 40, 20);
+
+    // Shadow generator
+    const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+
     const memberMaterial = new BABYLON.PBRMaterial("memberMat", bjsScene);
-    memberMaterial.albedoColor = new BABYLON.Color3.FromHexString("#455A64");
-    memberMaterial.metallic = 0.85;
+    memberMaterial.albedoColor = new BABYLON.Color3.FromHexString("#003cff");
+    memberMaterial.metallic = 0.6;
     memberMaterial.roughness = 0.45;
     
     const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
-    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#78909C");
-    plateMaterial.metallic = 0.8;
+    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#ff8800");
+    plateMaterial.metallic = 0.6;
     plateMaterial.roughness = 0.4;
 
     const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
     boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5");
-    boltMaterial.metallic = 0.9;
+    boltMaterial.metallic = 0.6;
     boltMaterial.roughness = 0.35;
 
 
-    // --- 4. Geometry Creation ---
+    // --- 4. Helper functions for Dimensions ---
+    const createLabel = (text, anchorMesh) => {
+        const label = new BABYLON.GUI.Rectangle();
+        label.height = "18px";
+        label.width = `${text.length * 7}px`;
+        label.cornerRadius = 5;
+        label.thickness = 1;
+        label.background = isDarkMode ? "rgba(40, 40, 40, 0.7)" : "rgba(255, 255, 255, 0.7)";
+        label.color = isDarkMode ? "#FFFFFF" : "#000000";
+        bjsGuiTexture.addControl(label);
+        dimensionElements.labels.push(label); // Track label
+        const textBlock = new BABYLON.GUI.TextBlock();
+        textBlock.text = text;
+        textBlock.fontSize = 10;
+        label.addControl(textBlock);
+        label.linkWithMesh(anchorMesh);
+        return label;
+    };
+
+    const createDimensionLine = (name, value, start, end, offset) => {
+        if (!value || value <= 0) return;
+        const lineMat = new BABYLON.StandardMaterial(`${name}_mat`, bjsScene);
+        lineMat.emissiveColor = isDarkMode ? new BABYLON.Color3.White() : new BABYLON.Color3.Black();
+        lineMat.disableLighting = true;
+
+        const mainLinePoints = [start.add(offset), end.add(offset)];
+        const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: mainLinePoints }, bjsScene);
+        mainLine.material = lineMat;
+        dimensionElements.meshes.push(mainLine);
+
+        const extLine1Points = [start, start.add(offset.scale(1.1))];
+        const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: extLine1Points }, bjsScene);
+        extLine1.material = lineMat;
+        dimensionElements.meshes.push(extLine1);
+
+        const extLine2Points = [end, end.add(offset.scale(1.1))];
+        const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: extLine2Points }, bjsScene);
+        extLine2.material = lineMat;
+        dimensionElements.meshes.push(extLine2);
+
+        const labelAnchor = new BABYLON.AbstractMesh(`${name}_label_anchor`, bjsScene);
+        labelAnchor.position = BABYLON.Vector3.Center(start, end).add(offset.scale(1.2));
+        createLabel(`${name}=${value}"`, labelAnchor);
+    };
+
+
+    // --- 5. Geometry Creation ---
     const createBeamMember = (name, length) => {
         const { member_d: d, member_bf: bf, member_tf: tf, member_tw: tw } = inputs;
+        if (!d || !bf || !tf || !tw) return null;
         const topFlange = BABYLON.MeshBuilder.CreateBox(`${name}_tf`, { width: bf, height: tf, depth: length }, bjsScene);
         topFlange.position.y = (d - tf) / 2;
         const botFlange = BABYLON.MeshBuilder.CreateBox(`${name}_bf`, { width: bf, height: tf, depth: length }, bjsScene);
         botFlange.position.y = -(d - tf) / 2;
         const web = BABYLON.MeshBuilder.CreateBox(`${name}_web`, { width: tw, height: d - 2 * tf, depth: length }, bjsScene);
         const member = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
-        if (member) member.material = memberMaterial;
+        if (member) {
+            member.material = memberMaterial;
+            shadowGenerator.addShadowCaster(member);
+            member.receiveShadows = true;
+        }
         return member;
     };
 
     const beamLength = Math.max(inputs.L_fp, inputs.L_wp, 24) || 24;
     const beam1 = createBeamMember("beam1", beamLength);
-    if(beam1) beam1.position.z = -(inputs.gap / 2 + beamLength / 2);
+    if (beam1) beam1.position.z = -(inputs.gap / 2 + beamLength / 2);
 
     const beam2 = createBeamMember("beam2", beamLength);
-    if(beam2) beam2.position.z = (inputs.gap / 2 + beamLength / 2);
+    if (beam2) beam2.position.z = (inputs.gap / 2 + beamLength / 2);
 
     // Flange Plates
-    const outerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("outer_fp_top", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
-    outerFlangePlateTop.material = plateMaterial;
-    outerFlangePlateTop.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
-    
-    const outerFlangePlateBot = outerFlangePlateTop.clone("outer_fp_bot");
-    outerFlangePlateBot.position.y = -(inputs.member_d / 2 + inputs.t_fp / 2);
+    if (inputs.L_fp > 0 && inputs.H_fp > 0 && inputs.t_fp > 0) {
+        const outerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("outer_fp_top", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
+        outerFlangePlateTop.material = plateMaterial;
+        outerFlangePlateTop.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
+        shadowGenerator.addShadowCaster(outerFlangePlateTop);
+        outerFlangePlateTop.receiveShadows = true;
 
+        const outerFlangePlateBot = outerFlangePlateTop.clone("outer_fp_bot");
+        outerFlangePlateBot.position.y = -(inputs.member_d / 2 + inputs.t_fp / 2);
+    }
 
-    if (inputs.num_flange_plates == 2) {
+    if (inputs.num_flange_plates == 2 && inputs.L_fp_inner > 0 && inputs.H_fp_inner > 0 && inputs.t_fp_inner > 0) {
         const innerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("inner_fp_top", { width: inputs.H_fp_inner, height: inputs.t_fp_inner, depth: inputs.L_fp_inner }, bjsScene);
         innerFlangePlateTop.material = plateMaterial;
         innerFlangePlateTop.position.y = inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2;
+        shadowGenerator.addShadowCaster(innerFlangePlateTop);
+        innerFlangePlateTop.receiveShadows = true;
 
         const innerFlangePlateBot = innerFlangePlateTop.clone("inner_fp_bot");
         innerFlangePlateBot.position.y = -(inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2);
     }
-    
+
     // Web Plates
     for (let i = 0; i < inputs.num_web_plates; i++) {
-        const webPlate = BABYLON.MeshBuilder.CreateBox(`wp_${i}`, { width: inputs.t_wp, height: inputs.H_wp, depth: inputs.L_wp }, bjsScene);
-        webPlate.material = plateMaterial;
-        const offset = (inputs.member_tw / 2 + inputs.t_wp / 2) * (i === 0 ? 1 : -1);
-        webPlate.position.x = offset;
+        if (inputs.L_wp > 0 && inputs.H_wp > 0 && inputs.t_wp > 0) {
+            const webPlate = BABYLON.MeshBuilder.CreateBox(`wp_${i}`, { width: inputs.t_wp, height: inputs.H_wp, depth: inputs.L_wp }, bjsScene);
+            webPlate.material = plateMaterial;
+            const offset = (inputs.member_tw / 2 + inputs.t_wp / 2 + (i > 0 ? inputs.t_wp : 0));
+            webPlate.position.x = i % 2 === 0 ? offset : -offset;
+            shadowGenerator.addShadowCaster(webPlate);
+            webPlate.receiveShadows = true;
+        }
     }
 
     // --- Bolt Creation ---
     const createWebBoltGroup = () => {
         const { D_wp: D, Nc_wp: Nc, Nr_wp: Nr, S4_col_spacing_wp: S_col, S5_row_spacing_wp: S_row, S6_end_dist_wp: S_end } = inputs;
         if (!D || !Nc || !Nr) return;
-        
-        const thickness = inputs.member_tw + inputs.num_web_plates * inputs.t_wp;
-        const startY = -((Nr - 1) * S_row) / 2; 
+
+        // Calculate total thickness of the web connection
+        const thickness = inputs.member_tw + (inputs.num_web_plates * inputs.t_wp);
+        const startY = -((Nr - 1) * S_row) / 2;
 
         for (let side = -1; side <= 1; side += 2) {
             for (let i = 0; i < Nc; i++) {
                 const z_pos = side * (inputs.gap / 2 + S_end + i * S_col);
                 for (let j = 0; j < Nr; j++) {
                     const y_pos = startY + j * S_row;
-                    const bolt = createBoltMesh(`web_bolt_${side}_${i}_${j}`, { diameter: D, length: thickness }, bjsScene);
+
+                    const bolt = createBoltMesh(`web_bolt_${side}_${i}_${j}`, {
+                        diameter: D,
+                        thickness: thickness,
+                        position: new BABYLON.Vector3(0, y_pos, z_pos) // Web connection is centered at x=0
+                    }, bjsScene);
+
                     if (bolt) {
                         bolt.material = boltMaterial;
-                        bolt.position = new BABYLON.Vector3(0, y_pos, z_pos);
                         bolt.rotation.z = Math.PI / 2; // Orient horizontally
+                        shadowGenerator.addShadowCaster(bolt);
                     }
                 }
             }
@@ -179,33 +295,50 @@ function draw3dSpliceDiagram() {
     };
 
     const createFlangeBoltGroup = () => {
-        const { D_fp: D, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, g_gage_fp: gage, S3_end_dist_fp: S_end } = inputs;
+        const { D_fp: D, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, g_gage_fp: gage, S3_end_dist_fp: S_end, num_flange_plates, t_fp, member_tf, t_fp_inner, member_d } = inputs;
         if (!D || !Nc || !Nr) return;
 
-        const thickness = inputs.t_fp + inputs.member_tf + (inputs.num_flange_plates == 2 ? inputs.t_fp_inner : 0);
-        
+        let clamped_thickness, y_center_top;
+
+        if (num_flange_plates == 2) {
+            // Total thickness of the 3-layer stack (outer plate + flange + inner plate)
+            clamped_thickness = t_fp + member_tf + t_fp_inner;
+            // Geometric center of the 3-layer stack
+            y_center_top = (member_d / 2) + t_fp / 2 - member_tf / 2 - t_fp_inner / 2;
+        } else {
+            // Total thickness of the 2-layer stack (outer plate + flange)
+            clamped_thickness = t_fp + member_tf;
+            // Geometric center of the 2-layer stack
+            y_center_top = (member_d / 2) + t_fp / 2 - member_tf / 2;
+        }
+        const y_center_bot = -y_center_top;
+
         for (let side = -1; side <= 1; side += 2) {
             for (let i = 0; i < Nc; i++) {
                 const z_pos = side * (inputs.gap / 2 + S_end + i * S_col);
-                
-                // This logic handles multiple rows (Nr) of bolts across the flange, spaced by the gage and row spacing.
-                for (let j = 0; j < Nr; j++) {
-                    const x_positions = gage > 0 ? [-gage/2, gage/2] : [0];
+                const x_positions = gage > 0 ? [-gage / 2, gage / 2] : [0];
 
-                    for(const x_p of x_positions) {
-                         // Top Flange Bolt
-                        const bolt_top = createBoltMesh(`top_flange_bolt_${side}_${i}`, { diameter: D, length: thickness }, bjsScene);
-                        if(bolt_top) {
-                            bolt_top.material = boltMaterial;
-                            bolt_top.position = new BABYLON.Vector3(x_p, inputs.member_d / 2, z_pos);
-                        }
-                        
-                        // Bottom Flange Bolt
-                        const bolt_bot = createBoltMesh(`bot_flange_bolt_${side}_${i}`, { diameter: D, length: thickness }, bjsScene);
-                        if(bolt_bot) {
-                            bolt_bot.material = boltMaterial;
-                            bolt_bot.position = new BABYLON.Vector3(x_p, -inputs.member_d / 2, z_pos);
-                        }
+                for (const x_p of x_positions) {
+                    // Top Flange Bolt
+                    const bolt_top = createBoltMesh(`top_flange_bolt_${side}_${i}_${x_p}`, {
+                        diameter: D,
+                        thickness: clamped_thickness,
+                        position: new BABYLON.Vector3(x_p, y_center_top, z_pos)
+                    }, bjsScene);
+                    if (bolt_top) {
+                        bolt_top.material = boltMaterial;
+                        shadowGenerator.addShadowCaster(bolt_top);
+                    }
+
+                    // Bottom Flange Bolt
+                    const bolt_bot = createBoltMesh(`bot_flange_bolt_${side}_${i}_${x_p}`, {
+                        diameter: D,
+                        thickness: clamped_thickness,
+                        position: new BABYLON.Vector3(x_p, y_center_bot, z_pos)
+                    }, bjsScene);
+                    if (bolt_bot) {
+                        bolt_bot.material = boltMaterial;
+                        shadowGenerator.addShadowCaster(bolt_bot);
                     }
                 }
             }
@@ -215,17 +348,74 @@ function draw3dSpliceDiagram() {
     createWebBoltGroup();
     createFlangeBoltGroup();
 
-    // --- [FIX #2] Final Camera Adjustment ---
+
+    // --- 6. Add Dimensions ---
+    const dimYOffset = inputs.member_d / 2 + inputs.t_fp + 5;
+    const dimXOffset = (inputs.member_bf / 2) + 5;
+
+    // Gap
+    createDimensionLine("Gap", inputs.gap, new BABYLON.Vector3(0, dimYOffset, -inputs.gap / 2), new BABYLON.Vector3(0, dimYOffset, inputs.gap / 2), new BABYLON.Vector3(0, 2, 0));
+
+    // Flange Plate Dimensions
+    if (inputs.L_fp > 0 && inputs.H_fp > 0) {
+        createDimensionLine("L_fp", inputs.L_fp, new BABYLON.Vector3(-inputs.H_fp / 2, dimYOffset, -inputs.L_fp / 2), new BABYLON.Vector3(-inputs.H_fp / 2, dimYOffset, inputs.L_fp / 2), new BABYLON.Vector3(-2, 0, 0));
+        createDimensionLine("H_fp", inputs.H_fp, new BABYLON.Vector3(-inputs.H_fp / 2, dimYOffset, inputs.L_fp / 2), new BABYLON.Vector3(inputs.H_fp / 2, dimYOffset, inputs.L_fp / 2), new BABYLON.Vector3(0, 0, 2));
+    }
+
+    // Flange Bolt Dimensions
+    if (inputs.Nc_fp > 1) {
+        const s1_z_start = -(inputs.gap / 2 + inputs.S3_end_dist_fp);
+        const s1_z_end = s1_z_start - inputs.S1_col_spacing_fp;
+        createDimensionLine("S1", inputs.S1_col_spacing_fp, new BABYLON.Vector3(dimXOffset, dimYOffset, s1_z_start), new BABYLON.Vector3(dimXOffset, dimYOffset, s1_z_end), new BABYLON.Vector3(2, 0, 0));
+    }
+    if (inputs.g_gage_fp > 0) {
+        const gage_z = -(inputs.gap / 2 + inputs.S3_end_dist_fp);
+        createDimensionLine("g", inputs.g_gage_fp, new BABYLON.Vector3(-inputs.g_gage_fp / 2, dimYOffset, gage_z), new BABYLON.Vector3(inputs.g_gage_fp / 2, dimYOffset, gage_z), new BABYLON.Vector3(0, 0, -2));
+    }
+    createDimensionLine("S3", inputs.S3_end_dist_fp, new BABYLON.Vector3(dimXOffset, dimYOffset, -inputs.gap / 2), new BABYLON.Vector3(dimXOffset, dimYOffset, -(inputs.gap / 2 + inputs.S3_end_dist_fp)), new BABYLON.Vector3(2, 0, 0));
+
+    // Web Plate Dimensions
+    const webDimXOffset = (inputs.member_tw / 2) + inputs.t_wp + 2;
+    if (inputs.L_wp > 0 && inputs.H_wp > 0) {
+        createDimensionLine("L_wp", inputs.L_wp, new BABYLON.Vector3(webDimXOffset, -inputs.H_wp / 2, -inputs.L_wp / 2), new BABYLON.Vector3(webDimXOffset, -inputs.H_wp / 2, inputs.L_wp / 2), new BABYLON.Vector3(2, 0, 0));
+        createDimensionLine("H_wp", inputs.H_wp, new BABYLON.Vector3(webDimXOffset, -inputs.H_wp / 2, inputs.L_wp / 2), new BABYLON.Vector3(webDimXOffset, inputs.H_wp / 2, inputs.L_wp / 2), new BABYLON.Vector3(2, 0, 0));
+    }
+
+    // Web Bolt Dimensions
+    if (inputs.Nc_wp > 1) {
+        const s4_z_start = -(inputs.gap / 2 + inputs.S6_end_dist_wp);
+        const s4_z_end = s4_z_start - inputs.S4_col_spacing_wp;
+        const s4_y = ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2;
+        createDimensionLine("S4", inputs.S4_col_spacing_wp, new BABYLON.Vector3(webDimXOffset, s4_y, s4_z_start), new BABYLON.Vector3(webDimXOffset, s4_y, s4_z_end), new BABYLON.Vector3(2, 0, 0));
+    }
+    if (inputs.Nr_wp > 1) {
+        const s5_y_start = -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2;
+        const s5_y_end = s5_y_start + inputs.S5_row_spacing_wp;
+        const s5_z = -(inputs.gap / 2 + inputs.S6_end_dist_wp);
+        createDimensionLine("S5", inputs.S5_row_spacing_wp, new BABYLON.Vector3(webDimXOffset, s5_y_start, s5_z), new BABYLON.Vector3(webDimXOffset, s5_y_end, s5_z), new BABYLON.Vector3(2, 0, 0));
+    }
+    createDimensionLine("S6", inputs.S6_end_dist_wp, new BABYLON.Vector3(webDimXOffset, 0, -inputs.gap / 2), new BABYLON.Vector3(webDimXOffset, 0, -(inputs.gap / 2 + inputs.S6_end_dist_wp)), new BABYLON.Vector3(2, 0, 0));
+
+
+    // --- 7. Final Camera Adjustment ---
     if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
-		const allMeshes = bjsScene.meshes.filter(m => m.isVisible && m.getBoundingInfo());
+        const allMeshes = bjsScene.meshes.filter(m => m.isVisible && m.getBoundingInfo() && !m.name.includes("dim"));
         if (allMeshes.length > 0) {
-            // Correct way to merge BoundingInfo in Babylon.js
-            let boundingInfo = allMeshes[0].getBoundingInfo();
-            for (let i = 1; i < allMeshes.length; i++) {
-                boundingInfo = BABYLON.BoundingInfo.Merge([boundingInfo, allMeshes[i].getBoundingInfo()]);
-            }
+            let min = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+            let max = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+
+            allMeshes.forEach(mesh => {
+                // Important: ensure the mesh's world matrix is computed before getting bounding info
+                mesh.computeWorldMatrix(true);
+                const boundingBox = mesh.getBoundingInfo().boundingBox;
+                min = BABYLON.Vector3.Minimize(min, boundingBox.minimumWorld);
+                max = BABYLON.Vector3.Maximize(max, boundingBox.maximumWorld);
+            });
+            
+            const boundingInfo = new BABYLON.BoundingInfo(min, max);
+
             bjsScene.activeCamera.setTarget(boundingInfo.boundingSphere.center);
-            bjsScene.activeCamera.radius = boundingInfo.boundingSphere.radius * 2.5;
+            bjsScene.activeCamera.radius = boundingInfo.boundingSphere.radius * 2.8;
         }
     }
 }
@@ -1845,6 +2035,20 @@ document.addEventListener('DOMContentLoaded', () => {
     populateMaterialDropdowns();
     populateBoltGradeDropdowns();
     
+    // --- Dimension Toggle Logic ---
+    const toggleDimensionsBtn = document.getElementById('toggle-dimensions-btn');
+    if (toggleDimensionsBtn) {
+        toggleDimensionsBtn.addEventListener('click', () => {
+            if (dimensionElements && dimensionElements.meshes.length > 0) {
+                const isVisible = !dimensionElements.meshes[0].isVisible;
+                dimensionElements.meshes.forEach(mesh => { if(mesh) mesh.isVisible = isVisible; });
+                dimensionElements.labels.forEach(label => { if(label) label.isVisible = isVisible; });
+                toggleDimensionsBtn.textContent = isVisible ? 'Hide Dimensions' : 'Show Dimensions';
+            }
+        });
+    }
+
+
     // --- Get all input IDs for the main calculation logic ---
     const allCalcInputIds = getAllInputIdsOnPage();
 
@@ -1868,12 +2072,15 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
     });
     
-    // --- Attach event listeners for DYNAMIC diagram updates ---
+    // --- Attach event listeners for DYNAMIC diagram updates with debouncing ---
+    const debouncedRedraw3D = debounce(draw3dSpliceDiagram, 300);
+
     diagramInputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.addEventListener('input', draw3dSpliceDiagram);
-            el.addEventListener('change', draw3dSpliceDiagram); // For select dropdowns
+            // Redraw 3D diagram after a short delay to prevent lag and race conditions.
+            el.addEventListener('input', debouncedRedraw3D);
+            el.addEventListener('change', debouncedRedraw3D); // For select dropdowns
         }
     });
 

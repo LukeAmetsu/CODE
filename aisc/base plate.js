@@ -143,6 +143,12 @@ function draw3dBasePlateDiagram() {
         camera.upperRadiusLimit = 400;
         camera.wheelPrecision = 10;
         
+        // Add a rendering pipeline for better visuals (SSAO, etc.)
+        const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, bjsScene, [camera]);
+        pipeline.samples = 4; // Anti-aliasing
+        pipeline.ssaoEnabled = true;
+        pipeline.ssaoRatio = 0.4; // Lower ratio for better performance
+
         canvas.addEventListener("wheel", (event) => {
             event.preventDefault();
         }, { passive: false }); // The { passive: false } is important for some browsers
@@ -157,16 +163,31 @@ function draw3dBasePlateDiagram() {
 
     // --- FIX: Clear previous elements instead of disposing the entire scene ---
     bjsScene.meshes.forEach(mesh => mesh.dispose());
-    bjsScene.lights.forEach(light => light.dispose());
     bjsGuiTexture.getChildren().forEach(control => {
         control.dispose();
     });
+    // Clear materials, lights, and environment texture more robustly
+    while (bjsScene.materials.length > 0) {
+        bjsScene.materials[0].dispose(true, false);
+    }
+    while (bjsScene.lights.length > 0) {
+        bjsScene.lights[0].dispose();
+    }
+    if (bjsScene.environmentTexture) {
+        bjsScene.environmentTexture.dispose();
+    }
 
     // --- 3. Lighting ---
-    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 0) : new BABYLON.Color4(0.95, 0.95, 0.95, 0);
-    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0.5, 1, 0.25), bjsScene);
-    light.intensity = 1.0;
-    light.specular = BABYLON.Color3.Black();
+    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+    bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
+    bjsScene.environmentIntensity = 1.2;
+
+    const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
+    light.position = new BABYLON.Vector3(20, 40, 20);
+
+    const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
 
     // --- Materials ---
     const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
@@ -222,16 +243,20 @@ function draw3dBasePlateDiagram() {
     const pedestalHeight = Math.max(12, inputs.anchor_embedment_hef * 1.5);
     const pedestal = BABYLON.MeshBuilder.CreateBox("pedestal", { width: inputs.pedestal_B, height: pedestalHeight, depth: inputs.pedestal_N }, bjsScene);
     pedestal.material = concreteMaterial;
+    pedestal.receiveShadows = true;
     pedestal.position.y = -inputs.provided_plate_thickness_tp / 2 - (pedestalHeight / 2);
 
     const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: inputs.base_plate_width_B, height: inputs.provided_plate_thickness_tp, depth: inputs.base_plate_length_N }, bjsScene);
     plate.material = plateMaterial;
+    shadowGenerator.addShadowCaster(plate);
+    plate.receiveShadows = true;
 
     // --- Column & **FIXED WELD** Geometry ---
     const colHeight = 12;
     if (inputs.column_type === 'Round HSS' && inputs.column_depth_d > 0) {
         const hss = BABYLON.MeshBuilder.CreateCylinder("hss", { diameter: inputs.column_depth_d, height: colHeight }, bjsScene);
         hss.material = columnMaterial;
+        shadowGenerator.addShadowCaster(hss);
         hss.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
 
         if (inputs.weld_size > 0 && inputs.weld_type === 'Fillet') {
@@ -252,6 +277,7 @@ function draw3dBasePlateDiagram() {
             }, bjsScene);
 
             weld.material = weldMaterial;
+            shadowGenerator.addShadowCaster(weld);
             weld.position.y = inputs.provided_plate_thickness_tp / 2; // Position it on top of the base plate
 
             // Weld Label Anchor
@@ -270,6 +296,8 @@ function draw3dBasePlateDiagram() {
         const column = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
         if (column) {
             column.material = columnMaterial;
+            shadowGenerator.addShadowCaster(column);
+            column.receiveShadows = true;
             column.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
         }
 
@@ -279,7 +307,7 @@ function draw3dBasePlateDiagram() {
             const createWeld = (name, length, rotation, position) => {
                 const weldShape = [ new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(weldSize, 0, 0), new BABYLON.Vector3(0, weldSize, 0) ];
                 const weld = BABYLON.MeshBuilder.ExtrudeShape(name, { shape: weldShape, path: [new BABYLON.Vector3(0, 0, -length/2), new BABYLON.Vector3(0, 0, length/2)] }, bjsScene);
-                weld.material = weldMaterial; weld.rotation = rotation; weld.position = position; return weld;
+                weld.material = weldMaterial; weld.rotation = rotation; weld.position = position; shadowGenerator.addShadowCaster(weld); return weld;
             };
             createWeld("weld_tf1", bf, new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, weldY, (d - tf) / 2 + weldSize));
             createWeld("weld_tf2", bf, new BABYLON.Vector3(0, Math.PI, 0), new BABYLON.Vector3(0, weldY, -(d - tf) / 2 - weldSize));
@@ -295,6 +323,7 @@ function draw3dBasePlateDiagram() {
         for (let c = 0; c < inputs.num_bolts_B; c++) {
             const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${r}_${c}`, { diameter: inputs.anchor_bolt_diameter, height: inputs.anchor_embedment_hef }, bjsScene);
             bolt.material = boltMaterial;
+            shadowGenerator.addShadowCaster(bolt);
             bolt.position.set(startX + c * inputs.bolt_spacing_B, -inputs.anchor_embedment_hef / 2 + inputs.provided_plate_thickness_tp / 2, startZ + r * inputs.bolt_spacing_N);
         }
     }

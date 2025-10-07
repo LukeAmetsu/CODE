@@ -271,7 +271,10 @@
             <div class="hidden lg:block lg:w-1/2">
                 <div class="sticky top-8">
                     <div class="form-section mt-6 lg:mt-0">
-                        <h2>Splice Diagram</h2>
+                        <div class="flex justify-between items-center mb-2">
+                            <h2 class="text-xl font-semibold">Splice Diagram</h2>
+                            <button id="toggle-dimensions-btn" class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-gray-600 text-xs">Toggle Dimensions</button>
+                        </div>
                         <div class="diagram">
                             <canvas id="splice-3d-canvas" class="w-full h-[600px]"></canvas>
                         </div>
