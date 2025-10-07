@@ -236,24 +236,8 @@ function renderRainResults(results) {
             handleDownloadWord('rain-report-content', 'Rain-Load-Report.doc');
         }
         if (event.target.id === 'send-to-combos-btn' && lastRainRunResults) {
-            sendRainToCombos(lastRainRunResults);
+            const loads = { combo_rain_load_r: lastRainRunResults.results.R_nominal || 0 };
+            sendToCombos(loads, 'Rain Calculator', 'Rain');
         }
     });
-}
-
-function sendRainToCombos(results) {
-    if (!results || !results.results) {
-        showFeedback('No rain results to send.', true, 'feedback-message');
-        return;
-    }
-    const comboData = {
-        combo_rain_load_r: results.results.R_nominal || 0,
-    };
-    const dataToSend = {
-        source: 'Rain Calculator',
-        type: 'Rain',
-        loads: comboData
-    };
-    localStorage.setItem('loadsForCombinator', JSON.stringify(dataToSend));
-    window.location.href = 'combos.html';
 }

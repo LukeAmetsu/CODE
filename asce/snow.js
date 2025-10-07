@@ -347,7 +347,17 @@ function attachSnowReportEventListeners() {
             handleDownloadWord('snow-report-content', 'Snow-Load-Report.doc');
         }
         if (event.target.id === 'send-to-combos-btn' && lastSnowRunResults) {
-            sendSnowToCombos(lastSnowRunResults);
+            const loads = {
+                combo_balanced_snow_load_sb: lastSnowRunResults.results.ps_balanced_nominal || 0,
+            };
+            if (lastSnowRunResults.unbalanced && lastSnowRunResults.unbalanced.applicable) {
+                loads.combo_unbalanced_windward_snow_load_suw = lastSnowRunResults.unbalanced.windward_nominal || 0;
+                loads.combo_unbalanced_leeward_snow_load_sul = (lastSnowRunResults.unbalanced.leeward_nominal || 0) + (lastSnowRunResults.unbalanced.surcharge_magnitude || 0);
+            }
+            if (lastSnowRunResults.drift && lastSnowRunResults.drift.applicable) {
+                loads.combo_drift_surcharge_sd = lastSnowRunResults.drift.pd_nominal || 0;
+            }
+            sendToCombos(loads, 'Snow Calculator', 'Snow');
         }
         const button = event.target.closest('.toggle-details-btn');
         if (button) {

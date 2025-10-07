@@ -1988,82 +1988,67 @@ function renderCandCSection(candc, inputs, units) {
     return html;
 }
 
-function sendWindToCombos(results) {
-    if (!results || !results.directional_results) {
-        showFeedback('No wind results to send.', true, 'feedback-message');
-        return;
-    }
+document.addEventListener('click', async (event) => {
+    // ... (existing event listeners)
+    if (event.target.id === 'send-to-combos-btn' && lastWindRunResults) {
+        const results = lastWindRunResults;
+        const comboData = {
+            combo_wind_wall_ww_max: 0, combo_wind_wall_ww_min: 0,
+            combo_wind_wall_lw_max: 0, combo_wind_wall_lw_min: 0,
+            combo_wind_roof_ww_max: 0, combo_wind_roof_ww_min: 0,
+            combo_wind_roof_lw_max: 0, combo_wind_roof_lw_min: 0,
+            combo_wind_cc_max: 0, combo_wind_cc_min: 0,
+            combo_wind_cc_wall_max: 0, combo_wind_cc_wall_min: 0,
+        };
 
-    const comboData = {
-        combo_wind_wall_ww_max: 0, combo_wind_wall_ww_min: 0,
-        combo_wind_wall_lw_max: 0, combo_wind_wall_lw_min: 0,
-        combo_wind_roof_ww_max: 0, combo_wind_roof_ww_min: 0,
-        combo_wind_roof_lw_max: 0, combo_wind_roof_lw_min: 0,
-        combo_wind_cc_max: 0, combo_wind_cc_min: 0,
-        combo_wind_cc_wall_max: 0, combo_wind_cc_wall_min: 0,
-    };
+        const getGoverningMwfrsPressure = (surface_name) => {
+            let max_abs_pressure = { p_pos_asd: 0, p_neg_asd: 0 };
+            let max_abs_val = -1;
+            for (const dir in results.directional_results) {
+                const resultSet = results.directional_results[dir] || [];
+                const surfaceResult = resultSet.find(r => r.surface.includes(surface_name));
+                if (surfaceResult) {
+                    const current_max_abs = Math.max(Math.abs(surfaceResult.p_pos_asd), Math.abs(surfaceResult.p_neg_asd));
+                    if (current_max_abs > max_abs_val) {
+                        max_abs_val = current_max_abs;
+                        max_abs_pressure = surfaceResult;
+                    }
+                }
+            }
+            return { max: max_abs_pressure.p_pos_asd, min: max_abs_pressure.p_neg_asd };
+        };
 
-    // Helper to find the most critical (max absolute) nominal pressures from all MWFRS directions
-    const getGoverningMwfrsPressure = (surface_name) => {
-        let max_abs_pressure = { p_pos_asd: 0, p_neg_asd: 0 };
-        let max_abs_val = -1;
+        const ww_wall = getGoverningMwfrsPressure('Windward Wall');
+        const lw_wall = getGoverningMwfrsPressure('Leeward Wall');
+        const ww_roof = getGoverningMwfrsPressure('Windward Roof');
+        const lw_roof = getGoverningMwfrsPressure('Leeward Roof');
 
-        for (const dir in results.directional_results) {
-            const resultSet = results.directional_results[dir] || [];
-            const surfaceResult = resultSet.find(r => r.surface.includes(surface_name));
-            if (surfaceResult) {
-                const current_max_abs = Math.max(Math.abs(surfaceResult.p_pos_asd), Math.abs(surfaceResult.p_neg_asd));
-                if (current_max_abs > max_abs_val) {
-                    max_abs_val = current_max_abs;
-                    max_abs_pressure = surfaceResult;
+        comboData.combo_wind_wall_ww_max = ww_wall.max;
+        comboData.combo_wind_wall_ww_min = ww_wall.min;
+        comboData.combo_wind_wall_lw_max = lw_wall.max;
+        comboData.combo_wind_wall_lw_min = lw_wall.min;
+        comboData.combo_wind_roof_ww_max = ww_roof.max;
+        comboData.combo_wind_roof_ww_min = ww_roof.min;
+        comboData.combo_wind_roof_lw_max = lw_roof.max;
+        comboData.combo_wind_roof_lw_min = lw_roof.min;
+
+        const candc = results.candc;
+        if (candc && candc.applicable && candc.pressures) {
+            for (const [zone, pressureData] of Object.entries(candc.pressures)) {
+                const p_asd_pos = pressureData.p_pos * 0.6;
+                const p_asd_neg = pressureData.p_neg * 0.6;
+                if (zone.toLowerCase().includes('wall')) {
+                    comboData.combo_wind_cc_wall_max = Math.max(comboData.combo_wind_cc_wall_max, p_asd_pos);
+                    comboData.combo_wind_cc_wall_min = Math.min(comboData.combo_wind_cc_wall_min, p_asd_neg);
+                } else {
+                    comboData.combo_wind_cc_max = Math.max(comboData.combo_wind_cc_max, p_asd_pos);
+                    comboData.combo_wind_cc_min = Math.min(comboData.combo_wind_cc_min, p_asd_neg);
                 }
             }
         }
-        return { max: max_abs_pressure.p_pos_asd, min: max_abs_pressure.p_neg_asd };
-    };
-
-    // Get governing MWFRS pressures
-    const ww_wall = getGoverningMwfrsPressure('Windward Wall');
-    const lw_wall = getGoverningMwfrsPressure('Leeward Wall');
-    const ww_roof = getGoverningMwfrsPressure('Windward Roof');
-    const lw_roof = getGoverningMwfrsPressure('Leeward Roof');
-
-    comboData.combo_wind_wall_ww_max = ww_wall.max;
-    comboData.combo_wind_wall_ww_min = ww_wall.min;
-    comboData.combo_wind_wall_lw_max = lw_wall.max;
-    comboData.combo_wind_wall_lw_min = lw_wall.min;
-    comboData.combo_wind_roof_ww_max = ww_roof.max;
-    comboData.combo_wind_roof_ww_min = ww_roof.min;
-    comboData.combo_wind_roof_lw_max = lw_roof.max;
-    comboData.combo_wind_roof_lw_min = lw_roof.min;
-
-    // C&C Loads
-    const candc = results.candc;
-    if (candc && candc.applicable && candc.pressures) {
-        for (const [zone, pressureData] of Object.entries(candc.pressures)) {
-            // The combo calculator expects nominal (ASD) level loads.
-            // For C&C, the ASD pressure is 0.6 * LRFD pressure.
-            const p_asd_pos = pressureData.p_pos * 0.6; // p_pos is LRFD level
-            const p_asd_neg = pressureData.p_neg * 0.6; // p_neg is LRFD level
-            
-            if (zone.toLowerCase().includes('wall')) {
-                comboData.combo_wind_cc_wall_max = Math.max(comboData.combo_wind_cc_wall_max, p_asd_pos);
-                comboData.combo_wind_cc_wall_min = Math.min(comboData.combo_wind_cc_wall_min, p_asd_neg);
-            } else { // roof
-                comboData.combo_wind_cc_max = Math.max(comboData.combo_wind_cc_max, p_asd_pos);
-                comboData.combo_wind_cc_min = Math.min(comboData.combo_wind_cc_min, p_asd_neg);
-            }
-        }
+        sendToCombos(comboData, 'Wind Calculator', 'Wind');
     }
-
-    const dataToSend = {
-        source: 'Wind Calculator',
-        type: 'Wind',
-        loads: comboData
-    };
-    localStorage.setItem('loadsForCombinator', JSON.stringify(dataToSend));
-    window.location.href = 'combos.html';
-}
+});
 /**
  * Main rendering orchestrator function.
  */

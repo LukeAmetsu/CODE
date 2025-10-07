@@ -1019,3 +1019,22 @@ function createCalculationHandler(config) { // This is the function being called
         if (buttonId) setLoadingState(false, buttonId);
     };
 }
+
+/**
+ * Sends calculated loads from a source calculator to the Load Combinator page.
+ * @param {object} loads - An object where keys are the `combo_*` input IDs and values are the loads to send.
+ * @param {string} sourceName - The name of the source calculator (e.g., "Wind Calculator").
+ * @param {string} loadType - The type of load being sent (e.g., "Wind", "Snow").
+ * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ */
+function sendToCombos(loads, sourceName, loadType, feedbackElId = 'feedback-message') {
+    if (!loads || Object.keys(loads).length === 0) {
+        showFeedback(`No ${loadType.toLowerCase()} results to send.`, true, feedbackElId);
+        return;
+    }
+    const dataToSend = {
+        source: sourceName, type: loadType, loads
+    };
+    localStorage.setItem('loadsForCombinator', JSON.stringify(dataToSend));
+    window.location.href = 'combos.html';
+}

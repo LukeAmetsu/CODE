@@ -147,102 +147,208 @@ function displayImportBanner(source, type, importedIds) {
     });
 }
 
+/**
+ * Builds an executable function from an abstract formula definition.
+ * @param {Array<object>} formula_def - The abstract definition of the formula.
+ * @returns {function(object): number} A function that takes a data scope and returns the calculated value.
+ */
+function buildFormulaFunction(formula_def) {
+    if (!Array.isArray(formula_def)) return () => 0; // Return a no-op function if def is invalid
+    const terms = formula_def.map(term => {
+        if (term.load) {
+            return `${term.factor || 1.0} * d.${term.load}`;
+        }
+        if (term.maxOf) {
+            const maxTerms = term.maxOf.map(maxTerm => {
+                if (typeof maxTerm === 'string') return `d.${maxTerm}`;
+                return `${maxTerm.factor || 1.0} * d.${maxTerm.load}`;
+            }).join(', ');
+            return `${term.factor || 1.0} * Math.max(${maxTerms})`;
+        }
+        return '0';
+    });
+    return new Function('d', `return ${terms.join(' + ')}`);
+}
+
+/**
+ * Builds a human-readable formula string from an abstract definition.
+ * @param {Array<object>} formula_def - The abstract definition of the formula.
+ * @returns {string} A string representation of the formula.
+ */
+function buildFormulaString(formula_def) {
+    if (!Array.isArray(formula_def)) return "Invalid Formula";
+    const terms = formula_def.map(term => {
+        const factorStr = term.factor ? `${term.factor}` : '';
+        if (term.load) {
+            return `${factorStr}${factorStr ? '*' : ''}${term.load}`;
+        }
+        if (term.maxOf) {
+            const maxTerms = term.maxOf.map(maxTerm => (typeof maxTerm === 'string') ? maxTerm : `${maxTerm.factor || ''}${maxTerm.factor ? '*' : ''}${maxTerm.load}`).join('|');
+            return `${factorStr}${factorStr ? '*' : ''}(${maxTerms})`;
+        }
+        return '';
+    }).filter(Boolean).join(' + ');
+}
+
+const comboStrategies = {
+    'ASCE 7-16': {
+        prepareLoads: (loads, level) => {
+            // --- FIX: Correctly handle ASCE 7-16 wind load levels ---
+            // ASCE 7-16 LRFD combinations (e.g., 1.0W) expect a STRENGTH-level wind load.
+            // ASCE 7-16 ASD combinations (e.g., 0.6W) expect a NOMINAL-level wind load.
+            // If the user provides a NOMINAL load but requests LRFD combinations, we must convert it.
+            // W_strength = W_nominal / 0.6
+            const newScope = { ...loads };
+            const adjustment_notes = {};
+
+            if (level === 'Nominal (Service/ASD)' && newScope.W) {
+                // This conversion is only needed for LRFD, but we apply it here and the ASD formulas
+                // will correctly factor it back down (e.g., 0.6 * (W_nom / 0.6) = W_nom).
+                // This is simpler than branching the logic for LRFD/ASD inside this function.
+                // The LRFD formulas will now correctly use the strength-level wind load.
+                newScope.W = newScope.W / 0.6;
+                adjustment_notes['Wind Load'] = `Input nominal wind load (W) was divided by 0.6 to get the required strength-level wind load for ASCE 7-16 LRFD combinations.`;
+            }
+
+            return {
+                scope: newScope,
+                adjustment_notes: adjustment_notes
+            };
+        },
+        lrfdDefs: {
+            '1': [{ factor: 1.4, load: 'D' }],
+            '2': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '3': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'S', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '4': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 0.2, load: 'S' }],
+            '6': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'W' }],
+            '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+        },
+        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
+        asdDefs: {
+            '1. D': [{ factor: 1.0, load: 'D' }],
+            '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
+            '3. D + (Lr|S|R)': [{ factor: 1.0, load: 'D' }, { factor: 1.0, maxOf: ['Lr', 'S', 'R'] }],
+            '4. D + 0.75L + 0.75(Lr|S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.75, maxOf: ['Lr', 'S', 'R'] }],
+            '5a. D + 0.6W': [{ factor: 1.0, load: 'D' }, { factor: 0.6, load: 'W' }],
+            '5b. D + 0.7E': [{ factor: 1.0, load: 'D' }, { factor: 0.7, load: 'E' }],
+            '6a. D + 0.75L + 0.75(0.6W) + 0.75(Lr|S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.45, load: 'W' }, { factor: 0.75, maxOf: ['Lr', 'S', 'R'] }],
+            '6b. D + 0.75L + 0.75(0.7E) + 0.75S': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.525, load: 'E' }, { factor: 0.75, load: 'S' }],
+            '7. 0.6D + 0.6W': [{ factor: 0.6, load: 'D' }, { factor: 0.6, load: 'W' }],
+            '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }]
+        }
+    },
+    'ASCE 7-22': {
+        prepareLoads: (loads, level) => {
+            // All formulas in ASCE 7-22 LRFD and ASD use nominal-level loads directly with factors.
+            // No pre-adjustment is necessary.
+            return {
+                scope: { ...loads },
+                adjustment_notes: {}
+            };
+        },
+        lrfdDefs: {
+            '1': [{ factor: 1.4, load: 'D' }],
+            '2': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '3a': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '3b': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'S' }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '4': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }], // Note: 1.0S, not 0.2S as in 7-16
+            '6': [{ factor: 0.9, load: 'D' }, { factor: 1.6, load: 'W' }],
+            '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+        },
+        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
+        asdDefs: {
+            '1. D': [{ factor: 1.0, load: 'D' }],
+            '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
+            '3. D + (Lr|0.7S|R)': [{ factor: 1.0, load: 'D' }, { maxOf: [{ load: 'Lr' }, { factor: 0.7, load: 'S' }, { load: 'R' }] }],
+            '4. D + 0.75L + 0.75(Lr|0.7S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.75, maxOf: [{ load: 'Lr' }, { factor: 0.7, load: 'S' }, { load: 'R' }] }],
+            '5a. D + W': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'W' }],
+            '5b. D + 0.7E': [{ factor: 1.0, load: 'D' }, { factor: 0.7, load: 'E' }],
+            '6. D + 0.75L + 0.75W + 0.75(Lr|0.7S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.75, load: 'W' }, { factor: 0.75, maxOf: [{ load: 'Lr' }, { factor: 0.7, load: 'S' }, { load: 'R' }] }],
+            '7. 0.6D + W': [{ factor: 0.6, load: 'D' }, { factor: 1.0, load: 'W' }],
+            '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }]
+        }
+    }
+};
+
+/**
+ * Generates a string representation of a calculation by substituting variables with their values from an abstract definition.
+ * @param {Array<object>} formula_def - The abstract definition of the formula.
+ * @param {object} scope - The object containing variable values.
+ * @returns {string} The calculation string with values substituted.
+ */
+function generateCalculationString(formula_def, scope) {
+    const terms = formula_def.map(term => {
+        const factor = term.factor;
+        const factorStr = factor !== undefined ? `${factor.toFixed(2)}*` : '';
+
+        if (term.load) {
+            const value = scope[term.load] !== undefined ? scope[term.load].toFixed(2) : '0.00';
+            return `${factorStr}${value}`;
+        }
+        if (term.maxOf) {
+            const maxTerms = term.maxOf.map(maxTerm => {
+                if (typeof maxTerm === 'string') return (scope[maxTerm] || 0).toFixed(2);
+                const maxFactorStr = maxTerm.factor ? `${maxTerm.factor.toFixed(2)}*` : '';
+                return `${maxFactorStr}${(scope[maxTerm.load] || 0).toFixed(2)}`;
+            }).join(', ');
+            return `${factorStr}max(${maxTerms})`;
+        }
+        return '0';
+    });
+    return terms.join(' + ');
+}
 const comboLoadCalculator = (() => {
     function calculateCombinations(loads, standard, level, method) {
-        const { D, L, Lr, R, S: S_input, W: W_input, E, unit_system } = loads;
-        const adjustment_notes = {};
-
-        let S_nominal, W_strength, S_strength, W_nominal;
-
-        // LRFD formulas use strength-level loads. ASD formulas use nominal-level loads.
-        // We adjust inputs to the required level for the formulas. W is strength-level, S is nominal for ASCE 7-16.
-        if (standard === "ASCE 7-16") { // Formulas expect nominal S and strength W
-            S_nominal = S_input;
-            W_strength = (level === 'Nominal (Service/ASD)') ? W_input / 0.6 : W_input; // Convert ASD wind to LRFD level
-            if (level === 'Nominal (Service/ASD)' && W_input !== 0) adjustment_notes['W'] = `Input W (${W_input.toFixed(2)}) was ASD-level, converted to Strength-level W=${W_strength.toFixed(2)} for LRFD formulas.`;
-            S_strength = null; // Not used in 7-16 formulas
-            W_nominal = null; // Not used in 7-16 formulas
-
-        } else { // ASCE 7-22: Formulas expect strength S and nominal W
-            W_nominal = W_input; // Input is nominal, use directly for ASD formulas. For LRFD, it will be factored.
-            S_strength = (level === 'Nominal (Service/ASD)') ? S_input * 1.6 : S_input; // Convert nominal snow to LRFD level
-            if (level === 'Nominal (Service/ASD)' && S_input !== 0) adjustment_notes['S'] = `Input S (${S_input.toFixed(2)}) was Nominal, converted to Strength-level S=${S_strength.toFixed(2)} for LRFD formulas.`;
+        const { D, L, Lr, R, E, unit_system } = loads;
+        const strategy = comboStrategies[standard];
+        if (!strategy) {
+            throw new Error(`Unsupported standard: ${standard}`);
         }
 
-        const formulas = {
-            'ASCE 7-16': {
-                'LRFD': {
-                    '1. 1.4D': (d) => 1.4 * d.D, // Eq. 2.3.2-1
-                    '2. 1.2D + 1.6L + 0.5(Lr|S|R)': (d) => 1.2 * d.D + 1.6 * d.L + 0.5 * Math.max(d.Lr, d.S_nominal, d.R), // Eq. 2.3.2-2
-                    '3. 1.2D + 1.6(Lr|S|R) + (L|0.5W)': (d) => 1.2 * d.D + 1.6 * Math.max(d.Lr, d.S_nominal, d.R) + Math.max(d.L, 0.5 * d.W_strength), // Eq. 2.3.2-3
-                    '4. 1.2D + 1.0W + L + 0.5(Lr|S|R)': (d) => 1.2 * d.D + 1.0 * d.W_strength + d.L + 0.5 * Math.max(d.Lr, d.S_nominal, d.R), // Eq. 2.3.2-4
-                    '5. 1.2D + 1.0E + L + 0.2S': (d) => 1.2 * d.D + 1.0 * d.E + d.L + 0.2 * d.S_nominal, // Eq. 2.3.2-5
-                    '6. 0.9D + 1.0W': (d) => 0.9 * d.D + 1.0 * d.W_strength, // Eq. 2.3.2-6
-                    '7. 0.9D + 1.0E': (d) => 0.9 * d.D + 1.0 * d.E, // Eq. 2.3.2-7
-                },
-                'ASD': {
-                    '1. D': (d) => d.D, // Eq. 2.4-1
-                    '2. D + L': (d) => d.D + d.L, // Eq. 2.4-2
-                    '3. D + (Lr|S|R)': (d) => d.D + Math.max(d.Lr, d.S_nominal, d.R), // Eq. 2.4-3
-                    '4. D + 0.75L + 0.75(Lr|S|R)': (d) => d.D + 0.75 * d.L + 0.75 * Math.max(d.Lr, d.S_nominal, d.R), // Eq. 2.4-4
-                    '5. D + 0.6W': (d) => d.D + 0.6 * d.W_strength, // Eq. 2.4-5, W is strength level
-                    '6. D + 0.75L + 0.75(0.6W) + 0.75(Lr|S|R)': (d) => d.D + 0.75 * d.L + 0.75 * (0.6 * d.W_strength) + 0.75 * Math.max(d.Lr, d.S_nominal, d.R), // Eq. 2.4-6
-                    '7. D + 0.7E': (d) => d.D + 0.7 * d.E, // Eq. 2.4-7
-                    '8. D + 0.75L + 0.75(0.7E) + 0.75S': (d) => d.D + 0.75 * d.L + 0.75 * (0.7 * d.E) + 0.75 * d.S_nominal, // Eq. 2.4-8
-                    '9. 0.6D + 0.6W': (d) => 0.6 * d.D + 0.6 * d.W_strength, // Eq. 2.4-9
-                    '10. 0.6D + 0.7E': (d) => 0.6 * d.D + 0.7 * d.E, // Eq. 2.4-10
-                }
-            },
-            'ASCE 7-22': {
-                'LRFD': {
-                    '1. 1.4D': (d) => 1.4 * d.D, // Eq. 2.3.1-1
-                    '2. 1.2D + 1.6L + 0.5(Lr|S|R)': (d) => 1.2 * d.D + 1.6 * d.L + 0.5 * Math.max(d.Lr, d.S_strength, d.R), // Eq. 2.3.1-2, S is strength
-                    '3a. 1.2D + 1.6(Lr|R) + (L|0.5W)': (d) => 1.2 * d.D + 1.6 * Math.max(d.Lr, d.R) + Math.max(d.L, 0.5 * d.W_nominal), // Eq. 2.3.1-3a
-                    '3b. 1.2D + 1.0S + (L|0.5W)': (d) => 1.2 * d.D + 1.0 * d.S_strength + Math.max(d.L, 0.5 * d.W_nominal), // Eq. 2.3.1-3b
-                    '4. 1.2D + 1.6W + L + 0.5(Lr|S|R)': (d) => 1.2 * d.D + 1.6 * d.W_nominal + d.L + 0.5 * Math.max(d.Lr, d.S_strength, d.R), // Eq. 2.3.1-4
-                    '5. 1.2D + 1.0E + L + 1.0S': (d) => 1.2 * d.D + 1.0 * d.E + d.L + 1.0 * d.S_strength, // Eq. 2.3.1-5
-                    '6. 0.9D + 1.6W': (d) => 0.9 * d.D + 1.6 * d.W_nominal, // Eq. 2.3.1-6
-                    '7. 0.9D + 1.0E': (d) => 0.9 * d.D + 1.0 * d.E, // Eq. 2.3.1-7
-                },
-                'ASD': {
-                    '1. D': (d) => d.D, // Eq. 2.4.1-1
-                    '2. D + L': (d) => d.D + d.L, // Eq. 2.4.1-2
-                    '3. D + (Lr|0.7S|R)': (d) => d.D + Math.max(d.Lr, 0.7 * d.S_strength, d.R), // Eq. 2.4.1-3, S is strength
-                    '4. D + 0.75L + 0.75(Lr|0.7S|R)': (d) => d.D + 0.75 * d.L + 0.75 * Math.max(d.Lr, 0.7 * d.S_strength, d.R), // Eq. 2.4.1-4
-                    '5. D + W': (d) => d.D + d.W_nominal, // Eq. 2.4.1-5, W is nominal
-                    '6. D + 0.75L + 0.75W + 0.75(Lr|0.7S|R)': (d) => d.D + 0.75 * d.L + 0.75 * d.W_nominal + 0.75 * Math.max(d.Lr, 0.7 * d.S_strength, d.R), // Eq. 2.4.1-6
-                    '7. D + 0.7E': (d) => d.D + 0.7 * d.E, // Eq. 2.4.1-7
-                    '8. D + 0.75L + 0.75(0.7E) + 0.75(0.7S)': (d) => d.D + 0.75 * d.L + 0.75 * (0.7 * d.E) + 0.75 * (0.7 * d.S_strength), // Eq. 2.4.1-8
-                    '9. 0.6D + W': (d) => 0.6 * d.D + d.W_nominal, // Eq. 2.4.1-9
-                    '10. 0.6D + 0.7E': (d) => 0.6 * d.D + 0.7 * d.E, // Eq. 2.4.1-10
-                }
-            }
-        };
+        // The prepareLoads function is now much simpler but retained for future-proofing.
+        const { scope, adjustment_notes } = strategy.prepareLoads(loads, level);
+        
+        // **FIXED**: Directly choose the correct definition set and remove old dynamic generation logic.
+        let formulaDefs;
+        if (method === 'LRFD') {
+            formulaDefs = strategy.lrfdDefs;
+        } else { // ASD
+            formulaDefs = strategy.asdDefs; // This now correctly uses the explicit ASD definitions.
+        }
 
-        const selectedFormulas = formulas[standard][method];
+        const final_formulas = {};
+        for (const key in formulaDefs) {
+            final_formulas[key] = buildFormulaFunction(formulaDefs[key]);
+        }
         
         let results = {};
         let pattern_results = {};
+        let calc_strings = {};
+        let pattern_calc_strings = {};
 
-        // Check for pattern live load requirement
-        const live_load_threshold = unit_system === 'imperial' ? 100 : 4.79;
-        const pattern_load_required = L > live_load_threshold;
+        const live_load_threshold = scope.unit_system === 'imperial' ? 100 : 4.79;
+        const pattern_load_required = scope.L > live_load_threshold;
         
-        const evaluateCombinations = (formulas, data) => {
+        const evaluateCombinations = (formulas, defs, data) => {
             const calculated = {};
-            for (const key in formulas) calculated[key] = formulas[key](data);
-            return calculated;
+            const strings = {};
+            for (const key in formulas) {
+                calculated[key] = formulas[key](data);
+                strings[key] = generateCalculationString(defs[key], data);
+            }
+            return { results: calculated, strings };
         };
         
-        const scope = { D, L, Lr, R, E, S_nominal, W_strength, S_strength, W_nominal };
-
-        results = evaluateCombinations(selectedFormulas, scope);
+        ({ results, strings: calc_strings } = evaluateCombinations(final_formulas, formulaDefs, scope));
         if (pattern_load_required) {
-            const pattern_scope = { ...scope, L: 0.75 * L };
-            pattern_results = evaluateCombinations(selectedFormulas, pattern_scope);
+            const pattern_scope = { ...scope, L: 0.75 * scope.L };
+            ({ results: pattern_results, strings: pattern_calc_strings } = evaluateCombinations(final_formulas, formulaDefs, pattern_scope));
         }
 
-        return { results, pattern_results, pattern_load_required, final_formulas: selectedFormulas, adjustment_notes };
+        // Return the definitions so the renderer can use them.
+        return { results, pattern_results, pattern_load_required, final_formulas, adjustment_notes, calc_strings, pattern_calc_strings, formulaDefs };
     }
     return { calculate: calculateCombinations };
 })();
@@ -253,37 +359,36 @@ const handleRunComboCalculation = createCalculationHandler({
     validationRuleKey: 'combo', // This will now correctly use the rules from validation-rules.js
     calculatorFunction: (inputs) => {
         const validation = validateInputs(inputs, validationRules.combo);
-        const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;
-        const scenarios = {
-            windward_wall: { title: 'Windward Wall Analysis', S: inputs.combo_balanced_snow_load_sb, W_max: inputs.combo_wind_wall_ww_max, W_min: inputs.combo_wind_wall_ww_min },
-            leeward_wall: { title: 'Leeward Wall Analysis', S: inputs.combo_unbalanced_windward_snow_load_suw, W_max: inputs.combo_wind_wall_lw_max, W_min: inputs.combo_wind_wall_lw_min },
-            windward_roof: { title: 'Windward Roof Analysis', S: inputs.combo_unbalanced_windward_snow_load_suw, W_max: inputs.combo_wind_roof_ww_max, W_min: inputs.combo_wind_roof_ww_min },
-            leeward_roof: { title: 'Leeward Roof Analysis', S: inputs.combo_unbalanced_leeward_snow_load_sul, W_max: inputs.combo_wind_roof_lw_max, W_min: inputs.combo_wind_roof_lw_min },
-            cc_roof: { title: 'Components & Cladding (C&C) Roof Analysis', S: inputs.combo_balanced_snow_load_sb, W_max: inputs.combo_wind_cc_max, W_min: inputs.combo_wind_cc_min },
-            cc_wall: { title: 'Components & Cladding (C&C) Wall Analysis', S: inputs.combo_balanced_snow_load_sb, W_max: inputs.combo_wind_cc_wall_max, W_min: inputs.combo_wind_cc_wall_min },
-            balanced_snow: { title: 'Balanced Snow Analysis', S: inputs.combo_balanced_snow_load_sb, W_max: 0, W_min: 0 },
-            unbalanced_windward_snow: { title: 'Unbalanced Windward Snow Analysis', S: inputs.combo_unbalanced_windward_snow_load_suw, W_max: 0, W_min: 0 },
-            unbalanced_leeward_snow: { title: 'Unbalanced Leeward Snow Analysis', S: inputs.combo_unbalanced_leeward_snow_load_sul, W_max: 0, W_min: 0 },
-            drift_surcharge: { title: 'Drift Surcharge Load Analysis', S: inputs.combo_balanced_snow_load_sb + inputs.combo_drift_surcharge_sd, W_max: 0, W_min: 0 },
-        };
+        const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
+        const scenarios = buildScenarios(inputs);
+
         const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
         const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+        
         const scenarios_data = {};
-        for(const key in scenarios) {
-            const { S, W_max, W_min } = scenarios[key];
+        for (const key in scenarios) {
             const isWallScenario = key.includes('wall');
+            
+            // Start with all loads from the form.
+            const scenario_loads = {
+                D: inputs.combo_dead_load_d, 
+                L: inputs.combo_live_load_l, 
+                Lr: inputs.combo_roof_live_load_lr, 
+                R: inputs.combo_rain_load_r, 
+                S: scenarios[key].S, // Use scenario-specific snow
+                E: inputs.combo_seismic_load_e, 
+                unit_system: inputs.combo_unit_system 
+            };
 
-            // Create a copy of base loads for this scenario
-            const scenario_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S, E: inputs.combo_seismic_load_e, unit_system: inputs.combo_unit_system };
-
-            // If it's a wall scenario, zero out roof-specific loads
+            // **CORRECTED LOGIC**: For wall analysis, zero out ALL roof-specific gravity loads.
             if (isWallScenario) {
                 scenario_loads.Lr = 0;
                 scenario_loads.R = 0;
-                scenario_loads.S = 0; // This will also zero out the specific S from the scenario object
+                scenario_loads.S = 0; // Walls don't have direct snow load.
             }
-            scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-            scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            
+            scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
         }
         return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
     },
@@ -291,6 +396,47 @@ const handleRunComboCalculation = createCalculationHandler({
     resultsContainerId: 'combo-results-container',
     buttonId: 'run-combo-calculation-btn'
 });
+/**
+ * Configuration for all possible calculation scenarios.
+ * This is the single source of truth for scenario keys and titles.
+ */
+const scenarioConfig = [
+    { key: 'windward_wall', title: 'Windward Wall Analysis', s: 'unbalanced_windward_snow_load_suw', wMax: 'wind_wall_ww_max', wMin: 'wind_wall_ww_min' },
+    { key: 'leeward_wall', title: 'Leeward Wall Analysis', s: 'unbalanced_leeward_snow_load_sul', wMax: 'wind_wall_lw_max', wMin: 'wind_wall_lw_min' },
+    { key: 'windward_roof', title: 'Windward Roof Analysis', s: 'unbalanced_windward_snow_load_suw', wMax: 'wind_roof_ww_max', wMin: 'wind_roof_ww_min' },
+    { key: 'leeward_roof', title: 'Leeward Roof Analysis', s: 'unbalanced_leeward_snow_load_sul', wMax: 'wind_roof_lw_max', wMin: 'wind_roof_lw_min' },
+    { key: 'cc_roof', title: 'Components & Cladding (C&C) Roof Analysis', s: 'balanced_snow_load_sb', wMax: 'wind_cc_max', wMin: 'wind_cc_min' },
+    { key: 'cc_wall', title: 'Components & Cladding (C&C) Wall Analysis', s: 'balanced_snow_load_sb', wMax: 'wind_cc_wall_max', wMin: 'wind_cc_wall_min' },
+    { key: 'balanced_snow', title: 'Balanced Snow Analysis', s: 'balanced_snow_load_sb' },
+    { key: 'drift_surcharge', title: 'Drift Surcharge Load Analysis', s: (inputs) => (inputs.combo_balanced_snow_load_sb || 0) + (inputs.combo_drift_surcharge_sd || 0), wMax: 'wind_roof_ww_max', wMin: 'wind_roof_ww_min' }
+];
+
+/**
+ * Creates a map of scenario keys to their full titles from the global config.
+ * @returns {Object.<string, string>}
+ */
+function getScenarioTitleMap() {
+    return Object.fromEntries(scenarioConfig.map(item => [item.key, item.title]));
+}
+
+/**
+ * Builds the scenarios object dynamically from a configuration array.
+ * @param {object} inputs - The user inputs object from the form.
+ * @returns {object} The fully constructed scenarios object.
+ */
+function buildScenarios(inputs) {
+    const scenarios = {};
+    scenarioConfig.forEach(config => {
+        scenarios[config.key] = {
+            title: config.title,
+            S: typeof config.s === 'function' ? config.s(inputs) : (inputs[`combo_${config.s}`] || 0),
+            W_max: inputs[`combo_${config.wMax}`] || 0,
+            W_min: inputs[`combo_${config.wMin}`] || 0,
+        };
+    });
+
+    return scenarios;
+}
 
 function generateComboSummary(all_gov_data, design_method, p_unit) {
     const scenarios = {};
@@ -308,15 +454,18 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
 
     summaryHtml += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">`;
 
-    const scenarioOrder = [
-        'Balanced Snow Analysis', 'Unbalanced Leeward Snow Analysis', 'Unbalanced Windward Snow Analysis', 'Drift Surcharge Analysis',
+    // Define a master order for all possible scenarios to maintain a consistent layout.
+    const masterScenarioOrder = [
+        'Balanced Snow Analysis', 'Drift Surcharge Load Analysis',
         'Windward Wall Analysis', 'Leeward Wall Analysis', 'Windward Roof Analysis', 'Leeward Roof Analysis',
         'Components & Cladding (C&C) Roof Analysis', 'Components & Cladding (C&C) Wall Analysis'
     ];
 
-    scenarioOrder.forEach(title => {
-        const data = scenarios[title];
-        if (!data) return;
+    // Filter the master list to only include scenarios that have results in the current calculation.
+    const availableScenarios = masterScenarioOrder.filter(title => scenarios[title]);
+
+    availableScenarios.forEach(title => {
+        const data = scenarios[title]; // We know data exists because of the filter above.
 
         const shortTitle = title.replace(' Analysis', '').replace(' Combinations', '');
         summaryHtml += `
@@ -363,6 +512,50 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
     return summaryHtml;
 }
 
+/**
+ * Defines the configuration for displaying input loads in the report.
+ * Each object can have a 'label', 'id' (for simple value lookup), or a 'value' function for complex calculations.
+ */
+const inputLoadConfig = [
+    { label: 'Dead Load (D)', id: 'combo_dead_load_d' },
+    { label: 'Live Load (L)', id: 'combo_live_load_l' },
+    { label: 'Roof Live (Lr)', id: 'combo_roof_live_load_lr' },
+    { label: 'Rain Load (R)', id: 'combo_rain_load_r' },
+    { label: 'Balanced Snow (Sb)', id: 'combo_balanced_snow_load_sb' },
+    { label: 'Unbalanced Windward (Suw)', id: 'combo_unbalanced_windward_snow_load_suw' },
+    { label: 'Unbalanced Leeward (Sul)', id: 'combo_unbalanced_leeward_snow_load_sul' },
+    { label: 'Drift Surcharge (Sd)', id: 'combo_drift_surcharge_sd' },
+    { label: 'Max Wind (Wmax)', value: (i) => Math.max(i.combo_wind_wall_ww_max, i.combo_wind_wall_lw_max, i.combo_wind_roof_ww_max, i.combo_wind_roof_lw_max, i.combo_wind_cc_max, i.combo_wind_cc_wall_max) },
+    { label: 'Min Wind (Wmin)', value: (i) => Math.min(i.combo_wind_wall_ww_min, i.combo_wind_wall_lw_min, i.combo_wind_roof_ww_min, i.combo_wind_roof_lw_min, i.combo_wind_cc_min, i.combo_wind_cc_wall_min) },
+    { label: 'Windward Wall Max (W)', id: 'combo_wind_wall_ww_max' },
+    { label: 'Windward Wall Min (W)', id: 'combo_wind_wall_ww_min' },
+    { label: 'Leeward Wall Max (W)', id: 'combo_wind_wall_lw_max' },
+    { label: 'Leeward Wall Min (W)', id: 'combo_wind_wall_lw_min' },
+    { label: 'Windward Roof Max (W)', id: 'combo_wind_roof_ww_max' },
+    { label: 'Windward Roof Min (W)', id: 'combo_wind_roof_ww_min' },
+    { label: 'Leeward Roof Max (W)', id: 'combo_wind_roof_lw_max' },
+    { label: 'Leeward Roof Min (W)', id: 'combo_wind_roof_lw_min' },
+    { label: 'C&C Roof Max/Min (W)', value: (i) => `${i.combo_wind_cc_max.toFixed(2)} / ${i.combo_wind_cc_min.toFixed(2)}` },
+    { label: 'C&C Wall Max/Min (W)', value: (i) => `${i.combo_wind_cc_wall_max.toFixed(2)} / ${i.combo_wind_cc_wall_min.toFixed(2)}` },
+    { label: 'Seismic Load (E)', id: 'combo_seismic_load_e' }
+];
+
+/**
+ * Generates the HTML list for the input loads section of the report.
+ * @param {object} inputs - The user inputs object.
+ * @param {string} p_unit - The pressure unit string (e.g., 'psf').
+ * @returns {string} The HTML string for the list of input loads.
+ */
+function generateInputLoadSummary(inputs, p_unit) {
+    return inputLoadConfig.map(load => {
+        const value = load.id ? inputs[load.id] : load.value(inputs);
+        if (typeof value === 'number') {
+            return `<li><strong>${load.label}:</strong> ${value.toFixed(2)} ${p_unit}</li>`;
+        }
+        return `<li><strong>${load.label}:</strong> ${value} ${p_unit}</li>`; // Handles pre-formatted strings
+    }).join('');
+}
+
 function renderComboResults(fullResults) {
     if (!fullResults || !fullResults.success) return;
     lastComboRunResults = fullResults;
@@ -399,49 +592,13 @@ function renderComboResults(fullResults) {
     // --- 1. INPUT LOADS ---
     const { inputs } = fullResults;
     const p_unit = inputs.combo_unit_system === 'imperial' ? 'psf' : 'kPa';
-    const input_loads = [
-        { label: 'Dead Load (D)', value: inputs.combo_dead_load_d },
-        { label: 'Live Load (L)', value: inputs.combo_live_load_l },
-        { label: 'Roof Live (Lr)', value: inputs.combo_roof_live_load_lr },
-        { label: 'Rain Load (R)', value: inputs.combo_rain_load_r },
-        { label: 'Balanced Snow (Sb)', value: inputs.combo_balanced_snow_load_sb },
-        { label: 'Unbalanced Windward (Suw)', value: inputs.combo_unbalanced_windward_snow_load_suw },
-        { label: 'Unbalanced Leeward (Sul)', value: inputs.combo_unbalanced_leeward_snow_load_sul },
-        { label: 'Drift Surcharge (Sd)', value: inputs.combo_drift_surcharge_sd },
-        { label: 'Max Wind (Wmax)', value: Math.max(inputs.combo_wind_wall_ww_max, inputs.combo_wind_wall_lw_max, inputs.combo_wind_roof_ww_max, inputs.combo_wind_roof_lw_max, inputs.combo_wind_cc_max, inputs.combo_wind_cc_wall_max) },
-        { label: 'Min Wind (Wmin)', value: Math.min(inputs.combo_wind_wall_ww_min, inputs.combo_wind_wall_lw_min, inputs.combo_wind_roof_ww_min, inputs.combo_wind_roof_lw_min, inputs.combo_wind_cc_min, inputs.combo_wind_cc_wall_min) },
-        // Wind Loads (MWFRS)
-        { label: 'Windward Wall Max (W)', value: inputs.combo_wind_wall_ww_max },
-        { label: 'Windward Wall Min (W)', value: inputs.combo_wind_wall_ww_min },
-        { label: 'Leeward Wall Max (W)', value: inputs.combo_wind_wall_lw_max },
-        { label: 'Leeward Wall Min (W)', value: inputs.combo_wind_wall_lw_min },
-        { label: 'Windward Roof Max (W)', value: inputs.combo_wind_roof_ww_max },
-        { label: 'Windward Roof Min (W)', value: inputs.combo_wind_roof_ww_min },
-        { label: 'Leeward Roof Max (W)', value: inputs.combo_wind_roof_lw_max },
-        { label: 'Leeward Roof Min (W)', value: inputs.combo_wind_roof_lw_min },
-        // Wind Loads (C&C)
-        { label: 'C&C Roof Max/Min (W)', value: `${inputs.combo_wind_cc_max.toFixed(2)} / ${inputs.combo_wind_cc_min.toFixed(2)}` },
-        { label: 'C&C Wall Max/Min (W)', value: `${inputs.combo_wind_cc_wall_max.toFixed(2)} / ${inputs.combo_wind_cc_wall_min.toFixed(2)}` },
-        { label: 'Seismic Load (E)', value: inputs.combo_seismic_load_e }
-    ];
 
     html += `<div id="combo-inputs-section" class="report-section-copyable">
                 <div class="flex justify-between items-center">
                     <h3 class="report-header">A. Input Loads</h3>
                     <button data-copy-target-id="combo-inputs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>
-                <ul class="list-disc list-inside space-y-1">`;
-    
-    input_loads.forEach(load => {
-        if (typeof load.value === 'number') {
-            html += `<li><strong>${load.label}:</strong> ${load.value.toFixed(2)} ${p_unit}</li>`;
-        } else {
-            // Handle cases where the value is already a formatted string (e.g., C&C loads)
-            html += `<li><strong>${load.label}:</strong> ${load.value} ${p_unit}</li>`;
-        }
-    });
-
-    html += `   </ul>
+                <ul class="list-disc list-inside space-y-1">${generateInputLoadSummary(inputs, p_unit)}</ul>
              </div>`;
 
     // --- Base Load Combinations (No Wind/Snow) ---
@@ -452,17 +609,13 @@ function renderComboResults(fullResults) {
              </div>
              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">These combinations are constant across all scenarios.</p>
              <table class="results-container w-full mt-2 border-collapse">
-                <thead><tr><th>Combination</th><th>Formula</th><th>Result</th></tr></thead>
+                <thead><tr><th>Combination</th><th>Calculation & Result</th></tr></thead>
                 <tbody>`;
     for (const combo in fullResults.base_combos.results) {
         if (combo.includes('W') || combo.includes('S') || combo.includes('E')) continue;
-        const formula = fullResults.base_combos.final_formulas[combo].toString().replace(/d\./g, '');
         const value = fullResults.base_combos.results[combo];
-        const cleanFormula = formula
-            .replace(/Math\.(max|min)/g, '$1')
-            .replace(/_7_16/g, '') // remove suffixes from variable names
-            .replace(/_7_22/g, '');
-        html += `<tr><td>${combo}</td><td>${cleanFormula}</td><td>${value.toFixed(2)}</td></tr>`;
+        const calc_string = fullResults.base_combos.calc_strings[combo];
+        html += `<tr><td>${combo}</td><td>${calc_string} = <b>${value.toFixed(2)}</b></td></tr>`;
     }
     html += `</tbody></table></div>`;
 
@@ -478,18 +631,8 @@ function renderComboResults(fullResults) {
     for (const key in fullResults.scenarios_data) {
         if (key.endsWith('_wmin')) continue; // Process pairs together
         const scenario_key = key.replace('_wmax', '');
-        const title_map = {
-            'windward_wall': 'Windward Wall Analysis', 
-            'leeward_wall': 'Leeward Wall Analysis', 
-            'windward_roof': 'Windward Roof Analysis', 
-            'leeward_roof': 'Leeward Roof Analysis',
-            'cc_roof': 'Components & Cladding (C&C) Roof Analysis',
-            'cc_wall': 'Components & Cladding (C&C) Wall Analysis',
-            'balanced_snow': 'Balanced Snow Analysis',
-            'unbalanced_windward_snow': 'Unbalanced Windward Snow Analysis',
-            'unbalanced_leeward_snow': 'Unbalanced Leeward Snow Analysis',
-            'drift_surcharge': 'Drift Surcharge Analysis',
-        };
+        // Dynamically generate the title map from the single source of truth
+        const title_map = getScenarioTitleMap();
         const title = title_map[scenario_key] || scenario_key;
 
          const res_wmax = fullResults.scenarios_data[`${scenario_key}_wmax`];
@@ -503,27 +646,24 @@ function renderComboResults(fullResults) {
                  </div>
                  `;
          html += `<table class="results-container w-full mt-2 border-collapse">
-                    <thead><tr><th>Combination</th><th>Formula</th><th>Result (Max Wind)</th><th>Result (Min Wind)</th></tr></thead>
+                    <thead><tr><th>Combination</th><th>Calculation (Max Wind)</th><th>Calculation (Min Wind)</th></tr></thead>
                     <tbody>`;
         
         for (const combo in res_wmax.results) {
              if (!combo.includes('W') && !combo.includes('S') && !combo.includes('E')) continue; // Skip base combos
-             const formula = res_wmax.final_formulas[combo].toString().replace(/d\./g, '');
-             const cleanFormula = formula
-                .replace(/Math\.(max|min)/g, '$1')
-                .replace(/_7_16/g, '')
-                .replace(/_7_22/g, '');
+             const calc_string_wmax = res_wmax.calc_strings[combo];
+             const calc_string_wmin = res_wmin.calc_strings[combo];
              const val_wmax = res_wmax.results[combo];
              const val_wmin = res_wmin.results[combo];
+
              const rowId = `row-${scenario_key}-${combo.replace(/\s/g, '-')}`;
              all_gov_data.push({ value: val_wmax, combo, title });
              all_gov_data.push({ value: val_wmin, combo, title });
 
              html += `<tr id="${rowId}">
                         <td>${combo}</td>
-                        <td>${cleanFormula}</td>
-                        <td>${val_wmax.toFixed(2)}</td>
-                        <td>${val_wmin.toFixed(2)}</td>
+                        <td class="text-sm">${calc_string_wmax} = <b>${val_wmax.toFixed(2)}</b></td>
+                        <td class="text-sm">${calc_string_wmin} = <b>${val_wmin.toFixed(2)}</b></td>
                       </tr>`;
         }
          html += `</tbody></table>`;
@@ -532,25 +672,22 @@ function renderComboResults(fullResults) {
             html += `<h4 class="text-lg font-semibold text-center mt-4">Pattern Live Load Combinations (0.75L)</h4>`;
             html += `<p class="text-xs text-center text-gray-500 dark:text-gray-400 mb-2">Required because Live Load > ${fullResults.inputs.combo_unit_system === 'imperial' ? '100 psf' : '4.79 kPa'} (ASCE 7-16/22 Sec. 4.3.5)</p>`;
             html += `<table class="results-container w-full mt-2 border-collapse">
-                    <thead><tr><th>Combination</th><th>Formula (with 0.75L)</th><th>Result (Max Wind)</th><th>Result (Min Wind)</th></tr></thead>
+                    <thead><tr><th>Combination</th><th>Calculation (Max Wind)</th><th>Calculation (Min Wind)</th></tr></thead>
                     <tbody>`;
             for (const combo in res_wmax.pattern_results) {
                 if (!combo.includes('W') && !combo.includes('S') && !combo.includes('E')) continue;
-                const formula = res_wmax.final_formulas[combo].toString().replace(/d\./g, '');
-                const cleanFormula = formula
-                    .replace(/Math\.(max|min)/g, '$1')
-                    .replace(/_7_16/g, '')
-                    .replace(/_7_22/g, '');
+                const calc_string_wmax = res_wmax.pattern_calc_strings[combo];
+                const calc_string_wmin = res_wmin.pattern_calc_strings[combo];
                 const val_wmax = res_wmax.pattern_results[combo];
                 const val_wmin = res_wmin.pattern_results[combo];
+
                 const rowId = `row-pattern-${scenario_key}-${combo.replace(/\s/g, '-')}`;
                 all_gov_data.push({ value: val_wmax, combo, title, pattern: true });
                 all_gov_data.push({ value: val_wmin, combo, title, pattern: true });
                 html += `<tr id="${rowId}">
                             <td>${combo}</td>
-                            <td>${cleanFormula}</td>
-                            <td>${val_wmax.toFixed(2)}</td>
-                            <td>${val_wmin.toFixed(2)}</td>
+                            <td class="text-sm">${calc_string_wmax} = <b>${val_wmax.toFixed(2)}</b></td>
+                            <td class="text-sm">${calc_string_wmin} = <b>${val_wmin.toFixed(2)}</b></td>
                          </tr>`;
             }
             html += `</tbody></table>`;
