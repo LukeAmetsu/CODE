@@ -330,30 +330,6 @@ function getAllCssStyles() {
 }
 
 /**
- * Gathers all CSS rules from the document's stylesheets into a single string.
- * This is crucial for embedding styles into SVGs for correct rendering during export.
- * @returns {string} A string containing all CSS rules wrapped in a <style> tag.
- */
-function getAllCssStyles() {
-    let cssText = "";
-    for (const styleSheet of document.styleSheets) {
-        try {
-            // Check if the stylesheet is accessible (CORS policy can block access to external stylesheets)
-            if (styleSheet.cssRules) {
-                for (const rule of styleSheet.cssRules) {
-                    cssText += rule.cssText;
-                }
-            }
-        } catch (e) {
-            // This can happen with cross-origin stylesheets. We'll log a warning but continue.
-            console.warn("Could not read CSS rules from stylesheet:", styleSheet.href, e);
-        }
-    }
-    // Wrap the collected CSS rules in a <style> tag for SVG embedding.
-    return `<style>${cssText}</style>`;
-}
-
-/**
  * Converts an SVG element to a PNG image, embedding all necessary styles.
  * @param {SVGElement} svg - The SVG element to convert.
  * @returns {Promise<HTMLImageElement|null>} A promise that resolves with an HTML <img> element or null on failure.
@@ -994,14 +970,11 @@ function createCalculationHandler(config) { // This is the function being called
         showFeedback('Running calculation...', false, feedbackElId);
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
 
-        let calculationResult;
-        const originalCalculator = calculatorFunction; // Preserve the original function reference
-        try {
-            calculationResult = originalCalculator(inputs, validation);
-        } catch (error) {
-            console.error('An unexpected error occurred during calculation:', error);
-            calculationResult = { error: `Calculation Error: ${error.message}. Check console for details.`, success: false };
-        }
+        const calculationResult = safeCalculation(
+            () => calculatorFunction(inputs, validation),
+            'An unexpected error occurred during calculation'
+        );
+
         await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
 
         if (calculationResult.error) {

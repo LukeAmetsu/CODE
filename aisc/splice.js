@@ -532,8 +532,6 @@ function checkBlockShear({ L_gv, L_nv, L_gt, L_nt, t_p, Fu, Fy, num_tension_rows
     // --- Path 2: Shear along bolt lines, tension between bolt lines ---
     const Agv2 = Agv1; // Same shear path
     const Anv2 = Anv1;
-    const Agv2 = Agv1; // Same shear path
-    const Anv2 = Anv1;
     const Ant2 = L_nt * t_p; // Net tension path between bolt lines
 
     const tension_term2 = Ubs * Fu * Ant2;
