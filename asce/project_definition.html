@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASCE Project Definition</title>
+    <title>ASCE Project Geometry Definition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         (function() {
@@ -24,8 +23,8 @@
         <div id="header-placeholder"></div>
 
         <main id="project-definition-form">
-            <div class="lg:flex lg:gap-8">
-                <div class="flex-grow lg:w-1/2">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
                     <div class="form-section">
                         <h2>1. General Project Parameters</h2>
                         <div class="grid grid-cols-2 gap-4">
@@ -56,53 +55,88 @@
                     </div>
 
                     <div class="form-section">
-                        <h2>2. Building Geometry</h2>
+                        <h2>2. Building Geometry Coordinates</h2>
+                        <p class="text-xs mb-4">Define the building outline using X and Y points. The origin (0,0) is at the ground level of the leftmost point.</p>
+                        
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium mb-1">Elevation Coordinates (Length Profile)</label>
+                            <div id="elevation-coords-container" class="space-y-2 p-2 border rounded-md dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50">
+                                <div class="grid grid-cols-[1fr_1fr_auto] gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                    <span>X</span>
+                                    <span>Y</span>
+                                    <span class="w-8"></span>
+                                </div>
+                            </div>
+                            <button id="add-elevation-point-btn" class="mt-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-3 py-1 rounded">+ Add Point</button>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block text-sm font-medium mb-1">Section Coordinates (Width Profile)</label>
+                            <div id="section-coords-container" class="space-y-2 p-2 border rounded-md dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50">
+                                 <div class="grid grid-cols-[1fr_1fr_auto] gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                    <span>X</span>
+                                    <span>Y</span>
+                                    <span class="w-8"></span>
+                                </div>
+                            </div>
+                            <button id="add-section-point-btn" class="mt-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-3 py-1 rounded">+ Add Point</button>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h2>3. Site & Project Parameters</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="building_length_L" class="block text-sm font-medium mb-1">Length (L)</label>
-                                <input type="number" id="building_length_L" value="100">
+                                <label for="ground_elevation" class="block text-sm font-medium mb-1">Ground Elevation</label>
+                                <input type="number" id="ground_elevation" value="0">
                             </div>
                             <div>
-                                <label for="building_width_B" class="block text-sm font-medium mb-1">Width (B)</label>
-                                <input type="number" id="building_width_B" value="60">
+                                <label for="effective_wind_area" class="block text-sm font-medium mb-1">Effective Wind Area (C&C)</label>
+                                <input type="number" id="effective_wind_area" value="10">
                             </div>
                             <div>
-                                <label for="mean_roof_height" class="block text-sm font-medium mb-1">Mean Roof Height (h)</label>
-                                <input type="number" id="mean_roof_height" value="50">
-                            </div>
-                            <div>
-                                <label for="eave_height" class="block text-sm font-medium mb-1">Eave Height</label>
-                                <input type="number" id="eave_height" value="40">
-                            </div>
-                             <div>
-                                <label for="roof_type" class="block text-sm font-medium mb-1">Roof Type</label>
-                                <select id="roof_type">
+                                <label for="roof_type_manual" class="block text-sm font-medium mb-1">Roof Type (Manual Override)</label>
+                                <select id="roof_type_manual">
+                                    <option value="auto" selected>Auto-Detect</option>
                                     <option value="flat">Flat</option>
-                                    <option value="gable" selected>Gable</option>
+                                    <option value="gable">Gable</option>
                                     <option value="hip">Hip</option>
                                     <option value="monoslope">Monoslope</option>
+                                    <option value="sawtooth">Sawtooth</option>
                                 </select>
                             </div>
-                            <div>
-                                <label for="roof_slope_deg" class="block text-sm font-medium mb-1">Roof Slope (°)</label>
-                                <input type="number" id="roof_slope_deg" value="30">
+                             <div>
+                                <label for="temporary_construction" class="block text-sm font-medium mb-1">Temporary Construction?</label>
+                                <select id="temporary_construction">
+                                    <option value="No" selected>No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                      <div class="mt-8 flex justify-center">
                         <button id="save-project-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700">
-                            Save Project & Proceed to Calculators
+                            Save Geometry & Proceed
                         </button>
                     </div>
                 </div>
 
-                <div class="hidden lg:block lg:w-1/2">
+                <div>
                     <div class="sticky top-8">
-                        <div class="form-section mt-6 lg:mt-0">
-                            <h2>Building Visualization</h2>
-                            <div class="diagram">
-                                <canvas id="building-canvas" class="w-full h-[500px]"></canvas>
+                        <div class="form-section">
+                            <h2>Geometry Visualization & Data</h2>
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="diagram">
+                                    <h4 class="text-center font-semibold text-sm mb-2">Elevation View</h4>
+                                    <canvas id="elevation-canvas" height="200"></canvas>
+                                </div>
+                                <div class="diagram">
+                                    <h4 class="text-center font-semibold text-sm mb-2">Section View</h4>
+                                    <canvas id="section-canvas" height="200"></canvas>
+                                </div>
                             </div>
+                            <div id="calculated-data" class="mt-4 text-sm space-y-2">
+                                </div>
                         </div>
                     </div>
                 </div>

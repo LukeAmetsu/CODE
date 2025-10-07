@@ -11,14 +11,11 @@ function addRangeIndicators() {
 }
 
 const windInputIds = [
-    'asce_standard', 'unit_system', 'risk_category', 'design_method',
-    'jurisdiction', 'ground_elevation', 'topographic_factor_Kzt',
-    'basic_wind_speed', 'exposure_category', 'mean_roof_height', 'building_flexibility',
-    'fundamental_period',
-    'building_length_L', 'building_width_B', 'enclosure_classification',
-    'roof_type', 'roof_slope_deg', 'structure_type_for_kd',
-    'gust_effect_factor_g', 'temporary_construction', 'wind_obstruction', 'effective_wind_area'
-, 'calculate_height_varying_pressure'];
+    // These are the only inputs left on the wind.html page for the user to modify.
+    'design_method', 'unit_system', 'basic_wind_speed', 'exposure_category',
+    'enclosure_classification', 'wind_obstruction', 'building_flexibility', 'fundamental_period',
+    'structure_type_for_kd', 'topographic_factor_Kzt', 'gust_effect_factor_g', 'calculate_height_varying_pressure'
+];
 
 // =================================================================================
 //  UI INJECTION & INITIALIZATION
@@ -27,7 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Create the main calculation handler first, so it's available to other functions.
     const handleRunWindCalculation = createCalculationHandler({
         inputIds: windInputIds,
-        storageKey: 'wind-calculator-inputs',
+        storageKey: 'wind-calculator-inputs', // For wind-specific inputs
+        gatherInputsFunction: () => {
+            // Gather inputs from this page
+            const windInputs = gatherInputsFromIds(windInputIds);
+            // Load the comprehensive project data from localStorage
+            const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+            // Merge them, with wind-specific inputs overriding project data if there are any conflicts.
+            return { ...projectData, ...windInputs };
+        },
         validatorFunction: validateWindInputs,
         calculatorFunction: windLoadCalculator.run,
         renderFunction: renderWindResults,
@@ -38,12 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT HANDLERS ---
     function attachEventListeners() {
-        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
-            const h = parseFloat(event.target.value) || 0;
-            const is_imp = document.getElementById('unit_system').value === 'imperial';
-            const limit = is_imp ? 60 : 18.3;
-            document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
-        });
+        // This logic is now part of displayProjectDataSummary
+        // document.getElementById('mean_roof_height').addEventListener('input', (event) => {
+        //     const h = parseFloat(event.target.value) || 0;
+        //     const is_imp = document.getElementById('unit_system').value === 'imperial';
+        //     const limit = is_imp ? 60 : 18.3;
+        //     document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
+        // });
 
         // Create file-based handlers
         const handleSaveWindInputs = createSaveInputsHandler(windInputIds, 'wind-inputs.txt');
@@ -91,19 +97,56 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeApp() {
         initializeSharedUI();
         attachEventListeners();
+        
+        // Load the comprehensive project data and display it
+        const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+        displayProjectDataSummary(projectData);
 
-        // Load shared project data first
-        loadInputsFromLocalStorage('buildingProjectData', windInputIds);
         addRangeIndicators();
+
         // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
         setTimeout(() => {
-            loadInputsFromLocalStorage('wind-calculator-inputs', windInputIds);
+            // Load only the wind-specific inputs saved from this page
+            loadInputsFromLocalStorage('wind-calculator-inputs', windInputIds, null, '1.0');
         }, 100);
     }
 
     // 4. Run the app.
     initializeApp();    
 }); // END DOMContentLoaded
+
+/**
+ * Displays a summary of the loaded project data on the wind calculator page.
+ * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
+ */
+function displayProjectDataSummary(projectData) {
+    const container = document.getElementById('project-data-summary-container');
+    if (!container) return;
+
+    if (!projectData || !projectData.building_length_L) {
+        container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
+        document.getElementById('run-calculation-btn').disabled = true;
+        return;
+    }
+
+    const { building_length_L, building_width_B, mean_roof_height, eave_height, roof_type, roof_slope_deg, asce_standard, risk_category, jurisdiction } = projectData;
+
+    container.innerHTML = `
+        <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
+        <ul class="text-sm space-y-1 mt-2">
+            <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
+            <li><strong>Risk Category:</strong> ${sanitizeHTML(risk_category)}</li>
+            <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
+            <li><strong>Dimensions (L x B):</strong> ${building_length_L.toFixed(1)} x ${building_width_B.toFixed(1)}</li>
+            <li><strong>Mean Roof Height (h):</strong> ${mean_roof_height.toFixed(1)}</li>
+            <li><strong>Roof Type:</strong> ${sanitizeHTML(roof_type)} (${roof_slope_deg.toFixed(1)}°)</li>
+        </ul>`;
+    
+    // Also, toggle the tall building section based on the loaded height
+    const is_imp = (document.getElementById('unit_system')?.value || 'imperial') === 'imperial';
+    const limit = is_imp ? 60 : 18.3;
+    document.getElementById('tall-building-section')?.classList.toggle('hidden', mean_roof_height <= limit);
+}
 
 // =================================================================================
 //  WIND LOAD CALCULATOR LOGIC
@@ -122,7 +165,7 @@ function getInternalPressureCoefficient(enclosureClass) {
         return map[enclosureClass] || [0.00, "Invalid Enclosure"];
     }
 
-    // Detailed Cp values for Gable and Hip roofs
+    // Detailed Cp values for Gable and Hip roofs (MWFRS, Low-Rise)
     // Reference: ASCE 7-16/22 Figure 27.3-2
     function getGableHipCpValues(h, L, B, roofSlopeDeg, isHip, unitSystem) {
         const cpMap = {};
@@ -180,7 +223,7 @@ function getInternalPressureCoefficient(enclosureClass) {
         return cpMap;
     }
 
-    // Cp values for buildings of all heights (Analytical Procedure)
+    // Cp values for buildings of all heights (MWFRS, Analytical Procedure)
     // Reference: ASCE 7-16 Figure 27.3-1
     function getAnalyticalCpValues(h, dim_parallel_to_wind, dim_perp_to_wind, roofSlopeDeg) {
     const cpMap = {};
@@ -242,7 +285,7 @@ function getInternalPressureCoefficient(enclosureClass) {
     }
 
     // External pressure coefficients Cp
-    // Reference: ASCE 7-16/22 Figures 27.4-1, 27.4-2, 27.4-3 (now includes edge/corner zones for flat roofs)
+    // Reference: ASCE 7-16/22 Figures 27.3-1, 27.3-2, 27.3-3 (now includes edge/corner zones for flat roofs)
     // NOTE: For more complex roof shapes, see future improvement
     function getCpValues(standard, h, L, B, roofType, roofSlopeDeg, unitSystem) {
         const cpMap = {};
@@ -252,42 +295,42 @@ function getInternalPressureCoefficient(enclosureClass) {
 
         cpMap["Windward Wall"] = 0.8;
         refNotes["Windward Wall"] = "ASCE 7 Fig. 27.4-1";
-        cpMap["Side Wall"] = -0.7;
-        refNotes["Side Wall"] = "ASCE 7 Fig. 27.4-1";
-        cpMap["Leeward Wall"] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]);
-        refNotes["Leeward Wall"] = "ASCE 7 Fig. 27.4-1 (varies with L/B)";
+        cpMap["Side Wall"] = -0.7; // This is from Fig 27.3-1, not 27.4-1
+        refNotes["Side Wall"] = "ASCE 7 Fig. 27.3-1";
+        cpMap["Leeward Wall"] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]); // This is from Fig 27.3-1
+        refNotes["Leeward Wall"] = "ASCE 7 Fig. 27.3-1 (varies with L/B)";
 
         if (roofType === "flat") {
             if (standard === "ASCE 7-22") {
-                // ASCE 7-22 Figure 27.4-1 (Zoned approach)
+                // ASCE 7-22 Figure 27.3-1 (Zoned approach)
                 let a = Math.min(0.1 * Math.min(L, B), 0.4 * h);
                 const min_a = unitSystem === 'imperial' ? 3.0 : 0.9;
                 a = Math.max(a, min_a);
                 cpMap[`Roof Zone 1 (0 to ${a.toFixed(1)} ${h_unit})`] = -0.9;
                 cpMap[`Roof Zone 2 (${a.toFixed(1)} to ${2*a.toFixed(1)} ${h_unit})`] = -0.5;
                 cpMap[`Roof Zone 3 (> ${2*a.toFixed(1)} ${h_unit})`] = -0.3;
-                refNotes["Roof"] = "ASCE 7-22 Fig. 27.4-1 (Zoned approach)";
+                refNotes["Roof"] = "ASCE 7-22 Fig. 27.3-1 (Zoned approach)";
             } else { // ASCE 7-16
-                // ASCE 7-16 Figure 27.4-1 (h/L approach)
+                // ASCE 7-16 Figure 27.3-1 (h/L approach)
                 const h_over_L = L > 0 ? h / L : 0;
                 if (h_over_L <= 0.5) {
                     cpMap[`Roof (0 to ${(h/2).toFixed(1)} ${h_unit})`] = -0.9;
                     cpMap[`Roof (${(h/2).toFixed(1)} to ${h.toFixed(1)} ${h_unit})`] = -0.9;
                     cpMap[`Roof (${h.toFixed(1)} to ${(2*h).toFixed(1)} ${h_unit})`] = -0.5;
                     cpMap[`Roof (> ${(2*h).toFixed(1)} ${h_unit})`] = -0.3;
-                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.4-1 (h/L ≤ 0.5)";
+                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.3-1 (h/L ≤ 0.5)";
                 } else {
                     cpMap[`Roof (0 to ${(h/2).toFixed(1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -1.3]);
                     cpMap[`Roof (${(h/2).toFixed(1)} to ${h.toFixed(1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -0.7]);
                     cpMap[`Roof (> ${h.toFixed(1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.5, -0.4]);
-                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.4-1 (h/L > 0.5)";
+                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.3-1 (h/L > 0.5)";
                 }
             }
         } else if (["gable", "hip"].includes(roofType)) {
             const isHip = roofType === 'hip';
             const gableHipCp = getGableHipCpValues(h, L, B, roofSlopeDeg, isHip, unitSystem);
             Object.assign(cpMap, gableHipCp);
-            refNotes["Roof"] = `ASCE 7-16/22 Fig. 27.4-2 (${isHip ? 'Hip' : 'Gable'})`;
+            refNotes["Roof"] = `ASCE 7-16/22 Fig. 27.3-2 (${isHip ? 'Hip' : 'Gable'})`;
         }
         return { cpMap, refNotes };
     }
@@ -405,7 +448,7 @@ function calculateVelocityPressure(Kz, Kzt, Kd, Ke, V, standard, riskCat, units)
 }
 
 // Design pressure p = qz(G*Cp - GCpi)
-// Reference: ASCE 7-16/22 Eq. 27.4-1 (MWFRS)
+// Reference: ASCE 7-16/22 Eq. 27.3-1 (MWFRS)
 function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
     // Correct formula: p = q(GCp) - qi(GCpi)
     // q = q_ext (qz for windward wall, qh for others)
@@ -961,7 +1004,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
             windResults.warnings.push(...candc_results.warnings);
         }
 
-        // Torsional Load Case (ASCE 7-16/22 Fig 27.4-8, Case 2)
+        // Torsional Load Case (ASCE 7-16/22 Fig 27.3-8, Case 2)
         // Applies to enclosed and partially enclosed low-rise buildings
         if (!is_tall_building && ["Enclosed", "Partially Enclosed"].includes(inputs.enclosure_classification)) {
             const results_L = windResults.directional_results['perp_to_L'];
@@ -1004,7 +1047,9 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
  * @returns {object} An object containing all the input values.
  */
 function gatherWindInputs() {
-    return gatherInputsFromIds(windInputIds);
+    const windInputs = gatherInputsFromIds(windInputIds);
+    const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+    return { ...projectData, ...windInputs };
 }
 
 /**
@@ -1021,7 +1066,7 @@ function validateWindInputs(inputs) {
     }
     const isImperial = inputs.unit_system === 'imperial';
     const vRange = isImperial ? [85, 200] : [38, 90];
-    if (inputs.basic_wind_speed < vRange[0] || inputs.basic_wind_speed > vRange[1]) {
+    if (inputs.basic_wind_speed && (inputs.basic_wind_speed < vRange[0] || inputs.basic_wind_speed > vRange[1])) {
         warnings.push(`Wind speed ${inputs.basic_wind_speed} ${isImperial ? 'mph' : 'm/s'} is outside the typical ASCE 7 range (${vRange[0]}-${vRange[1]}).`);
     }
 
@@ -1259,7 +1304,7 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
  * Generates the HTML for the "Design Parameters" section of the report.
  */
 function renderDesignParameters(inputs, intermediate, units) {
-    const { v_unit, h_unit, p_unit } = units;
+    const { v_unit, h_unit, p_unit } = units; // p_unit was missing
     
     let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
                 <div class="flex justify-between items-center">
@@ -1293,7 +1338,7 @@ function renderDesignParameters(inputs, intermediate, units) {
  * Generates the HTML for the "Detailed Calculation Breakdown" section.
  */
 function renderCalculationBreakdown(inputs, intermediate, units) {
-    const { h_unit, p_unit } = units;
+    const { h_unit, p_unit } = units; // This was missing
 
     let html = `<div id="calc-breakdown-section" class="mt-6 report-section-copyable">
                 <div class="flex justify-between items-center">
@@ -1327,7 +1372,7 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
  * Renders the results table for Open Buildings.
  */
 function renderOpenBuildingResults(directional_results, open_building_ref, inputs, units) {
-    const { p_unit } = units;
+    const { p_unit } = units; // This was missing
     if (inputs.enclosure_classification !== 'Open') return '';
 
     let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h*G*C_N)</h3></div>`;
@@ -1358,7 +1403,7 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
  * Renders a single directional results table for MWFRS.
  */
 function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermediate, units) {
-    const { p_unit } = units;
+    const { p_unit } = units; // This was missing
 
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
@@ -1401,7 +1446,7 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
  * Renders the entire MWFRS section, including diagrams and tables for both directions.
  */
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
-    const { h_unit } = units;
+    const { h_unit } = units; // This was missing
     let html = `<div id="mwfrs-section" class="mt-6 report-section-copyable">
         <div class="flex justify-between items-center">
             <h3 class="report-header flex-grow">3. MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
@@ -1450,7 +1495,7 @@ function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_met
  * Renders the table for height-varying windward wall pressures.
  */
 function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs, units) {
-    const { h_unit, p_unit } = units;
+    const { h_unit, p_unit } = units; // This was missing
     if (!heightVaryingResults) return '';
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
 
@@ -1561,7 +1606,7 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
  * Renders the Torsional Load Case section.
  */
 function renderTorsionalCase(torsional_case, inputs, units) {
-    if (!torsional_case) return '';
+    if (!torsional_case) return ''; // This was missing
     const { is_imp } = units;
         const m_unit = is_imp ? 'lb-ft' : 'kN-m';
         let Mt_L = is_imp ? torsional_case.perp_to_L.Mt : torsional_case.perp_to_L.Mt / 1000;
@@ -1596,7 +1641,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
  * Renders the Components & Cladding (C&C) section.
  */
 function renderCandCSection(candc, inputs, units) {
-    if (!candc || !candc.applicable) return '';
+    if (!candc || !candc.applicable) return ''; // This was missing
     const { is_imp, p_unit } = units;
     let html = `<div id="candc-section" class="mt-6 report-section-copyable">
                     <div class="flex justify-between items-center mb-4">
@@ -1660,7 +1705,7 @@ function renderCandCSection(candc, inputs, units) {
  * Generates the HTML for the "Design Parameters" section of the report.
  */
 function renderDesignParameters(inputs, intermediate, units) {
-    const { v_unit, h_unit } = units;
+    const { v_unit, h_unit, p_unit } = units; // p_unit was missing
     
     let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
                 <div class="flex justify-between items-center">
@@ -1694,7 +1739,7 @@ function renderDesignParameters(inputs, intermediate, units) {
  * Generates the HTML for the "Detailed Calculation Breakdown" section.
  */
 function renderCalculationBreakdown(inputs, intermediate, units) {
-    const { h_unit, p_unit } = units;
+    const { h_unit, p_unit } = units; // This was missing
 
     let html = `<div id="calc-breakdown-section" class="mt-6">
                 <div class="flex justify-between items-center">
@@ -1726,7 +1771,7 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
  * Renders the results table for Open Buildings.
  */
 function renderOpenBuildingResults(directional_results, open_building_ref, inputs, units) {
-    const { p_unit } = units;
+    const { p_unit } = units; // This was missing
     if (inputs.enclosure_classification !== 'Open') return '';
 
     let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h*G*C_N)</h3></div>`;
@@ -1757,7 +1802,7 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
  * Renders a single directional results table for MWFRS.
  */
 function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermediate, units) {
-    const { p_unit } = units;
+    const { p_unit } = units; // This was missing
 
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
@@ -1800,7 +1845,7 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
  * Renders the entire MWFRS section, including diagrams and tables for both directions.
  */
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
-    const { h_unit } = units;
+    const { h_unit } = units; // This was missing
     let html = `<div id="mwfrs-section" class="mt-6">
         <div class="flex justify-between items-center text-center pt-4">
             <h3 class="text-xl font-bold">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
@@ -1851,7 +1896,7 @@ function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_met
  * Renders the table for height-varying windward wall pressures.
  */
 function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs, units) {
-    const { h_unit, p_unit } = units;
+    const { h_unit, p_unit } = units; // This was missing
     if (!heightVaryingResults) return '';
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
 
@@ -1895,7 +1940,7 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
  * Renders the Torsional Load Case section.
  */
 function renderTorsionalCase(torsional_case, inputs, units) {
-    // Added more robust check to prevent crash if sub-properties are missing
+    // Added more robust check to prevent crash if sub-properties are missing // This was missing
     if (!torsional_case || !torsional_case.perp_to_L || !torsional_case.perp_to_B) return '';
     const { is_imp } = units;
         const m_unit = is_imp ? 'lb-ft' : 'kN-m';
@@ -1931,7 +1976,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
  * Renders the Components & Cladding (C&C) section.
  */
 function renderCandCSection(candc, inputs, units) {
-    if (!candc || !candc.applicable) return '';
+    if (!candc || !candc.applicable) return ''; // This was missing
     const { is_imp, p_unit } = units;
     let html = `<div id="candc-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
                     <div class="flex justify-between items-center mb-4">

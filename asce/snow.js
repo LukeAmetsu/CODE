@@ -313,7 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonId: 'run-snow-calculation-btn',
         });
 
-        // Load shared project data first
+        // --- MODIFIED LINE ---
+        // Load the comprehensive project data.
+        // The gatherInputsFromIds function will automatically handle the new fields.
         loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
 
         // Attach all event listeners

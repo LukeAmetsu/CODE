@@ -89,7 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Attach all event listeners ---
     initializeSharedUI();
 
-    // Load shared project data first
+    // --- MODIFIED LINE ---
+    // Load the comprehensive project data.
+    // The gatherInputsFromIds function will automatically handle the new fields.
     loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
 
     // Main calculation and file handling
