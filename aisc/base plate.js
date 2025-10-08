@@ -164,28 +164,22 @@ function draw3dBasePlateDiagram() {
     // --- FIX: Clear previous elements instead of disposing the entire scene ---
     bjsScene.meshes.forEach(mesh => mesh.dispose());
     bjsGuiTexture.getChildren().forEach(control => {
-        control.dispose();
+        if (control) control.dispose();
     });
-    // Clear materials, lights, and environment texture more robustly
-    while (bjsScene.materials.length > 0) {
-        bjsScene.materials[0].dispose(true, false);
-    }
-    while (bjsScene.lights.length > 0) {
-        bjsScene.lights[0].dispose();
-    }
-    if (bjsScene.environmentTexture) {
-        bjsScene.environmentTexture.dispose();
-    }
 
     // --- 3. Lighting ---
     bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
-    bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
-    bjsScene.environmentIntensity = 1.2;
+    if (!bjsScene.environmentTexture) {
+        bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
+        bjsScene.environmentIntensity = 1.2;
+    }
+    if (bjsScene.lights.length === 0) {
+        const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
+        light.position = new BABYLON.Vector3(20, 40, 20);
+        new BABYLON.ShadowGenerator(1024, light);
+    }
 
-    const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
-    light.position = new BABYLON.Vector3(20, 40, 20);
-
-    const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    const shadowGenerator = bjsScene.lights[0].getShadowGenerator();
     shadowGenerator.useBlurExponentialShadowMap = true;
     shadowGenerator.blurKernel = 32;
 
@@ -194,30 +188,31 @@ function draw3dBasePlateDiagram() {
     plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#ff8800"); // Standardized: Orange
     plateMaterial.metallic = 0.6;
     plateMaterial.roughness = 0.4;
-
-    const columnMaterial = new BABYLON.PBRMaterial("colMat", bjsScene);
+    
+    const columnMaterial = bjsScene.getMaterialByName("colMat") || new BABYLON.PBRMaterial("colMat", bjsScene);
     columnMaterial.albedoColor = new BABYLON.Color3.FromHexString("#003cff"); // Standardized: Blue
     columnMaterial.metallic = 0.6;
     columnMaterial.roughness = 0.45;
 
-    const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
+    const boltMaterial = bjsScene.getMaterialByName("boltMat") || new BABYLON.PBRMaterial("boltMat", bjsScene);
     boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5"); // Standardized: Light Gray
     boltMaterial.metallic = 0.6;
     boltMaterial.roughness = 0.35;
     
-    const concreteMaterial = new BABYLON.PBRMaterial("concreteMat", bjsScene);
+    const concreteMaterial = bjsScene.getMaterialByName("concreteMat") || new BABYLON.PBRMaterial("concreteMat", bjsScene);
     concreteMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#3b475c" : "#A9A9A9");
     concreteMaterial.metallic = 0.1;
     concreteMaterial.roughness = 0.9;
     
-    const weldMaterial = new BABYLON.PBRMaterial("weldMat", bjsScene);
+    const weldMaterial = bjsScene.getMaterialByName("weldMat") || new BABYLON.PBRMaterial("weldMat", bjsScene);
     weldMaterial.albedoColor = new BABYLON.Color3.FromHexString("#DAA520");
     weldMaterial.metallic = 0.5;
     weldMaterial.roughness = 0.7;
 
     // --- Standardized Helper for creating GUI labels ---
     const createLabel = (text, anchorMesh) => {
-        const label = new BABYLON.GUI.Rectangle();
+        if (!bjsGuiTexture) return;
+        const label = new BABYLON.GUI.Rectangle(text + "_label");
         label.height = "18px";
         label.width = `${text.length * 7}px`;
         label.cornerRadius = 5;
@@ -1164,7 +1159,7 @@ function renderBasePlateStrengthChecks(results) {
 
     const html = `
         <div id="strength-checks-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center">                <h3 class="report-header">C. Strength Checks (${design_method})</h3>
+            <div class="flex justify-between items-center mb-2">                <h3 class="report-header">Strength Checks (${design_method})</h3>
                 <button data-copy-target-id="strength-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -1200,8 +1195,8 @@ function renderBasePlateInputSummary(inputs) {
 
     return `
     <div id="input-summary-section" class="report-section-copyable">
-        <div class="flex justify-between items-center">
-            <h3 class="report-header">1. Input Summary</h3>
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header">Input Summary</h3>
             <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1263,7 +1258,7 @@ function renderBasePlateGeometryChecks(geomChecks) {
     return `
     <div id="geometry-checks-section" class="report-section-copyable mt-6">
         <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">2. Geometry & Spacing Checks (ACI 318-19)</h3>
+            <h3 class="report-header">Geometry & Spacing Checks (ACI 318-19)</h3>
             <button data-copy-target-id="geometry-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">

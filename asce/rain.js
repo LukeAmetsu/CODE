@@ -105,11 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Attach all event listeners ---
     initializeSharedUI();
 
-    // --- MODIFIED LINE ---
-    // Load the comprehensive project data.
-    // The gatherInputsFromIds function will automatically handle the new fields.
-    loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
-
     // Main calculation and file handling
     document.getElementById('run-rain-calculation-btn').addEventListener('click', handleRunRainCalculation);
     document.getElementById('save-rain-inputs-btn').addEventListener('click', createSaveInputsHandler(rainInputIds, 'rain-inputs.txt'));
@@ -133,7 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial state setup
     // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
     setTimeout(() => {
-        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds);
+        // Load rain-specific settings first, then override with shared project data.
+        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds, handleRunRainCalculation);
+        loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
     }, 100);
 });
 
@@ -187,8 +184,8 @@ function renderRainResults(results) {
 
     // --- Design Parameters Summary ---
     html += `<div id="rain-params-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="report-header">1. Design Parameters</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="report-header">Design Parameters</h3>
                     <button data-copy-target-id="rain-params-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>
                 <div class="copy-content">
@@ -205,17 +202,17 @@ function renderRainResults(results) {
 
     html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
              <div id="rain-summary-section" class="report-section-copyable">
-                <div class="flex justify-between items-center mb-4" data-copy-ignore>
-                    <h3 class="report-header flex-grow">2. Governing Load Summary</h3>
+                <div class="flex justify-between items-center mb-2" data-copy-ignore>
+                    <h3 class="report-header flex-grow">Governing Load Summary</h3>
                     <button data-copy-target-id="rain-summary-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden" data-copy-ignore>Copy Summary</button>
                 </div>
                 <div class="copy-content">
                 ${generateRainSummary({ design_method: inputs.rain_design_method }, results.results, p_unit, dh_calc_note)}
                 </div>
              </div>
-             <div id="rain-breakdown-section" class="border rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 space-y-4 report-section-copyable">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="report-header">3. Calculation Breakdown</h3>
+             <div id="rain-breakdown-section" class="report-section-copyable">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="report-header">Calculation Breakdown</h3>
                 <button data-copy-target-id="rain-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
             </div>
             <ul class="space-y-2">

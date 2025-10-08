@@ -1,5 +1,8 @@
 // --- Global variables for the 3D scene ---
-let bjsEngine, bjsScene, bjsGuiTexture, dimensionElements = { meshes: [], labels: [] };
+let bjsEngine, bjsScene, bjsGuiTexture;
+let dimensionElements = { meshes: [], labels: [] };
+let isFirstDraw = true; // Flag to control camera auto-fitting
+let areDimensionsVisible = true; // Flag to track dimension visibility state
 
 // --- Define all Input IDs that affect the diagram's geometry ---
 const diagramInputIds = [
@@ -106,25 +109,22 @@ function draw3dSpliceDiagram() {
     }
 
     // --- Robustly Clear Previous Scene Elements ---
-    while (bjsScene.meshes.length > 0) {
-        bjsScene.meshes[0].dispose(false, true);
-    }
-    while (bjsScene.materials.length > 0) {
-        bjsScene.materials[0].dispose(true, false);
-    }
-    if (bjsScene.environmentTexture) {
-        bjsScene.environmentTexture.dispose();
-    }
-    while (bjsScene.lights.length > 0) {
-        bjsScene.lights[0].dispose();
-    }
+    // FIX: Only dispose of meshes, not materials, lights, or the environment texture.
+    bjsScene.meshes.forEach(mesh => mesh.dispose());
+
     if (bjsGuiTexture) {
         bjsGuiTexture.getChildren().forEach(control => control.dispose());
     }
     // Clear the dimension elements tracker
     dimensionElements.meshes = [];
     dimensionElements.labels = [];
-
+    
+    // --- 3. Lighting & Materials (Create only if they don't exist) ---
+    if (bjsScene.lights.length === 0) {
+        const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
+        light.position = new BABYLON.Vector3(20, 40, 20);
+        new BABYLON.ShadowGenerator(1024, light);
+    }
 
 
     // --- 3. Lighting & Materials ---
@@ -132,16 +132,10 @@ function draw3dSpliceDiagram() {
     bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
     bjsScene.environmentIntensity = 1.2;
 
-    // Add a directional light to cast shadows
-    const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
-    light.position = new BABYLON.Vector3(20, 40, 20);
+    const shadowGenerator = bjsScene.lights[0].getShadowGenerator();
 
-    // Shadow generator
-    const shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 32;
-
-    const memberMaterial = new BABYLON.PBRMaterial("memberMat", bjsScene);
+    // Use existing materials or create them if they don't exist
+    const memberMaterial = bjsScene.getMaterialByName("memberMat") || new BABYLON.PBRMaterial("memberMat", bjsScene);
     memberMaterial.albedoColor = new BABYLON.Color3.FromHexString("#003cff");
     memberMaterial.metallic = 0.6;
     memberMaterial.roughness = 0.45;
@@ -151,11 +145,11 @@ function draw3dSpliceDiagram() {
     plateMaterial.metallic = 0.6;
     plateMaterial.roughness = 0.4;
 
-    const boltMaterial = new BABYLON.PBRMaterial("boltMat", bjsScene);
+    const boltMaterial = bjsScene.getMaterialByName("boltMat") || new BABYLON.PBRMaterial("boltMat", bjsScene);
     boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5");
     boltMaterial.metallic = 0.6;
     boltMaterial.roughness = 0.35;
-
+    
 
     // --- 4. Helper functions for Dimensions ---
     const createLabel = (text, anchorMesh) => {
@@ -171,6 +165,7 @@ function draw3dSpliceDiagram() {
         const textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
         textBlock.fontSize = 10;
+        label.isVisible = areDimensionsVisible; // Set visibility based on global state
         label.addControl(textBlock);
         label.linkWithMesh(anchorMesh);
         return label;
@@ -178,23 +173,30 @@ function draw3dSpliceDiagram() {
 
     const createDimensionLine = (name, value, start, end, offset) => {
         if (!value || value <= 0) return;
-        const lineMat = new BABYLON.StandardMaterial(`${name}_mat`, bjsScene);
+        // --- FIX: Use a single, consistent material for all dimension lines ---
+        let lineMat = bjsScene.getMaterialByName("dimLineMat");
+        if (!lineMat) {
+            lineMat = new BABYLON.StandardMaterial("dimLineMat", bjsScene);
+        }
         lineMat.emissiveColor = isDarkMode ? new BABYLON.Color3.White() : new BABYLON.Color3.Black();
         lineMat.disableLighting = true;
 
         const mainLinePoints = [start.add(offset), end.add(offset)];
         const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: mainLinePoints }, bjsScene);
         mainLine.material = lineMat;
+        mainLine.isVisible = areDimensionsVisible; // Set visibility based on global state
         dimensionElements.meshes.push(mainLine);
 
         const extLine1Points = [start, start.add(offset.scale(1.1))];
         const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: extLine1Points }, bjsScene);
         extLine1.material = lineMat;
+        extLine1.isVisible = areDimensionsVisible; // Set visibility based on global state
         dimensionElements.meshes.push(extLine1);
 
         const extLine2Points = [end, end.add(offset.scale(1.1))];
         const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: extLine2Points }, bjsScene);
         extLine2.material = lineMat;
+        extLine2.isVisible = areDimensionsVisible; // Set visibility based on global state
         dimensionElements.meshes.push(extLine2);
 
         const labelAnchor = new BABYLON.AbstractMesh(`${name}_label_anchor`, bjsScene);
@@ -398,8 +400,8 @@ function draw3dSpliceDiagram() {
 
 
     // --- 7. Final Camera Adjustment ---
-    if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
-        const allMeshes = bjsScene.meshes.filter(m => m.isVisible && m.getBoundingInfo() && !m.name.includes("dim"));
+    if (isFirstDraw && bjsScene.activeCamera && bjsScene.meshes.length > 0) {
+        const allMeshes = bjsScene.meshes.filter(m => m.getBoundingInfo() && !m.name.includes("dim"));
         if (allMeshes.length > 0) {
             let min = new BABYLON.Vector3(Infinity, Infinity, Infinity);
             let max = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
@@ -416,6 +418,7 @@ function draw3dSpliceDiagram() {
 
             bjsScene.activeCamera.setTarget(boundingInfo.boundingSphere.center);
             bjsScene.activeCamera.radius = boundingInfo.boundingSphere.radius * 2.8;
+            isFirstDraw = false; // Set flag to false after the first auto-fit
         }
     }
 }
@@ -578,6 +581,19 @@ function checkPlateCompression({ Ag, Fy, t, unbraced_length, k=0.65 }) {
         Fcr = (Fy / Fe) <= 2.25 ? (0.658**(Fy / Fe)) * Fy : 0.877 * Fe;
     }
     return { Rn: Fcr * Ag, phi: 0.90, omega: 1.67, Fcr, slenderness, r, Fe, Ag, Fy, k, unbraced_length };
+}
+
+function checkBoltSlip({ db, faying_surface_class, num_fillers = 0, num_slip_planes, hole_type = 'standard' }) {
+    // AISC 360-22 Section J3.8
+    const Tb = AISC_SPEC.getTb(db); // Minimum bolt pretension from Table J3.1
+    const mu = AISC_SPEC.getMu(faying_surface_class); // Mean slip coefficient from Table J3.5
+    const Du = 1.13; // Multiplier that reflects the ratio of mean installed bolt pretension to the specified minimum
+    const hf = (num_fillers === 1) ? 1.0 : (num_fillers > 1) ? 0.85 : 1.0; // Factor for fillers
+
+    // Nominal slip resistance per bolt
+    const Rn = mu * Du * hf * Tb * num_slip_planes;
+
+    return { Rn, phi: 1.0, omega: 1.5, mu, Du, hf, Tb, num_slip_planes }; // Factors for standard holes
 }
 
 function checkBoltTension(grade, db) {
@@ -750,7 +766,7 @@ function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt 
     return { T_req, Q, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
 }
 
-function getGeometryChecks({ db, s_col, s_row, le_long, le_tran, t_thinner }) { 
+function getGeometryChecks({ db, s_col, s_row, gage, le_long, le_tran, t_thinner }) { 
     // Implements checks from AISC J3.3, J3.4, and J3.5.
     // Assumes standard round holes.
     // Assumes sheared edges for minimum edge distance lookup (most conservative).
@@ -758,14 +774,15 @@ function getGeometryChecks({ db, s_col, s_row, le_long, le_tran, t_thinner }) {
     // For rolled edges or different hole types, Table J3.4 values would change.
     const tolerance = 1e-9; // Small tolerance for floating point comparisons
     const min_le = AISC_SPEC.minEdgeDistanceTable[String(db)] || 1.25 * db; // Use exact values from map where possible
-    const min_s = (8/3) * db; // AISC J3.4 minimum spacing is 2-2/3 * db
+    const min_s = (8 / 3) * db; // AISC J3.4 minimum spacing is 2-2/3 * db
     // From AISC J3.5
     const max_s = min(24 * t_thinner, 12.0);
     return {
         edge_dist_long: { actual: le_long, min: min_le, pass: le_long >= min_le - tolerance },
         edge_dist_tran: { actual: le_tran, min: min_le, pass: le_tran >= min_le - tolerance },
         spacing_col: { actual: s_col, min: min_s, pass: s_col >= min_s - tolerance },
-        spacing_row: { actual: s_row, min: min_s, pass: s_row >= min_s - tolerance },
+        spacing_row: { actual: s_row, min: min_s, pass: s_row >= min_s - tolerance }, // Spacing between rows on one side of the gage
+        spacing_gage: { actual: gage, min: min_s, pass: !gage || (gage >= min_s - tolerance) }, // Gage is also a spacing
         max_spacing_col: { actual: s_col, max: max_s, pass: s_col <= max_s + tolerance },
         max_spacing_row: { actual: s_row, max: max_s, pass: s_row <= max_s + tolerance }
     };
@@ -1008,9 +1025,12 @@ function performFlangeChecks(inputs, demands) {
             prying_details = { outer: prying_outer, inner: prying_inner };
         } else {
             // Single plate system - full bolt force
-            const b_pry_outer = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
-            const a_pry_outer = (inputs.H_fp - bolt_pattern_height_fp) / 2.0;
-            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry_outer, a: a_pry_outer, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_bolt /* ✅ Full bolt force */ });
+            // For a single plate on a W-shape flange:
+            // 'b' is from bolt centerline to the web face.
+            const b_pry = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
+            // 'a' is from bolt centerline to the plate edge.
+            const a_pry = (inputs.H_fp - inputs.g_gage_fp) / 2.0;
+            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry, a: a_pry, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_bolt /* ✅ Full bolt force */ });
             Q_total = prying_outer.Q;
             prying_details = { outer: prying_outer };
         }
@@ -1040,6 +1060,7 @@ function performFlangeChecks(inputs, demands) {
         db: inputs.D_fp, 
         s_col: inputs.S1_col_spacing_fp, 
         s_row: inputs.S2_row_spacing_fp, 
+        gage: inputs.g_gage_fp,
         le_long: le_long_fp, 
         le_tran: le_tran_fp, 
         t_thinner: t_thinner_flange
@@ -1072,7 +1093,20 @@ function performWebChecks(inputs, demands) {
     const num_web_bolts_per_side = inputs.Nc_wp * inputs.Nr_wp;
     if (num_web_bolts_per_side === 0) return { checks, geomChecks, inputs };
 
-    const { max_R: max_bolt_demand } = calculateWebSpliceEccentricity(V_load, Hw, inputs.gap, inputs.Nc_wp, inputs.Nr_wp, inputs.S4_col_spacing_wp, inputs.S5_row_spacing_wp, inputs.S6_end_dist_wp);
+    // --- Bolt Slip Check (if applicable) ---
+    if (inputs.connection_type === 'slip-critical') {
+        const single_bolt_slip_check = checkBoltSlip({
+            db: inputs.D_wp,
+            faying_surface_class: inputs.faying_surface_class,
+            num_slip_planes: inputs.num_web_plates,
+        });
+        const total_slip_capacity = single_bolt_slip_check.Rn * num_web_bolts_per_side;
+        // Demand is the resultant of V_load and Hw
+        checks['Web Bolt Slip'] = { demand: Math.sqrt(V_load**2 + Hw**2), check: { ...single_bolt_slip_check, Rn: total_slip_capacity }, details: { num_bolts: num_web_bolts_per_side } };
+    }
+
+    const eccentricity_results = calculateWebSpliceEccentricity(V_load, Hw, inputs.gap, inputs.Nc_wp, inputs.Nr_wp, inputs.S4_col_spacing_wp, inputs.S5_row_spacing_wp, inputs.S6_end_dist_wp);
+    const max_bolt_demand = eccentricity_results.max_R;
 
     const fastenerPatternLength_web = (inputs.Nr_wp > 1) ? ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) : 0;
     const single_web_bolt_shear_check = checkBoltShear({
@@ -1082,11 +1116,10 @@ function performWebChecks(inputs, demands) {
         numPlanes: inputs.num_web_plates, 
         fastenerPatternLength: fastenerPatternLength_web
     });
-    
     checks['Web Bolt Group Shear'] = {
         demand: max_bolt_demand, // Demand is the max force on the critical bolt
         check: single_web_bolt_shear_check, // Capacity is for a single bolt
-        details: { Rn_single: single_web_bolt_shear_check.Rn, V_load, Hw, max_R: max_bolt_demand }
+        details: { ...eccentricity_results, Rn_single: single_web_bolt_shear_check.Rn, V_load, Hw }
     };
 
     // --- Web Bolt Shear/Tension Interaction (AISC J3.9) ---
@@ -1127,6 +1160,21 @@ function performWebChecks(inputs, demands) {
         check: checkShearRupture(Anv_wp, inputs.web_plate_Fu),
         details: { H_wp: inputs.H_wp, Nr_wp: inputs.Nr_wp, hole_dia: hole_for_net_area_wp, t_total: total_t_wp }
     };
+
+    // --- Web Plate Flexural Checks ---
+    const { Mu_resisted_by_web } = demands;
+    if (Mu_resisted_by_web > 0) {
+        const Zx_wp = (total_t_wp * (inputs.H_wp ** 2)) / 4.0;
+        const Sx_wp = (total_t_wp * (inputs.H_wp ** 2)) / 6.0;
+        const Mn_yield_wp = inputs.web_plate_Fy * Zx_wp;
+        checks['Web Plate Flexural Yielding'] = {
+            demand: Mu_resisted_by_web,
+            check: { Rn: Mn_yield_wp, phi: 0.90, omega: 1.67, Fy: inputs.web_plate_Fy, Zx: Zx_wp }
+        };
+        const An_wp_flexure = (inputs.H_wp - inputs.Nr_wp * hole_for_net_area_wp) * total_t_wp;
+        const Mn_rupture_wp = inputs.web_plate_Fu * An_wp_flexure * Sx_wp / (inputs.H_wp * total_t_wp);
+        checks['Web Plate Flexural Rupture'] = { demand: Mu_resisted_by_web, check: { Rn: Mn_rupture_wp, phi: 0.75, omega: 2.00 } };
+    }
     
     // --- Corrected Web Plate Block Shear ---
     const total_t_wp_bs_calc = inputs.t_wp * inputs.num_web_plates; // Total thickness of web plates
@@ -1172,6 +1220,7 @@ function performWebChecks(inputs, demands) {
         db: inputs.D_wp, 
         s_col: inputs.S4_col_spacing_wp, 
         s_row: inputs.S5_row_spacing_wp, 
+        gage: 0, // No gage for web plates
         le_long: le_long_wp, 
         le_tran: le_tran_wp, 
         t_thinner: t_thinner_web
@@ -1188,6 +1237,13 @@ function performMemberChecks(inputs, demands) {
     const hole_for_net_area_fp = AISC_SPEC.getNominalHoleDiameter(inputs.D_fp, inputs.hole_calc_method, 'standard') + 1.0 / 16.0;
     const hole_for_net_area_wp = AISC_SPEC.getNominalHoleDiameter(inputs.D_wp, inputs.hole_calc_method, 'standard') + 1.0 / 16.0;
     const checks = {};
+
+    // --- Beam Flexural Yielding (Gross Section) ---
+    const Mn_yield = inputs.member_Fy * inputs.member_Zx;
+    checks['Beam Flexural Yielding'] = {
+        demand: M_load * 12, // kip-in
+        check: { Rn: Mn_yield, phi: 0.90, omega: 1.67, Fy: inputs.member_Fy, Zx: inputs.member_Zx }
+    };
 
     const Agv_beam_web = (inputs.member_d - 2 * inputs.member_tf) * inputs.member_tw;
     checks['Beam Web Shear Yielding'] = { 
@@ -1270,7 +1326,8 @@ function runSingleCheck(inputs) {
             const phi_b = 0.90; const omega_b = 1.67;
             M_load = (inputs.design_method === 'LRFD' ? phi_b * Mn_kipin : Mn_kipin / omega_b) / 12.0;
         }
-        const Aw = inputs.member_d * inputs.member_tw;
+        // Use the clear web area for shear capacity calculation, per AISC G2.1
+        const Aw = (inputs.member_d - 2 * inputs.member_tf) * inputs.member_tw;
         if (Aw > 0) {
             const Vn_kips = 0.6 * inputs.member_Fy * Aw;
             const phi_v_yield = 1.00; const omega_v_yield = 1.50;
@@ -1281,69 +1338,74 @@ function runSingleCheck(inputs) {
 }
 
 function optimizeFlangeBolts(inputs, optimizationLog) {
-    const MAX_TOTAL_BOLTS_PER_SIDE = 40;
+    const MAX_TOTAL_BOLTS_PER_SIDE = 48; // Increased limit
     const MAX_ROWS_OR_COLS = 10;
     const flangeBoltDiameters = inputs.optimize_diameter_check ? AISC_SPEC.standardBoltDiameters : [inputs.D_fp];
     let bestSolution = null;
+    let lastFailureReason = "No valid configuration found within limits.";
 
     for (const d_fp of flangeBoltDiameters) {
-        for (let nc_fp = 1; nc_fp <= MAX_ROWS_OR_COLS; nc_fp++) {
-            for (let nr_fp = 1; nr_fp <= MAX_ROWS_OR_COLS; nr_fp++) {
-                const num_bolts_per_side = nc_fp * (2 * nr_fp);
-                if (num_bolts_per_side > MAX_TOTAL_BOLTS_PER_SIDE) continue;
+        // Iterate by total number of bolts to find the minimum required first.
+        for (let total_bolts = 2; total_bolts <= MAX_TOTAL_BOLTS_PER_SIDE; total_bolts += 2) {
+            if (bestSolution && total_bolts >= bestSolution.num_bolts_per_side) break; // Found a solution, no need to check for more bolts.
 
-                // If we already have a solution with fewer bolts, don't bother checking this one.
-                if (bestSolution && num_bolts_per_side >= bestSolution.num_bolts_per_side) {
-                    continue;
-                }
+            for (let nc_fp = 1; nc_fp <= MAX_ROWS_OR_COLS; nc_fp++) {
+                if (total_bolts % (2 * nc_fp) === 0) {
+                    const nr_fp = total_bolts / (2 * nc_fp);
+                    if (nr_fp > MAX_ROWS_OR_COLS || nr_fp < 1) continue;
 
-                const currentInputs = { ...inputs, D_fp: d_fp, Nc_fp: nc_fp, Nr_fp: nr_fp };
-                const results = runSingleCheck(currentInputs);
+                    const currentInputs = { ...inputs, D_fp: d_fp, Nc_fp: nc_fp, Nr_fp: nr_fp };
+                    const results = runSingleCheck(currentInputs);
 
-                const allFlangeChecksPass = Object.entries(results.checks)
-                    .filter(([key]) => (key.includes('Flange Bolt') || key.includes('Plate')) && !key.startsWith('Beam'))
-                    .every(([key, data]) => {
-                        const capacity = inputs.design_method === 'LRFD' ? data.check.Rn * data.check.phi : data.check.Rn / data.check.omega;
-                        if (key === 'Plate Thickness for Prying') {
-                            return data.demand >= capacity;
-                        }
-                        return Math.abs(data.demand) <= capacity;
-                    });
+                    const failingStrengthCheck = Object.entries(results.checks)
+                        .filter(([key]) => (key.includes('Flange Bolt') || key.includes('Plate')) && !key.startsWith('Beam'))
+                        .find(([key, data]) => {
+                            const capacity = inputs.design_method === 'LRFD' ? data.check.Rn * data.check.phi : data.check.Rn / data.check.omega;
+                            const ratio = capacity > 0 ? Math.abs(data.demand) / capacity : Infinity;
+                            return ratio > 1.0;
+                        });
 
-                const flangeGeomOk = Object.values(results.geomChecks['Flange Bolts']).every(check => check.pass);
+                    const failingGeomCheck = Object.entries(results.geomChecks['Flange Bolts'] || {})
+                        .find(([key, data]) => !data.pass);
 
-                if (allFlangeChecksPass && flangeGeomOk) {
-                    // This is the best solution found so far. Store it.
-                    bestSolution = {
-                        inputs: currentInputs,
-                        num_bolts_per_side: num_bolts_per_side
-                    };
+                    if (!failingStrengthCheck && !failingGeomCheck) {
+                        bestSolution = {
+                            inputs: currentInputs,
+                            num_bolts_per_side: total_bolts
+                        };
+                        // Break from the nc_fp loop to move to the next total_bolts count (or exit).
+                        break; 
+                    } else {
+                        // Log the last failure reason for this bolt count.
+                        if (failingStrengthCheck) lastFailureReason = `Strength check failed: ${failingStrengthCheck[0]}`;
+                        else if (failingGeomCheck) lastFailureReason = `Geometry check failed: ${failingGeomCheck[0]}`;
+                    }
                 }
             }
         }
+        if (bestSolution) break; // Found a solution with this diameter, no need to check smaller diameters.
     }
 
     if (bestSolution) {
-        const { Nc_fp, Nr_fp, D_fp } = bestSolution.inputs;
+        const { Nc_fp, Nr_fp, D_fp } = bestSolution.inputs; // These are undefined here.
         optimizationLog.push(`Flange splice optimized to ${Nc_fp} column(s) and ${Nr_fp} row(s) of ${D_fp}" bolts (${bestSolution.num_bolts_per_side} bolts per side).`);
         return bestSolution.inputs;
     }
 
-    optimizationLog.push(`Flange splice optimization failed to converge.`);
+    optimizationLog.push(`Flange splice optimization failed. Last failure reason: ${lastFailureReason}`);
     return null;
 }
 
 function optimizeWebBolts(inputs, optimizationLog) {
-    const MAX_TOTAL_BOLTS_PER_SIDE = 40;
+    const MAX_TOTAL_BOLTS_PER_SIDE = 48; // Increased limit
     const webBoltDiameters = inputs.optimize_diameter_check ? AISC_SPEC.standardBoltDiameters : [inputs.D_wp];
     let bestSolution = null;
+    let lastFailureReason = "No valid configuration found within limits.";
 
     for (const d_wp of webBoltDiameters) {
         for (let total_bolts = 1; total_bolts <= MAX_TOTAL_BOLTS_PER_SIDE; total_bolts++) {
              // If we already found a solution with fewer bolts, no need to continue this loop.
-            if(bestSolution && total_bolts >= bestSolution.num_bolts_per_side) {
-                continue;
-            }
+            if (bestSolution && total_bolts >= bestSolution.num_bolts_per_side) break;
 
             for (let nr_wp = 1; nr_wp <= total_bolts; nr_wp++) {
                 if (total_bolts % nr_wp === 0) {
@@ -1351,27 +1413,35 @@ function optimizeWebBolts(inputs, optimizationLog) {
                     const currentInputs = { ...inputs, D_wp: d_wp, Nc_wp: nc_wp, Nr_wp: nr_wp };
                     const results = runSingleCheck(currentInputs);
 
-                    const allWebChecksPass = Object.entries(results.checks)
+                    const failingStrengthCheck = Object.entries(results.checks)
                         .filter(([key]) => key.includes('Web') && !key.startsWith('Beam'))
-                        .every(([key, data]) => {
+                        .find(([key, data]) => {
                             const capacity = inputs.design_method === 'LRFD' ? data.check.Rn * data.check.phi : data.check.Rn / data.check.omega;
-                            return Math.abs(data.demand) <= capacity;
+                            const ratio = capacity > 0 ? Math.abs(data.demand) / capacity : Infinity;
+                            return ratio > 1.0;
                         });
 
-                    const webGeomOk = Object.values(results.geomChecks['Web Bolts']).every(check => check.pass);
+                    const failingGeomCheck = Object.entries(results.geomChecks['Web Bolts'] || {})
+                        .find(([key, data]) => !data.pass);
 
-                    if (allWebChecksPass && webGeomOk) {
+                    if (!failingStrengthCheck && !failingGeomCheck) {
                          bestSolution = {
                             inputs: currentInputs,
                             num_bolts_per_side: total_bolts
                         };
                         // Break the inner loop since we found the best solution for this total_bolts count
                         break;
+                    } else {
+                        if (failingStrengthCheck) lastFailureReason = `Strength check failed: ${failingStrengthCheck[0]}`;
+                        else if (failingGeomCheck) lastFailureReason = `Geometry check failed: ${failingGeomCheck[0]}`;
                     }
                 }
             }
+            if (bestSolution && total_bolts === bestSolution.num_bolts_per_side) break;
         }
+        if (bestSolution) break; // Found a solution with this diameter.
     }
+
 
     if (bestSolution) {
         const { Nc_wp, Nr_wp, D_wp } = bestSolution.inputs;
@@ -1379,7 +1449,7 @@ function optimizeWebBolts(inputs, optimizationLog) {
         return bestSolution.inputs;
     }
 
-    optimizationLog.push(`Web splice optimization failed to converge.`);
+    optimizationLog.push(`Web splice optimization failed. Last failure reason: ${lastFailureReason}`);
     return null;
 }
 
@@ -1505,14 +1575,24 @@ const baseBreakdownGenerators = {
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
     },
-    'Web Bolt Group Shear': ({ check, details, demand }, common) => common.format_list([
-        `<u>Demand on Critical Bolt (Elastic Method)</u>`,
-        `Max Resultant Force (R<sub>u,max</sub>) = <b>${common.fmt(details.max_R)} kips</b>`,
-        `<u>Capacity of Single Bolt</u>`,
-        `Nominal Shear Strength (R<sub>n</sub>) = F<sub>nv</sub> &times; A<sub>b</sub> &times; n<sub>planes</sub>`,
-        `R<sub>n</sub> = ${common.fmt(check.Fnv, 1)} &times; ${common.fmt(check.Ab, 3)} &times; ${check.num_planes} = <b>${common.fmt(check.Rn)} kips</b>`,
-        `Design Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
-    ]),
+    'Web Bolt Group Shear': ({ check, details }, common) => {
+        const { eccentricity, M_ecc, Ip, f_vy_direct, f_vx_direct, f_v_moment, f_h_moment, max_R, num_bolts } = details;
+        const R_h = f_vx_direct + f_h_moment;
+        const R_v = f_vy_direct + f_v_moment;
+        return common.format_list([
+            `<u>Demand on Critical Bolt (Elastic Method) per AISC Manual Part 7</u>`,
+            `Eccentricity (e) = <b>${common.fmt(eccentricity)} in</b>`,
+            `Moment on Bolt Group (M) = V &times; e = ${common.fmt(details.V_load)} &times; ${common.fmt(eccentricity)} = <b>${common.fmt(M_ecc)} kip-in</b>`,
+            `Polar Moment of Inertia (I<sub>p</sub>) = &Sigma;(x² + y²) = <b>${common.fmt(Ip)} in²</b>`,
+            `<b>Direct Shear Components:</b>`,
+            `&nbsp;&nbsp;Vertical (r<sub>v</sub>) = V / n = ${common.fmt(details.V_load)} / ${num_bolts} = ${common.fmt(f_vy_direct)} kips`,
+            `&nbsp;&nbsp;Horizontal (r<sub>h</sub>) = H / n = ${common.fmt(details.Hw)} / ${num_bolts} = ${common.fmt(f_vx_direct)} kips`,
+            `<b>Moment-Induced Shear Components on Critical Bolt:</b>`,
+            `&nbsp;&nbsp;Vertical (r<sub>mv</sub>) = M&middot;x / I<sub>p</sub> = ${common.fmt(M_ecc)} &times; x<sub>crit</sub> / ${common.fmt(Ip)} = ${common.fmt(f_v_moment)} kips`,
+            `&nbsp;&nbsp;Horizontal (r<sub>mh</sub>) = M&middot;y / I<sub>p</sub> = ${common.fmt(M_ecc)} &times; y<sub>crit</sub> / ${common.fmt(Ip)} = ${common.fmt(f_h_moment)} kips`,
+            `<b>Resultant Force (R<sub>u</sub>):</b> &radic;[ (r<sub>h</sub>+r<sub>mh</sub>)² + (r<sub>v</sub>+r<sub>mv</sub>)² ] = &radic;[ (${common.fmt(R_h)})² + (${common.fmt(R_v)})² ] = <b>${common.fmt(max_R)} kips</b>`,
+        ]);
+    },
     'Shear Yield': ({ check }, common) => common.format_list([
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.2(a)</u>`,
         `R<sub>n</sub> = 0.6 &times; F<sub>y</sub> &times; A<sub>gv</sub>`,
@@ -1560,6 +1640,15 @@ const baseBreakdownGenerators = {
             `R<sub>n</sub> = ${common.fmt(check.Fnt, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
             `<u>Design Capacity</u>`,
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
+        ]);
+    },
+    'Beam Flexural Yielding': ({ check }, common) => {
+        return common.format_list([
+            `<u>Flexural Yielding Check per AISC F2.1</u>`,
+            `Nominal Moment Strength (M<sub>n</sub>) = F<sub>y</sub> &times; Z<sub>x</sub>`,
+            `M<sub>n</sub> = ${common.fmt(check.Fy)} ksi &times; ${common.fmt(check.Zx)} in³ = <b>${common.fmt(check.Rn)} kip-in</b>`,
+            `<u>Design Capacity</u>`,
+            `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kip-in</b>`
         ]);
     },
     'Beam Flexural Rupture': ({ check }, common) => {
@@ -1638,8 +1727,10 @@ function getBreakdownGenerator(name) {
     if (name.includes('Bolt Bearing')) return baseBreakdownGenerators['Bolt Bearing'];
     if (name.includes('Web Bolt Group Shear')) return baseBreakdownGenerators['Web Bolt Group Shear'];
     if (name.includes('Shear Yield')) return baseBreakdownGenerators['Shear Yield'];
+    if (name.includes('Web Bolt Slip')) return baseBreakdownGenerators['Web Bolt Slip'];
     if (name.includes('Shear Rupture')) return baseBreakdownGenerators['Shear Rupture'];
     if (name.includes('Flexural Rupture')) return baseBreakdownGenerators['Beam Flexural Rupture'];
+    if (name.includes('Flexural Yielding')) return baseBreakdownGenerators['Beam Flexural Yielding'];
     if (name.includes('Web Bolt Tension with Prying')) return baseBreakdownGenerators['Web Bolt Tension with Prying'];
     if (name.includes('Beam Flange Tensile Rupture')) return baseBreakdownGenerators['NSF']; // Reuse the plate NSF breakdown
     if (name.includes('Plate Thickness for Prying')) return baseBreakdownGenerators['Plate Thickness for Prying'];
@@ -1763,7 +1854,7 @@ function createReportTable(config) {
 
     let tableHtml = `
         <div id="${id}" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center mb-2">
                 <h3 class="report-header">${caption}</h3>
                 <button data-copy-target-id="${id}" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
@@ -1891,7 +1982,7 @@ function renderResults(results, rawInputs) {
     let optimizationHtml = '';
 	if (results.optimizationLog && results.optimizationLog.length > 0) {
 		optimizationHtml = `<div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 my-4 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-600" id="optimization-log-section">
-			<p class="font-bold">Optimization Log:</p>
+			<p class="font-bold">Optimization Log</p>
 			<ul class="list-disc list-inside mt-2 text-sm">${results.optimizationLog.map(log => `<li>${log}</li>`).join('')}</ul>
 		</div>`;
 	}
@@ -1909,7 +2000,7 @@ function renderResults(results, rawInputs) {
     addGeomRow('Flange Bolt Edge Distance (Tran.)', geomChecks['Flange Bolts'].edge_dist_tran);
     addGeomRow('Flange Bolt Edge Distance (Gap Side)', geomChecks['Flange Bolts'].edge_dist_gap);
     addGeomRow('Flange Bolt Spacing (Pitch)', geomChecks['Flange Bolts'].spacing_col);
-    addGeomRow('Flange Bolt Spacing (Gage)', geomChecks['Flange Bolts'].spacing_row);
+    addGeomRow('Flange Bolt Spacing (Gage)', geomChecks['Flange Bolts'].spacing_gage);
     addGeomRow('Flange Bolt Spacing (Pitch)', geomChecks['Flange Bolts'].max_spacing_col, true);
     addGeomRow('Flange Bolt Spacing (Gage)', geomChecks['Flange Bolts'].max_spacing_row, true);
     addGeomRow('Web Bolt Edge Distance (Long.)', geomChecks['Web Bolts'].edge_dist_long);
@@ -1962,8 +2053,8 @@ function renderResults(results, rawInputs) {
         status = ratio <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
 
         let demand_unit = 'kips', capacity_unit = 'kips';
-        if (name === 'Plate Thickness for Prying') { demand_unit = 'in'; capacity_unit = 'in (req)'; }
-        if (name === 'Beam Flexural Rupture') { display_demand /= 12.0; display_capacity /= 12.0; demand_unit = 'kip-ft'; capacity_unit = 'kip-ft'; }
+        if (name === 'Plate Thickness for Prying') { demand_unit = 'in (req)'; capacity_unit = 'in'; }
+        if (name.includes('Flexural')) { display_demand /= 12.0; display_capacity /= 12.0; demand_unit = 'kip-ft'; capacity_unit = 'kip-ft'; }
 
         const breakdownHtml = generateSpliceBreakdownHtml(name, data, inputs);
 
@@ -1995,6 +2086,9 @@ function renderResults(results, rawInputs) {
 
     const webPlateChecks = [
         'Web Bolt Group Shear',
+        'Web Bolt Slip',
+        'Web Plate Flexural Yielding',
+        'Web Plate Flexural Rupture',
         'Web Bolt Tension with Prying',
         'Web Plate Gross Shear Yield',
         'Web Plate Net Shear Rupture',
@@ -2005,7 +2099,9 @@ function renderResults(results, rawInputs) {
     const memberChecks = [
         'Beam Flange Tensile Rupture',
         'Beam Flange Block Shear',
+        'Beam Flange Bolt Bearing',
         'Beam Web Bolt Bearing',
+        'Beam Flexural Yielding',
         'Beam Flexural Rupture',
         'Beam Web Shear Yielding',
         'Beam Web Shear Rupture',
@@ -2083,11 +2179,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleDimensionsBtn = document.getElementById('toggle-dimensions-btn');
     if (toggleDimensionsBtn) {
         toggleDimensionsBtn.addEventListener('click', () => {
-            if (dimensionElements && dimensionElements.meshes.length > 0) {
-                const isVisible = !dimensionElements.meshes[0].isVisible;
-                dimensionElements.meshes.forEach(mesh => { if(mesh) mesh.isVisible = isVisible; });
-                dimensionElements.labels.forEach(label => { if(label) label.isVisible = isVisible; });
-                toggleDimensionsBtn.textContent = isVisible ? 'Hide Dimensions' : 'Show Dimensions';
+            if (dimensionElements) {
+                areDimensionsVisible = !areDimensionsVisible;
+                // FIX: Toggle visibility for both meshes (lines) and GUI labels (text).
+                dimensionElements.meshes.forEach(mesh => { if (mesh) mesh.isVisible = areDimensionsVisible; });
+                dimensionElements.labels.forEach(label => { if(label) label.isVisible = areDimensionsVisible; });
+                toggleDimensionsBtn.textContent = areDimensionsVisible ? 'Hide Dimensions' : 'Show Dimensions';
             }
         });
     }

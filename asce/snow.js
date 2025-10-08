@@ -333,11 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
             buttonId: 'run-snow-calculation-btn',
         });
 
-        // --- MODIFIED LINE ---
-        // Load the comprehensive project data.
-        // The gatherInputsFromIds function will automatically handle the new fields.
-        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
-
         // Attach all event listeners
         initializeSharedUI();
         document.getElementById('run-snow-calculation-btn').addEventListener('click', handleRunSnowCalculation);
@@ -351,7 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
             el?.addEventListener('change', () => saveInputsToLocalStorage('snow-calculator-inputs', gatherInputsFromIds(snowInputIds)));
         });
 
+        // Load snow-specific settings first, then override with shared project data.
         loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds, handleRunSnowCalculation);
+        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
+
     }, 50); // A small delay to ensure DOM is ready after injection
 });
 
@@ -429,7 +427,7 @@ function renderSnowDesignParameters(inputs, intermediate, units) {
     return `
         <div id="snow-design-parameters-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">A. Design Parameters</h3>
+                <h3 class="report-header flex-grow">Design Parameters</h3>
                 <button data-copy-target-id="snow-design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -472,13 +470,13 @@ function renderSnowCalculationBreakdown(inputs, intermediate, is_nycbc_min_gover
     return `
         <div id="snow-calc-breakdown-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">B. Detailed Calculation Breakdown</h3>
+                <h3 class="report-header flex-grow">Detailed Calculation Breakdown</h3>
                 <button data-copy-target-id="snow-calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <div class="calc-breakdown mt-0">
-                    <h4 class="font-semibold uppercase text-base">a) Balanced Snow Load Calculation</h4>
+                <div class="calc-breakdown mt-0 border-none shadow-none p-0">
+                    <h4 class="font-semibold uppercase text-base">Balanced Snow Load Calculation</h4>
                     <ul class="list-disc list-inside space-y-2 mt-2">
                         <li><strong>Factors:</strong> I<sub>s</sub> = ${safeIs.toFixed(2)}, C<sub>e</sub> = ${safeCe.toFixed(2)}, C<sub>t</sub> = ${safeCt.toFixed(2)}, C<sub>s</sub> = ${safeCs.toFixed(3)}</li>
                         <li><strong>Flat Roof Snow Load (p<sub>f</sub>):</strong>
@@ -504,7 +502,7 @@ function renderSnowDiagrams(inputs, unbalanced, drift, units) {
     return `
         <div id="snow-diagrams-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">C. Load Case Diagrams</h3>
+                <h3 class="report-header flex-grow">Load Case Diagrams</h3>
                 <button data-copy-target-id="snow-diagrams-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -594,7 +592,7 @@ function renderSnowLoadSummary(inputs, results, unbalanced, drift, sliding, unit
     return `
         <div id="snow-summary-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">D. Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
+                <h3 class="report-header flex-grow">Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
                 <button data-copy-target-id="snow-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -611,7 +609,7 @@ function renderSnowPartialLoading(partial, units) {
     return `
         <div id="snow-partial-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">E. Partial Loading (Continuous Beams)</h3>
+                <h3 class="report-header flex-grow">Partial Loading (Continuous Beams)</h3>
                 <button data-copy-target-id="snow-partial-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">

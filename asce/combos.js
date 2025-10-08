@@ -439,7 +439,9 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
     });
 
     let summaryHtml = `<div class="mt-8 report-section-copyable">
-        <h3 class="report-header">B. Governing Load Combinations Summary</h3>`;
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header">Governing Load Combinations Summary</h3>
+        </div>`;
 
     summaryHtml += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">`;
 
@@ -484,10 +486,10 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
 
     summaryHtml += `<div id="combo-overall-summary" class="mt-8 report-section-copyable">
             <div class="flex justify-between items-center">
-                <h3 class="report-header flex-grow">C. Overall Governing ${design_method} Loads</h3>
+                <h3 class="report-header flex-grow">Overall Governing ${design_method} Loads</h3>
                 <button data-copy-target-id="combo-overall-summary" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden" data-copy-ignore>Copy Summary</button>
             </div>
-            <h4 class="font-semibold mt-4">1. FINAL GOVERNING ${design_method} LOADS</h4>
+            <h4 class="font-semibold mt-4">FINAL GOVERNING ${design_method} LOADS</h4>
             <ul class="list-disc list-inside ml-4 space-y-1">
                 <li><strong>Overall Max Pressure:</strong> ${overallMax.value.toFixed(2)} ${p_unit}
                     <div class="pl-6 text-sm text-gray-500 dark:text-gray-400">From: ${overallMax.title.replace(' Analysis', '')}: ${overallMax.combo}</div>
@@ -584,7 +586,7 @@ function renderComboResults(fullResults) {
 
     html += `<div id="combo-inputs-section" class="report-section-copyable">
                 <div class="flex justify-between items-center">
-                    <h3 class="report-header">A. Input Loads</h3>
+                    <h3 class="report-header">Input Loads</h3>
                     <button data-copy-target-id="combo-inputs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>
                 <ul class="list-disc list-inside space-y-1">${generateInputLoadSummary(inputs, p_unit)}</ul>
@@ -593,7 +595,7 @@ function renderComboResults(fullResults) {
     // --- Base Load Combinations (No Wind/Snow) ---
     html += `<div id="combo-base-section" class="report-section-copyable mt-6">
              <div class="flex justify-between items-center">
-                <h3 class="report-header flex-grow">B. Base Load Combinations</h3>
+                <h3 class="report-header flex-grow">Base Load Combinations</h3>
                 <button data-copy-target-id="combo-base-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
              </div>
              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">These combinations are constant across all scenarios.</p>
@@ -612,7 +614,7 @@ function renderComboResults(fullResults) {
     // --- Scenario-Specific Combinations ---
     html += `<div id="combo-scenario-section" class="report-section-copyable mt-6">
                 <div class="flex justify-between items-center">
-                    <h3 class="report-header flex-grow">C. Scenario-Specific Combinations</h3>
+                    <h3 class="report-header flex-grow">Scenario-Specific Combinations</h3>
                     <button data-copy-target-id="combo-scenario-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>`;
 

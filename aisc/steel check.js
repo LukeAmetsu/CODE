@@ -1544,8 +1544,8 @@ function renderSteelInputSummary(inputs) {
 
     return `
     <div id="input-summary-section" class="report-section-copyable">
-        <div class="flex justify-between items-center">
-            <h3 class="report-header">1. Input Summary</h3>
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header">Input Summary</h3>
             <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1610,7 +1610,7 @@ function renderSteelPropertySummary(properties) {
     return `
     <div id="property-summary-section" class="report-section-copyable mt-6">
         <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">2. Section Properties</h3>
+            <h3 class="report-header">Section Properties</h3>
             <button data-copy-target-id="property-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1695,8 +1695,8 @@ function renderSteelStrengthChecks(results) {
 
     return `
         <div id="strength-checks-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center">
-                <h3 class="report-header">3. Strength & Serviceability Checks (${inputs.design_method})</h3>
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="report-header">Strength & Serviceability Checks (${inputs.design_method})</h3>
                 <button data-copy-target-id="strength-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">

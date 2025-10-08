@@ -106,8 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
         setTimeout(() => {
-            // Load only the wind-specific inputs saved from this page
-            loadInputsFromLocalStorage('wind-calculator-inputs', windInputIds, null, '1.0');
+            // First, load any wind-specific inputs.
+            loadInputsFromLocalStorage('wind-calculator-inputs', windInputIds);
+            // Then, load the shared project data, which will override any geometric properties.
+            loadInputsFromLocalStorage('buildingProjectData', windInputIds);
         }, 100);
     }
 
@@ -1312,8 +1314,8 @@ function renderDesignParameters(inputs, intermediate, units) {
     const { v_unit, h_unit, p_unit } = units; // p_unit was missing
     
     let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header">1. Design Parameters</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="report-header">Design Parameters</h3>
                     <button data-copy-target-id="design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
@@ -1346,8 +1348,8 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
     const { h_unit, p_unit } = units; // This was missing
 
     let html = `<div id="calc-breakdown-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header">2. Detailed Calculation Breakdown</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="report-header">Detailed Calculation Breakdown</h3>
                     <button data-copy-target-id="calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
@@ -1453,8 +1455,8 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
     const { h_unit } = units; // This was missing
     let html = `<div id="mwfrs-section" class="mt-6 report-section-copyable">
-        <div class="flex justify-between items-center">
-            <h3 class="report-header flex-grow">3. MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header flex-grow">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
             <button data-copy-target-id="mwfrs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1505,8 +1507,8 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
 
     let html = `<div id="height-varying-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">4. Height-Varying Windward Wall Pressures</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="report-header flex-grow">Height-Varying Windward Wall Pressures</h3>
                         <button data-copy-target-id="height-varying-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1622,8 +1624,8 @@ function renderTorsionalCase(torsional_case, inputs, units) {
         }
 
     return `<div id="torsional-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">5. Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="report-header flex-grow">Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
                         <button data-copy-target-id="torsional-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1649,8 +1651,8 @@ function renderCandCSection(candc, inputs, units) {
     if (!candc || !candc.applicable) return ''; // This was missing
     const { is_imp, p_unit } = units;
     let html = `<div id="candc-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">6. Components & Cladding (C&C) Pressures</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="report-header flex-grow">Components & Cladding (C&C) Pressures</h3>
                         <button data-copy-target-id="candc-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1713,8 +1715,8 @@ function renderDesignParameters(inputs, intermediate, units) {
     const { v_unit, h_unit, p_unit } = units; // p_unit was missing
     
     let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold uppercase">1. Design Parameters</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="report-header">Design Parameters</h3>
                     <button data-copy-target-id="design-parameters-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
@@ -1747,8 +1749,8 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
     const { h_unit, p_unit } = units; // This was missing
 
     let html = `<div id="calc-breakdown-section" class="mt-6">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-bold uppercase">2. Detailed Calculation Breakdown</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="report-header">Detailed Calculation Breakdown</h3>
                     <button data-copy-target-id="calc-breakdown-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
@@ -1851,9 +1853,9 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
  */
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
     const { h_unit } = units; // This was missing
-    let html = `<div id="mwfrs-section" class="mt-6">
-        <div class="flex justify-between items-center text-center pt-4">
-            <h3 class="text-xl font-bold">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
+    let html = `<div id="mwfrs-section" class="mt-6 report-section-copyable">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header flex-grow">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
             <button data-copy-target-id="mwfrs-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1906,8 +1908,8 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
 
     let html = `<div id="height-varying-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold text-center flex-grow">Height-Varying Windward Wall Pressures</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="report-header flex-grow">Height-Varying Windward Wall Pressures</h3>
                         <button data-copy-target-id="height-varying-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1957,8 +1959,8 @@ function renderTorsionalCase(torsional_case, inputs, units) {
         }
 
     return `<div id="torsional-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold text-center flex-grow">Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="report-header flex-grow">Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
                         <button data-copy-target-id="torsional-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1984,8 +1986,8 @@ function renderCandCSection(candc, inputs, units) {
     if (!candc || !candc.applicable) return ''; // This was missing
     const { is_imp, p_unit } = units;
     let html = `<div id="candc-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold text-center flex-grow">Components & Cladding (C&C) Pressures</h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="report-header flex-grow">Components & Cladding (C&C) Pressures</h3>
                         <button data-copy-target-id="candc-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                     </div>
                     <div class="copy-content">

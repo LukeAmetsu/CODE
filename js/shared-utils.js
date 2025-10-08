@@ -316,6 +316,12 @@ function showFeedback(message, isError = false, feedbackElId = 'feedback-message
 function getAllCssStyles() {
     let cssText = "";
     for (const styleSheet of document.styleSheets) {
+        // Skip external stylesheets (like Google Fonts) to avoid CORS security errors.
+        // We can only access cssRules for stylesheets on the same domain.
+        if (styleSheet.href) {
+            continue;
+        }
+
         try {
             if (styleSheet.cssRules) {
                 for (const rule of styleSheet.cssRules) {
@@ -470,11 +476,6 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
         showFeedback('Preparing report for copying...', false, feedbackElId);
         const clone = container.cloneNode(true);
 
-        // --- Prepare Header ---
-        const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-        const reportDate = new Date().toLocaleDateString();
-        const headerHtml = `<h1>${reportTitle}</h1><p style="text-align: center;">Date: ${reportDate}</p><hr>`;
-
         // Prepare the clone for copying: remove interactive elements, expand details, and remove empty rows.
         clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
         clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
@@ -508,10 +509,9 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
 
         showFeedback('Copying to clipboard...', false, feedbackElId);
 
-        // Generate final HTML and Text content
-        const bodyContent = headerHtml + clone.innerHTML;
-        const allCss = getAllCssStyles();
-        const htmlContent = createWordCompatibleHTML(bodyContent, reportTitle, allCss);
+        // Generate final HTML and Text content, consistent with handleDownloadWord
+        const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
+        const htmlContent = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Use the simpler HTML structure
         const plainTextContent = convertElementToPlainText(clone);
 
         const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
@@ -870,13 +870,22 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
             return;
         }
 
+        // --- Data Mapping for Shared Project Data ---
+        // This allows 'buildingProjectData' with generic keys (e.g., 'risk_category')
+        // to populate specific calculator inputs (e.g., 'wind_risk_category').
+        const isProjectData = storageKey === 'buildingProjectData';
+        const pagePrefix = document.body.id.split('-')[0] + '_'; // e.g., 'wind_', 'snow_'
+
         inputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el && inputs[id] !== undefined) {
+            // Determine the key to look for in the loaded data object.
+            const dataKey = isProjectData ? id.replace(pagePrefix, '') : id;
+
+            const el = document.getElementById(id); // The element on the current page
+            if (el && inputs[dataKey] !== undefined) {
                 if (el.type === 'checkbox') {
-                    el.checked = !!inputs[id];
+                    el.checked = !!inputs[dataKey];
                 } else {
-                    el.value = inputs[id];
+                    el.value = inputs[dataKey];
                 }
                 el.dispatchEvent(new Event('change', { bubbles: true }));
                 el.dispatchEvent(new Event('input', { bubbles: true }));
