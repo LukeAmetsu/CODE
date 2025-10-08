@@ -13,9 +13,12 @@ const diagramInputIds = [
     'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp'
 ];
 
+// --- Master Bolt Cache ---
+let masterBolts = {};
 
 /**
- * Creates a detailed bolt mesh with a hexagonal head, nut, and washers, positioned and scaled correctly.
+ * Creates or clones a detailed bolt mesh. A master mesh is created for each unique bolt size (diameter/thickness)
+ * and subsequent requests for the same size will return a lightweight clone for performance.
  * @param {string} name - The base name for the bolt mesh.
  * @param {object} options - Bolt dimensions and position.
  * @param {number} options.diameter - The diameter of the bolt shank.
@@ -28,42 +31,48 @@ function createBoltMesh(name, options, scene) {
     const { diameter, thickness, position } = options;
     if (!diameter || !thickness || isNaN(diameter) || isNaN(thickness)) return null;
 
-    // Dimensions
-    const headDiameter = diameter * 1.8;
-    const headHeight = diameter * 0.65;
-    const washerDiameter = diameter * 2.2;
-    const washerHeight = diameter * 0.15;
-    // Shank should be long enough to go through material, washers, and engage the nut
-    const shankLength = thickness + 2 * washerHeight + headHeight;
+    const masterBoltKey = `d${diameter.toFixed(3)}-t${thickness.toFixed(3)}`;
+    let masterBolt = masterBolts[masterBoltKey];
 
-    // Create parts at the origin before merging and moving
-    const shank = BABYLON.MeshBuilder.CreateCylinder(`${name}_shank`, { diameter, height: shankLength }, scene);
+    if (!masterBolt) {
+        // --- Create the master bolt if it doesn't exist ---
+        const headDiameter = diameter * 1.8;
+        const headHeight = diameter * 0.65;
+        const washerDiameter = diameter * 2.2;
+        const washerHeight = diameter * 0.15;
+        const shankLength = thickness + 2 * washerHeight + headHeight;
 
-    // Position washer ON TOP of the clamped material surface
-    const washer1 = BABYLON.MeshBuilder.CreateCylinder(`${name}_washer1`, { diameter: washerDiameter, height: washerHeight }, scene);
-    washer1.position.y = thickness / 2 + washerHeight / 2;
+        // Create parts at the origin
+        const shank = BABYLON.MeshBuilder.CreateCylinder("master_shank", { diameter, height: shankLength }, scene);
+        const washer1 = BABYLON.MeshBuilder.CreateCylinder("master_washer1", { diameter: washerDiameter, height: washerHeight }, scene);
+        washer1.position.y = thickness / 2 + washerHeight / 2;
+        const head = BABYLON.MeshBuilder.CreateCylinder("master_head", { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
+        head.position.y = thickness / 2 + washerHeight + headHeight / 2;
+        head.rotation.y = Math.PI / 6;
+        const washer2 = BABYLON.MeshBuilder.CreateCylinder("master_washer2", { diameter: washerDiameter, height: washerHeight }, scene);
+        washer2.position.y = -thickness / 2 - washerHeight / 2;
+        const nut = BABYLON.MeshBuilder.CreateCylinder("master_nut", { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
+        nut.position.y = -thickness / 2 - washerHeight - headHeight / 2;
+        nut.rotation.y = Math.PI / 6;
 
-    // Position head ON TOP of the washer
-    const head = BABYLON.MeshBuilder.CreateCylinder(`${name}_head`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
-    head.position.y = thickness / 2 + washerHeight + headHeight / 2;
-    head.rotation.y = Math.PI / 6;
-
-    // Position second washer BELOW the clamped material surface
-    const washer2 = BABYLON.MeshBuilder.CreateCylinder(`${name}_washer2`, { diameter: washerDiameter, height: washerHeight }, scene);
-    washer2.position.y = -thickness / 2 - washerHeight / 2;
-
-    // Position nut BELOW the second washer
-    const nut = BABYLON.MeshBuilder.CreateCylinder(`${name}_nut`, { diameter: headDiameter, height: headHeight, tessellation: 6 }, scene);
-    nut.position.y = -thickness / 2 - washerHeight - headHeight / 2;
-    nut.rotation.y = Math.PI / 6;
-
-    // Merge all parts into a single mesh
-    const boltMesh = BABYLON.Mesh.MergeMeshes([shank, head, nut, washer1, washer2], true, false, null, false, true);
-    if (boltMesh) {
-        boltMesh.name = name;
-        boltMesh.position = position; // Move the entire assembly to its final position
+        masterBolt = BABYLON.Mesh.MergeMeshes([shank, head, nut, washer1, washer2], true, false, null, false, true);
+        if (masterBolt) {
+            masterBolt.name = masterBoltKey;
+            masterBolt.isVisible = false; // Hide the master mesh
+            masterBolts[masterBoltKey] = masterBolt; // Cache it
+        } else {
+            return null; // Failed to create master bolt
+        }
     }
-    return boltMesh;
+
+    // --- Clone the master bolt to create the new instance ---
+    const boltInstance = masterBolt.clone(name, null, true);
+    if (boltInstance) {
+        boltInstance.position = position; // Move the instance to its final position
+        boltInstance.isVisible = true; // Make the clone visible
+    }
+
+    return boltInstance;
 }
 
 
@@ -110,14 +119,17 @@ function draw3dSpliceDiagram() {
 
     // --- Robustly Clear Previous Scene Elements ---
     // FIX: Only dispose of meshes, not materials, lights, or the environment texture.
-    bjsScene.meshes.forEach(mesh => mesh.dispose());
-
+    // Iterate backwards to safely dispose of meshes while modifying the array.
+    for (let i = bjsScene.meshes.length - 1; i >= 0; i--) {
+        bjsScene.meshes[i].dispose();
+    }
     if (bjsGuiTexture) {
         bjsGuiTexture.getChildren().forEach(control => control.dispose());
     }
     // Clear the dimension elements tracker
     dimensionElements.meshes = [];
     dimensionElements.labels = [];
+    masterBolts = {}; // Clear the master bolt cache on each redraw
     
     // --- 3. Lighting & Materials (Create only if they don't exist) ---
     if (bjsScene.lights.length === 0) {
@@ -351,52 +363,46 @@ function draw3dSpliceDiagram() {
     createFlangeBoltGroup();
 
 
-    // --- 6. Add Dimensions ---
-    const dimYOffset = inputs.member_d / 2 + inputs.t_fp + 5;
-    const dimXOffset = (inputs.member_bf / 2) + 5;
+    // --- 6. Data-Driven Dimension Creation ---
+    const flangeDimY = inputs.member_d / 2 + inputs.t_fp + 5;
+    const flangeDimX = (inputs.member_bf / 2) + 5;
+    const webDimX = (inputs.member_tw / 2) + inputs.t_wp + 2;
 
-    // Gap
-    createDimensionLine("Gap", inputs.gap, new BABYLON.Vector3(0, dimYOffset, -inputs.gap / 2), new BABYLON.Vector3(0, dimYOffset, inputs.gap / 2), new BABYLON.Vector3(0, 2, 0));
+    const dimensionDefinitions = [
+        // --- General ---
+        { name: "Gap", value: inputs.gap, start: [0, flangeDimY, -inputs.gap / 2], end: [0, flangeDimY, inputs.gap / 2], offset: [0, 2, 0] },
 
-    // Flange Plate Dimensions
-    if (inputs.L_fp > 0 && inputs.H_fp > 0) {
-        createDimensionLine("L_fp", inputs.L_fp, new BABYLON.Vector3(-inputs.H_fp / 2, dimYOffset, -inputs.L_fp / 2), new BABYLON.Vector3(-inputs.H_fp / 2, dimYOffset, inputs.L_fp / 2), new BABYLON.Vector3(-2, 0, 0));
-        createDimensionLine("H_fp", inputs.H_fp, new BABYLON.Vector3(-inputs.H_fp / 2, dimYOffset, inputs.L_fp / 2), new BABYLON.Vector3(inputs.H_fp / 2, dimYOffset, inputs.L_fp / 2), new BABYLON.Vector3(0, 0, 2));
-    }
+        // --- Flange Plate & Bolts ---
+        { name: "L_fp", value: inputs.L_fp, condition: inputs.L_fp > 0 && inputs.H_fp > 0, start: [-inputs.H_fp / 2, flangeDimY, -inputs.L_fp / 2], end: [-inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], offset: [-2, 0, 0] },
+        { name: "H_fp", value: inputs.H_fp, condition: inputs.L_fp > 0 && inputs.H_fp > 0, start: [-inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], end: [inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], offset: [0, 0, 2] },
+        { name: "S1", value: inputs.S1_col_spacing_fp, condition: inputs.Nc_fp > 1, start: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp + inputs.S1_col_spacing_fp)], offset: [2, 0, 0] },
+        { name: "g", value: inputs.g_gage_fp, condition: inputs.g_gage_fp > 0, start: [-inputs.g_gage_fp / 2, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [inputs.g_gage_fp / 2, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], offset: [0, 0, -2] },
+        { name: "S3", value: inputs.S3_end_dist_fp, start: [flangeDimX, flangeDimY, -inputs.gap / 2], end: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], offset: [2, 0, 0] },
 
-    // Flange Bolt Dimensions
-    if (inputs.Nc_fp > 1) {
-        const s1_z_start = -(inputs.gap / 2 + inputs.S3_end_dist_fp);
-        const s1_z_end = s1_z_start - inputs.S1_col_spacing_fp;
-        createDimensionLine("S1", inputs.S1_col_spacing_fp, new BABYLON.Vector3(dimXOffset, dimYOffset, s1_z_start), new BABYLON.Vector3(dimXOffset, dimYOffset, s1_z_end), new BABYLON.Vector3(2, 0, 0));
-    }
-    if (inputs.g_gage_fp > 0) {
-        const gage_z = -(inputs.gap / 2 + inputs.S3_end_dist_fp);
-        createDimensionLine("g", inputs.g_gage_fp, new BABYLON.Vector3(-inputs.g_gage_fp / 2, dimYOffset, gage_z), new BABYLON.Vector3(inputs.g_gage_fp / 2, dimYOffset, gage_z), new BABYLON.Vector3(0, 0, -2));
-    }
-    createDimensionLine("S3", inputs.S3_end_dist_fp, new BABYLON.Vector3(dimXOffset, dimYOffset, -inputs.gap / 2), new BABYLON.Vector3(dimXOffset, dimYOffset, -(inputs.gap / 2 + inputs.S3_end_dist_fp)), new BABYLON.Vector3(2, 0, 0));
+        // --- Web Plate & Bolts ---
+        { name: "L_wp", value: inputs.L_wp, condition: inputs.L_wp > 0 && inputs.H_wp > 0, start: [webDimX, -inputs.H_wp / 2, -inputs.L_wp / 2], end: [webDimX, -inputs.H_wp / 2, inputs.L_wp / 2], offset: [2, 0, 0] },
+        { name: "H_wp", value: inputs.H_wp, condition: inputs.L_wp > 0 && inputs.H_wp > 0, start: [webDimX, -inputs.H_wp / 2, inputs.L_wp / 2], end: [webDimX, inputs.H_wp / 2, inputs.L_wp / 2], offset: [2, 0, 0] },
+        { name: "S4", value: inputs.S4_col_spacing_wp, condition: inputs.Nc_wp > 1, start: [webDimX, ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp + inputs.S4_col_spacing_wp)], offset: [2, 0, 0] },
+        { name: "S5", value: inputs.S5_row_spacing_wp, condition: inputs.Nr_wp > 1, start: [webDimX, -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2 + inputs.S5_row_spacing_wp, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], offset: [2, 0, 0] },
+        { name: "S6", value: inputs.S6_end_dist_wp, start: [webDimX, 0, -inputs.gap / 2], end: [webDimX, 0, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], offset: [2, 0, 0] },
+    ];
 
-    // Web Plate Dimensions
-    const webDimXOffset = (inputs.member_tw / 2) + inputs.t_wp + 2;
-    if (inputs.L_wp > 0 && inputs.H_wp > 0) {
-        createDimensionLine("L_wp", inputs.L_wp, new BABYLON.Vector3(webDimXOffset, -inputs.H_wp / 2, -inputs.L_wp / 2), new BABYLON.Vector3(webDimXOffset, -inputs.H_wp / 2, inputs.L_wp / 2), new BABYLON.Vector3(2, 0, 0));
-        createDimensionLine("H_wp", inputs.H_wp, new BABYLON.Vector3(webDimXOffset, -inputs.H_wp / 2, inputs.L_wp / 2), new BABYLON.Vector3(webDimXOffset, inputs.H_wp / 2, inputs.L_wp / 2), new BABYLON.Vector3(2, 0, 0));
-    }
-
-    // Web Bolt Dimensions
-    if (inputs.Nc_wp > 1) {
-        const s4_z_start = -(inputs.gap / 2 + inputs.S6_end_dist_wp);
-        const s4_z_end = s4_z_start - inputs.S4_col_spacing_wp;
-        const s4_y = ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2;
-        createDimensionLine("S4", inputs.S4_col_spacing_wp, new BABYLON.Vector3(webDimXOffset, s4_y, s4_z_start), new BABYLON.Vector3(webDimXOffset, s4_y, s4_z_end), new BABYLON.Vector3(2, 0, 0));
-    }
-    if (inputs.Nr_wp > 1) {
-        const s5_y_start = -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2;
-        const s5_y_end = s5_y_start + inputs.S5_row_spacing_wp;
-        const s5_z = -(inputs.gap / 2 + inputs.S6_end_dist_wp);
-        createDimensionLine("S5", inputs.S5_row_spacing_wp, new BABYLON.Vector3(webDimXOffset, s5_y_start, s5_z), new BABYLON.Vector3(webDimXOffset, s5_y_end, s5_z), new BABYLON.Vector3(2, 0, 0));
-    }
-    createDimensionLine("S6", inputs.S6_end_dist_wp, new BABYLON.Vector3(webDimXOffset, 0, -inputs.gap / 2), new BABYLON.Vector3(webDimXOffset, 0, -(inputs.gap / 2 + inputs.S6_end_dist_wp)), new BABYLON.Vector3(2, 0, 0));
+    dimensionDefinitions.forEach(dim => {
+        // If a condition is defined and it's false, skip this dimension.
+        if (dim.condition !== undefined && !dim.condition) {
+            return;
+        }
+        // Create dimension line if the value is valid.
+        if (dim.value > 0) {
+            createDimensionLine(
+                dim.name,
+                dim.value,
+                new BABYLON.Vector3(...dim.start),
+                new BABYLON.Vector3(...dim.end),
+                new BABYLON.Vector3(...dim.offset)
+            );
+        }
+    });
 
 
     // --- 7. Final Camera Adjustment ---
@@ -1072,6 +1078,111 @@ function performFlangeChecks(inputs, demands) {
     return { checks, geomChecks, inputs };
 }
 
+/**
+ * Computes the bolt group coefficient C using the numerical ICR method.
+ * Adapted from Brandt's iterative approach for AISC eccentrically loaded bolt groups.
+ * @param {number} boltRow - Number of rows (Nr, along y/vertical).
+ * @param {number} boltColumn - Number of columns (Nc, along z/horizontal).
+ * @param {number} rowSpacing - Spacing between rows (S_row, in).
+ * @param {number} columnSpacing - Spacing between columns (S_col, in).
+ * @param {number} eccentricity - Eccentricity along z (in).
+ * @param {number} rotation - Optional group rotation in degrees (default 0).
+ * @returns {number} The coefficient C (effective number of bolts).
+ */
+function boltCoefficient(boltRow, boltColumn, rowSpacing, columnSpacing, eccentricity, rotation = 0) {
+    const Rv = boltRow;
+    const Rh = boltColumn;
+    const Sv = rowSpacing;
+    const Sh = columnSpacing;
+    rotation = rotation * Math.PI / 180; // Convert to radians
+    const Ec = Math.abs(eccentricity);
+
+    if (Ec === 0 || Rv === 0 || Rh === 0) return Rv * Rh;
+
+    const boltLoc = [];
+    for (let i = 0; i < Rv; i++) {
+        for (let k = 0; k < Rh; k++) {
+            let y1 = (i * Sv) - (Rv - 1) * Sv / 2; // Vertical coordinate
+            let x1 = (k * Sh) - (Rh - 1) * Sh / 2; // Horizontal coordinate
+            const dv = x1 * Math.sin(rotation) + y1 * Math.cos(rotation);
+            const dh = x1 * Math.cos(rotation) - y1 * Math.sin(rotation); // Simplified without MirrFlag
+            boltLoc.push({ dv, dh });
+        }
+    }
+
+    let xRo = 0; // Horizontal shift from centroid
+    let yRo = 0; // Vertical shift from centroid
+    const Ru = 1.0; // Normalized ultimate strength (divides out)
+    let stp = false;
+    let cnt = 0;
+    let p = 0; // Initialize p to 0 to handle cases where the loop doesn't run.
+    let uFprev = Infinity; // Previous force imbalance
+    const cntMax = 5000;
+    const epsilon = 1e-6; // Small value to avoid division by near-zero
+
+    while (!stp) {
+        cnt++;
+        let liMax = 0;
+        for (let i = 0; i < boltLoc.length; i++) {
+            // Find the bolt furthest from the current trial ICR
+            const xi = boltLoc[i].dh + xRo;
+            const yi = boltLoc[i].dv + yRo;
+            liMax = Math.max(liMax, Math.sqrt(xi ** 2 + yi ** 2));
+        }
+
+        let rx = 0; // Horizontal force sum
+        let ry = 0; // Vertical force sum
+        let m = 0;  // Moment sum
+        let j = 0;  // Inertia sum
+        for (let i = 0; i < boltLoc.length; i++) {
+            // Calculate properties for each bolt based on its distance from the trial ICR
+            const xi = boltLoc[i].dh + xRo;
+            const yi = boltLoc[i].dv + yRo;
+            const ri = Math.sqrt(xi ** 2 + yi ** 2);
+            
+            // Guard against division by zero if liMax is 0 (e.g., single bolt at origin)
+            const delta = liMax > epsilon ? 0.34 * ri / liMax : 0;
+            const iRn = Ru * (1 - Math.exp(-10 * delta)) ** 0.55;
+
+            // Sum forces and moments (guard ri for components)
+            m += (iRn / Ru) * ri;
+            if (ri > epsilon) {
+                ry += (iRn / Ru) * (xi / ri); // Vertical component
+                rx += (iRn / Ru) * (yi / ri); // Horizontal component
+            }
+            j += ri ** 2;
+        }
+
+        // Calculate total force and force imbalances
+        const ro = Ec + xRo; // Effective radius to load line
+        p = (Math.abs(ro) > epsilon) ? m / ro : 0; // Guard ro=0
+        const uFy = p - ry;  // Vertical imbalance
+        const uFx = -rx;     // Horizontal imbalance (no applied horizontal in this frame)
+        const uF = Math.sqrt(uFy**2 + uFx**2); // Total imbalance
+
+        // --- Convergence Checks ---
+        const stp1 = Math.abs(uFy) <= 0.00001 && Math.abs(uFx) <= 0.00001;
+        const stp2 = cnt >= cntMax;
+        // Divergence check: if total imbalance starts increasing after more iterations, stop.
+        const stp3 = cnt > 50 && uF > uFprev * 1.01;
+        stp = stp1 || stp2 || stp3;
+
+        if (stp && !stp1) {
+            // Convergence failed; log details for debugging (optional)
+            // console.warn(`ICR convergence failed after ${cnt} iterations. Final imbalance: ${uF.toFixed(6)}, xRo: ${xRo.toFixed(4)}, yRo: ${yRo.toFixed(4)}`);
+            return NaN; // Or fallback to elastic method if desired
+        }
+
+        // Update the trial ICR location
+        const mapFunc = (Math.abs(m) > epsilon) ? j / (Rv * Rh * m) : 0; // Guard m=0
+        xRo += uFy * mapFunc;
+        yRo += uFx * mapFunc;
+        uFprev = uF;
+    }
+
+    return p; // C coefficient
+}
+
 function performWebChecks(inputs, demands) {
     const { V_load, Hw } = demands;
     const checks = {};
@@ -1105,9 +1216,6 @@ function performWebChecks(inputs, demands) {
         checks['Web Bolt Slip'] = { demand: Math.sqrt(V_load**2 + Hw**2), check: { ...single_bolt_slip_check, Rn: total_slip_capacity }, details: { num_bolts: num_web_bolts_per_side } };
     }
 
-    const eccentricity_results = calculateWebSpliceEccentricity(V_load, Hw, inputs.gap, inputs.Nc_wp, inputs.Nr_wp, inputs.S4_col_spacing_wp, inputs.S5_row_spacing_wp, inputs.S6_end_dist_wp);
-    const max_bolt_demand = eccentricity_results.max_R;
-
     const fastenerPatternLength_web = (inputs.Nr_wp > 1) ? ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) : 0;
     const single_web_bolt_shear_check = checkBoltShear({
         grade: inputs.bolt_grade_wp, 
@@ -1116,10 +1224,33 @@ function performWebChecks(inputs, demands) {
         numPlanes: inputs.num_web_plates, 
         fastenerPatternLength: fastenerPatternLength_web
     });
-    checks['Web Bolt Group Shear'] = {
-        demand: max_bolt_demand, // Demand is the max force on the critical bolt
-        check: single_web_bolt_shear_check, // Capacity is for a single bolt
-        details: { ...eccentricity_results, Rn_single: single_web_bolt_shear_check.Rn, V_load, Hw }
+
+    // In performWebChecks...
+    const eccentricity = calculateWebSpliceEccentricity(1, 0, inputs.gap, inputs.Nc_wp, inputs.Nr_wp, inputs.S4_col_spacing_wp, inputs.S5_row_spacing_wp, inputs.S6_end_dist_wp).eccentricity; // Get e
+
+    const theta = Math.atan2(Hw, V_load); // Load angle (Hw horizontal/z, V_load vertical/y)
+    const resultant_demand = Math.sqrt(V_load ** 2 + Hw ** 2);
+    const e_eff = (V_load * eccentricity) / (resultant_demand || 1); // Avoid division by zero
+
+    // Compute C (note: row/col swapped if needed; here row = Nr_wp vertical, column = Nc_wp horizontal)
+    const C = boltCoefficient(inputs.Nr_wp, inputs.Nc_wp, inputs.S5_row_spacing_wp, inputs.S4_col_spacing_wp, e_eff, 0);
+
+    const Rn_group = C * single_web_bolt_shear_check.Rn;
+
+    const bolt_group_capacity_check = { 
+        Rn: Rn_group, 
+        phi: 0.75, 
+        omega: 2.00, 
+        C, 
+        Rn_single: single_web_bolt_shear_check.Rn,
+        e_eff: e_eff,
+        theta_deg: theta * 180 / Math.PI
+    };
+
+    checks['Web Bolt Group Shear (ICR)'] = {
+        demand: resultant_demand,
+        check: bolt_group_capacity_check,
+        details: { ...bolt_group_capacity_check, V_load, Hw, eccentricity }
     };
 
     // --- Web Bolt Shear/Tension Interaction (AISC J3.9) ---
@@ -1536,7 +1667,7 @@ const baseBreakdownGenerators = {
     ]),
     'NSF': ({ check }, common) => common.format_list([
         `<u>Net Area (A<sub>n</sub>) per AISC J4.1</u>`,
-        `A<sub>n</sub> = A<sub>g</sub> - A<sub>holes</sub> = ${common.fmt(check.Ag, 3)} - ${common.fmt(check.A_holes, 3)} = ${common.fmt(check.An, 3)} in²`,
+        `A<sub>n</sub> = A<sub>g</sub> - A<sub>holes</sub> = ${common.fmt(check.Ag, 3)} - ${common.fmt(check.A_holes, 3)} = <b>${common.fmt(check.An, 3)} in²</b>`,
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.1(b)</u>`,
         `R<sub>n</sub> = F<sub>u</sub> &times; A<sub>n</sub> (Shear lag factor U=1.0 for splice plates)`,
         `R<sub>n</sub> = ${common.fmt(check.Fu)} ksi &times; ${common.fmt(check.An, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
@@ -1544,7 +1675,7 @@ const baseBreakdownGenerators = {
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Block Shear': ({ check }, common) => common.format_list([
-        `<u>Nominal Strength per AISC J4-5</u>`,
+        `<u>Nominal Strength per AISC J4.3</u>`,
         `Shear Rupture Path: 0.6 × F<sub>u</sub> × A<sub>nv</sub> = ${common.fmt(check.details.shear_rupture_term)} kips`,
         `Tension Rupture Path: U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.details.tension_rupture_term)} kips`,
         `Shear Yield Limit: 0.6 × F<sub>y</sub> × A<sub>gv</sub> + U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.details.shear_yield_limit)} kips`,
@@ -1575,22 +1706,17 @@ const baseBreakdownGenerators = {
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
     },
-    'Web Bolt Group Shear': ({ check, details }, common) => {
-        const { eccentricity, M_ecc, Ip, f_vy_direct, f_vx_direct, f_v_moment, f_h_moment, max_R, num_bolts } = details;
-        const R_h = f_vx_direct + f_h_moment;
-        const R_v = f_vy_direct + f_v_moment;
+    'Web Bolt Group Shear (ICR)': ({ check, details, demand }, common) => {
         return common.format_list([
-            `<u>Demand on Critical Bolt (Elastic Method) per AISC Manual Part 7</u>`,
-            `Eccentricity (e) = <b>${common.fmt(eccentricity)} in</b>`,
-            `Moment on Bolt Group (M) = V &times; e = ${common.fmt(details.V_load)} &times; ${common.fmt(eccentricity)} = <b>${common.fmt(M_ecc)} kip-in</b>`,
-            `Polar Moment of Inertia (I<sub>p</sub>) = &Sigma;(x² + y²) = <b>${common.fmt(Ip)} in²</b>`,
-            `<b>Direct Shear Components:</b>`,
-            `&nbsp;&nbsp;Vertical (r<sub>v</sub>) = V / n = ${common.fmt(details.V_load)} / ${num_bolts} = ${common.fmt(f_vy_direct)} kips`,
-            `&nbsp;&nbsp;Horizontal (r<sub>h</sub>) = H / n = ${common.fmt(details.Hw)} / ${num_bolts} = ${common.fmt(f_vx_direct)} kips`,
-            `<b>Moment-Induced Shear Components on Critical Bolt:</b>`,
-            `&nbsp;&nbsp;Vertical (r<sub>mv</sub>) = M&middot;x / I<sub>p</sub> = ${common.fmt(M_ecc)} &times; x<sub>crit</sub> / ${common.fmt(Ip)} = ${common.fmt(f_v_moment)} kips`,
-            `&nbsp;&nbsp;Horizontal (r<sub>mh</sub>) = M&middot;y / I<sub>p</sub> = ${common.fmt(M_ecc)} &times; y<sub>crit</sub> / ${common.fmt(Ip)} = ${common.fmt(f_h_moment)} kips`,
-            `<b>Resultant Force (R<sub>u</sub>):</b> &radic;[ (r<sub>h</sub>+r<sub>mh</sub>)² + (r<sub>v</sub>+r<sub>mv</sub>)² ] = &radic;[ (${common.fmt(R_h)})² + (${common.fmt(R_v)})² ] = <b>${common.fmt(max_R)} kips</b>`,
+            `<u>Bolt Group Capacity (Instantaneous Center of Rotation Method)</u>`,
+            `Reference: AISC Manual Part 7`,
+            `Resultant Demand = √(V² + H²) = √(${common.fmt(details.V_load)}² + ${common.fmt(details.Hw)}²) = <b>${common.fmt(demand)} kips</b>`,
+            `Load Angle (θ) = atan2(H, V) = <b>${common.fmt(details.theta_deg, 1)}°</b>`,
+            `Effective Eccentricity (e_eff) = (V × e) / Resultant = (${common.fmt(details.V_load)} × ${common.fmt(details.eccentricity)}) / ${common.fmt(demand)} = <b>${common.fmt(details.e_eff, 2)} in</b>`,
+            `Bolt Group Coefficient (C) = <b>${common.fmt(details.C, 2)}</b> (iterative convergence on ICR location)`,
+            `Single Bolt Capacity (R_n,bolt) = <b>${common.fmt(details.Rn_single)} kips</b>`,
+            `Nominal Group Capacity (R_n,group) = C × R_n,bolt = ${common.fmt(details.C, 2)} × ${common.fmt(details.Rn_single)} = <b>${common.fmt(check.Rn)} kips</b>`,
+            `Design Capacity = ${common.capacity_eq} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
     },
     'Shear Yield': ({ check }, common) => common.format_list([
@@ -1601,7 +1727,7 @@ const baseBreakdownGenerators = {
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Shear Rupture': ({ check }, common) => common.format_list([
-        `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.2(b)</u>`,
+        `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.1</u>`,
         `R<sub>n</sub> = 0.6 &times; F<sub>u</sub> &times; A<sub>nv</sub>`,
         `R<sub>n</sub> = 0.6 &times; ${common.fmt(check.Fu, 1)} ksi &times; ${common.fmt(check.Anv, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
@@ -1725,7 +1851,7 @@ function getBreakdownGenerator(name) {
     if (name.includes('NSF')) return baseBreakdownGenerators['NSF'];
     if (name.includes('Block Shear')) return baseBreakdownGenerators['Block Shear'];
     if (name.includes('Bolt Bearing')) return baseBreakdownGenerators['Bolt Bearing'];
-    if (name.includes('Web Bolt Group Shear')) return baseBreakdownGenerators['Web Bolt Group Shear'];
+    if (name.includes('Web Bolt Group Shear (ICR)')) return baseBreakdownGenerators['Web Bolt Group Shear (ICR)'];
     if (name.includes('Shear Yield')) return baseBreakdownGenerators['Shear Yield'];
     if (name.includes('Web Bolt Slip')) return baseBreakdownGenerators['Web Bolt Slip'];
     if (name.includes('Shear Rupture')) return baseBreakdownGenerators['Shear Rupture'];
@@ -2085,7 +2211,7 @@ function renderResults(results, rawInputs) {
     ];
 
     const webPlateChecks = [
-        'Web Bolt Group Shear',
+        'Web Bolt Group Shear (ICR)', // This was already correct
         'Web Bolt Slip',
         'Web Plate Flexural Yielding',
         'Web Plate Flexural Rupture',
@@ -2093,7 +2219,7 @@ function renderResults(results, rawInputs) {
         'Web Plate Gross Shear Yield',
         'Web Plate Net Shear Rupture',
         'Web Plate Block Shear',
-        'Web Plate Bolt Bearing'
+        'Web Plate Bolt Bearing',
     ];
 
     const memberChecks = [

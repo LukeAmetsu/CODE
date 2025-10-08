@@ -117,6 +117,29 @@ function drawBasePlateDiagram() {
     }
 }
 
+/**
+ * Gets the appropriate resistance factor (phi) or safety factor (omega) for a given limit state.
+ * @param {string} limit_state - The name of the limit state (e.g., 'bearing', 'bending').
+ * @param {string} design_method - The design method ('LRFD' or 'ASD').
+ * @returns {number} The corresponding phi or omega factor.
+ */
+function getPhi(limit_state, design_method) {
+    const factors = {
+        'bearing': { phi: 0.65, omega: 2.31 }, // AISC J8
+        'bending': { phi: 0.90, omega: 1.67 }, // AISC F1
+        'weld': { phi: 0.75, omega: 2.00 },    // AISC J2
+        'anchor_tension_steel': { phi: 0.75, omega: 2.00 },
+        'anchor_tension_concrete': { phi: 0.65, omega: 2.31 },
+        'anchor_pullout': { phi: 0.70, omega: 2.14 },
+        'anchor_side_face': { phi: 0.75, omega: 2.00 },
+        'anchor_shear_steel': { phi: 0.65, omega: 2.31 },
+        'anchor_shear_concrete': { phi: 0.65, omega: 2.31 },
+        'anchor_pryout': { phi: 0.65, omega: 2.31 },
+    };
+    const f = factors[limit_state] || { phi: 1.0, omega: 1.0 };
+    return design_method === 'LRFD' ? f.phi : f.omega;
+}
+
 // --- Global variables for the 3D scene to avoid re-creation ---
 let bjsEngine, bjsScene, bjsGuiTexture;
 
@@ -387,7 +410,7 @@ function draw3dBasePlateDiagram() {
 }
 
 const basePlateInputIds = [ // FIX: Corrected variable name
-    'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy',
+    'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx', 
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
@@ -475,13 +498,13 @@ const basePlateCalculator = (() => {
             'bending': { phi: 0.90, omega: 1.67 }, // AISC F1
             'weld': { phi: 0.75, omega: 2.00 },    // AISC J2
             // ACI 318 Anchor factors are LRFD (phi) only. ASD conversion is handled by factoring loads.
-            'anchor_tension_steel': { phi: 0.75, omega: 2.00 }, // Kept omega for steel check consistency, but will use phi.
-            'anchor_tension_concrete': { phi: 0.65 }, // Breakout
-            'anchor_pullout': { phi: 0.70 },
-            'anchor_side_face': { phi: 0.75 },
-            'anchor_shear_steel': { phi: 0.65, omega: 2.31 }, // Kept omega for steel check consistency, but will use phi.
-            'anchor_shear_concrete': { phi: 0.65 }, // Breakout
-            'anchor_pryout': { phi: 0.65 },
+            'anchor_tension_steel': { phi: 0.75, omega: 2.00 },
+            'anchor_tension_concrete': { phi: 0.65, omega: 2.31 }, // Breakout
+            'anchor_pullout': { phi: 0.70, omega: 2.14 },
+            'anchor_side_face': { phi: 0.75, omega: 2.00 },
+            'anchor_shear_steel': { phi: 0.65, omega: 2.31 },
+            'anchor_shear_concrete': { phi: 0.65, omega: 2.31 }, // Breakout
+            'anchor_pryout': { phi: 0.65, omega: 2.31 },
         };
         const f = factors[limit_state] || { phi: 1.0, omega: 1.0 };
         return design_method === 'LRFD' ? f.phi : f.omega;
@@ -713,6 +736,99 @@ const basePlateCalculator = (() => {
     }
 
     /**
+     * Checks if friction is sufficient to resist the applied shear load.
+     * Reference: AISC Design Guide 1, Section 2.9
+     * @param {object} inputs - The user inputs object.
+     * @returns {object} An object with the friction check results.
+     */
+    function checkFrictionResistance(inputs) {
+        const { shear_V_in: Vu, axial_load_P_in: Pu, design_method } = inputs;
+
+        // Friction is only effective under compression (negative Pu).
+        if (Pu >= 0) {
+            return { demand: Vu, check: { Rn: 0, phi: 1.0, omega: 1.0 }, details: { mu: 0.4, Pu_compressive: 0, shear_resisted_by_friction: 0 } };
+        }
+
+        const Pu_compressive = Math.abs(Pu);
+        // Friction coefficient (μ) for steel on grout/concrete. DG1 suggests 0.4.
+        const mu = 0.4;
+
+        // Nominal frictional resistance (Rn)
+        const Rn = mu * Pu_compressive;
+        const phi = 0.75; // Per DG1, a resistance factor of 0.75 is recommended for friction.
+        return { demand: Vu, check: { Rn, phi, omega: 2.00 }, details: { mu, Pu_compressive, shear_resisted_by_friction: Rn } };
+    }
+
+    /**
+     * Checks bolt bearing on the base plate material per AISC J3.10.
+     * @param {object} inputs - The user inputs object.
+     * @param {number} force_per_bolt - The shear force demand on a single bolt.
+     * @returns {object} An object with the bolt bearing check results.
+     */
+    function checkBoltBearingOnPlate(inputs, force_per_bolt) {
+        // Ensure all variables used in calculations are parsed as numbers.
+        // Default to 0 if an input is invalid or empty to prevent NaN results.
+        const db = parseFloat(inputs.anchor_bolt_diameter) || 0;
+        const tp = parseFloat(inputs.provided_plate_thickness_tp) || 0;
+        const Fu = parseFloat(inputs.base_plate_Fu) || 0;
+        const base_plate_width_B = parseFloat(inputs.base_plate_width_B) || 0;
+        const bolt_spacing_B = parseFloat(inputs.bolt_spacing_B) || 0;
+
+        // Simplified: Assume a reasonable edge distance for the plate itself.
+        // A more rigorous check would need the exact bolt-to-plate-edge distance as an input.
+        const le = (base_plate_width_B - bolt_spacing_B) / 2.0;
+        const hole_dia = AISC_SPEC.getNominalHoleDiameter(db);
+        const Lc = le - hole_dia / 2.0;
+
+        if (Lc <= 0 || db === 0 || tp === 0 || Fu === 0) {
+            return {
+                demand: force_per_bolt,
+                check: { Rn: 0, phi: 0.75, omega: 2.00 },
+                details: { Lc: Lc || 0, le: le || 0, hole_dia: hole_dia || 0, Rn_bearing: 0, Rn_tearout: 0 }
+            };
+        }
+
+        // AISC J3-6a: Bearing strength
+        const Rn_bearing = 2.4 * db * tp * Fu;
+        // AISC J3-6b: Tearout strength
+        const Rn_tearout = 1.2 * Lc * tp * Fu;
+
+        const Rn = Math.min(Rn_bearing, Rn_tearout);
+        return { demand: force_per_bolt, check: { Rn, phi: 0.75, omega: 2.00 }, details: { Lc, le, hole_dia, Rn_bearing, Rn_tearout, Fu } };
+    }
+
+    /**
+     * Checks for column web local yielding and crippling at the base plate connection.
+     * Reference: AISC 360-16, Chapter J10.2 and J10.3
+     * @param {object} inputs - The user inputs object.
+     * @param {object} bearing_results - The results from the concrete bearing check.
+     * @returns {object} An object containing the web check results.
+     */
+    function checkColumnWebChecks(inputs, bearing_results) {
+        const { column_type, column_depth_d: d, column_flange_width_bf: bf, column_web_tw: tw, column_flange_tf: tf, base_plate_Fy: Fy, design_method } = inputs;
+        
+        // These checks only apply to Wide Flange sections under compression
+        if (column_type !== 'Wide Flange' || !bearing_results || bearing_results.details.Pu >= 0) return {};
+        const f_p_max = bearing_results.details.f_p_max;
+
+        // These properties are not direct inputs, so we must approximate them.
+        const k_des = tf; // Approx. k distance
+        if (tw <= 0 || tf <= 0) return { error: "Column thickness is zero." };
+        const checks = {};
+
+        // Web Local Yielding (AISC J10.2)
+        const R_wly_demand = f_p_max * bf * tf; // Force on the critical flange area
+        const Rn_wly = Fy * tw * (5 * k_des + bf);
+        checks['Column Web Local Yielding'] = { demand: R_wly_demand, check: { Rn: Rn_wly, phi: 1.0, omega: 1.5 }, details: { Rn_wly, k_des, tw, bf, Fy, f_p_max } };
+
+        // Web Local Crippling (AISC J10.3)
+        const Rn_wlc = 0.80 * tw**2 * (1 + 3 * (bf / d) * (tw / tf)**1.5) * Math.sqrt(29000 * Fy * tf / tw);
+        checks['Column Web Local Crippling'] = { demand: R_wly_demand, check: { Rn: Rn_wlc, phi: 0.75, omega: 2.00 }, details: { Rn_wlc, tw, bf, d, tf, Fy, f_p_max } };
+
+        return checks;
+    }
+
+    /**
      * Calculates the coordinates of each anchor bolt relative to the centroid of the bolt group.
      * @param {object} inputs - The user inputs object.
      * @returns {Array<{x: number, z: number}>} An array of bolt coordinate objects.
@@ -892,11 +1008,11 @@ const basePlateCalculator = (() => {
      * @param {object} bearing_results - The results from the concrete bearing check.
      * @returns {object} An object containing all anchor check results.
      */
-    function performAnchorChecks(inputs, Tu_bolt, bearing_results, tension_breakdown) {
-        const { num_bolts_N, num_bolts_B, shear_V_in, design_method } = inputs;
+    function performAnchorChecks(inputs, Tu_bolt, shear_on_bolts, bearing_results, tension_breakdown) {
+        const { num_bolts_N, num_bolts_B, design_method } = inputs;
         const num_bolts_total = num_bolts_N * num_bolts_B;
         const num_bolts_tension_row = num_bolts_B;
-        const anchorChecks = {};
+        let anchorChecks = {};
 
         // --- Load Factoring for Anchor Checks ---
         // ACI 318 anchor design is strength-based (LRFD). If the user selected ASD,
@@ -904,7 +1020,7 @@ const basePlateCalculator = (() => {
         const asd_load_factor = 1.6; // Conservative load factor for converting ASD to LRFD.
         const is_asd = design_method === 'ASD';
         const Tu_bolt_strength = is_asd ? Tu_bolt * asd_load_factor : Tu_bolt;
-        const Vu_strength = is_asd ? shear_V_in * asd_load_factor : shear_V_in;
+        const Vu_strength = is_asd ? shear_on_bolts * asd_load_factor : shear_on_bolts;
         const load_factor_note = is_asd ? `ASD service loads were factored by ${asd_load_factor} for ACI strength design.` : '';
 
         const Tu_group = Tu_bolt_strength * num_bolts_tension_row;
@@ -923,7 +1039,7 @@ const basePlateCalculator = (() => {
         }
 
         // --- ANCHOR SHEAR CHECKS ---
-        if (shear_V_in > 0) {
+        if (shear_on_bolts > 0) {
             if (num_bolts_total <= 0) return { error: "Cannot check anchor shear with zero total bolts." }; // This should be caught by validation
             const Vu_bolt = Vu_strength / num_bolts_total;
 
@@ -936,7 +1052,7 @@ const basePlateCalculator = (() => {
         }
 
         // --- Combined Shear and Tension Interaction (ACI 17.8) ---
-        if (Tu_bolt > 0 && shear_V_in > 0) {
+        if (Tu_bolt > 0 && shear_on_bolts > 0) {
             // Use strength-level loads for interaction check
             const interaction_checks = checkAnchorInteraction(Tu_group, Vu_strength, anchorChecks, design_method);
             Object.assign(anchorChecks, interaction_checks);
@@ -1077,19 +1193,40 @@ const basePlateCalculator = (() => {
         const { ca1, ca2 } = calculateEdgeDistances(inputs);
         inputs.concrete_edge_dist_ca1 = ca1;
         inputs.concrete_edge_dist_ca2 = ca2;
-        const checks = {};
+        let checks = {};
 
         const bearing_results = checkConcreteBearing(inputs);
         if (bearing_results.error) return { errors: [bearing_results.error], checks, geomChecks };
         checks['Concrete Bearing'] = bearing_results;
         
+        // --- Shear Demand Calculation ---
+        const friction_check = checkFrictionResistance(inputs);
+        checks['Friction Resistance'] = friction_check;
+        let shear_on_bolts = inputs.shear_V_in;
+        const friction_capacity = inputs.design_method === 'LRFD' ? friction_check.check.Rn * friction_check.check.phi : friction_check.check.Rn / friction_check.check.omega;
+        
+        if (friction_capacity >= Math.abs(inputs.shear_V_in)) {
+            shear_on_bolts = 0; // Friction is sufficient to take all shear.
+            friction_check.details.note = "Friction is sufficient to resist the entire shear load. Shear on anchor bolts is considered zero.";
+        } else {
+            shear_on_bolts = Math.abs(inputs.shear_V_in) - friction_capacity;
+            friction_check.details.note = `Friction resists ${friction_capacity.toFixed(2)} kips. The remaining ${shear_on_bolts.toFixed(2)} kips must be resisted by anchor bolts.`;
+        }
+
         const bending_results = checkPlateBending(inputs, bearing_results); // Can be null
         if (bending_results?.error) return { errors: [bending_results.error], checks, geomChecks };
         if (bending_results) checks['Plate Bending'] = bending_results;
 
-        const { value: Tu_bolt, breakdown: tension_breakdown } = calculateAnchorTension(inputs); // Capture the breakdown string
-        const anchor_checks = performAnchorChecks(inputs, Tu_bolt, bearing_results, tension_breakdown);
+        const { value: Tu_bolt, breakdown: tension_breakdown } = calculateAnchorTension(inputs);
+        const anchor_checks = performAnchorChecks(inputs, Tu_bolt, shear_on_bolts, bearing_results, tension_breakdown);
         Object.assign(checks, anchor_checks);
+        
+        // --- Add Plate Bending in Uplift Check ---
+        const bending_uplift_results = checkPlateBendingUplift(inputs, Tu_bolt);
+        if (bending_uplift_results) checks['Plate Bending in Uplift'] = bending_uplift_results;
+
+        const num_bolts_total = inputs.num_bolts_N * inputs.num_bolts_B;
+        checks['Bolt Bearing on Plate'] = checkBoltBearingOnPlate(inputs, num_bolts_total > 0 ? shear_on_bolts / num_bolts_total : 0);
 
         const weld_check = checkWeldStrength(inputs, bearing_results);
         if (weld_check?.error) return { errors: [weld_check.error], checks, geomChecks };
@@ -1118,7 +1255,7 @@ function renderBasePlateStrengthChecks(results) {
             const detailId = `bp-details-${index}`;
             const { demand, check } = data;
             const { Rn, phi, omega } = check;
-            const breakdownHtml = generateBasePlateBreakdownHtml(name, data, calcInputs); // Pass full inputs
+            const breakdownHtml = generateBasePlateBreakdownHtml(name, data, calcInputs, results); // Pass full results object
             
             // For anchor checks, the capacity is always LRFD-based (phi*Rn)
             // For other checks, it depends on the user's design_method selection.
@@ -1130,13 +1267,13 @@ function renderBasePlateStrengthChecks(results) {
             let ratio, demand_val, capacity_val;
             if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
                 // For thickness, demand is provided, capacity is required. Ratio is req/prov.
-                demand_val = demand;             // provided tp
-                capacity_val = design_capacity; // required t_req
-                ratio = demand_val > 0 ? capacity_val / demand_val : Infinity;
+                demand_val = demand; // provided tp
+                capacity_val = design_capacity; // required t_req (Rn)
+                ratio = demand_val > 0 ? capacity_val / demand_val : (capacity_val > 0 ? Infinity : 0);
             } else {
                 demand_val = is_anchor_check && design_method === 'ASD' ? demand * 1.6 : demand; // Apply load factor for ASD anchor checks
                 capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity; // Use LRFD capacity for anchor checks
-                ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : Infinity;
+                ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
             }
 
             const status = ratio <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
@@ -1279,7 +1416,7 @@ function renderBasePlateLoadSummary(inputs, checks) {
     // FIX: The anchor tension demand and breakdown are already calculated and stored in the 'checks' object.
     // We should retrieve them from there instead of calling the private `calculateAnchorTension` function again.
     const anchorTensionDemand = checks['Anchor Steel Tension']?.demand || 0;
-    const tensionBreakdown = checks['Anchor Steel Tension']?.details?.breakdown || 'No tension calculated.';
+    const tensionBreakdown = checks['Anchor Steel Tension']?.breakdown || 'No tension calculated.';
     const anchorShearDemand = checks['Anchor Steel Shear']?.demand || 0;
     const num_bolts_total = num_bolts_N * num_bolts_B;
 
@@ -1336,8 +1473,10 @@ function renderBasePlateLoadSummary(inputs, checks) {
 
     // --- Anchor Shear Breakdown ---
     let shearFormula;
+    const shear_on_bolts = checks['Friction Resistance']?.details?.note.match(/remaining ([\d.]+) kips/)?.[1] || '0';
+
     if (anchorShearDemand > 0 && num_bolts_total > 0) {
-        shearFormula = `V<sub>u,bolt</sub> = V<sub>total</sub> / n<sub>bolts</sub> = ${Vu.toFixed(2)} / ${num_bolts_total}`;
+        shearFormula = `V<sub>u,bolt</sub> = V<sub>net</sub> / n<sub>bolts</sub> = ${parseFloat(shear_on_bolts).toFixed(2)} / ${num_bolts_total}`;
     } else {
         shearFormula = 'No shear applied.';
     }
@@ -1418,7 +1557,7 @@ function generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs) {
     return { value: max_tension > 0 ? max_tension : 0, breakdown: breakdown_lines.join('<br>') };
 }
 
-function generateBasePlateBreakdownHtml(name, data, inputs) {
+function generateBasePlateBreakdownHtml(name, data, inputs, results) {
     const { check } = data;
     const details = data.details || check.details;
 
@@ -1440,7 +1579,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
     if (data.breakdown) {
         // For anchor tension, we need to add the capacity calculation part.
         const Ab_tension = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
-        const Nsa = Ab_tension * inputs.anchor_bolt_Fut;
+        const Nsa = Ab_tension * (AISC_SPEC.getFnt(inputs.anchor_bolt_grade) || inputs.anchor_bolt_Fut);
         const phiNsa = (check?.phi || 0.75) * Nsa;
         return `${data.breakdown}<br><hr class="my-2"><b>Capacity (per bolt):</b><br>&phi;N<sub>sa</sub> = &phi; &times; A<sub>b,eff</sub> &times; F<sub>ut</sub> = ${(check?.phi || 0.75)} &times; ${Ab_tension.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${phiNsa.toFixed(2)} kips</b>`;
     }
@@ -1488,6 +1627,27 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
                 `t<sub>req</sub> = &radic;(4 &times; ${details.Tu_bolt.toFixed(2)} kips / (${phi_bending_uplift} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
             ]);
             break;
+        case 'Bolt Bearing on Plate':
+            const tearout_coeff = 1.2; // Deformation at bolt hole is a design consideration
+            const bearing_coeff = 2.4;
+            content = format_list([
+                `<u>Nominal Bearing Strength (R<sub>n</sub>) per AISC J3.10 on Plate Material (${inputs.base_plate_material})</u>`,
+                `Clear Distance (L<sub>c</sub>) = L<sub>e</sub> - d<sub>h</sub>/2 = ${details.le.toFixed(3)} - ${details.hole_dia.toFixed(3)}/2 = <b>${details.Lc.toFixed(3)} in</b>`,
+                `Tearout Strength (R<sub>n,tearout</sub>) = ${tearout_coeff} &times; L<sub>c</sub> &times; t<sub>p</sub> &times; F<sub>u</sub> = <b>${details.Rn_tearout.toFixed(2)} kips</b>`,
+                `Bearing Strength (R<sub>n,bearing</sub>) = ${bearing_coeff} &times; d<sub>b</sub> &times; t<sub>p</sub> &times; F<sub>u</sub> = <b>${details.Rn_bearing.toFixed(2)} kips</b>`,
+                `R<sub>n</sub> = min(Tearout, Bearing) = <b>${check.Rn.toFixed(2)} kips</b>`
+            ]);
+            break;
+        case 'Friction Resistance':
+            content = format_list([
+                `<u>Nominal Frictional Resistance (R<sub>n</sub>) per AISC DG 1, Sec. 2.9</u>`,
+                `R<sub>n</sub> = &mu; &times; P<sub>u,compressive</sub>`,
+                `R<sub>n</sub> = ${details.mu} &times; ${details.Pu_compressive.toFixed(2)} kips = <b>${check.Rn.toFixed(2)} kips</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${capacity_eq} = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`,
+                `<em>${details.note || ''}</em>`
+            ]);
+            break;
         case 'Anchor Steel Tension':
             // This case is now primarily handled by the `data.breakdown` logic at the top.
             // This is a fallback.
@@ -1501,13 +1661,14 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
         case 'Anchor Steel Shear':
             const Ab_shear = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
             const Vu_bolt = data.demand;
+            const shear_on_bolts = results.checks['Friction Resistance']?.details?.note.match(/remaining ([\d.]+) kips/)?.[1] || '0';
             content = format_list([
                 `<u>Shear Demand per Bolt (V<sub>u,bolt</sub>)</u>`,
-                `V<sub>u,bolt</sub> = V<sub>u,total</sub> / n<sub>bolts</sub> = ${inputs.shear_V_in.toFixed(2)} / ${details.num_bolts_total} = <b>${Vu_bolt.toFixed(2)} kips</b>`,
+                `V<sub>u,bolt</sub> = V<sub>net</sub> / n<sub>bolts</sub> = ${parseFloat(shear_on_bolts).toFixed(2)} / ${details.num_bolts_total} = <b>${Vu_bolt.toFixed(2)} kips</b>`,
                 `<hr class="my-2">`,
                 `<u>Nominal Steel Strength (V<sub>sa</sub>) per ACI 17.7.1</u>`,
-                `&phi;V<sub>sa</sub> = &phi; &times; 0.6 &times; A<sub>b,eff</sub> &times; F<sub>ut</sub>`,
-                `&phi;V<sub>sa</sub> = ${check.phi} &times; 0.6 &times; ${Ab_shear.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${final_capacity.toFixed(2)} kips</b>`,
+                `&phi;V<sub>sa</sub> = &phi; &times; 0.6 &times; A<sub>b,eff</sub> &times; F<sub>ut</sub>`, // Fut is actually Fnt
+                `&phi;V<sub>sa</sub> = ${check.phi} &times; 0.6 &times; ${Ab_shear.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${(check.phi * check.Rn).toFixed(2)} kips</b>`,
                 `<u>Design Capacity (per bolt)</u>`,
                 `Capacity = &phi;V<sub>sa</sub> = <b>${final_capacity.toFixed(2)} kips</b>`
             ]);
@@ -1521,7 +1682,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
                 `Modification Factors: &psi;<sub>ec,N</sub>=${details.psi_ec_N.toFixed(3)}, &psi;<sub>ed,N</sub>=${details.psi_ed_N.toFixed(3)}, &psi;<sub>c,N</sub>=${details.psi_c_N.toFixed(3)}`,
                 `Nominal Strength (N<sub>cbg</sub>) = (A<sub>Nc</sub>/A<sub>Nco</sub>) &times; &psi;<sub>...</sub> &times; N<sub>b</sub> &times; n = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (Group)</u>`,
-                `Capacity = &phi;N<sub>cbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`
+                `Capacity = &phi;N<sub>cbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${(check.phi * check.Rn).toFixed(2)} kips</b>`
             ]);
             break;
         case 'Anchor Pullout Strength':
@@ -1558,7 +1719,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs) {
                 `Area Ratio (A<sub>vc</sub>/A<sub>vco</sub>) = <b>${details.Avc_Avco.toFixed(3)}</b>`,
                 `Nominal Strength (V<sub>cbg</sub>) = (A<sub>vc</sub>/A<sub>vco</sub>) &times; &psi;<sub>...</sub> &times; V<sub>b</sub> &times; n = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity (Group)</u>`,
-                `Capacity = &phi;V<sub>cbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`
+                `Capacity = &phi;V<sub>cbg</sub> = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${(check.phi * check.Rn).toFixed(2)} kips</b>`
             ]);
             break;
         case 'Anchor Combined Shear and Tension (Steel)':
@@ -1693,6 +1854,7 @@ document.addEventListener('DOMContentLoaded', () => {
             select.addEventListener('change', (e) => {
                 const grade = AISC_SPEC.getSteelGrade(e.target.value);
                 if (grade) {
+                    if (e.target.dataset.fuTarget) document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
                     if (e.target.dataset.fyTarget) document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
                 }
             });
