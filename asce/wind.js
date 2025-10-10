@@ -12,7 +12,7 @@ function addRangeIndicators() {
 
 const windInputIds = [
     // These are the only inputs left on the wind.html page for the user to modify.
-    'design_method', 'unit_system', 'basic_wind_speed', 'exposure_category',
+    'design_method', 'unit_system', 'basic_wind_speed', 'exposure_category', 'risk_category', 'asce_standard', 'jurisdiction',
     'enclosure_classification', 'wind_obstruction', 'building_flexibility', 'fundamental_period',
     'structure_type_for_kd', 'topographic_factor_Kzt', 'gust_effect_factor_g', 'calculate_height_varying_pressure'
 ];
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (event.target.id === 'send-to-combos-btn' && lastWindRunResults) {
-                sendWindToCombos(lastWindRunResults);
+                sendWindToCombos(lastWindRunResults); // Refactored this function
             }
             if (event.target.id === 'print-report-btn') {
                 window.print();

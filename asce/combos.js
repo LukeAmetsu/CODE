@@ -19,6 +19,30 @@ const comboInputIds = [
  * This function is called from combos.html after the DOM and templates are loaded.
  */
 function initializeApp() {
+    /**
+     * Displays a summary of the loaded project data on the combos calculator page.
+     * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
+     */
+    function displayProjectDataSummary(projectData) {
+        const container = document.getElementById('project-data-summary-container');
+        if (!container) return;
+
+        if (!projectData || !projectData.asce_standard) {
+            container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
+            document.getElementById('run-combo-calculation-btn').disabled = true;
+            return;
+        }
+
+        const { asce_standard, jurisdiction } = projectData;
+
+        container.innerHTML = `
+            <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
+            <ul class="text-sm space-y-1 mt-2 grid grid-cols-2">
+                <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
+                <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
+            </ul>`;
+    }
+
     function attachEventListeners() {
         function attachDebouncedListeners(ids, handler) {
             const debouncedHandler = debounce(handler, 300);
@@ -72,6 +96,9 @@ function initializeApp() {
 
     attachEventListeners();
     loadDataFromStorage();
+    const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+    displayProjectDataSummary(projectData);
+    loadInputsFromLocalStorage('buildingProjectData', comboInputIds);
     loadInputsFromLocalStorage('combo-calculator-inputs', comboInputIds);
 }
 
@@ -455,13 +482,17 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
     // Filter the master list to only include scenarios that have results in the current calculation.
     const availableScenarios = masterScenarioOrder.filter(title => scenarios[title]);
 
-    availableScenarios.forEach(title => {
+    availableScenarios.forEach((title, index) => {
         const data = scenarios[title]; // We know data exists because of the filter above.
+        const cardId = `combo-summary-card-${index}`;
 
         const shortTitle = title.replace(' Analysis', '').replace(' Combinations', '');
         summaryHtml += `
-            <div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col">
-                <h4 class="font-semibold text-center text-base mb-2">${shortTitle}</h4>
+            <div id="${cardId}" class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col relative">
+                <button data-copy-target-id="${cardId}" class="copy-section-btn absolute top-2 right-2 bg-blue-500 text-white font-semibold p-1 rounded-md hover:bg-blue-600 text-xs print-hidden" data-copy-ignore title="Copy Card">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                </button>
+                <h4 class="font-semibold text-center text-base mb-2 pr-6">${shortTitle}</h4>
                 <div class="flex-grow space-y-2">
                     <div class="text-center">
                         <p class="text-sm">Max Pressure</p>

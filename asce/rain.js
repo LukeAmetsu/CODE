@@ -91,6 +91,29 @@ const rainLoadCalculator = (() => {
     return { run };
 })();
 
+/**
+ * Displays a summary of the loaded project data on the rain calculator page.
+ * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
+ */
+function displayProjectDataSummary(projectData) {
+    const container = document.getElementById('project-data-summary-container');
+    if (!container) return;
+
+    if (!projectData || !projectData.asce_standard) {
+        container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
+        document.getElementById('run-rain-calculation-btn').disabled = true;
+        return;
+    }
+
+    const { asce_standard, jurisdiction } = projectData;
+
+    container.innerHTML = `
+        <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
+        <ul class="text-sm space-y-1 mt-2 grid grid-cols-2">
+            <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
+            <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
+        </ul>`;
+}
 document.addEventListener('DOMContentLoaded', () => {
     const handleRunRainCalculation = createCalculationHandler({
         inputIds: rainInputIds,
@@ -128,9 +151,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial state setup
     // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
     setTimeout(() => {
+        const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+        displayProjectDataSummary(projectData);
+        loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
         // Load rain-specific settings first, then override with shared project data.
         loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds, handleRunRainCalculation);
-        loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
     }, 100);
 });
 

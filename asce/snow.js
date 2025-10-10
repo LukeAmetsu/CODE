@@ -2,10 +2,10 @@ let lastSnowRunResults = null;
 
 const snowInputIds = [
     'snow_asce_standard', 'snow_unit_system', 'snow_risk_category', 'snow_design_method', 'snow_jurisdiction', 'snow_roof_type',
-    'snow_nycbc_minimum_roof_snow_load', 'snow_ground_snow_load', 'snow_surface_roughness_category', 
-    'snow_exposure_condition', 'snow_thermal_condition', 'snow_roof_slope_degrees', 'snow_is_roof_slippery', 
-    'snow_calculate_unbalanced', 'snow_calculate_drift', 'snow_calculate_sliding', 'snow_eave_to_ridge_distance_W', 
-    'snow_is_simply_supported_prismatic', 'snow_winter_wind_parameter_W2', 'snow_upper_roof_length_lu', 
+    'snow_nycbc_minimum_roof_snow_load', 'snow_ground_snow_load', 'snow_surface_roughness_category',
+    'snow_exposure_condition', 'snow_thermal_condition', 'snow_roof_slope_degrees', 'snow_is_roof_slippery',
+    'snow_calculate_unbalanced', 'snow_calculate_drift', 'snow_calculate_sliding', 'snow_eave_to_ridge_distance_W',
+    'snow_is_simply_supported_prismatic', 'snow_winter_wind_parameter_W2', 'snow_upper_roof_length_lu',
     'snow_height_difference_hc', 'snow_lower_roof_length_ll'
 ];
 
@@ -310,6 +310,33 @@ function run(inputs, validation) {
     return { run };
 })();
 
+/**
+ * Displays a summary of the loaded project data on the snow calculator page.
+ * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
+ */
+function displayProjectDataSummary(projectData) {
+    const container = document.getElementById('project-data-summary-container');
+    if (!container) return;
+
+    if (!projectData || !projectData.building_length_L) {
+        container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
+        document.getElementById('run-snow-calculation-btn').disabled = true;
+        return;
+    }
+
+    const { asce_standard, risk_category, jurisdiction, roof_type, roof_slope_deg, eave_to_ridge_distance_W } = projectData;
+
+    container.innerHTML = `
+        <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
+        <ul class="text-sm space-y-1 mt-2 grid grid-cols-2">
+            <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
+            <li><strong>Risk Category:</strong> ${sanitizeHTML(risk_category)}</li>
+            <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
+            <li><strong>Roof Type:</strong> ${sanitizeHTML(roof_type)} (${roof_slope_deg.toFixed(1)}°)</li>
+            <li><strong>Eave-to-Ridge (W):</strong> ${eave_to_ridge_distance_W.toFixed(1)}</li>
+        </ul>`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Inject templates first
     injectHeader({
@@ -346,9 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
             el?.addEventListener('change', () => saveInputsToLocalStorage('snow-calculator-inputs', gatherInputsFromIds(snowInputIds)));
         });
 
+        // Load project data first to populate shared fields
+        const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+        displayProjectDataSummary(projectData);
+        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
         // Load snow-specific settings first, then override with shared project data.
         loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds, handleRunSnowCalculation);
-        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
 
     }, 50); // A small delay to ensure DOM is ready after injection
 });

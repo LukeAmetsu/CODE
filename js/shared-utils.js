@@ -442,16 +442,28 @@ function createWordCompatibleHTML(content, title, cssStyles) {
  * @returns {string} A plain text representation of the element's content.
  */
 function convertElementToPlainText(element) {
+    // Special handling for combo summary cards to make the text output cleaner
+    if (element.id.startsWith('combo-summary-card-')) {
+        const title = element.querySelector('h4')?.innerText.trim() || 'Summary';
+        const maxPressure = element.querySelector('p.text-xl')?.innerText.trim() || 'N/A';
+        const maxCombo = element.querySelector('p.truncate')?.title || 'N/A';
+        const minPressure = element.querySelectorAll('p.text-xl')[1]?.innerText.trim() || 'N/A';
+        const minCombo = element.querySelectorAll('p.truncate')[1]?.title || 'N/A';
+
+        return `${title}\n- Max Pressure: ${maxPressure} (From: ${maxCombo})\n- Max Uplift/Suction: ${minPressure} (From: ${minCombo})`;
+    }
+
+    // Generic conversion for other elements
     const textParts = [];
     element.querySelectorAll('h1, h2, h3, h4, p, li, tr, caption').forEach(el => {
         const tagName = el.tagName.toLowerCase();
         let line = el.innerText.trim();
-        if (tagName === 'h1') textParts.push(`\n# ${line}\n`);
-        else if (tagName === 'h2') textParts.push(`\n## ${line}\n`);
+        if (tagName === 'h1') textParts.push(`\n# ${line}\n\n`);
+        else if (tagName === 'h2') textParts.push(`\n## ${line}\n\n`);
         else if (tagName === 'h3') textParts.push(`\n### ${line}\n`);
         else if (tagName === 'h4') textParts.push(`\n#### ${line}\n`);
         else if (tagName === 'caption') textParts.push(`\n--- ${line} ---\n`);
-        else if (tagName === 'li') textParts.push(`* ${line}`);
+        else if (tagName === 'li') textParts.push(`* ${line}`); // Keep li as is
         else if (tagName === 'tr') {
             const cells = Array.from(el.querySelectorAll('th, td')).map(cell => cell.innerText.trim());
             textParts.push(cells.join('\t|\t')); // Tab-separated for better column alignment
@@ -870,22 +882,28 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
             return;
         }
 
-        // --- Data Mapping for Shared Project Data ---
-        // This allows 'buildingProjectData' with generic keys (e.g., 'risk_category')
-        // to populate specific calculator inputs (e.g., 'wind_risk_category').
-        const isProjectData = storageKey === 'buildingProjectData';
-        const pagePrefix = document.body.id.split('-')[0] + '_'; // e.g., 'wind_', 'snow_'
-
         inputIds.forEach(id => {
-            // Determine the key to look for in the loaded data object.
-            const dataKey = isProjectData ? id.replace(pagePrefix, '') : id;
+            const el = document.getElementById(id);
+            if (!el) return;
 
-            const el = document.getElementById(id); // The element on the current page
-            if (el && inputs[dataKey] !== undefined) {
+            // Try to find a value for the current element's ID.
+            // 1. Look for a direct match (e.g., inputs['snow_risk_category']).
+            // 2. If it's project data, look for a generic match (e.g., inputs['risk_category']).
+            let valueToApply;
+            if (inputs[id] !== undefined) {
+                valueToApply = inputs[id];
+            } else if (storageKey === 'buildingProjectData') {
+                const genericKey = id.substring(id.indexOf('_') + 1);
+                if (inputs[genericKey] !== undefined) {
+                    valueToApply = inputs[genericKey];
+                }
+            }
+
+            if (valueToApply !== undefined) {
                 if (el.type === 'checkbox') {
-                    el.checked = !!inputs[dataKey];
+                    el.checked = !!valueToApply;
                 } else {
-                    el.value = inputs[dataKey];
+                    el.value = valueToApply;
                 }
                 el.dispatchEvent(new Event('change', { bubbles: true }));
                 el.dispatchEvent(new Event('input', { bubbles: true }));
