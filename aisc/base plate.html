@@ -151,6 +151,13 @@
                                 <h2>Column Properties</h2>
                                 <div class="grid grid-cols-2 gap-4">
                                      <div>
+                                        <label for="column_type" class="block text-sm font-medium mb-1">Column Type</label>
+                                        <select id="column_type">
+                                            <option value="Wide Flange">Wide Flange</option>
+                                            <option value="Round HSS" selected>Round HSS</option>
+                                        </select>
+                                    </div>
+                                     <div>
                                         <label for="column_depth_d" id="label_column_dim1" class="block text-sm">Column d</label><input type="number" id="column_depth_d" value="3.5" data-validate="positive">
                                     </div>
                                     <div id="container_column_dim2">
@@ -158,12 +165,12 @@
                                         <input type="number" id="column_flange_width_bf" value="3.5" data-validate="positive">
                                     </div>
                                     <div>
-                                        <label for="column_type" class="block text-sm font-medium mb-1">Column Type</label>
-                                        <select id="column_type">
-                                            <option value="Wide Flange">Wide Flange</option>
-                                            <option value="Round HSS" selected>Round HSS</option>
+                                        <label for="aisc_shape_select" class="block text-sm font-medium mb-1">Select Shape</label>
+                                        <select id="aisc_shape_select">
+                                            <option value="">-- Manual Input --</option>
+                                            <!-- Options will be populated by JS -->
                                         </select>
-                                    </div>
+                                     </div>
                                     <div id="container_column_tf">
                                         <label for="column_flange_tf" class="block text-sm">Flange Thick (t<sub>f</sub>)</label>
                                         <input type="number" id="column_flange_tf" value="0.25">

@@ -1323,6 +1323,7 @@ function getSectionProperties(inputs) {
 function updateGeometryInputsUI() {
     const sectionType = document.getElementById('section_type').value;
     const d_label = document.getElementById('label-d');
+    const shapeSelectContainer = document.getElementById('aisc-shape-select-container');
     const bf_label = document.getElementById('label-bf');
     const tf_label = document.getElementById('label-tf');
     const tw_label = document.getElementById('label-tw');
@@ -1335,6 +1336,7 @@ function updateGeometryInputsUI() {
     bf_container.style.display = 'block';
     tf_container.style.display = 'block';
     tw_container.style.display = 'block';
+    shapeSelectContainer.style.display = 'block';
 
     if (sectionType === 'I-Shape') {
         d_label.textContent = 'Depth (d)';
@@ -1358,7 +1360,13 @@ function updateGeometryInputsUI() {
         bf_label.textContent = 'Flange Width (bf)';
         tf_label.textContent = 'Flange Thick (tf)';
         tw_label.textContent = 'Web Thick (tw)';
+    } else if (sectionType === 'Manual Input') {
+        shapeSelectContainer.style.display = 'none';
+        // Ensure inputs are not readonly
+        document.querySelectorAll('#d, #bf, #tf, #tw').forEach(el => el.readOnly = false);
     }
+
+    populateShapeDropdown(); // Repopulate shapes for the selected type
 }
 
 function handleToggleAllDetails(mainButton, containerSelector) {
@@ -1775,6 +1783,69 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function populateShapeDropdown() {
+        const shapeSelect = document.getElementById('aisc_shape_select');
+        const sectionType = document.getElementById('section_type').value;
+        if (!shapeSelect || sectionType === 'Manual Input') return;
+
+        try {
+            const shapes = await AISC_SPEC.getShapesByType(sectionType);
+            const shapeNames = Object.keys(shapes).sort(); // Sort alphabetically
+
+            // Preserve current value if it exists in the new list
+            const currentVal = shapeSelect.value;
+
+            shapeSelect.innerHTML = '<option value="">-- Select a Shape --</option>'; // Reset
+            shapeNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                shapeSelect.appendChild(option);
+            });
+
+            if (shapeNames.includes(currentVal)) {
+                shapeSelect.value = currentVal;
+            }
+
+        } catch (error) {
+            console.error("Failed to populate shape dropdown:", error);
+            shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
+        }
+    }
+
+    async function handleShapeSelection() {
+        const shapeName = document.getElementById('aisc_shape_select').value;
+        const geometryInputs = ['d', 'bf', 'tf', 'tw'];
+        const manualPropInputs = ['Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual'];
+
+        if (!shapeName) {
+            // If "Select a Shape" is chosen, make inputs editable
+            [...geometryInputs, ...manualPropInputs].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.readOnly = false;
+            });
+            return;
+        }
+
+        const shape = await AISC_SPEC.getShape(shapeName);
+        if (!shape) return;
+
+        const propertyMap = {
+            d: shape.d, bf: shape.bf, tf: shape.tf, tw: shape.tw,
+            Ag_manual: shape.Ag, I_manual: shape.Ix, Sx_manual: shape.Sx, Zx_manual: shape.Zx,
+            ry_manual: shape.ry, rts_manual: shape.rts, J_manual: shape.J, Cw_manual: shape.Cw,
+            Iy_manual: shape.Iy, Sy_manual: shape.Sy, Zy_manual: shape.Zy
+        };
+
+        Object.keys(propertyMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el && propertyMap[id] !== undefined) {
+                el.value = propertyMap[id];
+                el.readOnly = true; // Make inputs read-only when a shape is selected
+            }
+        });
+    }
+
     const handleRunSteelCheck = createCalculationHandler({
         gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
         storageKey: 'steel-check-inputs',
@@ -1794,6 +1865,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
     document.getElementById('file-input').addEventListener('change', createLoadInputsHandler(steelCheckInputIds, handleRunSteelCheck));
     document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
+    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
 
     // --- Auto-save to Local Storage (with debouncing) ---
     const debouncedSave = debounce(() => {
@@ -1806,6 +1878,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Setup ---
     populateMaterialDropdowns();
+    populateShapeDropdown();
     updateGeometryInputsUI();
     loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
 

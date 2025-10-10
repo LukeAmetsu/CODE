@@ -1967,6 +1967,63 @@ function populateBoltGradeDropdowns() {
     });
 }
 
+async function populateShapeDropdown() {
+    const shapeSelect = document.getElementById('aisc_shape_select');
+    if (!shapeSelect) return;
+
+    try {
+        // Splice calculator is for I-shapes
+        const shapes = await AISC_SPEC.getShapesByType('I-Shape');
+        const shapeNames = Object.keys(shapes).sort();
+
+        const currentVal = shapeSelect.value;
+        shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>'; // Reset
+        shapeNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            shapeSelect.appendChild(option);
+        });
+
+        if (shapeNames.includes(currentVal)) {
+            shapeSelect.value = currentVal;
+        }
+
+    } catch (error) {
+        console.error("Failed to populate shape dropdown:", error);
+        shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
+    }
+}
+
+async function handleShapeSelection() {
+    const shapeName = document.getElementById('aisc_shape_select').value;
+    const memberInputs = ['member_d', 'member_bf', 'member_tf', 'member_tw', 'member_Zx', 'member_Sx'];
+
+    if (!shapeName) {
+        memberInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.readOnly = false;
+        });
+        return;
+    }
+
+    const shape = await AISC_SPEC.getShape(shapeName);
+    if (!shape) return;
+
+    const propertyMap = {
+        'member_d': shape.d, 'member_bf': shape.bf, 'member_tf': shape.tf, 'member_tw': shape.tw,
+        'member_Zx': shape.Zx, 'member_Sx': shape.Sx
+    };
+
+    Object.keys(propertyMap).forEach(id => {
+        const el = document.getElementById(id);
+        if (el && propertyMap[id] !== undefined) {
+            el.value = propertyMap[id];
+            el.readOnly = true;
+        }
+    });
+}
+
 function getAllInputIdsOnPage() {
     const ids = new Set();
     document.querySelectorAll('input[id], select[id]').forEach(el => ids.add(el.id));
@@ -2300,6 +2357,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSharedUI();
     populateMaterialDropdowns();
     populateBoltGradeDropdowns();
+    populateShapeDropdown();
+    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
     
     // --- Dimension Toggle Logic ---
     const toggleDimensionsBtn = document.getElementById('toggle-dimensions-btn');
