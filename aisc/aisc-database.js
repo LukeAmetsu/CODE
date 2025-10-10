@@ -147,6 +147,69 @@ const AISC_SPEC = (() => {
         "E70XX": { Fexx: 70 },
     };
 
+    // --- AISC SHAPE DATABASE ---
+    let _shapeDatabaseCache = null;
+    let _databaseLoadingPromise = null;
+
+    /**
+     * Asynchronously loads the AISC shape database from a JSON file.
+     * Uses a singleton pattern to ensure the database is fetched only once.
+     * @returns {Promise<object>} A promise that resolves with the shape database object.
+     */
+    async function loadShapeDatabase() {
+        if (_shapeDatabaseCache) {
+            return _shapeDatabaseCache;
+        }
+        if (_databaseLoadingPromise) {
+            return _databaseLoadingPromise;
+        }
+
+        _databaseLoadingPromise = new Promise(async (resolve, reject) => {
+            try {
+                // Assumes aisc-shapes.json is in the same directory as the HTML file.
+                const response = await fetch('aisc-shapes.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                _shapeDatabaseCache = data;
+                resolve(data);
+            } catch (error) {
+                console.error("Could not load or parse aisc-shapes.json:", error);
+                _databaseLoadingPromise = null; // Reset promise on failure
+                reject(error);
+            }
+        });
+
+        return _databaseLoadingPromise;
+    }
+
+    /**
+     * Retrieves the properties for a specific AISC shape.
+     * @param {string} shapeName - The designation of the shape (e.g., "W18X50").
+     * @returns {object|null} The properties object for the shape, or null if not found.
+     */
+    async function getShape(shapeName) {
+        const db = await loadShapeDatabase();
+        return db[shapeName] || null;
+    }
+
+    /**
+     * Retrieves all shapes of a given type.
+     * @param {string} shapeType - The type of shape (e.g., "I-Shape", "Rectangular HSS").
+     * @returns {object} An object where keys are shape names and values are their properties.
+     */
+    async function getShapesByType(shapeType) {
+        const db = await loadShapeDatabase();
+        const shapes = {};
+        for (const [name, props] of Object.entries(db)) {
+            if (props.type === shapeType || shapeType === 'All') {
+                shapes[name] = props;
+            }
+        }
+        return shapes;
+    }
+
     // --- PUBLIC API ---
     return {
         getFnv,
@@ -160,5 +223,8 @@ const AISC_SPEC = (() => {
         getNominalHoleDiameter,
         weldElectrodes, // Expose for populating dropdowns
         minEdgeDistanceTable,
+        loadShapeDatabase, // Expose the loader
+        getShape,
+        getShapesByType,
     };
 })();

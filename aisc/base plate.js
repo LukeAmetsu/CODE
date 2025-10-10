@@ -1920,6 +1920,68 @@ document.addEventListener('DOMContentLoaded', () => {
         themeToggleButton.addEventListener('click', () => setTimeout(draw3dBasePlateDiagram, 50)); // Use a small timeout to ensure class has been updated
     }
 
+    async function populateShapeDropdown() {
+        const shapeSelect = document.getElementById('aisc_shape_select');
+        const columnType = document.getElementById('column_type').value;
+        if (!shapeSelect) return;
+
+        const shapeTypeMap = {
+            'Wide Flange': 'I-Shape',
+            'Round HSS': 'HSS/Pipe (Circular)'
+        };
+        const aiscShapeType = shapeTypeMap[columnType];
+
+        try {
+            const shapes = await AISC_SPEC.getShapesByType(aiscShapeType);
+            const shapeNames = Object.keys(shapes).sort();
+
+            const currentVal = shapeSelect.value;
+            shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>'; // Reset
+            shapeNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                shapeSelect.appendChild(option);
+            });
+
+            if (shapeNames.includes(currentVal)) {
+                shapeSelect.value = currentVal;
+            }
+
+        } catch (error) {
+            console.error("Failed to populate shape dropdown:", error);
+            shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
+        }
+    }
+
+    async function handleShapeSelection() {
+        const shapeName = document.getElementById('aisc_shape_select').value;
+        const geometryInputs = ['column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw'];
+
+        if (!shapeName) {
+            geometryInputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.readOnly = false;
+            });
+            return;
+        }
+
+        const shape = await AISC_SPEC.getShape(shapeName);
+        if (!shape) return;
+
+        const propertyMap = {
+            'column_depth_d': shape.d, 'column_flange_width_bf': shape.bf, 'column_flange_tf': shape.tf, 'column_web_tw': shape.tw
+        };
+
+        Object.keys(propertyMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el && propertyMap[id] !== undefined) {
+                el.value = propertyMap[id];
+                el.readOnly = true;
+            }
+        });
+    }
+
     function updateColumnInputsUI() {
         const columnType = document.getElementById('column_type').value;
         const label1 = document.getElementById('label_column_dim1');
@@ -1927,18 +1989,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const tf_container = document.getElementById('container_column_tf');
         const tw_container = document.getElementById('container_column_tw');
 
+        // Reset shape selection when type changes
+        document.getElementById('aisc_shape_select').value = '';
+        handleShapeSelection(); // This will unlock the inputs
+
         if (columnType === 'Round HSS') {
             label1.textContent = 'Column Diameter (D)';
             dim2_container.style.display = 'none';
             tf_container.style.display = 'none';
             tw_container.style.display = 'none';
+            document.getElementById('label_column_dim2').textContent = 'Column bf'; // Reset label
         } else { // Wide Flange
             label1.textContent = 'Column Depth (d)';
             dim2_container.style.display = 'block';
             tf_container.style.display = 'block';
             tw_container.style.display = 'block';
         }
-        // Redraw diagram whenever the type changes
+        populateShapeDropdown();
         drawBasePlateDiagram();
     }
 
@@ -1966,6 +2033,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSharedUI();
     // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
     populateMaterialDropdowns();
+    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
     updateColumnInputsUI(); // Set initial state
  
     // --- Auto-save inputs to localStorage on any input change, with debouncing ---
