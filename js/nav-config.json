@@ -15,7 +15,8 @@
         { "key": "wood-design", "href": "nds/nds wood design.html", "text": "Wood Design" }
     ],
     "nbr": [
-        { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "text": "Combinações" }
+        { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "text": "Combinações" },
+        { "key": "concrete-beam", "href": "concrete beam.html", "text": "Concrete Beam" }
     ],
     "home": [
         { "key": "home", "href": "index.html", "text": "Home" }
