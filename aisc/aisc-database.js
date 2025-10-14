@@ -203,6 +203,7 @@ const AISC_SPEC = (() => {
         const db = await loadShapeDatabase();
         const shapes = {};
         for (const [name, props] of Object.entries(db)) {
+            // With the updated aisc-shapes.json, we can now directly match the type.
             if (props.type === shapeType || shapeType === 'All') {
                 shapes[name] = props;
             }

@@ -1398,19 +1398,26 @@ function performMemberChecks(inputs, demands) {
     if (Axial_load > 0) {
         const A_gross_approx = 2 * inputs.member_bf * inputs.member_tf + (inputs.member_d - 2 * inputs.member_tf) * inputs.member_tw; 
         const A_holes_flange = (2 * inputs.Nr_fp) * hole_for_net_area_fp * inputs.member_tf;
-        const A_holes_web = inputs.Nr_wp * hole_for_net_area_wp * inputs.member_tw;
-        const An = A_gross_approx - A_holes_flange - A_holes_web;
+        const A_holes_web = inputs.Nr_wp * hole_for_net_area_wp * inputs.member_tw; // Holes in one line
+        const An = A_gross_approx - 2 * A_holes_flange - A_holes_web; // Holes in both flanges
 
-        // Shear Lag Factor U per AISC Table D3.1, Case 7 (W, M, S shapes with flange connections)
-        const An_conn = 2 * (inputs.member_bf - inputs.Nr_fp * hole_for_net_area_fp) * inputs.member_tf;
-        const Ag_conn = 2 * inputs.member_bf * inputs.member_tf;
-        const U = Ag_conn > 0 ? An_conn / Ag_conn : 1.0;
+        // --- Shear Lag Factor U per AISC Table D3.1 ---
+        // For a W-shape connected by the flanges, Case 7 is often used.
+        // U = 0.9 if bf >= 2/3 d, otherwise U = 0.85
+        const U_case7 = (inputs.member_bf >= (2/3) * inputs.member_d) ? 0.90 : 0.85;
+
+        // Alternatively, Case 2 can be used.
+        const conn_length_flange = (inputs.Nc_fp - 1) * inputs.S1_col_spacing_fp;
+        const { U: U_case2, x_bar } = computeShearLagFactorU({ plate_width: inputs.member_bf, gage: inputs.g_gage_fp, num_fastener_rows: inputs.Nr_fp, conn_length: conn_length_flange, t_p: inputs.member_tf, d_bolt: inputs.D_fp });
+
+        // Per AISC D3, it is permitted to use the larger value.
+        const U = Math.max(U_case2, U_case7);
         
         const Ae = U * An;
         const check = { 
             Rn: inputs.member_Fu * Ae, phi: 0.75, omega: 2.00, 
             An, Ae, U, Fu: inputs.member_Fu, 
-            details: { Ag_approx: A_gross_approx, A_holes_flange, A_holes_web, An_conn, Ag_conn, hole_dia: hole_for_net_area_fp } // Corrected hole_dia
+            details: { Ag_approx: A_gross_approx, A_holes_flange, A_holes_web, U_case2, U_case7, x_bar, conn_length: conn_length_flange }
         };
         checks['Beam Section Tensile Rupture'] = { demand: Axial_load, check };
     }

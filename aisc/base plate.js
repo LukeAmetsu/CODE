@@ -1926,8 +1926,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!shapeSelect) return;
 
         const shapeTypeMap = {
-            'Wide Flange': 'I-Shape',
-            'Round HSS': 'HSS/Pipe (Circular)'
+            'W-Shape': 'W-Shape', // Maps UI selection to JSON type
+            'Round HSS': 'Round HSS',
+            'Pipe': 'Pipe'
         };
         const aiscShapeType = shapeTypeMap[columnType];
 
@@ -1992,14 +1993,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset shape selection when type changes
         document.getElementById('aisc_shape_select').value = '';
         handleShapeSelection(); // This will unlock the inputs
-
-        if (columnType === 'Round HSS') {
+ 
+        if (columnType === 'Round HSS' || columnType === 'Pipe') {
             label1.textContent = 'Column Diameter (D)';
             dim2_container.style.display = 'none';
             tf_container.style.display = 'none';
             tw_container.style.display = 'none';
             document.getElementById('label_column_dim2').textContent = 'Column bf'; // Reset label
-        } else { // Wide Flange
+        } else { // W-Shape
             label1.textContent = 'Column Depth (d)';
             dim2_container.style.display = 'block';
             tf_container.style.display = 'block';
