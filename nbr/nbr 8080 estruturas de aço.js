@@ -67,30 +67,91 @@ function renderNbr8800Results(calc_results) {
     const N_ratio = results.NcRd > 0 ? (inputs.Nsd / results.NcRd) : Infinity;
     const M_ratio = results.Mrd > 0 ? (inputs.Msdx / results.Mrd) : Infinity;
 
-    const getStatus = (ratio) => ratio <= 1.0 ? `<span class="pass">OK</span>` : `<span class="fail">NÃO OK</span>`;
+    const getStatus = (ratio) => ratio <= 1.0 ? `<span class="pass">OK</span>` : `<span class="fail">FALHA</span>`;
 
     summaryContainer.innerHTML = `
         <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Compressão Axial:</span> <strong class="${N_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${N_ratio.toFixed(3)}</strong></p>
+            <p class="flex justify-between"><span>Compressão (N<sub>Sd</sub> / N<sub>c,Rd</sub>):</span> <strong class="${N_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${N_ratio.toFixed(3)}</strong></p>
         </div>
         <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Flexão (Eixo X):</span> <strong class="${M_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${M_ratio.toFixed(3)}</strong></p>
+            <p class="flex justify-between"><span>Flexão (M<sub>Sd,x</sub> / M<sub>Rd,x</sub>):</span> <strong class="${M_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${M_ratio.toFixed(3)}</strong></p>
         </div>
         <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Interação N + M:</span> <strong class="${results.interaction_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${results.interaction_ratio.toFixed(3)}</strong></p>
+            <p class="flex justify-between"><span>Interação (N+M):</span> <strong class="${results.interaction_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${results.interaction_ratio.toFixed(3)}</strong></p>
         </div>
     `;
 
+    const checks = [
+        {
+            name: 'Compressão Axial',
+            demand: inputs.Nsd / 1000,
+            capacity: results.NcRd / 1000,
+            ratio: N_ratio,
+            unit: 'kN',
+            breakdown: `<h4>Cálculo de Compressão Axial Resistente (N<sub>c,Rd</sub>)</h4>
+                <ul>
+                    <li>Força Axial de Escoamento (N<sub>pl</sub>) = A<sub>g</sub> &times; f<sub>y</sub> = ${(inputs.Ag / 100).toFixed(2)} cm² &times; ${(inputs.fy / 10).toFixed(2)} kN/cm² = ${((inputs.Ag * inputs.fy) / 1000).toFixed(2)} kN</li>
+                    <li>Força Axial Elástica de Flambagem (N<sub>e</sub>) = &pi;²EI / (KL)² = <b>${(results.Ne / 1000).toFixed(2)} kN</b></li>
+                    <li>Índice de Esbeltez Reduzido (&lambda;<sub>0</sub>) = &radic;(N<sub>pl</sub> / N<sub>e</sub>) = <b>${results.lambda_0.toFixed(3)}</b></li>
+                    <li>Fator de Redução (&chi;) = <b>${results.chi.toFixed(3)}</b> (baseado em &lambda;<sub>0</sub>)</li>
+                    <li>Resistência (N<sub>c,Rd</sub>) = (&chi; &times; A<sub>g</sub> &times; f<sub>y</sub>) / &gamma;<sub>a1</sub> = <b>${NcRd_kN} kN</b></li>
+                </ul>`
+        },
+        {
+            name: 'Flexão (Eixo X)',
+            demand: inputs.Msdx / 10**6,
+            capacity: results.Mrd / 10**6,
+            ratio: M_ratio,
+            unit: 'kN·m',
+            breakdown: `<h4>Cálculo de Momento Fletor Resistente (M<sub>Rd,x</sub>)</h4>
+                <ul>
+                    <li>Momento de Plastificação (M<sub>pl</sub>) = Z<sub>x</sub> &times; f<sub>y</sub> = ${(inputs.Zx / 1000).toFixed(2)} cm³ &times; ${(inputs.fy / 10).toFixed(2)} kN/cm² = ${((inputs.Zx * inputs.fy) / 10**6).toFixed(2)} kN·m</li>
+                    <li>Resistência (M<sub>Rd,x</sub>) = M<sub>pl</sub> / &gamma;<sub>a1</sub> = <b>${Mrd_kNm} kN·m</b></li>
+                    <li><small>Nota: Flambagem lateral com torção (FLT) não foi verificada neste cálculo simplificado.</small></li>
+                </ul>`
+        },
+        {
+            name: 'Interação N + M',
+            demand: results.interaction_ratio,
+            capacity: 1.0,
+            ratio: results.interaction_ratio,
+            unit: '',
+            breakdown: `<h4>Verificação de Interação Força Axial + Momento Fletor (NBR 8800:2008, Seção 5.4.2.2)</h4>
+                <ul>
+                    <li>Relação de Compressão = N<sub>Sd</sub> / N<sub>c,Rd</sub> = ${(inputs.Nsd / 1000).toFixed(2)} / ${NcRd_kN} = <b>${N_ratio.toFixed(3)}</b></li>
+                    <li>Equação de Interação Aplicada: <b>${N_ratio >= 0.2 ? '(N<sub>Sd</sub>/N<sub>c,Rd</sub>) + (8/9)*(M<sub>Sd,x</sub>/M<sub>Rd,x</sub>)' : '(N<sub>Sd</sub>/2N<sub>c,Rd</sub>) + (M<sub>Sd,x</sub>/M<sub>Rd,x</sub>)'}</b></li>
+                    <li>Resultado = <b>${results.interaction_ratio.toFixed(3)}</b></li>
+                </ul>`
+        }
+    ];
+
+    const checkRows = checks.map((check, index) => {
+        const detailId = `steel-detail-${index}`;
+        return `
+            <tr class="border-t dark:border-gray-700">
+                <td>${check.name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Mostrar]</button></td>
+                <td>${check.demand.toFixed(2)} ${check.unit}</td>
+                <td>${check.capacity.toFixed(2)} ${check.unit}</td>
+                <td>${check.ratio.toFixed(3)}</td>
+                <td>${getStatus(check.ratio)}</td>
+            </tr>
+            <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${check.breakdown}</div></td></tr>
+        `;
+    }).join('');
+
     resultsContainer.innerHTML = `
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-            <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação Detalhado</h2>
-            <table class="w-full mt-4">
+        <div id="steel-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+            <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
+                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Mostrar Detalhes</button>
+                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Baixar PDF</button>
+                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
+            </div>
+            <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação Detalhado (NBR 8800)</h2>
+            <table class="w-full mt-4 results-table">
                 <caption>Resistências de Cálculo</caption>
                 <thead><tr><th>Verificação</th><th>Solicitante (Sd)</th><th>Resistente (Rd)</th><th>Ratio</th><th>Status</th></tr></thead>
                 <tbody>
-                    <tr><td>Compressão Axial</td><td>${(inputs.Nsd / 1000).toFixed(2)} kN</td><td>${NcRd_kN} kN</td><td>${N_ratio.toFixed(3)}</td><td>${getStatus(N_ratio)}</td></tr>
-                    <tr><td>Flexão (Eixo X)</td><td>${(inputs.Msdx / 10 ** 6).toFixed(2)} kN·m</td><td>${Mrd_kNm} kN·m</td><td>${M_ratio.toFixed(3)}</td><td>${getStatus(M_ratio)}</td></tr>
-                    <tr><td>Interação N + M</td><td colspan="2">Equação NBR 8800 5.4.2.2</td><td>${results.interaction_ratio.toFixed(3)}</td><td>${getStatus(results.interaction_ratio)}</td></tr>
+                    ${checkRows}
                 </tbody>
             </table>
         </div>
@@ -119,4 +180,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
     document.getElementById('file-input').addEventListener('change', handleLoadInputs);
     document.getElementById('run-check-btn').addEventListener('click', handleRunNbr8800Check);
+
+    document.getElementById('results-container').addEventListener('click', (event) => {
+        const button = event.target.closest('.toggle-details-btn');
+        if (button) {
+            const detailId = button.dataset.toggleId;
+            const row = document.getElementById(detailId);
+            if (row) {
+                row.classList.toggle('is-visible');
+                button.textContent = row.classList.contains('is-visible') ? '[Esconder]' : '[Mostrar]';
+            }
+        }
+        if (event.target.id === 'toggle-all-details-btn') {
+            const mainButton = event.target;
+            const shouldShow = mainButton.dataset.state === 'hidden';
+            document.querySelectorAll('#results-container .details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
+            document.querySelectorAll('#results-container .toggle-details-btn').forEach(button => button.textContent = shouldShow ? '[Esconder]' : '[Mostrar]');
+            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
+            mainButton.textContent = shouldShow ? 'Esconder Detalhes' : 'Mostrar Detalhes';
+        }
+        if (event.target.id === 'copy-report-btn') handleCopyToClipboard('steel-report-content', 'feedback-message');
+        if (event.target.id === 'download-pdf-btn') handleDownloadPdf('steel-report-content', 'NBR8800-Relatorio.pdf');
+    });
 });

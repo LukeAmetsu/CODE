@@ -47,7 +47,7 @@ function renderNbrResults(calc_results) {
     const M_ratio = flex.Mrd > 0 ? inputs.Msd / flex.Mrd : Infinity;
     const V_ratio = shear.VRd > 0 ? inputs.Vsd / shear.VRd : Infinity;
     const V_max_ratio = shear.VRd2 > 0 ? inputs.Vsd / shear.VRd2 : Infinity;
-    const getStatus = (ratio) => ratio <= 1.0 ? `<span class="pass">OK</span>` : `<span class="fail">NÃO OK</span>`;
+    const getStatus = (ratio) => ratio <= 1.0 ? `<span class="pass">OK</span>` : `<span class="fail">FALHA</span>`;
 
     summaryContainer.innerHTML = `
         <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
@@ -61,35 +61,78 @@ function renderNbrResults(calc_results) {
         </div>
     `;
 
-    resultsContainer.innerHTML = `
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-            <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação Detalhado (NBR 6118)</h2>
-            <table class="w-full mt-4">
-                <caption>Verificações de Cálculo (ELU)</caption>
-                <thead><tr><th>Verificação</th><th>Solicitante (Sd)</th><th>Resistente (Rd)</th><th>Ratio</th><th>Status</th></tr></thead>
-                <tbody>
-                    <tr><td>Flexão</td><td>${(inputs.Msd / 100).toFixed(2)} kN·m</td><td>${(flex.Mrd / 100).toFixed(2)} kN·m</td><td>${M_ratio.toFixed(3)}</td><td>${getStatus(M_ratio)}</td></tr>
-                    <tr><td>Cisalhamento</td><td>${inputs.Vsd.toFixed(2)} kN</td><td>${shear.VRd.toFixed(2)} kN</td><td>${V_ratio.toFixed(3)}</td><td>${getStatus(V_ratio)}</td></tr>
-                    <tr><td>Verif. Biela Comprimida</td><td>${inputs.Vsd.toFixed(2)} kN</td><td>${shear.VRd2.toFixed(2)} kN</td><td>${V_max_ratio.toFixed(3)}</td><td>${getStatus(V_max_ratio)}</td></tr>
-                </tbody>
-            </table>
-            <div class="calc-breakdown mt-4">
-                <h4>Detalhes da Flexão</h4>
+    const checks = [
+        {
+            name: 'Flexão',
+            demand: inputs.Msd / 100,
+            capacity: flex.Mrd / 100,
+            ratio: M_ratio,
+            unit: 'kN·m',
+            breakdown: `<h4>Cálculo de Flexão (ELU)</h4>
                 <ul>
                     <li>Altura Útil (d): ${flex.d.toFixed(2)} cm</li>
                     <li>Área de Aço (A<sub>s</sub>): ${flex.As.toFixed(2)} cm²</li>
                     <li>Linha Neutra (x): ${flex.x.toFixed(2)} cm</li>
                     <li>Relação x/d: ${flex.x_d_ratio.toFixed(3)} (${flex.dominio})</li>
-                </ul>
-            </div>
-            <div class="calc-breakdown mt-4">
-                <h4>Detalhes do Cisalhamento</h4>
+                    <li>Momento Resistente (M<sub>Rd</sub>) = A<sub>s</sub> &times; f<sub>yd</sub> &times; (d - 0.4x) = <b>${(flex.Mrd / 100).toFixed(2)} kN·m</b></li>
+                </ul>`
+        },
+        {
+            name: 'Cisalhamento',
+            demand: inputs.Vsd,
+            capacity: shear.VRd,
+            ratio: V_ratio,
+            unit: 'kN',
+            breakdown: `<h4>Cálculo de Cisalhamento (ELU)</h4>
                 <ul>
-                    <li>Contribuição do Concreto (V<sub>c</sub>): ${shear.Vc.toFixed(2)} kN</li>
-                    <li>Contribuição dos Estribos (V<sub>sw</sub>): ${shear.Vsw.toFixed(2)} kN</li>
-                    <li>Resistência Máxima (V<sub>Rd2</sub>): ${shear.VRd2.toFixed(2)} kN</li>
-                </ul>
+                    <li>Contribuição do Concreto (V<sub>c</sub>) = 0.6 &times; f<sub>ctd</sub> &times; b<sub>w</sub> &times; d = <b>${shear.Vc.toFixed(2)} kN</b></li>
+                    <li>Contribuição dos Estribos (V<sub>sw</sub>) = (A<sub>sw</sub>/s) &times; 0.9d &times; f<sub>yd</sub> = <b>${shear.Vsw.toFixed(2)} kN</b></li>
+                    <li>Força Cortante Resistente (V<sub>Rd</sub>) = V<sub>c</sub> + V<sub>sw</sub> = <b>${shear.VRd.toFixed(2)} kN</b></li>
+                </ul>`
+        },
+        {
+            name: 'Verif. Biela Comprimida',
+            demand: inputs.Vsd,
+            capacity: shear.VRd2,
+            ratio: V_max_ratio,
+            unit: 'kN',
+            breakdown: `<h4>Verificação da Biela Comprimida de Concreto (ELU)</h4>
+                <ul>
+                    <li>Resistência Máxima (V<sub>Rd2</sub>) = 0.27 &times; (1 - f<sub>ck</sub>/250) &times; f<sub>cd</sub> &times; b<sub>w</sub> &times; 0.9d = <b>${shear.VRd2.toFixed(2)} kN</b></li>
+                    <li>Esta é a força cortante máxima que a viga pode resistir para evitar o esmagamento da biela de compressão.</li>
+                </ul>`
+        }
+    ];
+
+    const checkRows = checks.map((check, index) => {
+        const detailId = `concrete-detail-${index}`;
+        return `
+            <tr class="border-t dark:border-gray-700">
+                <td>${check.name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Mostrar]</button></td>
+                <td>${check.demand.toFixed(2)} ${check.unit}</td>
+                <td>${check.capacity.toFixed(2)} ${check.unit}</td>
+                <td>${check.ratio.toFixed(3)}</td>
+                <td>${getStatus(check.ratio)}</td>
+            </tr>
+            <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${check.breakdown}</div></td></tr>
+        `;
+    }).join('');
+
+    resultsContainer.innerHTML = `
+        <div id="concrete-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+            <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
+                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Mostrar Detalhes</button>
+                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Baixar PDF</button>
+                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
             </div>
+            <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação Detalhado (NBR 6118)</h2>
+            <table class="w-full mt-4 results-table">
+                <caption>Verificações de Cálculo (ELU)</caption>
+                <thead><tr><th>Verificação</th><th>Solicitante (Sd)</th><th>Resistente (Rd)</th><th>Ratio</th><th>Status</th></tr></thead>
+                <tbody>
+                    ${checkRows}
+                </tbody>
+            </table>
         </div>`;
 }
 
@@ -115,4 +158,26 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
     document.getElementById('file-input').addEventListener('change', handleLoadInputs);
     document.getElementById('run-check-btn').addEventListener('click', handleRunNbrCheck);
+
+    document.getElementById('results-container').addEventListener('click', (event) => {
+        const button = event.target.closest('.toggle-details-btn');
+        if (button) {
+            const detailId = button.dataset.toggleId;
+            const row = document.getElementById(detailId);
+            if (row) {
+                row.classList.toggle('is-visible');
+                button.textContent = row.classList.contains('is-visible') ? '[Esconder]' : '[Mostrar]';
+            }
+        }
+        if (event.target.id === 'toggle-all-details-btn') {
+            const mainButton = event.target;
+            const shouldShow = mainButton.dataset.state === 'hidden';
+            document.querySelectorAll('#results-container .details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
+            document.querySelectorAll('#results-container .toggle-details-btn').forEach(button => button.textContent = shouldShow ? '[Esconder]' : '[Mostrar]');
+            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
+            mainButton.textContent = shouldShow ? 'Esconder Detalhes' : 'Mostrar Detalhes';
+        }
+        if (event.target.id === 'copy-report-btn') handleCopyToClipboard('concrete-report-content', 'feedback-message');
+        if (event.target.id === 'download-pdf-btn') handleDownloadPdf('concrete-report-content', 'NBR6118-Relatorio.pdf');
+    });
 });

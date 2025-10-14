@@ -80,7 +80,7 @@ const concreteBeamCalculator = (() => {
      * @returns {object} The results of the calculation.
      */
     function run(inputs) {
-        const { vertices, fck, load_pp, load_perm, load_var, beam_length, ecc_start, ecc_mid, ecc_end } = inputs;
+        const { vertices, fck, load_pp, load_perm, load_var, beam_length, cable_path } = inputs;
 
         // --- 1. Section Properties ---
         const props = calculateSectionProperties(vertices);
@@ -110,6 +110,10 @@ const concreteBeamCalculator = (() => {
         const sigma_inf_freq = -M_freq / 1000 / Wi_m3;
         const sigma_inf_qperm = -M_qperm / 1000 / Ws_m3;
 
+        // Find eccentricity at mid-span from the detailed path for the prestress calculation
+        // This is a simplification; a full analysis would check stresses along the entire path.
+        const ecc_mid = getEccentricityAt(beam_length / 2, cable_path);
+
         // --- 6. Prestressing Force Estimation (based on ELS-F) ---
         // σ_inf = -P/A - P*e/Wi - M/Wi <= fctf
         // P * (1/A + e/Wi) >= -fctf - M/Wi
@@ -129,7 +133,44 @@ const concreteBeamCalculator = (() => {
         return { checks: results, inputs };
     }
 
-    return { run, calculateSectionProperties, solveParabolaWithVertex };
+    /**
+     * Calculates the eccentricity 'y' at a given position 'x' along the beam,
+     * based on the defined cable path segments.
+     * @param {number} x_pos - The position along the beam length.
+     * @param {Array<object>} cable_path - The array of cable path points.
+     * @returns {number} The calculated eccentricity at x_pos.
+     */
+    function getEccentricityAt(x_pos, cable_path) {
+        if (!cable_path || cable_path.length < 2) return 0;
+    
+        for (let i = 0; i < cable_path.length - 1; i++) {
+            const p1 = cable_path[i];
+            const p2 = cable_path[i+1];
+    
+            // Check if x_pos is within the current segment [p1.x, p2.x]
+            if (x_pos >= p1.x && x_pos <= p2.x) {
+                // If the segment starting at p1 is 'Parabolic' AND there is a point p3 to define the full parabola
+                if (p1.type === 'Parabolic' && i + 2 < cable_path.length) {
+                    const p_vertex = p2;
+                    const p_end = cable_path[i+2];
+                    // Check if x_pos is within the first half of the parabola [p1.x, p_vertex.x]
+                    if (x_pos <= p_vertex.x) {
+                        const parabola = solveParabolaWithVertex([p1.x, p1.y], [p_vertex.x, p_vertex.y]);
+                        return parabola ? (parabola.a * (x_pos - p_vertex.x)**2 + p_vertex.y) : interpolate(x_pos, [p1.x, p_vertex.x], [p1.y, p_vertex.y]);
+                    }
+                    // Check if x_pos is within the second half of the parabola [p_vertex.x, p_end.x]
+                    if (x_pos > p_vertex.x && x_pos <= p_end.x) {
+                        const parabola = solveParabolaWithVertex([p_end.x, p_end.y], [p_vertex.x, p_vertex.y]);
+                        return parabola ? (parabola.a * (x_pos - p_vertex.x)**2 + p_vertex.y) : interpolate(x_pos, [p_vertex.x, p_end.x], [p_vertex.y, p_end.y]);
+                    }
+                } else { // The segment is 'Straight' or it's the last segment in the path
+                    return interpolate(x_pos, [p1.x, p2.x], [p1.y, p2.y]);
+                }
+            }
+        }
+        return cable_path[cable_path.length - 1].y; // Fallback to last point
+    }
+    return { run, calculateSectionProperties, solveParabolaWithVertex, getEccentricityAt };
 })();
 
 /**
@@ -139,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const inputIds = [
         'design_code', 'unit_system', 'fck', 'load_pp', 'load_perm', 'load_var',
-        'beam_length', 'beam_height', 'beam_coords', 'ecc_start', 'ecc_end', 'ecc_mid'
+        'beam_length', 'beam_height', 'beam_coords'
     ];
 
     function parseVertices(text) {
@@ -148,9 +189,45 @@ document.addEventListener('DOMContentLoaded', () => {
             .filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
     }
 
+    function gatherCablePath() {
+        const container = document.getElementById('cable-path-container');
+        return Array.from(container.querySelectorAll('.cable-path-row')).map(row => ({
+            x: parseFloat(row.querySelector('.cable-x').value) || 0,
+            y: parseFloat(row.querySelector('.cable-y').value) || 0,
+            type: row.querySelector('.cable-type').value
+        }));
+    }
+
+    function addCablePointRow(containerId, point = { x: 0, y: 0, type: 'Straight' }) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-[1fr_1fr_1.5fr_auto] gap-2 items-center cable-path-row';
+        
+        row.innerHTML = `
+            <input type="number" class="cable-x w-full" value="${point.x}">
+            <input type="number" class="cable-y w-full" value="${point.y}">
+            <select class="cable-type w-full">
+                <option value="Straight" ${point.type === 'Straight' ? 'selected' : ''}>Straight</option>
+                <option value="Parabolic" ${point.type === 'Parabolic' ? 'selected' : ''}>Parabolic</option>
+            </select>
+            <button class="remove-point-btn text-red-500 hover:text-red-700 w-8 h-8 flex items-center justify-center">&times;</button>
+        `;
+        
+        row.querySelector('.remove-point-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            row.remove();
+            debouncedDraw();
+        });
+
+        container.appendChild(row);
+        // Attach listener to the new row
+        row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', debouncedDraw));
+    }
+
     function gatherBeamInputs() {
         const inputs = gatherInputsFromIds(inputIds);
         inputs.vertices = parseVertices(inputs.beam_coords);
+        inputs.cable_path = gatherCablePath();
         return inputs;
     }
 
@@ -251,44 +328,56 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeRect(0, -H / 2 * scaleY, L * scaleX, H * scaleY);
 
         // Draw Centroidal Axis
-        ctx.beginPath();
         ctx.setLineDash([5, 5]);
+        ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(L * scaleX, 0);
         ctx.stroke();
         ctx.setLineDash([]);
 
         // --- Draw Cable Path ---
-        // This simplified version assumes a single parabolic segment for visualization
-        const p1 = [0, ecc_start];
-        const p2 = [L / 2, ecc_mid];
-        const p3 = [L, ecc_end];
-
-        // Simple quadratic interpolation for visualization
-        const denom = (p1[0] - p2[0]) * (p1[0] - p3[0]) * (p2[0] - p3[0]);
-        const A = (p3[0] * (p2[1] - p1[1]) + p2[0] * (p1[1] - p3[1]) + p1[0] * (p3[1] - p2[1])) / denom;
-        const B = (p3[0]*p3[0] * (p1[1] - p2[1]) + p2[0]*p2[0] * (p3[1] - p1[1]) + p1[0]*p1[0] * (p2[1] - p3[1])) / denom;
-        const C = (p2[0] * p3[0] * (p2[0] - p3[0]) * p1[1] + p3[0] * p1[0] * (p3[0] - p1[0]) * p2[1] + p1[0] * p2[0] * (p1[0] - p2[0]) * p3[1]) / denom;
-
         ctx.beginPath();
         ctx.strokeStyle = 'red';
         ctx.lineWidth = 2.5;
-        for (let x_m = 0; x_m <= L; x_m += L / 200) {
-            const y_m = A * x_m * x_m + B * x_m + C;
-            const canvasX = x_m * scaleX;
-            const canvasY = -y_m * scaleY; // Invert Y for canvas coordinates
-            if (x_m === 0) {
-                ctx.moveTo(canvasX, canvasY);
-            } else {
-                ctx.lineTo(canvasX, canvasY);
+
+        const path = inputs.cable_path;
+        if (path && path.length > 0) {
+            ctx.moveTo(path[0].x * scaleX, -path[0].y * scaleY);
+            for (let i = 0; i < path.length - 1; i++) {
+                const p_start = path[i];
+                const p_next = path[i+1];
+
+                if (p_start.type === 'Parabolic' && i + 2 < path.length) {
+                    // A full parabolic segment is defined by 3 points: start, vertex, end.
+                    const p_vertex = p_next;
+                    const p_end = path[i+2];
+
+                    // Draw first half of parabola (p_start to p_vertex)
+                    const parabola1 = solveParabolaWithVertex([p_start.x, p_start.y], [p_vertex.x, p_vertex.y]);
+                    if (parabola1) {
+                        for (let x = p_start.x; x <= p_vertex.x; x += (p_vertex.x - p_start.x) / 25) {
+                            ctx.lineTo(x * scaleX, -(parabola1.a * (x - p_vertex.x)**2 + p_vertex.y) * scaleY);
+                        }
+                    }
+                    // Draw second half of parabola (p_vertex to p_end)
+                    const parabola2 = solveParabolaWithVertex([p_end.x, p_end.y], [p_vertex.x, p_vertex.y]);
+                     if (parabola2) {
+                        for (let x = p_vertex.x; x <= p_end.x; x += (p_end.x - p_vertex.x) / 25) {
+                            ctx.lineTo(x * scaleX, -(parabola2.a * (x - p_vertex.x)**2 + p_vertex.y) * scaleY);
+                        }
+                    }
+                    i++; // Increment i an extra time because we've processed 3 points (i, i+1, i+2)
+                } else {
+                    // It's a straight segment or the last segment in the path
+                    ctx.lineTo(p_next.x * scaleX, -p_next.y * scaleY);
+                }
             }
         }
         ctx.stroke();
 
-        // Draw control points
-        [p1, p2, p3].forEach(([x_m, y_m]) => {
+        path.forEach(({x, y}) => {
             ctx.beginPath();
-            ctx.arc(x_m * scaleX, -y_m * scaleY, 5, 0, 2 * Math.PI);
+            ctx.arc(x * scaleX, -y * scaleY, 5, 0, 2 * Math.PI);
             ctx.fillStyle = 'red';
             ctx.fill();
         });
@@ -384,6 +473,15 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('input', debouncedDraw);
         }
     });
+
+    // Setup for the new cable path UI
+    const defaultCablePath = [
+        { x: 0, y: 0.4, type: 'Parabolic' },
+        { x: 9, y: -0.3, type: 'Parabolic' },
+        { x: 18, y: 0.3, type: 'Straight' }
+    ];
+    defaultCablePath.forEach(p => addCablePointRow('cable-path-container', p));
+    document.getElementById('add-cable-point-btn').addEventListener('click', () => addCablePointRow('cable-path-container'));
 
     // --- Page Initialization ---
     injectHeader({
