@@ -102,11 +102,16 @@
                             <div class="col-span-2">
                                 <label for="section_type" class="block text-sm font-medium mb-1">Section Type</label>
                                 <select id="section_type">
-                                    <option value="I-Shape" selected>I-Shape</option>
+                                    <option value="W-Shape" selected>W-Shape</option>
+                                    <option value="S-Shape">S-Shape</option>
+                                    <option value="HP-Shape">HP-Shape</option>
+                                    <option value="M-Shape">M-Shape</option>
+                                    <option value="WT-Shape">WT-Shape</option>
                                     <option value="Rectangular HSS">Rectangular HSS</option>
-                                    <option value="HSS/Pipe (Circular)">Round HSS</option>
-                                    <option value="channel">Channel</option>
-                                    <option value="angle">Angle</option>
+                                    <option value="Round HSS">Round HSS</option>
+                                    <option value="Pipe">Pipe</option>
+                                    <option value="Channel">Channel</option>
+                                    <option value="Angle">Angle</option>
                                     <option value="Manual Input">Manual Input</option>
                                 </select>
                             </div>
@@ -153,26 +158,6 @@
                             <div>
                                 <label for="Cm" class="block text-sm font-medium mb-1">Moment Gradient (Cm)</label>
                                 <input type="number" id="Cm" value="1.0">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h2>Web Local Strength</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                             <div>
-                                <label for="lb_bearing" class="block text-sm font-medium mb-1">Bearing Length (lb)</label>
-                                <input type="number" id="lb_bearing" value="4">
-                            </div>
-                            <div>
-                                <label for="k_des" class="block text-sm font-medium mb-1">k<sub>des</sub></label>
-                                <input type="number" id="k_des" value="1.18">
-                            </div>
-                             <div class="col-span-2">
-                                <label for="is_end_bearing" class="block text-sm font-medium mb-1">Bearing Location</label>
-                                <select id="is_end_bearing">
-                                    <option value="true" selected>End of Member</option>
-                                    <option value="false">Interior Location</option>
-                                </select>
                             </div>
                         </div>
                     </div>
