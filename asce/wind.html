@@ -102,6 +102,19 @@
                         <option value="Open">Open</option>
                     </select>
                 </div>
+                <div id="rooftop-structure-options" class="col-span-2 hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="enclosure_classification"
+                     data-ui-toggle-condition-value="Open">
+                    <p class="text-sm font-medium -mb-2">Rooftop Structure Dimensions (e.g., Scaffold)</p>
+                    <div>
+                        <label for="scaffold_width_Br" class="block text-sm">Width (B<sub>r</sub>, normal to wind)</label>
+                        <input type="number" id="scaffold_width_Br" value="20">
+                    </div>
+                    <div>
+                        <label for="scaffold_height_hr" class="block text-sm">Height (h<sub>r</sub>)</label>
+                        <input type="number" id="scaffold_height_hr" value="15">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -185,8 +198,9 @@
             <h2>Factors & Coefficients</h2>
             <div class="space-y-4">
                 <div>
-                    <label for="structure_type_for_kd" class="block text-sm font-medium mb-1">Structure Type (for Kd)</label>
-                    <select id="structure_type_for_kd">
+                    <label for="structure_type" class="block text-sm font-medium mb-1">Structure Type</label>
+                    <select id="structure_type"
+                            data-ui-toggle-controller>
                         <option selected>Buildings (MWFRS, C&C)</option>
                         <option>Arched Roofs</option>
                         <option>Circular Domes</option>
@@ -199,6 +213,103 @@
                         <option>Trussed Towers (Triangular, Square, Rectangular)</option>
                         <option>Trussed Towers (All Other Cross Sections)</option>
                     </select>
+                </div>
+                <div id="open-sign-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Open Signs/Frames">
+                    <div>
+                        <label for="solidity_ratio" class="block text-sm font-medium mb-1">Solidity Ratio (ε)</label>
+                        <input type="number" id="solidity_ratio" value="0.5" min="0.01" max="0.99" step="0.01">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ratio of solid area to gross area (A<sub>s</sub>/A<sub>g</sub>).</p>
+                    </div>
+                    <div>
+                        <label for="member_shape" class="block text-sm font-medium mb-1">Member Shape</label>
+                        <select id="member_shape"
+                                data-ui-toggle-controller
+                                data-ui-toggle-target="#round-member-options"
+                                data-ui-toggle-condition-value="round">
+                            <option value="flat" selected>Flat-Sided Members</option>
+                            <option value="round">Round Members</option>
+                        </select>
+                    </div>
+                    <div id="round-member-options" class="hidden">
+                        <label for="member_diameter" class="block text-sm font-medium mb-1">Typical Member Diameter (b)</label>
+                        <input type="number" id="member_diameter" value="0.5">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Diameter in feet or meters, depending on unit system.</p>
+                    </div>
+                </div>
+                <div id="solid-sign-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Solid Freestanding Signs/Walls">
+                    <div>
+                        <label for="sign_width_B" class="block text-sm font-medium mb-1">Sign Width (B)</label>
+                        <input type="number" id="sign_width_B" value="20">
+                    </div>
+                    <div>
+                        <label for="sign_height_s" class="block text-sm font-medium mb-1">Sign Height (s)</label>
+                        <input type="number" id="sign_height_s" value="10">
+                    </div>
+                    <div>
+                        <label for="clearance_z" class="block text-sm font-medium mb-1">Clearance from Ground (z)</label>
+                        <input type="number" id="clearance_z" value="10">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height from ground to bottom of sign.</p>
+                    </div>
+                </div>
+                <div id="chimney-tank-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal),Chimneys, Tanks (Octagonal),Chimneys, Tanks (Round)">
+                    <div>
+                        <label for="chimney_height" class="block text-sm font-medium mb-1">Structure Height (h)</label>
+                        <input type="number" id="chimney_height" value="80">
+                    </div>
+                    <div>
+                        <label for="chimney_diameter" class="block text-sm font-medium mb-1">Width/Diameter (D)</label>
+                        <input type="number" id="chimney_diameter" value="10">
+                    </div>
+                    <div id="chimney-corner-radius-option" data-ui-toggle-target-for="structure_type" data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal)">
+                        <label for="corner_radius_r" class="block text-sm font-medium mb-1">Corner Radius (r)</label>
+                        <input type="number" id="corner_radius_r" value="0">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Set to 0 for sharp corners.</p>
+                    </div>
+                </div>
+                <div id="arched-roof-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Arched Roofs">
+                    <div>
+                        <label for="arched_roof_rise" class="block text-sm font-medium mb-1">Roof Rise (r)</label>
+                        <input type="number" id="arched_roof_rise" value="15">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Vertical distance from spring line to roof crown.</p>
+                    </div>
+                    <div>
+                        <label for="arched_roof_spring_point" class="block text-sm font-medium mb-1">Roof Spring Point</label>
+                        <select id="arched_roof_spring_point">
+                            <option value="On Walls" selected>On Walls</option>
+                            <option value="On Ground">On Ground</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="trussed-tower-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Trussed Towers (Triangular, Square, Rectangular),Trussed Towers (All Other Cross Sections)">
+                    <div>
+                        <label for="tower_height" class="block text-sm font-medium mb-1">Tower Height (h)</label>
+                        <input type="number" id="tower_height" value="100">
+                    </div>
+                    <div>
+                        <label for="tower_width" class="block text-sm font-medium mb-1">Tower Face Width (w)</label>
+                        <input type="number" id="tower_width" value="10">
+                    </div>
+                    <div>
+                        <label for="tower_solidity_ratio" class="block text-sm font-medium mb-1">Solidity Ratio (ε)</label>
+                        <input type="number" id="tower_solidity_ratio" value="0.3" min="0.01" max="0.99" step="0.01">
+                    </div>
+                    <div>
+                        <label for="tower_member_shape" class="block text-sm font-medium mb-1">Member Shape</label>
+                        <select id="tower_member_shape">
+                            <option value="flat" selected>Flat-Sided Members</option>
+                            <option value="round">Round Members</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label for="topographic_factor_Kzt" class="block text-sm font-medium mb-1">Topo. Factor (Kzt)</label>

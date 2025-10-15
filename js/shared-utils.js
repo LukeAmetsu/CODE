@@ -317,29 +317,15 @@ function getAllCssStyles() {
     let cssText = "";
     for (const styleSheet of document.styleSheets) {
         try {
-            if (styleSheet.cssRules) {
-                for (const rule of styleSheet.cssRules) {
-                    cssText += rule.cssText;
-                }
+            // Skip external stylesheets (like Google Fonts) that would cause a security error.
+            // Only process stylesheets that are same-origin.
+            if (styleSheet.href && !styleSheet.href.startsWith(window.location.origin)) {
+                continue;
             }
-        } catch (e) {
-            console.warn("Could not read CSS rules from stylesheet:", styleSheet.href, e);
-        }
-    }
-    return `<style>${cssText}</style>`;
-}
 
-/**
- * Gathers all CSS rules from the document's stylesheets into a single string.
- * This is crucial for embedding styles into SVGs for correct rendering during export.
- * @returns {string} A string containing all CSS rules wrapped in a <style> tag.
- */
-function getAllCssStyles() {
-    let cssText = "";
-    for (const styleSheet of document.styleSheets) {
-        try {
-            // Check if the stylesheet is accessible (CORS policy can block access to external stylesheets)
-            if (styleSheet.cssRules) {
+            // The access to cssRules itself is what can throw the error.
+            const rules = styleSheet.cssRules;
+            if (rules) {
                 for (const rule of styleSheet.cssRules) {
                     cssText += rule.cssText;
                 }
