@@ -48,6 +48,17 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     box-shadow: 0 0 0 2px #3b82f666;
 }
 
+/* === Required Field Indicator === */
+.label-required::after {
+    content: ' *';
+    color: #dc2626; /* red-600 */
+    font-weight: bold;
+    margin-left: 2px;
+}
+.dark .label-required::after {
+    color: #f87171; /* red-400 */
+}
+
 /* === RESULTS & TABLES === */
 .results-container table {
     width: 100%;

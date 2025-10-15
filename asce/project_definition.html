@@ -55,6 +55,36 @@
                     </div>
 
                     <div class="form-section">
+                        <h2>Site & Environmental Loads</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="exposure_category" class="block text-sm font-medium mb-1">Exposure Category</label>
+                                <select id="exposure_category">
+                                    <option value="B">B</option>
+                                    <option value="C" selected>C</option>
+                                    <option value="D">D</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="topographic_factor_Kzt" class="block text-sm font-medium mb-1">Topo. Factor (Kzt)</label>
+                                <input type="number" id="topographic_factor_Kzt" value="1">
+                            </div>
+                            <div>
+                                <label for="basic_wind_speed" class="block text-sm font-medium mb-1">Basic Wind Speed (V)</label>
+                                <input type="number" id="basic_wind_speed" value="115">
+                            </div>
+                            <div>
+                                <label for="ground_snow_load" class="block text-sm font-medium mb-1">Ground Snow Load (pg)</label>
+                                <input type="number" id="ground_snow_load" value="25">
+                            </div>
+                             <div>
+                                <label for="rain_intensity" class="block text-sm font-medium mb-1">Rainfall Intensity (i)</label>
+                                <input type="number" id="rain_intensity" value="4.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
                         <h2>Building Geometry Coordinates</h2>
                         <p class="text-xs mb-4">Define the building outline using X and Y points. The origin (0,0) is at the ground level of the leftmost point.</p>
                         
@@ -87,12 +117,26 @@
                         <h2>Site & Project Parameters</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
+                                <label for="design_method" class="block text-sm font-medium mb-1">Design Method</label>
+                                <select id="design_method">
+                                    <option value="ASD" selected>ASD</option>
+                                    <option value="LRFD">LRFD</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label for="ground_elevation" class="block text-sm font-medium mb-1">Ground Elevation</label>
                                 <input type="number" id="ground_elevation" value="0">
                             </div>
                             <div>
                                 <label for="effective_wind_area" class="block text-sm font-medium mb-1">Effective Wind Area (C&C)</label>
                                 <input type="number" id="effective_wind_area" value="10">
+                            </div>
+                             <div>
+                                <label for="enclosure_classification" class="block text-sm font-medium mb-1">Enclosure Class.</label>
+                                <select id="enclosure_classification">
+                                    <option value="Enclosed" selected>Enclosed</option>
+                                    <option value="Partially Enclosed">Partially Enclosed</option>
+                                </select>
                             </div>
                             <div>
                                 <label for="roof_type_manual" class="block text-sm font-medium mb-1">Roof Type (Manual Override)</label>

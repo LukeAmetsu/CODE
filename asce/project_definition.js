@@ -1,7 +1,9 @@
 // This now includes all fields that need to be saved and passed to other calculators.
 const projectInputIds = [
-    'asce_standard', 'risk_category', 'jurisdiction',
-    'ground_elevation', 'effective_wind_area', 'roof_type_manual', 'temporary_construction'
+    'asce_standard', 'risk_category', 'jurisdiction', 'design_method', 'unit_system',
+    'exposure_category', 'topographic_factor_Kzt', 'basic_wind_speed', 'ground_snow_load', 'rain_intensity',
+    'ground_elevation', 'effective_wind_area', 'roof_type_manual', 'temporary_construction',
+    'enclosure_classification'
 ];
 
 document.addEventListener('DOMContentLoaded', () => {

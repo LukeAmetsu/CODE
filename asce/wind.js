@@ -11,10 +11,10 @@ function addRangeIndicators() {
 }
 
 const windInputIds = [
-    // These are the only inputs left on the wind.html page for the user to modify.
-    'design_method', 'unit_system', 'basic_wind_speed', 'exposure_category', 'risk_category', 'asce_standard', 'jurisdiction',
-    'enclosure_classification', 'wind_obstruction', 'building_flexibility', 'fundamental_period',
-    'structure_type_for_kd', 'topographic_factor_Kzt', 'gust_effect_factor_g', 'calculate_height_varying_pressure'
+    // These are the inputs specific to the wind calculator page.
+    // Shared inputs are now loaded from the 'buildingProjectData' in localStorage.
+    'wind_obstruction', 'building_flexibility', 'fundamental_period',
+    'structure_type_for_kd', 'gust_effect_factor_g', 'calculate_height_varying_pressure'
 ];
 
 // =================================================================================
@@ -961,12 +961,14 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
         if (inputs.enclosure_classification === 'Open') {
             if (['monoslope', 'pitched_troughed'].includes(inputs.roof_type)) {
                 const { cnMap, ref } = getOpenBuildingCnValues(inputs.roof_slope_deg, inputs.wind_obstruction === 'obstructed');
-                windResults.directional_results['open_roof'] = Object.entries(cnMap).map(([surface, cn_vals]) => {
-                    // p = qh * G * CN (ASCE 7-16 Eq. 27.3-2)
-                    const p_pos = qz * inputs.gust_effect_factor_g * cn_vals.cn_pos;
-                    const p_neg = qz * inputs.gust_effect_factor_g * cn_vals.cn_neg;
-                    return { surface, cp: null, cn_pos: cn_vals.cn_pos, cn_neg: cn_vals.cn_neg, p_pos, p_neg, p_pos_asd: p_pos * 0.6, p_neg_asd: p_neg * 0.6 };
-                });
+                // FIX: The result should be an object with an 'open_roof' property which is an array.
+                windResults.directional_results = {
+                    open_roof: Object.entries(cnMap).map(([surface, cn_vals]) => {
+                        const p_pos = qz * inputs.gust_effect_factor_g * cn_vals.cn_pos;
+                        const p_neg = qz * inputs.gust_effect_factor_g * cn_vals.cn_neg;
+                        return { surface, cp: null, cn_pos: cn_vals.cn_pos, cn_neg: cn_vals.cn_neg, p_pos, p_neg, p_pos_asd: p_pos * 0.6, p_neg_asd: p_neg * 0.6 };
+                    })
+                };
                 windResults.open_building_ref = ref;
             } else {
                 windResults.warnings.push("For Open buildings, only 'Monoslope' and 'Pitched/Troughed' roof types are currently supported by this calculator.");
@@ -1778,10 +1780,15 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
  * Renders the results table for Open Buildings.
  */
 function renderOpenBuildingResults(directional_results, open_building_ref, inputs, units) {
-    const { p_unit } = units; // This was missing
+    const { p_unit } = units;
     if (inputs.enclosure_classification !== 'Open') return '';
 
-    let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h*G*C_N)</h3></div>`;
+    // Add a guard clause to prevent the error if directional_results.open_roof is not an array.
+    if (!directional_results || !Array.isArray(directional_results.open_roof)) {
+        return '<p class="text-center text-red-500">Could not render Open Building results due to missing data.</p>';
+    }
+
+    let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h * G * C_N)</h3></div>`;
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Open Building Free Roof Pressures (${open_building_ref})</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
                 <th>Roof Zone</th><th>C_N,pos</th><th>C_N,neg</th><th>Positive Pressure (${inputs.design_method}) [${p_unit}]</th><th>Negative Pressure (${inputs.design_method}) [${p_unit}]</th>

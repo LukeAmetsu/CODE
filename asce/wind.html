@@ -16,6 +16,35 @@
         })();
     </script>
     <link rel="stylesheet" href="../styles.min.css">
+    <style>
+        /* Basic styles for form elements, can be expanded */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-section {
+            @apply bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700;
+        }
+        .form-section h2 {
+            @apply text-xl font-bold mb-4 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2;
+        }
+        label {
+            @apply text-gray-700 dark:text-gray-300;
+        }
+        input, select {
+            @apply w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500;
+        }
+        .svg-plate { fill:#dbeafe; stroke: #60a5fa; stroke-width: 1.5; }
+        .svg-member { fill: #e5e7eb; stroke: #9ca3af; stroke-width: 1; }
+        .dark .svg-member { fill: #4b5563; stroke: #6b7280; }
+        .svg-dim { stroke: #6b7280; stroke-width: 1; fill: none; }
+        .dark .svg-dim { stroke: #9ca3af; }
+        .svg-dim-text { font-size: 14px; font-family: sans-serif; fill: #4b5563; text-anchor: middle; }
+        .dark .svg-dim-text { fill: #d1d5db; }
+        .svg-label { font-size: 12px; font-weight: bold; fill: #4b5563; }
+        .dark .svg-label { fill: #d1d5db; }
+        #arrow path { fill: #4b5563; }
+        .dark #arrow path { fill: #d1d5db; }
+    </style>
     <script src="../js/template.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
@@ -27,56 +56,16 @@
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
         <main id="calculator-form">
-             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Column 1 -->
     <div>
         <div class="form-section" id="project-data-summary-container">
             <!-- This will be populated by JS -->
         </div>
-        <div class="form-section">
-            <h2>Wind Parameters</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="design_method" class="block text-sm font-medium mb-1">Design Method</label>
-                    <select id="design_method">
-                        <option value="ASD" selected>ASD</option>
-                        <option value="LRFD">LRFD</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="unit_system" class="block text-sm font-medium mb-1">Unit System</label>
-                    <select id="unit_system">
-                        <option value="imperial" selected>Imperial (mph, ft)</option>
-                        <option value="metric">Metric (m/s, m)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="basic_wind_speed" class="block text-sm font-medium mb-1">Basic Wind Speed (V)</label>
-                    <input type="number" id="basic_wind_speed" value="115" min="70" max="200">
-                </div>
-                <div>
-                    <label for="exposure_category" class="block text-sm font-medium mb-1">Exposure Category</label>
-                    <select id="exposure_category" aria-label="Exposure Category for wind loading">
-                        <option value="B">B</option>
-                        <option value="C" selected>C</option>
-                        <option value="D">D</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="enclosure_classification" class="block text-sm font-medium mb-1">Enclosure Class.</label>
-                    <select id="enclosure_classification"
-                            data-ui-toggle-controller
-                            data-ui-toggle-target="#open-building-options"
-                            data-ui-toggle-condition-value="Open">
-                        <option value="Enclosed" selected>Enclosed</option>
-                        <option value="Partially Enclosed">Partially Enclosed</option>
-                        <option value="Open">Open</option>
-                    </select>
-                </div>
-            </div>
-        </div>
     </div>
+    <!-- Column 2 -->
     <div>
-         <div class="form-section">
+        <div class="form-section">
             <h2>Additional Parameters</h2>
              <div id="open-building-options" class="mt-4 space-y-4 hidden">
                 <label for="wind_obstruction" class="block text-sm font-medium mb-1">Wind Flow Obstruction (for Open Buildings)</label>
@@ -85,13 +74,11 @@
                     <option value="obstructed">Obstructed (Blocked Wind Flow)</option>
                 </select>
              </div>
-        <div class="form-section hidden" id="tall-building-section">
+        </div>
+        <div class="form-section mt-6 hidden" id="tall-building-section">
             <h2>Tall Building Parameters (h > 60 ft)</h2>
             <div class="space-y-4">
-                <div data-ui-toggle-controller
-                     data-ui-toggle-target="#flexible-building-inputs"
-                     data-ui-toggle-condition-value="Flexible"
-                     data-ui-toggle-type="visibility">
+                <div>
                     <label for="building_flexibility" class="block text-sm font-medium mb-1">Building Flexibility</label>
                     <select id="building_flexibility">
                         <option value="Rigid" selected>Rigid (G=0.85)</option>
@@ -106,9 +93,7 @@
                 </div>
             </div>
         </div>
-    </div>
-    <div>
-        <div class="form-section">
+        <div class="form-section mt-6">
             <h2>Factors & Coefficients</h2>
             <div class="space-y-4">
                 <div>
@@ -128,10 +113,6 @@
                     </select>
                 </div>
                 <div>
-                    <label for="topographic_factor_Kzt" class="block text-sm font-medium mb-1">Topo. Factor (Kzt)</label>
-                    <input type="number" id="topographic_factor_Kzt" value="1">
-                </div>
-                <div>
                     <label for="gust_effect_factor_g" class="block text-sm font-medium mb-1">Gust Effect Factor (G)</label>
                     <input type="number" id="gust_effect_factor_g" value="0.85">
                 </div>
@@ -144,18 +125,21 @@
                 </div>
             </div>
         </div>
+    </div>
+    <!-- Column 3 -->
+    <div>
         <div class="form-section">
             <h2>Building Geometry Diagram</h2>
             <div class="diagram">
                 <div class="max-w-xs mx-auto">
                     <svg viewBox="0 0 400 250" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
                         <defs>
-                            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/></marker>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker>
                         </defs>
                         <!-- Building Isometric -->
-                        <polygon points="100,150 200,200 350,125 250,75" class="svg-plate" style="fill:#dbeafe; stroke: #60a5fa;"/>
-                        <polygon points="100,50 100,150 250,75 250, -25" class="svg-member" style="fill: #e5e7eb; stroke: #9ca3af;"/>
-                        <polygon points="250,75 350,125 350,25 250,-25" class="svg-member" style="fill: #f3f4f6; stroke: #9ca3af;"/>
+                        <polygon points="100,150 200,200 350,125 250,75" class="svg-plate"/>
+                        <polygon points="100,50 100,150 250,75 250, -25" class="svg-member"/>
+                        <polygon points="250,75 350,125 350,25 250,-25" class="svg-member"/>
 
                         <!-- Dimension Lines -->
                         <path d="M100,45 L250,-30" class="svg-dim" stroke-dasharray="2,2"/>
@@ -170,7 +154,7 @@
                         <text x="70" y="100" class="svg-dim-text" transform="rotate(-90 70,100)">h (Height)</text>
 
                         <!-- Wind Arrow -->
-                        <path d="M50,100 L95,100" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)"/>
+                        <path d="M50,100 L95,100" stroke="#4b5563" class="dark:stroke-gray-300" stroke-width="2" marker-end="url(#arrow)"/>
                         <text x="55" y="95" class="svg-label">WIND</text>
                         <text x="150" y="100" class="svg-label">Windward Face</text>
                     </svg>
@@ -179,13 +163,13 @@
         </div>
     </div>
 </div>
-<div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
-    <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
-    <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all">Save Inputs</button>
-    <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-    <button id="run-calculation-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Wind Load Calculation</button>
-    <input type="file" id="wind-file-input" class="hidden" accept=".txt">
-</div>
+            <div class="lg:col-span-3 mt-8 flex justify-center items-center gap-4 flex-wrap">
+                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
+                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all">Save Inputs</button>
+                <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
+                <button id="run-calculation-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Wind Load Calculation</button>
+                <input type="file" id="wind-file-input" class="hidden" accept=".txt">
+            </div>
         </main>
 
         <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>

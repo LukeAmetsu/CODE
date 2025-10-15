@@ -1,11 +1,10 @@
 let lastSnowRunResults = null;
 
 const snowInputIds = [
-    'snow_asce_standard', 'snow_unit_system', 'snow_risk_category', 'snow_design_method', 'snow_jurisdiction', 'snow_roof_type',
-    'snow_nycbc_minimum_roof_snow_load', 'snow_ground_snow_load', 'snow_surface_roughness_category',
+    'snow_nycbc_minimum_roof_snow_load', 'snow_surface_roughness_category', 'snow_roof_type',
     'snow_exposure_condition', 'snow_thermal_condition', 'snow_roof_slope_degrees', 'snow_is_roof_slippery',
     'snow_calculate_unbalanced', 'snow_calculate_drift', 'snow_calculate_sliding', 'snow_eave_to_ridge_distance_W',
-    'snow_is_simply_supported_prismatic', 'snow_winter_wind_parameter_W2', 'snow_upper_roof_length_lu',
+    'snow_is_simply_supported_prismatic', 'snow_winter_wind_parameter_W2', 'snow_upper_roof_length_lu', // Note: ground_snow_load is now from project data
     'snow_height_difference_hc', 'snow_lower_roof_length_ll'
 ];
 
@@ -13,11 +12,11 @@ const snowLoadCalculator = (() => {
     function validateSnowInputs(inputs) {
         const { errors, warnings } = validateInputs(inputs, validationRules.snow);
 
-        if (inputs.calculate_drift === 'Yes') {
-            if (inputs.lower_roof_length_ll <= 0) {
+        if (inputs.snow_calculate_drift === 'Yes') {
+            if (inputs.snow_lower_roof_length_ll <= 0) {
                 errors.push("Lower roof length (ll) must be positive to calculate drift loads.");
             }
-            if (inputs.upper_roof_length_lu <= 0) {
+            if (inputs.snow_upper_roof_length_lu <= 0) {
                 errors.push("Upper roof length (lu) must be positive to calculate drift loads.");
             }
         }
@@ -61,7 +60,7 @@ const snowLoadCalculator = (() => {
         }
     }
     function getSnowFactors(risk, exposure, thermal, surface_roughness) {
-        const is_map = {"I": 0.8, "II": 1.0, "III": 1.1, "IV": 1.2};
+        const is_map = { "I": 0.8, "II": 1.0, "III": 1.1, "IV": 1.2 };
         const Is = is_map[risk] || 1.0;
         const ce_map = {            "B": {"Fully Exposed": 0.9, "Partially Exposed": 1.0, "Sheltered": 1.2},            "C": {"Fully Exposed": 0.9, "Partially Exposed": 1.0, "Sheltered": 1.1},            "D": {"Fully Exposed": 0.8, "Partially Exposed": 0.9, "Sheltered": 1.0},            "Above treeline (windswept)": {"Fully Exposed": 0.7, "Partially Exposed": 0.8},            "Alaska (no trees)": {"Fully Exposed": 0.7, "Partially Exposed": 0.8}        };
         const Ce = ce_map[surface_roughness]?.[exposure] ?? 1.0;
@@ -158,7 +157,7 @@ const snowLoadCalculator = (() => {
     function calculateDriftLoads(pg, lu, hc, pf, standard, W2, lower_roof_length_ll, Is) {
          const gamma = calculateSnowDensity(pg);
          const hb = gamma > 0 ? pf / gamma : 0;
-         if (hc <= 0 || hb <= 0 || (hc / hb) <= 0.2) {
+         if (!isFinite(hc) || !isFinite(hb) || hc <= 0 || hb <= 0 || (hc / hb) <= 0.2) {
              return { applicable: false, reason: 'Drift surcharge not required per h_c/h_b ≤ 0.2.' };
          }
 
@@ -218,7 +217,7 @@ function run(inputs, validation) {
     const validationResult = validateSnowInputs(inputs);
 
     // Add jurisdiction-specific warnings
-    if (inputs.jurisdiction === "NYCBC 2022") {
+    if (inputs.snow_jurisdiction === "NYCBC 2022") {
         const nycbc_min_pg = 25;
         if (inputs.ground_snow_load < nycbc_min_pg) {
             validationResult.warnings.push(`The input ground snow load (p_g = ${inputs.ground_snow_load} psf) is less than the NYCBC 2022 minimum of ${nycbc_min_pg} psf. Verify the correct jurisdictional value.`);
@@ -231,10 +230,10 @@ function run(inputs, validation) {
     }
     
     // Ensure factors have default values
-    const { Is = 1.0, Ce = 1.0, Ct = 1.0 } = getSnowFactors(inputs.risk_category, inputs.exposure_condition, inputs.thermal_condition, inputs.surface_roughness_category);
+    const { Is = 1.0, Ce = 1.0, Ct = 1.0 } = getSnowFactors(inputs.risk_category, inputs.snow_exposure_condition, inputs.snow_thermal_condition, inputs.snow_surface_roughness_category);
     
-    const Cs = calculateSlopeFactor(inputs.roof_slope_degrees || 0, inputs.is_roof_slippery, Ct, inputs.asce_standard);
-    const pf = 0.7 * Ce * Ct * Is * (inputs.ground_snow_load || 0);
+    const Cs = calculateSlopeFactor(inputs.roof_slope_deg || 0, inputs.snow_is_roof_slippery === 'Yes', Ct, inputs.asce_standard);
+    const pf = 0.7 * Ce * Ct * Is * (inputs.ground_snow_load || 0); // ground_snow_load from project data
     const ps_calculated = Cs * pf;
     
     let ps_min_asce7 = 0;
@@ -251,30 +250,30 @@ function run(inputs, validation) {
     
     let ps_balanced = ps_asce7;
     let is_nycbc_min_governed = false;
-    if (inputs.jurisdiction === "NYCBC 2022" && ps_balanced < inputs.nycbc_minimum_roof_snow_load) {
+    if (inputs.jurisdiction === "NYCBC 2022" && ps_balanced < inputs.snow_nycbc_minimum_roof_snow_load) {
         ps_balanced = inputs.nycbc_minimum_roof_snow_load;
         is_nycbc_min_governed = true;
     }
     
     // Rest of the function remains the same...
     let unbalanced_results = {};
-    if (inputs.calculate_unbalanced === 'Yes') {
+    if (inputs.snow_calculate_unbalanced === 'Yes') {
         const gamma = calculateSnowDensity(inputs.ground_snow_load);
-        unbalanced_results = calculateUnbalancedLoads(ps_balanced, inputs.ground_snow_load, inputs.roof_slope_degrees, inputs.asce_standard, inputs.eave_to_ridge_distance_W, inputs.is_simply_supported_prismatic, inputs.winter_wind_parameter_W2, gamma, Is, inputs.roof_type);
+        unbalanced_results = calculateUnbalancedLoads(ps_balanced, inputs.ground_snow_load, inputs.roof_slope_deg, inputs.asce_standard, inputs.eave_to_ridge_distance_W, inputs.snow_is_simply_supported_prismatic === 'Yes', inputs.snow_winter_wind_parameter_W2, gamma, Is, inputs.snow_roof_type);
     }
 
     let drift_results = {};
-    if (inputs.calculate_drift) {
-        drift_results = calculateDriftLoads(inputs.ground_snow_load, inputs.upper_roof_length_lu, inputs.height_difference_hc, pf, inputs.asce_standard, inputs.winter_wind_parameter_W2, inputs.lower_roof_length_ll, Is);
+    if (inputs.snow_calculate_drift === 'Yes') {
+        drift_results = calculateDriftLoads(inputs.ground_snow_load, inputs.snow_upper_roof_length_lu, inputs.snow_height_difference_hc, pf, inputs.asce_standard, inputs.snow_winter_wind_parameter_W2, inputs.snow_lower_roof_length_ll, Is);
     }
 
     let sliding_snow_results = {};
-    if (inputs.calculate_sliding) {
-        sliding_snow_results = calculateSlidingSnowLoad(pf, inputs.eave_to_ridge_distance_W, Cs, inputs.is_roof_slippery, inputs.unit_system);
+    if (inputs.snow_calculate_sliding === 'Yes') {
+        sliding_snow_results = calculateSlidingSnowLoad(pf, inputs.eave_to_ridge_distance_W, Cs, inputs.snow_is_roof_slippery === 'Yes', inputs.unit_system);
     }
 
     let partial_load_results = {};
-    if (inputs.is_simply_supported_prismatic === 'No') {
+    if (inputs.snow_is_simply_supported_prismatic === 'No') {
         partial_load_results = {
             applicable: true,
             load_on_adjacent_span: 0.5 * ps_balanced,
@@ -324,7 +323,7 @@ function displayProjectDataSummary(projectData) {
         return;
     }
 
-    const { asce_standard, risk_category, jurisdiction, roof_type, roof_slope_deg, eave_to_ridge_distance_W } = projectData;
+    const { asce_standard, risk_category, jurisdiction, roof_type, roof_slope_deg, eave_to_ridge_distance_W, ground_snow_load } = projectData;
 
     container.innerHTML = `
         <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
@@ -332,6 +331,7 @@ function displayProjectDataSummary(projectData) {
             <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
             <li><strong>Risk Category:</strong> ${sanitizeHTML(risk_category)}</li>
             <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
+            <li><strong>Ground Snow Load (p<sub>g</sub>):</strong> ${ground_snow_load}</li>
             <li><strong>Roof Type:</strong> ${sanitizeHTML(roof_type)} (${roof_slope_deg.toFixed(1)}°)</li>
             <li><strong>Eave-to-Ridge (W):</strong> ${eave_to_ridge_distance_W.toFixed(1)}</li>
         </ul>`;
@@ -352,8 +352,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         const handleRunSnowCalculation = createCalculationHandler({
             inputIds: snowInputIds,
-            storageKey: 'snow-calculator-inputs',
-        validatorFunction: snowLoadCalculator.validateSnowInputs,
+            storageKey: 'snow-calculator-inputs', // For snow-specific inputs
+            gatherInputsFunction: () => {
+                const snowInputs = gatherInputsFromIds(snowInputIds);
+                const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+                return { ...projectData, ...snowInputs };
+            },
+            validatorFunction: snowLoadCalculator.validateSnowInputs,
             calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
             renderFunction: renderSnowResults,
             resultsContainerId: 'snow-results-container',
@@ -376,10 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load project data first to populate shared fields
         const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
         displayProjectDataSummary(projectData);
-        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
-        // Load snow-specific settings first, then override with shared project data.
-        loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds, handleRunSnowCalculation);
-
+        // Load snow-specific settings, which might be older.
+        loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds);
+        // Then load project data, which will override the shared fields with the latest values.
+        loadInputsFromLocalStorage('buildingProjectData', snowInputIds, handleRunSnowCalculation);
     }, 50); // A small delay to ensure DOM is ready after injection
 });
 

@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBR Prestressed Concrete Beam Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -53,9 +55,9 @@
                                 <input type="number" id="fck" value="30">
                             </div>
                             <div>
-                                <label for="fci" class="block text-sm font-medium mb-1">Concrete f<sub>ci</sub> (MPa)</label>
-                                <input type="number" id="fci" value="24" data-validate="positive">
-                                <p class="text-xs text-gray-500 mt-1">Strength at transfer. Defaults to 0.8 * fck.</p>
+                                <label for="age_at_prestress" class="block text-sm font-medium mb-1">Idade na Protensão (dias)</label>
+                                <input type="number" id="age_at_prestress" value="7" data-validate="positive">
+                                <p class="text-xs text-gray-500 mt-1">Idade do concreto no momento da aplicação da protensão.</p>
                             </div>
                         </div>
                     </div>
@@ -63,30 +65,12 @@
                         <h2>Prestressing Parameters</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="prestress_loss_pct" class="block text-sm font-medium mb-1">Prestress Losses (%)</label>
-                                <input type="number" id="prestress_loss_pct" value="20" data-validate="min:0,max:80">
-                            </div>
-                            <div>
                                 <label for="Ap" class="block text-sm font-medium mb-1">Tendon Area (A<sub>p</sub>, cm²)</label>
                                 <input type="number" id="Ap" value="12.5" data-validate="positive">
                             </div>
-                        </div>
-                    </div>
-                    <div class="form-section">
-                        <h2>Applied Loads</h2>
-                        <p class="text-xs mb-2">Service loads in kN/m.</p>
-                        <div class="space-y-4">
                             <div>
-                                <label for="load_pp" class="block text-sm font-medium mb-1">Self-Weight (kN/m)</label>
-                                <input type="number" id="load_pp" value="23.5">
-                            </div>
-                            <div>
-                                <label for="load_perm" class="block text-sm font-medium mb-1">Permanent Load (kN/m)</label>
-                                <input type="number" id="load_perm" value="14">
-                            </div>
-                            <div>
-                                <label for="load_var" class="block text-sm font-medium mb-1">Variable Load (kN/m)</label>
-                                <input type="number" id="load_var" value="28">
+                                <label for="fptk" class="block text-sm font-medium mb-1">Tendon f<sub>ptk</sub> (MPa)</label>
+                                <input type="number" id="fptk" value="1900" data-validate="positive">
                             </div>
                         </div>
                     </div>
@@ -103,7 +87,7 @@
                             </div>
                             <div>
                                 <label for="beam_height" class="block text-sm font-medium mb-1">Total Height (cm)</label>
-                                <input type="number" id="beam_height" value="80">
+                                <input type="number" id="beam_height" value="80" readonly class="w-full p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
                             </div>
                             <div class="col-span-2">
                                 <label for="beam_coords" class="block text-sm font-medium mb-1">Cross-Section Vertices (cm)</label>
@@ -123,9 +107,9 @@
                         <h2>Prestressing Cable Path</h2>
                         <p class="text-xs mb-2">Define the cable path points from left to right. The 'y' value is the eccentricity from the section's centroid.</p>
                         <div id="cable-path-container" class="space-y-2 p-2 border rounded-md dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50">
-                            <div class="grid grid-cols-[1fr_1fr_1.5fr_auto] gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                            <div class="grid grid-cols-[1.1fr_1fr_1.2fr_auto] gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                                 <span>X (m)</span>
-                                <span>Y / e (m)</span>
+                                <span>Y (m)</span>
                                 <span>Segment to Next</span>
                                 <span class="w-8"></span>
                             </div>
@@ -133,18 +117,44 @@
                         </div>
                         <button id="add-cable-point-btn" class="mt-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-3 py-1 rounded">+ Add Point</button>
                     </div>
+                    <div class="form-section">
+                        <h2>Prestressing Losses</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="anchorage_slip" class="block text-sm font-medium mb-1">Anchorage Slip (mm)</label>
+                                <input type="number" id="anchorage_slip" value="6" data-validate="positive">
+                            </div>
+                            <div>
+                                <label for="humidity" class="block text-sm font-medium mb-1">Ambient Humidity (%)</label>
+                                <input type="number" id="humidity" value="75" data-validate="positive">
+                            </div>
+                            <div>
+                                <label for="mu" class="block text-sm font-medium mb-1">Friction Coeff. (μ)</label>
+                                <input type="number" id="mu" value="0.2" data-validate="positive">
+                            </div>
+                            <div>
+                                <label for="k" class="block text-sm font-medium mb-1">Wobble Coeff. (k/m)</label>
+                                <input type="number" id="k" value="0.002" data-validate="positive">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Column 3: Cross-Section Diagram -->
-                <div class="form-section md:col-span-2 lg:col-span-1">
-                    <h2>Cross-Section Diagram</h2>
-                    <div class="diagram h-[400px] relative mt-4">
-                        <svg id="cross-section-svg" class="w-full h-full"></svg>
-                    </div>
-                    <div class="form-section mt-6">
-                        <h2>Stress Profile Diagram</h2>
+                <div class="space-y-6 md:col-span-2 lg:col-span-1">
+                    <div class="form-section">
+                        <h2>Cross-Section Diagram</h2>
                         <div class="diagram h-[400px] relative mt-4">
-                            <svg id="stress-diagram-svg" class="w-full h-full"></svg>
+                            <svg id="cross-section-svg" class="w-full h-full"></svg>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Applied Loads</h2>
+                        <p class="text-xs mb-2">Service loads in kN/m.</p>
+                        <div class="space-y-4">
+                            <div><label for="load_pp" class="block text-sm font-medium mb-1">Self-Weight (kN/m)</label><input type="number" id="load_pp" value="23.5"></div>
+                            <div><label for="load_perm" class="block text-sm font-medium mb-1">Permanent Load (kN/m)</label><input type="number" id="load_perm" value="14"></div>
+                            <div><label for="load_var" class="block text-sm font-medium mb-1">Variable Load (kN/m)</label><input type="number" id="load_var" value="28"></div>
                         </div>
                     </div>
                 </div>
@@ -161,10 +171,10 @@
             </div>
             
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
-                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load</button>
-                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save</button>
+                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Carregar</button>
+                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Salvar</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                <input type="file" id="file-input" class="hidden" accept=".txt">
+                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
                 <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Check</button>
             </div>
         </main>

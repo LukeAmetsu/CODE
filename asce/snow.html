@@ -108,41 +108,6 @@
                 <!-- Column 2 -->
                 <div class="space-y-6">
                     <div class="form-section">
-                        <h2>General Parameters</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="snow_asce_standard" class="block text-sm font-medium mb-1">ASCE Standard</label>
-                                <select id="snow_asce_standard">
-                                    <option value="ASCE 7-16" selected>ASCE 7-16</option>
-                                    <option value="ASCE 7-22">ASCE 7-22</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="snow_unit_system" class="block text-sm font-medium mb-1">Unit System</label>
-                                <select id="snow_unit_system">
-                                    <option value="imperial" selected>Imperial (psf, ft)</option>
-                                    <option value="metric">Metric (kPa, m)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="snow_risk_category" class="block text-sm font-medium mb-1">Risk Category</label>
-                                <select id="snow_risk_category">
-                                    <option value="I">I</option>
-                                    <option value="II" selected>II</option>
-                                    <option value="III">III</option>
-                                    <option value="IV">IV</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="snow_design_method" class="block text-sm font-medium mb-1">Design Method</label>
-                                <select id="snow_design_method">
-                                    <option value="ASD" selected>ASD</option>
-                                    <option value="LRFD">LRFD</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-section">
                          <h2>Additional Load Cases</h2>
                           <div class="space-y-4">
                             <div>
@@ -173,23 +138,9 @@
                 <div class="space-y-6">
                     <div class="form-section">
                         <h2>Jurisdiction & Site</h2>
-                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="snow_jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
-                                <select id="snow_jurisdiction">
-                                    <option value="ASCE 7" selected>ASCE 7</option>
-                                    <option value="NYCBC 2022">NYCBC 2022</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="snow_nycbc_minimum_roof_snow_load" class="block text-sm font-medium mb-1">NYCBC Min. Load (psf)</label>
-                                <input type="number" id="snow_nycbc_minimum_roof_snow_load" value="20">
-                            </div>
-                            <div>
-                                <label for="snow_ground_snow_load" class="block text-sm font-medium mb-1">Ground Snow Load (pg)</label>
-                                <input type="number" id="snow_ground_snow_load" value="25" min="0">
-                            </div>
-                         </div>
+                         <p class="text-sm text-gray-500 dark:text-gray-400">Ground Snow Load (p<sub>g</sub>) is loaded from the Project Definition page.</p>
+                         <label for="snow_nycbc_minimum_roof_snow_load" class="block text-sm font-medium mb-1">NYCBC Min. Load (psf)</label>
+                         <input type="number" id="snow_nycbc_minimum_roof_snow_load" value="20">
                     </div>
                     <div class="form-section">
                          <h2>Unbalanced & Drift Parameters</h2>

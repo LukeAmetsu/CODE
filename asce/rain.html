@@ -43,29 +43,7 @@
                 <div class="space-y-6">
                     <div class="form-section">
                         <h2>General Parameters</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="rain_asce_standard" class="block text-sm font-medium mb-1">ASCE Standard</label>
-                                <select id="rain_asce_standard">
-                                    <option value="ASCE 7-16" selected>ASCE 7-16</option>
-                                    <option value="ASCE 7-22">ASCE 7-22</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="rain_unit_system" class="block text-sm font-medium mb-1">Unit System</label>
-                                <select id="rain_unit_system">
-                                    <option value="imperial" selected>Imperial (in, psf)</option>
-                                    <option value="metric">Metric (mm, kPa)</option>
-                                </select>
-                            </div>
-                             <div>
-                                <label for="rain_design_method" class="block text-sm font-medium mb-1">Design Method</label>
-                                <select id="rain_design_method">
-                                    <option value="ASD" selected>ASD</option>
-                                    <option value="LRFD">LRFD</option>
-                                </select>
-                            </div>
-                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Design Method and Standard are loaded from the Project Definition page.</p>
                     </div>
                     <div class="form-section">
                         <h2>Drainage System</h2>
@@ -111,21 +89,11 @@
                 <div class="space-y-6">
                     <div class="form-section">
                         <h2>Drainage Calculation Parameters</h2>
+                        <p class="text-xs mb-4">Rainfall Intensity (i) is loaded from the Project Definition page but can be overridden here.</p>
                         <div class="grid grid-cols-2 gap-4">
-                             <div>
-                                <label for="rain_jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
-                                <select id="rain_jurisdiction">
-                                    <option value="ASCE 7" selected>ASCE 7</option>
-                                    <option value="NYCBC 2022">NYCBC 2022</option>
-                                </select>
-                            </div>
                             <div>
                                 <label for="rain_tributary_area" class="block text-sm font-medium mb-1">Tributary Area (A)</label>
                                 <input type="number" id="rain_tributary_area" value="1000">
-                            </div>
-                            <div>
-                                <label for="rain_intensity" class="block text-sm font-medium mb-1">Rainfall Intensity (i)</label>
-                                <input type="number" id="rain_intensity" value="4.0">
                             </div>
                             <div>
                                 <label for="rain_city_selector" class="block text-sm font-medium mb-1">Select City (for intensity)</label>

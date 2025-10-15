@@ -23,62 +23,35 @@ async function injectHeader(options) {
     const isRoot = window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html');
     const pathPrefix = isRoot ? './' : '../';
 
-    const response = await fetch(`${pathPrefix}js/nav-config.json`);
-    const navLinks = await response.json();
-
-    const mainNavLinks = {
-        home: { key: 'home', href: `${pathPrefix}index.html`, text: 'Home' },
-        us: { key: 'us', href: `${pathPrefix}index.html#us-codes-section`, text: 'US Codes' },
-        nbr: { key: 'nbr', href: `${pathPrefix}index.html#nbr-codes-section`, text: 'NBR (Brazil)' }
-    };
-
-    // Robustly find the correct set of navigation links
-    const trimmedActivePage = activePage.trim().toLowerCase();
-    let currentSubNavSetKey;
-    // The home page has no sub-navigation, so we only search if it's not the home page.
-    if (trimmedActivePage !== 'home') {
-        currentSubNavSetKey = Object.keys(navLinks).find(key =>
-            navLinks[key] && navLinks[key].some(link => link.key.toLowerCase() === trimmedActivePage)
-        );
+    let navConfig;
+    try {
+        const response = await fetch(`${pathPrefix}js/nav-config.json`);
+        navConfig = await response.json();
+    } catch (error) {
+        console.error("Failed to load nav-config.json:", error);
+        placeholder.innerHTML = `<p class="text-red-500 text-center">Error: Could not load navigation.</p>`;
+        return;
     }
 
-    // Determine the active main navigation group
-    const usKeys = ['asce', 'aisc', 'nds', 'aci'];
-    const nbrKeys = ['nbr'];
-    let activeMainKey = 'home'; // Default to 'home'
-    if (usKeys.includes(currentSubNavSetKey)) {
-        activeMainKey = 'us';
-    } else if (nbrKeys.includes(currentSubNavSetKey)) {
-        activeMainKey = 'nbr';
-    }
+    const activeMainNavItem = navConfig.mainNav.find(item => 
+        item.key === activePage || (item.subNav && item.subNav.some(sub => sub.key === activePage))
+    ) || navConfig.mainNav.find(item => item.key === 'home');
 
-    const currentSubNavSet = navLinks[currentSubNavSetKey] || [];
+    const activeMainKey = activeMainNavItem.key;
+    const currentSubNavSet = activeMainNavItem.subNav || [];
 
-    // Add a console log for easier debugging if the issue persists
-    if (trimmedActivePage !== 'home' && !currentSubNavSetKey) {
-        console.error(`Could not find a navigation set for activePage: '${activePage}'`);
-    }
-
-    // Build the navigation HTML using the simple relative href directly
+    // Build the sub-navigation HTML
     const subNavHtml = currentSubNavSet.map(link => `
         <a href="${pathPrefix}${link.href}" class="px-4 py-2 text-sm font-medium rounded-md z-10 transition-colors ${link.key === trimmedActivePage ? 'toggle-active' : 'toggle-inactive'}">
             ${link.text}
         </a>
     `).join('');
 
-    // Filter main navigation links based on the active context
-    let linksToDisplay = [];
-    if (activeMainKey === 'home') {
-        linksToDisplay = Object.values(mainNavLinks); // Show all on home page
-    } else {
-        linksToDisplay.push(mainNavLinks.home); // Always show Home
-        if (mainNavLinks[activeMainKey]) {
-            linksToDisplay.push(mainNavLinks[activeMainKey]); // Show the active category
-        }
-    }
-
-    const mainNavHtml = linksToDisplay.map(link => `
-        <a href="${link.href}" class="px-4 py-2 text-sm font-medium rounded-md transition-colors ${link.key === activeMainKey ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}">${link.text}</a>
+    // Build the main navigation HTML
+    const mainNavHtml = navConfig.mainNav.map(link => `
+        <a href="${pathPrefix}${link.href}" class="px-4 py-2 text-sm font-medium rounded-md transition-colors ${link.key === activeMainKey ? 'bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}">
+            ${link.text}
+        </a>
     `).join('');
 
     // Only render the sub-navigation container if there are links to show.

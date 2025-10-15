@@ -33,6 +33,26 @@ function initializeThemeToggle() {
 }
 
 /**
+ * Adds a visual indicator (e.g., a red asterisk) to the labels of required input fields.
+ * It reads the validation rules and applies a specific CSS class to the corresponding labels.
+ * @param {string} validationRuleKey - The key for the calculator in the `validationRules` object (e.g., 'wind', 'aci_concrete').
+ */
+function highlightRequiredFields(validationRuleKey) {
+    if (!window.validationRules || !validationRules[validationRuleKey]) {
+        return;
+    }
+    const rules = validationRules[validationRuleKey];
+    for (const inputId in rules) {
+        if (rules[inputId].required) {
+            const label = document.querySelector(`label[for="${inputId}"]`);
+            if (label) {
+                label.classList.add('label-required');
+            }
+        }
+    }
+}
+
+/**
  * A single initialization function for all shared UI components.
  */
 function initializeSharedUI() {
@@ -911,7 +931,7 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
         });
         // Only run the onComplete callback if data was actually found and loaded.
         if (typeof onComplete === 'function') {
-            onComplete();
+            onComplete(inputs);
         }
     } catch (error) {
         console.error('Could not load inputs from local storage:', error);
@@ -965,6 +985,11 @@ function createCalculationHandler(config) { // This is the function being called
         feedbackElId = 'feedback-message',
         buttonId
     } = config;
+
+    // Automatically highlight required fields for this calculator on page load.
+    if (validationRuleKey) {
+        highlightRequiredFields(validationRuleKey);
+    }
 
     return async function() { // This function is already async, which is good.
         if (buttonId) setLoadingState(true, buttonId);

@@ -1,8 +1,8 @@
 let lastRainRunResults = null;
 
 const rainInputIds = [
-    'rain_asce_standard', 'rain_unit_system', 'rain_design_method', 'rain_jurisdiction', 'rain_tributary_area',
-    'rain_intensity', 'rain_static_head', 'rain_hydraulic_head', 'dh_auto_calc_toggle', 'rain_drain_type', 'rain_scupper_width', 'rain_drain_diameter'
+    'rain_tributary_area', 'rain_static_head', 'rain_hydraulic_head', 'dh_auto_calc_toggle', 
+    'rain_drain_type', 'rain_scupper_width', 'rain_drain_diameter'
 ];
 
 const rainLoadCalculator = (() => {
@@ -31,7 +31,7 @@ const rainLoadCalculator = (() => {
             rain_tributary_area: A = 0,
             rain_unit_system: unit_system,
             rain_jurisdiction: jurisdiction,
-            dh_auto_calc_toggle: dh_auto_calc,
+            dh_auto_calc_toggle,
             rain_drain_type: drain_type,
             rain_scupper_width: scupper_width = 0,
             rain_drain_diameter: drain_diameter = 0
@@ -40,8 +40,8 @@ const rainLoadCalculator = (() => {
         let dh = dh_manual; // Start with manual value
         let dh_calc_note = "";
         const warnings = [];
-
-        if (dh_auto_calc) {
+        
+        if (dh_auto_calc_toggle) {
             // Per IPC, Q (gpm) = 0.0104 * A (sqft) * i (in/hr)
             const Q_gpm = 0.0104 * A * i;
             
@@ -105,7 +105,7 @@ function displayProjectDataSummary(projectData) {
         return;
     }
 
-    const { asce_standard, jurisdiction } = projectData;
+    const { asce_standard, jurisdiction, rain_intensity } = projectData;
 
     container.innerHTML = `
         <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
@@ -113,12 +113,23 @@ function displayProjectDataSummary(projectData) {
             <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
             <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
         </ul>`;
+    
+    // Also update the rain intensity input on this page from the project data
+    const rainIntensityInput = document.getElementById('rain_intensity');
+    if (rainIntensityInput && rain_intensity !== undefined) {
+        rainIntensityInput.value = rain_intensity;
+    }
 }
 document.addEventListener('DOMContentLoaded', () => {
     const handleRunRainCalculation = createCalculationHandler({
         inputIds: rainInputIds,
         storageKey: 'rain-calculator-inputs',
-        validatorFunction: rainLoadCalculator.validateRainInputs,
+        gatherInputsFunction: () => {
+            const rainInputs = gatherInputsFromIds(rainInputIds);
+            const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
+            return { ...projectData, ...rainInputs };
+        },
+        validatorFunction: rainLoadCalculator.validateRainInputs, // This can stay as it is
         calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
         renderFunction: renderRainResults,
         resultsContainerId: 'rain-results-container',
@@ -153,10 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
         displayProjectDataSummary(projectData);
-        loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
-        // Load rain-specific settings first, then override with shared project data.
-        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds, handleRunRainCalculation);
-    }, 100);
+        // Load rain-specific settings
+        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds);
+        // Then load project data, which will override the shared fields
+        loadInputsFromLocalStorage('buildingProjectData', rainInputIds, handleRunRainCalculation);
+    }, 150);
 });
 
 function generateRainSummary(inputs, results, p_unit, dh_calc_note) {
