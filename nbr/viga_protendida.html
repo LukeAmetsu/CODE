@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NBR Prestressed Concrete Beam Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -15,9 +16,9 @@
     </script>
     <link rel="stylesheet" href="../styles.min.css">
     <script src="../js/template.js" defer></script>
-    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script> 
     <script src="../js/validation-rules.js" defer></script>
-    <script src="concrete beam.js" defer></script>
+    <script src="viga_protendida.js" defer></script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
 
@@ -50,6 +51,24 @@
                             <div>
                                 <label for="fck" class="block text-sm font-medium mb-1">Concrete f<sub>ck</sub> (MPa)</label>
                                 <input type="number" id="fck" value="30">
+                            </div>
+                            <div>
+                                <label for="fci" class="block text-sm font-medium mb-1">Concrete f<sub>ci</sub> (MPa)</label>
+                                <input type="number" id="fci" value="24" data-validate="positive">
+                                <p class="text-xs text-gray-500 mt-1">Strength at transfer. Defaults to 0.8 * fck.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Prestressing Parameters</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="prestress_loss_pct" class="block text-sm font-medium mb-1">Prestress Losses (%)</label>
+                                <input type="number" id="prestress_loss_pct" value="20" data-validate="min:0,max:80">
+                            </div>
+                            <div>
+                                <label for="Ap" class="block text-sm font-medium mb-1">Tendon Area (A<sub>p</sub>, cm²)</label>
+                                <input type="number" id="Ap" value="12.5" data-validate="positive">
                             </div>
                         </div>
                     </div>
@@ -116,28 +135,36 @@
                     </div>
                 </div>
 
-                <!-- Column 3: Diagrams -->
-                <div class="space-y-6">
-                    <div class="form-section">
-                        <h2>Cross-Section Diagram</h2>
-                        <div class="diagram h-[300px] relative">
-                            <canvas id="cross-section-canvas" class="w-full h-full"></canvas>
+                <!-- Column 3: Cross-Section Diagram -->
+                <div class="form-section md:col-span-2 lg:col-span-1">
+                    <h2>Cross-Section Diagram</h2>
+                    <div class="diagram h-[400px] relative mt-4">
+                        <svg id="cross-section-svg" class="w-full h-full"></svg>
+                    </div>
+                    <div class="form-section mt-6">
+                        <h2>Stress Profile Diagram</h2>
+                        <div class="diagram h-[400px] relative mt-4">
+                            <svg id="stress-diagram-svg" class="w-full h-full"></svg>
                         </div>
                     </div>
-                    <div class="form-section">
-                        <h2>Longitudinal Diagram</h2>
-                        <div class="diagram h-[300px] relative">
-                            <canvas id="longitudinal-canvas" class="w-full h-full"></canvas>
-                        </div>
+                </div>
+            </div>
+
+            <!-- Longitudinal Diagram Row -->
+            <div class="mt-6">
+                <div class="form-section w-full">
+                    <h2 class="text-center">Longitudinal View</h2>
+                    <div class="diagram h-[350px] relative mt-4">
+                        <svg id="longitudinal-svg" class="w-full h-full"></svg>
                     </div>
                 </div>
             </div>
             
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
-                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
-                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save Inputs</button>
+                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load</button>
+                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
+                <input type="file" id="file-input" class="hidden" accept=".txt">
                 <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Check</button>
             </div>
         </main>

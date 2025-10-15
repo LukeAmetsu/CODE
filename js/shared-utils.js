@@ -807,7 +807,7 @@ function applyInputsToDOM(inputs, inputIds) {
  * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
  * @param {string} [appVersion='1.1'] - The current application version to check against.
  * @returns {function} An event handler function that takes the file input event.
- */
+ */ 
 function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-message', appVersion = '1.1') {
     return function(event) {
         const displayEl = document.getElementById('file-name-display');

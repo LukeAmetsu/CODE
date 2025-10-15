@@ -16,7 +16,8 @@
     ],
     "nbr": [
         { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "text": "Combinações" },
-        { "key": "concrete-beam", "href": "concrete beam.html", "text": "Concrete Beam" }
+        { "key": "viga-concreto", "href": "nbr/nbr 6118 concreto.html", "text": "Viga de Concreto" },
+        { "key": "viga-protendida", "href": "nbr/viga_protendida.html", "text": "Viga Protendida" }
     ],
     "home": [
         { "key": "home", "href": "index.html", "text": "Home" }

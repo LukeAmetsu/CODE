@@ -30,7 +30,7 @@ const steelChecker = (() => {
         return inputs.Fy * props.Zx;
     }
 
-    function calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr) {
+    function calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr, c) {
         // AISC F2.2: Lateral-Torsional Buckling (LTB)
         const { Fy, E, Cb, Lb_input, aisc_standard } = inputs;
         const { Sx, rts, J, d, tf, Cw } = props;
@@ -134,7 +134,7 @@ const steelChecker = (() => {
         
         const limit_states = {
             'Yielding (F2.1)': calculate_Mn_yield(props, inputs),
-            'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr),
+            'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr, c),
             'Flange Local Buckling (F3)': calculate_Mn_flb(props, inputs, Mp, My),
             'Web Local Buckling (F4)': checkWebLocalBuckling(props, inputs, Mp, My),
             'Compression Flange Yielding (F5)': (lambda_w > lambda_r_w) ? checkSlenderWebFlexure(props, inputs, Mp, My) : Infinity,
@@ -165,7 +165,7 @@ const steelChecker = (() => {
 
         return {
             phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, // to kip-ft
-            isCompact, Mn, Lb, Lp, Lr, Rpg: 1.0, R_pv, governing_limit_state,
+            isCompact, Mn, Lb, Lp, Lr, Rpg: 1.0, R_pv, governing_limit_state, phi: phi_b, omega: omega_b,
             reference: "AISC F2-F5",
             limit_states, // Pass the detailed results for the breakdown
             slenderness: { lambda_f, lambda_p_f, lambda_r_f, lambda_w, lambda_p_w, lambda_r_w }
@@ -1434,7 +1434,8 @@ function generateSteelBreakdownHtml(name, data, results) {
     const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
     const factor_val = design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67);
     const capacity_eq = design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`;
-    const final_capacity = design_method === 'LRFD' ? (check?.Rn || 0) * factor_val : (check?.Rn || 0) / factor_val;
+    const nominal_capacity = check?.Mn || check?.Rn || 0; // Use Mn for flexure, Rn for others
+    const final_capacity = design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val;
 
     const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
     const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
