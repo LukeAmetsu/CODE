@@ -1,6 +1,20 @@
 // --- GLOBAL VARIABLES for state management ---
 let lastWindRunResults = null;
 
+/**
+ * Safely formats a number to a fixed number of decimal places, returning 'N/A' if the number is null, undefined, or not finite.
+ * @param {number | null | undefined} val - The number to format.
+ * @param {number} [digits=2] - The number of decimal places.
+ * @returns {string} The formatted number or 'N/A'.
+ */
+function safeToFixed(val, digits = 2) {
+    // FIX: Explicitly check for null/undefined before calling isFinite, as isFinite(null) is true.
+    if (val === null || val === undefined || !isFinite(val)) {
+        return "N/A";
+    }
+    return val.toFixed(digits);
+}
+
 function addRangeIndicators() {
     document.querySelectorAll('input[type="number"][min], input[type="number"][max]').forEach(input => {
         const min = input.min ? `Min: ${input.min}` : '';
@@ -11,10 +25,19 @@ function addRangeIndicators() {
 }
 
 const windInputIds = [
-    // These are the only inputs left on the wind.html page for the user to modify.
-    'design_method', 'unit_system', 'basic_wind_speed', 'exposure_category', 'risk_category', 'asce_standard', 'jurisdiction',
-    'enclosure_classification', 'wind_obstruction', 'building_flexibility', 'fundamental_period',
-    'structure_type_for_kd', 'topographic_factor_Kzt', 'gust_effect_factor_g', 'calculate_height_varying_pressure'
+    'asce_standard', 'unit_system', 'risk_category', 'design_method',
+    'jurisdiction', 'ground_elevation',
+    'basic_wind_speed', 'exposure_category', 'mean_roof_height', 'building_flexibility',
+    'fundamental_period',
+    'building_length_L', 'building_width_B', 'enclosure_classification', 'roof_type', 'roof_slope_deg',
+    'structure_type', 'solidity_ratio', 'member_shape', 'member_diameter', // Open sign inputs
+    'sign_width_B', 'sign_height_s', 'clearance_z', // Solid sign inputs
+    'chimney_height', 'chimney_diameter', 'corner_radius_r', // Chimney/Tank inputs
+    'tower_height', 'tower_width', 'tower_solidity_ratio', 'tower_member_shape', // Trussed Tower inputs
+    'scaffold_width_Br', 'scaffold_height_hr', // Rooftop Structure inputs
+    'arched_roof_rise', 'arched_roof_spring_point', // Arched Roof inputs
+    'topographic_factor_Kzt', 'gust_effect_factor_g', 'temporary_construction',
+    'wind_obstruction', 'effective_wind_area', 'calculate_height_varying_pressure'
 ];
 
 // =================================================================================
@@ -24,15 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Create the main calculation handler first, so it's available to other functions.
     const handleRunWindCalculation = createCalculationHandler({
         inputIds: windInputIds,
-        storageKey: 'wind-calculator-inputs', // For wind-specific inputs
-        gatherInputsFunction: () => {
-            // Gather inputs from this page
-            const windInputs = gatherInputsFromIds(windInputIds);
-            // Load the comprehensive project data from localStorage
-            const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
-            // Merge them, with wind-specific inputs overriding project data if there are any conflicts.
-            return { ...projectData, ...windInputs };
-        },
+        storageKey: 'wind-calculator-inputs',
         validatorFunction: validateWindInputs,
         calculatorFunction: windLoadCalculator.run,
         renderFunction: renderWindResults,
@@ -43,13 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- EVENT HANDLERS ---
     function attachEventListeners() {
-        // This logic is now part of displayProjectDataSummary
-        // document.getElementById('mean_roof_height').addEventListener('input', (event) => {
-        //     const h = parseFloat(event.target.value) || 0;
-        //     const is_imp = document.getElementById('unit_system').value === 'imperial';
-        //     const limit = is_imp ? 60 : 18.3;
-        //     document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
-        // });
+        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
+            const h = parseFloat(event.target.value) || 0;
+            const is_imp = document.getElementById('unit_system').value === 'imperial';
+            const limit = is_imp ? 60 : 18.3;
+            document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
+        });
 
         // Create file-based handlers
         const handleSaveWindInputs = createSaveInputsHandler(windInputIds, 'wind-inputs.txt');
@@ -69,8 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     await handleCopyToClipboard(targetId, 'feedback-message');
                 }
             }
+            if (event.target.id === 'copy-report-btn') {
+                await handleCopyToClipboard('wind-report-content', 'feedback-message');
+            }
             if (event.target.id === 'send-to-combos-btn' && lastWindRunResults) {
-                sendWindToCombos(lastWindRunResults); // Refactored this function
+                sendWindToCombos(lastWindRunResults);
             }
             if (event.target.id === 'print-report-btn') {
                 window.print();
@@ -97,58 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeApp() {
         initializeSharedUI();
         attachEventListeners();
-        
-        // Load the comprehensive project data and display it
-        const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
-        displayProjectDataSummary(projectData);
-
         addRangeIndicators();
-
         // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
         setTimeout(() => {
-            // First, load any wind-specific inputs.
             loadInputsFromLocalStorage('wind-calculator-inputs', windInputIds);
-            // Then, load the shared project data, which will override any geometric properties.
-            loadInputsFromLocalStorage('buildingProjectData', windInputIds);
         }, 100);
     }
 
     // 4. Run the app.
     initializeApp();    
 }); // END DOMContentLoaded
-
-/**
- * Displays a summary of the loaded project data on the wind calculator page.
- * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
- */
-function displayProjectDataSummary(projectData) {
-    const container = document.getElementById('project-data-summary-container');
-    if (!container) return;
-
-    if (!projectData || !projectData.building_length_L) {
-        container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
-        document.getElementById('run-calculation-btn').disabled = true;
-        return;
-    }
-
-    const { building_length_L, building_width_B, mean_roof_height, eave_height, roof_type, roof_slope_deg, asce_standard, risk_category, jurisdiction } = projectData;
-
-    container.innerHTML = `
-        <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
-        <ul class="text-sm space-y-1 mt-2">
-            <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
-            <li><strong>Risk Category:</strong> ${sanitizeHTML(risk_category)}</li>
-            <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
-            <li><strong>Dimensions (L x B):</strong> ${building_length_L.toFixed(1)} x ${building_width_B.toFixed(1)}</li>
-            <li><strong>Mean Roof Height (h):</strong> ${mean_roof_height.toFixed(1)}</li>
-            <li><strong>Roof Type:</strong> ${sanitizeHTML(roof_type)} (${roof_slope_deg.toFixed(1)}°)</li>
-        </ul>`;
-    
-    // Also, toggle the tall building section based on the loaded height
-    const is_imp = (document.getElementById('unit_system')?.value || 'imperial') === 'imperial';
-    const limit = is_imp ? 60 : 18.3;
-    document.getElementById('tall-building-section')?.classList.toggle('hidden', mean_roof_height <= limit);
-}
 
 // =================================================================================
 //  WIND LOAD CALCULATOR LOGIC
@@ -167,7 +142,207 @@ function getInternalPressureCoefficient(enclosureClass) {
         return map[enclosureClass] || [0.00, "Invalid Enclosure"];
     }
 
-    // Detailed Cp values for Gable and Hip roofs (MWFRS, Low-Rise)
+    /**
+     * Calculates the net force coefficient (Cf) for open signs and lattice frameworks.
+     * Reference: ASCE 7-16/22 Figure 29.5-1
+     * @param {number} solidity_ratio - The ratio of solid area to gross area (ε).
+     * @param {object} options - An object containing member_shape, V (wind speed), b (diameter), and unit_system.
+     * @returns {{Cf: number, ref: string}}
+     */
+    function getOpenSignCf(solidity_ratio, options) {
+        const { member_shape, V, b, unit_system } = options;
+        const epsilon = Math.max(0, Math.min(solidity_ratio, 1.0)); // Clamp between 0 and 1
+
+        if (member_shape === 'flat') {
+            // Interpolate for flat-sided members from Figure 29.5-1
+            const cf = interpolate(epsilon, [0.1, 0.3, 0.5, 1.0], [1.8, 1.7, 1.6, 2.0]);
+            return { Cf: cf, ref: "ASCE 7 Fig. 29.5-1 (Flat Members)" };
+        } else { // 'round' members
+            // For round members, Cf depends on V*sqrt(b) and epsilon.
+            // V must be in ft/s and b in ft.
+            const V_fps = unit_system === 'imperial' ? V * 1.467 : V * 3.281;
+            const b_ft = unit_system === 'imperial' ? b : b * 3.281;
+            const V_sqrt_b = V_fps * Math.sqrt(b_ft);
+
+            // Interpolation data from ASCE 7-16 Fig 29.5-1 for round members
+            const epsilon_points = [0.1, 0.3, 0.5, 1.0];
+            const cf_low_reynolds = [0.7, 0.8, 0.8, 1.2]; // For V*sqrt(b) < 2.5
+            const cf_high_reynolds = [1.2, 1.3, 1.3, 1.5]; // For V*sqrt(b) >= 2.5
+
+            const cf_values = (V_sqrt_b < 2.5) ? cf_low_reynolds : cf_high_reynolds;
+            const cf = interpolate(epsilon, epsilon_points, cf_values);
+            return { Cf: cf, ref: `ASCE 7 Fig. 29.5-1 (Round, V√b=${safeToFixed(V_sqrt_b, 1)})` };
+        }
+    }
+
+    /**
+     * Calculates the net pressure coefficient (CN) for solid freestanding signs.
+     * Reference: ASCE 7-16/22 Figure 29.3-1
+     * @param {number} B - Width of the sign.
+     * @param {number} s - Height of the sign.
+     * @param {number} h - Height to the top of the sign.
+     * @returns {{CN: number, ref: string}}
+     */
+    function getSolidSignCn(B, s, h) {
+        if (!isFinite(B) || !isFinite(s) || !isFinite(h)) {
+            return { CN: 0, ref: "Invalid dimensions for Solid Sign" };
+        }
+
+        const M = s > 0 ? B / s : 0; // Aspect Ratio
+        const s_over_h = h > 0 ? s / h : 0;
+
+        // Interpolation data from ASCE 7-16 Fig 29.3-1
+        const M_points = [0.25, 1, 2, 4, 10, 20, 40];
+        const CN_at_s_over_h_1 = [1.2, 1.2, 1.25, 1.3, 1.4, 1.5, 1.6];
+        const CN_at_s_over_h_0 = [1.8, 1.85, 1.9, 1.9, 1.95, 1.95, 2.0];
+
+        const CN = interpolate(M, M_points, s_over_h < 0.5 ? CN_at_s_over_h_0 : CN_at_s_over_h_1);
+        return { CN, ref: `ASCE 7 Fig. 29.3-1 (M=${safeToFixed(M, 2)}, s/h=${safeToFixed(s_over_h, 2)})` };
+    }
+
+    /**
+     * Returns the net pressure coefficients (GCr) for rooftop structures on buildings with h > 60ft.
+     * This function now correctly uses Figure 29.5-1 for open lattice frameworks (like scaffolds)
+     * and falls back to a solid coefficient for other cases.
+     * @param {object} inputs - The main user inputs object.
+     * @returns {{GCrh: number, GCrv: number, ref: string}} Object with horizontal and vertical coefficients.
+     */
+    function getRooftopStructureCoefficients(inputs) {
+        const { scaffold_width_Br, scaffold_height_hr, solidity_ratio, member_shape, V_in, unit_system } = inputs;
+
+        if (!isFinite(scaffold_width_Br) || scaffold_width_Br <= 0 || !isFinite(scaffold_height_hr) || scaffold_height_hr <= 0) {
+            return { GCrh: 0, GCrv: 0, ref: "Invalid rooftop structure dimensions" };
+        }
+
+        // --- CORRECTED LOGIC for Open Lattice Frameworks (Scaffolds) ---
+        // Use getOpenSignCf which implements ASCE 7-16 Fig 29.5-1
+        const cf_options = {
+            member_shape: member_shape,
+            V: V_in,
+            b: 1.0, // Assume a typical member size of 1ft for Reynolds number check, as it's not a primary input here.
+            unit_system: unit_system
+        };
+        const { Cf, ref } = getOpenSignCf(solidity_ratio, cf_options);
+        const GCrh = Cf; // For open frameworks, the force coefficient is Cf.
+
+        // Vertical uplift for open frames is generally smaller. 1.5 is a conservative value for solid objects.
+        // A value of 0.8 is more reasonable for open frames, though code is less explicit.
+        const GCrv = 1.5; // Coefficient for vertical force (uplift)
+
+        return { GCrh, GCrv, ref };
+    }
+
+
+    /**
+     * Calculates the net force coefficient (Cf) for chimneys, tanks, and similar structures.
+     * Reference: ASCE 7-16/22 Figure 29.4-1
+     * @param {object} options - An object containing shape, h, D, qz, r, and unit_system.
+     * @returns {{Cf: number, ref: string}}
+     */
+    function getChimneyCf(options) {
+        const { shape, h, D, qz, r, unit_system } = options;
+        if (D <= 0 || h <= 0) return { Cf: 0, ref: "Invalid dimensions" };
+
+        const h_over_D = h / D;
+        const h_D_points = [1, 7, 25];
+        let cf_values;
+
+        switch (shape) {
+            case 'Square':
+                const r_over_D = r / D;
+                cf_values = (r_over_D >= 0.05)
+                    ? [1.0, 1.1, 1.2] // Rounded
+                    : [1.3, 1.4, 2.0]; // Sharp
+                const Cf_sq = interpolate(h_over_D, h_D_points, cf_values);
+                return { Cf: Cf_sq, ref: `ASCE 7 Fig. 29.4-1 (Square, r/D=${safeToFixed(r_over_D, 2)})` };
+
+            case 'Hexagonal':
+            case 'Octagonal':
+                cf_values = [1.0, 1.2, 1.4];
+                const Cf_hex = interpolate(h_over_D, h_D_points, cf_values);
+                return { Cf: Cf_hex, ref: `ASCE 7 Fig. 29.4-1 (${shape})` };
+
+            case 'Round':
+                // D must be in ft and qz in psf for the D*sqrt(qz) parameter.
+                const D_ft = unit_system === 'imperial' ? D : D * 3.281;
+                const qz_psf = unit_system === 'imperial' ? qz : qz * 0.020885;
+                const D_sqrt_qz = D_ft * Math.sqrt(qz_psf);
+
+                if (D_sqrt_qz < 2.5) { // Moderately smooth, subcritical
+                    cf_values = [0.5, 0.6, 0.7];
+                } else { // Rough or supercritical
+                    cf_values = [0.7, 0.8, 0.9];
+                }
+                const Cf_round = interpolate(h_over_D, h_D_points, cf_values);
+                return { Cf: Cf_round, ref: `ASCE 7 Fig. 29.4-1 (Round, D√q_z=${safeToFixed(D_sqrt_qz, 1)})` };
+
+            default:
+                return { Cf: 1.4, ref: "ASCE 7 Fig. 29.4-1 (Default/Unknown)" };
+        }
+    }
+
+    /**
+     * Calculates the net force coefficient (Cf) for trussed towers.
+     * Reference: ASCE 7-16/22 Tables 29.6-1 and 29.6-2
+     * @param {object} options - An object containing structure_type, solidity_ratio, and member_shape.
+     * @returns {{Cf: number, ref: string}}
+     */
+    function getTrussedTowerCf(options) {
+        const { structure_type, solidity_ratio, member_shape } = options;
+        const epsilon = Math.max(0, Math.min(solidity_ratio, 1.0));
+        let Cf;
+        let ref;
+
+        if (member_shape === 'flat') {
+            // ASCE 7 Table 29.6-1 for flat-sided members
+            Cf = 4.0 * epsilon**2 - 5.9 * epsilon + 4.0;
+            ref = "ASCE 7 Table 29.6-1 (Flat Members)";
+        } else { // round members
+            // ASCE 7 Table 29.6-2 for round members
+            if (structure_type.includes('Square')) {
+                Cf = 3.4 * epsilon**2 - 4.7 * epsilon + 2.7;
+                ref = "ASCE 7 Table 29.6-2 (Square Tower, Round Members)";
+            } else { // Triangular or All Other
+                Cf = 2.6 * epsilon**2 - 3.5 * epsilon + 2.2;
+                ref = "ASCE 7 Table 29.6-2 (Triangular Tower, Round Members)";
+            }
+        }
+        return { Cf: Math.max(Cf, 0), ref }; // Ensure Cf is not negative
+    }
+
+    /**
+     * Calculates the net pressure coefficient (CN) for arched roofs.
+     * Reference: ASCE 7-16/22 Figure 27.3-3
+     * @param {object} options - An object containing r (rise), B (span), h (eave height), and spring_point.
+     * @returns {{cnMap: object, ref: string}}
+     */
+    function getArchedRoofCn(options) {
+        const { r, B, h, spring_point } = options;
+        if (B <= 0) return { cnMap: {}, ref: "Invalid span" };
+
+        const r_over_B = r / B;
+        const h_over_B = spring_point === 'On Ground' ? 0 : h / B;
+        const cnMap = {};
+
+        // Interpolation data from ASCE 7-16 Fig 27.3-3
+        const r_B_points = [0.05, 0.2, 0.3, 0.4, 0.5];
+
+        // Windward Quarter
+        const cn_windward_ground = [0.9, 1.1, 1.1, 1.1, 1.1];
+        const cn_windward_elevated = [1.5, 1.4, 1.4, 1.4, 1.4];
+        const cn_windward = interpolate(h_over_B, [0, 0.5], [interpolate(r_over_B, r_B_points, cn_windward_ground), interpolate(r_over_B, r_B_points, cn_windward_elevated)]);
+        cnMap['Windward Quarter'] = cn_windward;
+
+        // Center Half (and Leeward Quarter)
+        const cn_center_h_B_0 = [-0.7, -0.8, -1.0, -1.1, -1.1];
+        const cn_center_h_B_0_5 = [-0.9, -0.8, -0.8, -0.8, -0.8];
+        const cn_center = interpolate(h_over_B, [0, 0.5], [interpolate(r_over_B, r_B_points, cn_center_h_B_0), interpolate(r_over_B, r_B_points, cn_center_h_B_0_5)]);
+        cnMap['Center Half & Leeward Quarter'] = cn_center;
+
+        return { cnMap, ref: `ASCE 7 Fig. 27.3-3 (r/B=${safeToFixed(r_over_B, 2)}, h/B=${safeToFixed(h_over_B, 2)})` };
+    }
+
+    // Detailed Cp values for Gable and Hip roofs
     // Reference: ASCE 7-16/22 Figure 27.3-2
     function getGableHipCpValues(h, L, B, roofSlopeDeg, isHip, unitSystem) {
         const cpMap = {};
@@ -182,7 +357,7 @@ function getInternalPressureCoefficient(enclosureClass) {
         const min_a_val2 = unitSystem === 'imperial' ? 3.0 : 0.9;
         a = Math.max(a, min_a_val1, min_a_val2);
 
-        const a_str = `(a=${a.toFixed(1)} ${h_unit})`;
+        const a_str = `(a=${safeToFixed(a, 1)} ${h_unit})`;
 
         // Interpolation functions for Cp based on theta and h/L
         // Windward zones (1, 2, 3)
@@ -225,7 +400,7 @@ function getInternalPressureCoefficient(enclosureClass) {
         return cpMap;
     }
 
-    // Cp values for buildings of all heights (MWFRS, Analytical Procedure)
+    // Cp values for buildings of all heights (Analytical Procedure)
     // Reference: ASCE 7-16 Figure 27.3-1
     function getAnalyticalCpValues(h, dim_parallel_to_wind, dim_perp_to_wind, roofSlopeDeg) {
     const cpMap = {};
@@ -234,18 +409,18 @@ function getInternalPressureCoefficient(enclosureClass) {
     cpMap["Windward Wall"] = 0.8;
     cpMap["Side Wall"] = -0.7;
     // Leeward wall Cp depends on L/B ratio
-    cpMap[`Leeward Wall (L/B = ${L_over_B.toFixed(2)})`] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]);
+    cpMap[`Leeward Wall (L/B = ${safeToFixed(L_over_B, 2)})`] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]);
     
     
     // Roof coefficients also depend on h/L ratio
     const h_over_L = dim_parallel_to_wind > 0 ? h / dim_parallel_to_wind : 0;
     
     if (h_over_L <= 0.8) { // Note: ASCE 7-16 Fig 27.3-1 uses h/L, not h/B
-        cpMap[`Roof Windward (h/L = ${h_over_L.toFixed(2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.7, -0.5, -0.3, -0.2, 0.0, 0.2, 0.4]); // This was missing a value in the original code
-        cpMap[`Roof Leeward (h/L = ${h_over_L.toFixed(2)})`] = interpolate(roofSlopeDeg, [10, 15, 20], [-0.3, -0.5, -0.6]);
+        cpMap[`Roof Windward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.7, -0.5, -0.3, -0.2, 0.0, 0.2, 0.4]); // This was missing a value in the original code
+        cpMap[`Roof Leeward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20], [-0.3, -0.5, -0.6]);
     } else {
-        cpMap[`Roof Windward (h/L = ${h_over_L.toFixed(2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.9, -0.7, -0.4, -0.3, -0.2, 0.0, 0.4]);
-        cpMap[`Roof Leeward (h/L = ${h_over_L.toFixed(2)})`] = -0.7;
+        cpMap[`Roof Windward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.9, -0.7, -0.4, -0.3, -0.2, 0.0, 0.4]);
+        cpMap[`Roof Leeward (h/L = ${safeToFixed(h_over_L, 2)})`] = -0.7;
     }
     
     return { cpMap };
@@ -253,18 +428,23 @@ function getInternalPressureCoefficient(enclosureClass) {
 
     // Net pressure coefficients CN for Open Buildings with Free Roofs
     // Reference: ASCE 7-16/22 Figure 27.3-4
-    function getOpenBuildingCnValues(roofSlopeDeg, isObstructed) {
+    function getOpenBuildingCnValues(roofSlopeDeg, isObstructed, roofType) {
         const cnMap = {};
         const theta = Math.abs(roofSlopeDeg); // Use absolute slope
         const caseKey = isObstructed ? 'obstructed' : 'unobstructed';
+
+        // For flat roofs (theta <= 5 deg), use the values for theta = 5 deg.
+        // ASCE 7-16/22 Fig 27.3-4 starts its charts at 5 degrees.
+        const interp_theta = Math.max(theta, 5);
 
         // Net Pressure Coefficients, CN, for Monoslope Roofs
         const monoslope_map = {
             unobstructed: {
                 zones: ['Zone 2', 'Zone 3'],
-                windward_qtr: [interpolate(theta, [5, 30, 45], [0.8, 1.2, 1.2]), interpolate(theta, [5, 30, 45], [1.2, 1.8, 1.8])],
-                middle_half:  [interpolate(theta, [5, 30, 45], [-0.8, -0.8, -0.8]), interpolate(theta, [5, 30, 45], [-1.2, -1.2, -1.2])],
-                leeward_qtr:  [interpolate(theta, [5, 30, 45], [-0.6, -0.5, -0.5]), interpolate(theta, [5, 30, 45], [-1.0, -0.8, -0.8])]
+                // FIX: Interpolate using interp_theta to handle flat roofs (theta < 5)
+                windward_qtr: [interpolate(interp_theta, [5, 30, 45], [0.8, 1.2, 1.2]), interpolate(interp_theta, [5, 30, 45], [1.2, 1.8, 1.8])],
+                middle_half:  [interpolate(interp_theta, [5, 30, 45], [-0.8, -0.8, -0.8]), interpolate(interp_theta, [5, 30, 45], [-1.2, -1.2, -1.2])],
+                leeward_qtr:  [interpolate(interp_theta, [5, 30, 45], [-0.6, -0.5, -0.5]), interpolate(interp_theta, [5, 30, 45], [-1.0, -0.8, -0.8])]
             },
             obstructed: {
                 zones: ['Zone 2', 'Zone 3'],
@@ -274,7 +454,7 @@ function getInternalPressureCoefficient(enclosureClass) {
             }
         };
 
-        // For pitched/troughed, we use the monoslope values for each half
+        // For pitched/troughed/flat, we use the monoslope values for each half
         const data = monoslope_map[caseKey];
         cnMap[`Windward Roof (First Quarter)`] = { cn_pos: data.windward_qtr[0], cn_neg: -data.windward_qtr[0] };
         cnMap[`Windward Roof (Zone 3)`] = { cn_pos: data.windward_qtr[1], cn_neg: -data.windward_qtr[1] };
@@ -287,7 +467,7 @@ function getInternalPressureCoefficient(enclosureClass) {
     }
 
     // External pressure coefficients Cp
-    // Reference: ASCE 7-16/22 Figures 27.3-1, 27.3-2, 27.3-3 (now includes edge/corner zones for flat roofs)
+    // Reference: ASCE 7-16/22 Figures 27.4-1, 27.4-2, 27.4-3 (now includes edge/corner zones for flat roofs)
     // NOTE: For more complex roof shapes, see future improvement
     function getCpValues(standard, h, L, B, roofType, roofSlopeDeg, unitSystem) {
         const cpMap = {};
@@ -297,49 +477,49 @@ function getInternalPressureCoefficient(enclosureClass) {
 
         cpMap["Windward Wall"] = 0.8;
         refNotes["Windward Wall"] = "ASCE 7 Fig. 27.4-1";
-        cpMap["Side Wall"] = -0.7; // This is from Fig 27.3-1, not 27.4-1
-        refNotes["Side Wall"] = "ASCE 7 Fig. 27.3-1";
-        cpMap["Leeward Wall"] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]); // This is from Fig 27.3-1
-        refNotes["Leeward Wall"] = "ASCE 7 Fig. 27.3-1 (varies with L/B)";
+        cpMap["Side Wall"] = -0.7;
+        refNotes["Side Wall"] = "ASCE 7 Fig. 27.4-1";
+        cpMap["Leeward Wall"] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]);
+        refNotes["Leeward Wall"] = "ASCE 7 Fig. 27.4-1 (varies with L/B)";
 
         if (roofType === "flat") {
             if (standard === "ASCE 7-22") {
-                // ASCE 7-22 Figure 27.3-1 (Zoned approach)
+                // ASCE 7-22 Figure 27.4-1 (Zoned approach)
                 let a = Math.min(0.1 * Math.min(L, B), 0.4 * h);
                 const min_a = unitSystem === 'imperial' ? 3.0 : 0.9;
                 a = Math.max(a, min_a);
-                cpMap[`Roof Zone 1 (0 to ${a.toFixed(1)} ${h_unit})`] = -0.9;
-                cpMap[`Roof Zone 2 (${a.toFixed(1)} to ${2*a.toFixed(1)} ${h_unit})`] = -0.5;
-                cpMap[`Roof Zone 3 (> ${2*a.toFixed(1)} ${h_unit})`] = -0.3;
-                refNotes["Roof"] = "ASCE 7-22 Fig. 27.3-1 (Zoned approach)";
+                cpMap[`Roof Zone 1 (0 to ${safeToFixed(a, 1)} ${h_unit})`] = -0.9;
+                cpMap[`Roof Zone 2 (${safeToFixed(a, 1)} to ${safeToFixed(2*a, 1)} ${h_unit})`] = -0.5;
+                cpMap[`Roof Zone 3 (> ${safeToFixed(2*a, 1)} ${h_unit})`] = -0.3;
+                refNotes["Roof"] = "ASCE 7-22 Fig. 27.4-1 (Zoned approach)";
             } else { // ASCE 7-16
-                // ASCE 7-16 Figure 27.3-1 (h/L approach)
+                // ASCE 7-16 Figure 27.4-1 (h/L approach)
                 const h_over_L = L > 0 ? h / L : 0;
                 if (h_over_L <= 0.5) {
-                    cpMap[`Roof (0 to ${(h/2).toFixed(1)} ${h_unit})`] = -0.9;
-                    cpMap[`Roof (${(h/2).toFixed(1)} to ${h.toFixed(1)} ${h_unit})`] = -0.9;
-                    cpMap[`Roof (${h.toFixed(1)} to ${(2*h).toFixed(1)} ${h_unit})`] = -0.5;
-                    cpMap[`Roof (> ${(2*h).toFixed(1)} ${h_unit})`] = -0.3;
-                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.3-1 (h/L ≤ 0.5)";
+                    cpMap[`Roof (0 to ${safeToFixed(h/2, 1)} ${h_unit})`] = -0.9;
+                    cpMap[`Roof (${safeToFixed(h/2, 1)} to ${safeToFixed(h, 1)} ${h_unit})`] = -0.9;
+                    cpMap[`Roof (${safeToFixed(h, 1)} to ${safeToFixed(2*h, 1)} ${h_unit})`] = -0.5;
+                    cpMap[`Roof (> ${safeToFixed(2*h, 1)} ${h_unit})`] = -0.3;
+                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.4-1 (h/L ≤ 0.5)";
                 } else {
-                    cpMap[`Roof (0 to ${(h/2).toFixed(1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -1.3]);
-                    cpMap[`Roof (${(h/2).toFixed(1)} to ${h.toFixed(1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -0.7]);
-                    cpMap[`Roof (> ${h.toFixed(1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.5, -0.4]);
-                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.3-1 (h/L > 0.5)";
+                    cpMap[`Roof (0 to ${safeToFixed(h/2, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -1.3]);
+                    cpMap[`Roof (${safeToFixed(h/2, 1)} to ${safeToFixed(h, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -0.7]);
+                    cpMap[`Roof (> ${safeToFixed(h, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.5, -0.4]);
+                    refNotes["Roof"] = "ASCE 7-16 Fig. 27.4-1 (h/L > 0.5)";
                 }
             }
         } else if (["gable", "hip"].includes(roofType)) {
             const isHip = roofType === 'hip';
             const gableHipCp = getGableHipCpValues(h, L, B, roofSlopeDeg, isHip, unitSystem);
             Object.assign(cpMap, gableHipCp);
-            refNotes["Roof"] = `ASCE 7-16/22 Fig. 27.3-2 (${isHip ? 'Hip' : 'Gable'})`;
+            refNotes["Roof"] = `ASCE 7-16/22 Fig. 27.4-2 (${isHip ? 'Hip' : 'Gable'})`;
         }
         return { cpMap, refNotes };
     }
 
 // Directionality factor Kd
 // Reference: ASCE 7-16/22 Table 26.6-1
-function getKdFactor(structureType) {
+function getKdFactor(structureType, asce_standard) {
         const kdMap = {
             "Buildings (MWFRS, C&C)": [0.85, "ASCE 7 Table 26.6-1 (Buildings)"],
             "Arched Roofs": [0.85, "ASCE 7 Table 26.6-1 (Arched Roofs)"],
@@ -347,9 +527,16 @@ function getKdFactor(structureType) {
             "Open Signs/Frames": [0.85, "ASCE 7 Table 26.6-1 (Open Signs)"],
             "Trussed Towers (Triangular, Square, Rectangular)": [0.85, "ASCE 7 Table 26.6-1 (Trussed Towers)"],
             "Trussed Towers (All Other Cross Sections)": [0.95, "ASCE 7 Table 26.6-1 (Trussed Towers)"],
-            "Chimneys, Tanks (Square)": [0.90, "ASCE 7 Table 26.6-1 (Square)"],
+            "Chimneys, Tanks (Square)": [0.90, "ASCE 7 Table 26.6-1 (Square)"], // This is for C&C, MWFRS is 0.85
+            "Chimneys, Tanks (Round)": [0.95, "ASCE 7 Table 26.6-1 (Round)"], // This is for C&C, MWFRS is 0.85
             "Chimneys, Tanks (Hexagonal)": [0.95, "ASCE 7 Table 26.6-1 (Hexagonal)"]
         };
+        // ASCE 7-22, Table 26.6-1, Note 3 states Kd=1.0 for MWFRS of other structures.
+        // This includes open signs.
+        if (asce_standard === 'ASCE 7-22' && structureType === 'Open Signs/Frames') {
+            return [1.0, "ASCE 7-22 Table 26.6-1, Note 3"];
+        }
+
         return kdMap[structureType] || [1.0, "ASCE 7 Table 26.6-1 (Default)"];
     }
 
@@ -412,7 +599,7 @@ function calculateKe(elevation, units, standard) {
         const ke_vals = [1.05, 1.00, 0.95, 0.90, 0.82, 0.74, 0.67, 0.61, 0.55];
         const elev_calc = units === 'metric' ? elevation * 3.28084 : elevation;
         const ke_val = interpolate(elev_calc, elev_ft, ke_vals);
-        return [ke_val, `ASCE 7-16 Table 26.9-1 (Elevation: ${elev_calc.toFixed(0)} ft)`];
+        return [ke_val, `ASCE 7-16 Table 26.9-1 (Elevation: ${safeToFixed(elev_calc, 0)} ft)`];
     }
 
 // Wind velocity pressure qz
@@ -450,7 +637,7 @@ function calculateVelocityPressure(Kz, Kzt, Kd, Ke, V, standard, riskCat, units)
 }
 
 // Design pressure p = qz(G*Cp - GCpi)
-// Reference: ASCE 7-16/22 Eq. 27.3-1 (MWFRS)
+// Reference: ASCE 7-16/22 Eq. 27.4-1 (MWFRS)
 function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
     // Correct formula: p = q(GCp) - qi(GCpi)
     // q = q_ext (qz for windward wall, qh for others)
@@ -534,6 +721,11 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
      * @returns {object} An object containing the calculated pressures and other metadata.
      */
     function calculateHighRiseCandCPressures(inputs, qh, GCpi_abs) {
+        // Add console warning if C&C pressures cannot be calculated for the given inputs.
+        console.warn('No C&C pressures calculated for high-rise - check inputs:', { 
+            effective_wind_area: inputs.effective_wind_area, 
+            roof_type: inputs.roof_type 
+        });
         const { mean_roof_height: h, effective_wind_area: A, roof_slope_deg, roof_type, unit_system } = inputs;
         const warnings = [];
         const results = {};
@@ -549,6 +741,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
             Object.assign(results, calculateSteepRoofCandC(A, h, roof_slope_deg));
         } else {
             warnings.push(`C&C pressures for '${roof_type}' roofs on high-rise buildings are not explicitly covered by the prescriptive methods in ASCE 7-16 Ch. 30 and are not calculated.`);
+            return { applicable: false, pressures: {}, ref: "Unsupported roof type for high-rise C&C", warnings };
         }
 
         // Convert GCp values to final pressures
@@ -807,7 +1000,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
     
         return {
             G: Gf,
-            ref: `ASCE 7-16 Eq. 26.11-6 (Flexible, G=${Gf.toFixed(3)})`
+            ref: `ASCE 7-16 Eq. 26.11-6 (Flexible, G=${safeToFixed(Gf, 3)})`
         };
     }
 
@@ -862,7 +1055,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
         // Wind Perpendicular to L (wind parallel to L)
         const { cpMap: cp_map_L } = getCpValues(effective_standard, mean_roof_height, building_length_L, building_width_B, roof_type, roof_slope_deg, unit_system);
         directional_results['perp_to_L'] = Object.entries(cp_map_L).map(([surface, cp]) => ({
-            surface: surface.replace('L/B', `L/B = ${(building_length_L / building_width_B).toFixed(2)}`),
+            surface: surface.replace('L/B', `L/B = ${safeToFixed(building_length_L / building_width_B, 2)}`),
             cp,
             p_pos: calculateDesignPressure(qz, qz, G, cp, abs_gcpi),
             p_neg: calculateDesignPressure(qz, qz, G, cp, -abs_gcpi),
@@ -873,7 +1066,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
         // Wind Perpendicular to B (wind parallel to B)
         const { cpMap: cp_map_B } = getCpValues(effective_standard, mean_roof_height, building_width_B, building_length_L, roof_type, roof_slope_deg, unit_system);
         directional_results['perp_to_B'] = Object.entries(cp_map_B).map(([surface, cp]) => ({
-            surface: surface.replace('L/B', `L/B = ${(building_width_B / building_length_L).toFixed(2)}`),
+            surface: surface.replace('L/B', `L/B = ${safeToFixed(building_width_B / building_length_L, 2)}`),
             cp,
             p_pos: calculateDesignPressure(qz, qz, G, cp, abs_gcpi),
             p_neg: calculateDesignPressure(qz, qz, G, cp, -abs_gcpi),
@@ -921,22 +1114,28 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
         let v_unreduced = inputs.basic_wind_speed;
         let jurisdiction_note = "", temporary_structure_note = "";
 
+        // Step 1: Force flexible analysis for tall buildings
+        const is_high_rise = inputs.mean_roof_height > 60 && inputs.unit_system === 'imperial';
+        if (is_high_rise) {
+            inputs.building_flexibility = 'Flexible';
+        }
+
         if (inputs.jurisdiction === "NYCBC 2022") {
             effective_standard = "ASCE 7-16";
             const risk_v_map = { "I": 110, "II": 117, "III": 127, "IV": 132 };
             v_input = risk_v_map[inputs.risk_category] || 117;
             v_unreduced = v_input;
-            jurisdiction_note = `NYCBC 2022 wind speed of ${v_input} mph for Risk Category ${inputs.risk_category} has been applied (Table 1609.3).`;
+            jurisdiction_note = `NYCBC 2022 wind speed of ${safeToFixed(v_input, 0)} mph for Risk Category ${inputs.risk_category} has been applied (Table 1609.3).`;
         }
 
         if (inputs.temporary_construction === "Yes") {
             v_input *= 0.8;
             const v_unit = inputs.unit_system === 'imperial' ? 'mph' : 'm/s';
-            temporary_structure_note = `A 0.8 reduction factor has been applied for temporary construction (PROJECT-SPECIFIC ALLOWANCE, NOT ASCE 7). Calculation wind speed is ${v_input.toFixed(1)} ${v_unit} (reduced from ${v_unreduced} ${v_unit}).`;
+            temporary_structure_note = `A 0.8 reduction factor has been applied for temporary construction (PROJECT-SPECIFIC ALLOWANCE, NOT ASCE 7). Calculation wind speed is ${safeToFixed(v_input, 1)} ${v_unit} (reduced from ${v_unreduced} ${v_unit}).`;
         }
 
         const [abs_gcpi, gcpi_ref] = getInternalPressureCoefficient(inputs.enclosure_classification);
-        const [Kd, kd_ref] = getKdFactor(inputs.structure_type_for_kd);
+        const [Kd, kd_ref] = getKdFactor(inputs.structure_type, inputs.asce_standard);
         const [Ke, ke_ref] = calculateKe(inputs.ground_elevation, inputs.unit_system, effective_standard);
         const { Kz, alpha, zg, ref_note: kz_ref } = calculateKz(inputs.mean_roof_height, inputs.exposure_category, inputs.unit_system); // Kz at roof height h
         const { qz, ref_note: qz_ref } = calculateVelocityPressure(Kz, inputs.topographic_factor_Kzt, Kd, Ke, v_input, effective_standard, inputs.risk_category, inputs.unit_system);
@@ -957,19 +1156,164 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
             warnings: validation.warnings, errors: validation.errors
         };
 
+        // Add warning after results object is created
+        if (is_high_rise) {
+            windResults.warnings.push("Structure treated as 'Flexible' due to height > 60 ft.");
+        }
+
+        // --- Handle Open Signs as a special case ---
+        if (inputs.structure_type === 'Open Signs/Frames') {
+            const cf_options = {
+                // FIX: Ensure all required options are passed to getOpenSignCf
+                // The original call was missing these, which could lead to errors.
+                member_shape: inputs.member_shape,
+                V: v_input, // Use the jurisdictional/factored wind speed
+                b: inputs.member_diameter,
+                unit_system: inputs.unit_system
+            };
+            const { Cf, ref } = getOpenSignCf(inputs.solidity_ratio, cf_options);
+            // Force F = qz * G * Cf * As (ASCE 7-16 Eq. 29.5-1)
+            // The calculator outputs pressure, so we provide p = qz * G * Cf
+            const pressure = qz * G * Cf;
+            windResults.open_sign_results = {
+                Cf,
+                ref,
+                pressure,
+                pressure_asd: pressure * 0.6
+            };
+            // Set a flag to indicate this is an open sign calculation
+            windResults.is_open_sign = true;
+            // Return early as the building-specific logic does not apply.
+            return windResults;
+        };
+
+        // --- Handle Solid Freestanding Signs as a special case ---
+        if (inputs.structure_type === 'Solid Freestanding Signs/Walls') {
+            const h_sign = inputs.sign_height_s + inputs.clearance_z;
+            // Calculate Kz at the centroid of the sign area
+            const { Kz: Kz_sign } = calculateKz(inputs.clearance_z + inputs.sign_height_s / 2, inputs.exposure_category, inputs.unit_system);
+            // Recalculate qz at the sign's centroid height
+            const { qz: qz_sign } = calculateVelocityPressure(Kz_sign, inputs.topographic_factor_Kzt, Kd, Ke, v_input, effective_standard, inputs.risk_category, inputs.unit_system);
+            
+            const { CN, ref } = getSolidSignCn(inputs.sign_width_B, inputs.sign_height_s, h_sign);
+            // Force F = qz * G * CN * As (ASCE 7-16 Eq. 29.3-1)
+            // The calculator outputs pressure, so we provide p = qz * G * CN
+            const pressure = qz_sign * G * CN;
+            windResults.solid_sign_results = {
+                CN, ref, pressure, pressure_asd: pressure * 0.6,
+                h_sign, Kz_sign, qz_sign
+            };
+            windResults.is_solid_sign = true;
+            // Return early as the building-specific logic does not apply.
+            return windResults;
+        }
+
+        // --- Handle Chimneys, Tanks, and Similar Structures ---
+        const chimney_types = ['Chimneys, Tanks (Square)', 'Chimneys, Tanks (Hexagonal)', 'Chimneys, Tanks (Octagonal)', 'Chimneys, Tanks (Round)'];
+        if (chimney_types.includes(inputs.structure_type)) {
+            const h_struct = inputs.chimney_height;
+            // Calculate Kz and qz at the top of the structure (h)
+            const { Kz: Kz_struct } = calculateKz(h_struct, inputs.exposure_category, inputs.unit_system);
+            const { qz: qz_struct } = calculateVelocityPressure(Kz_struct, inputs.topographic_factor_Kzt, Kd, Ke, v_input, effective_standard, inputs.risk_category, inputs.unit_system);
+
+            const shape = inputs.structure_type.match(/\(([^)]+)\)/)[1];
+            const cf_options = {
+                shape: shape, h: h_struct, D: inputs.chimney_diameter, qz: qz_struct,
+                r: inputs.corner_radius_r, unit_system: inputs.unit_system
+            };
+            const { Cf, ref } = getChimneyCf(cf_options);
+            // Force F = qz * G * Cf * A (ASCE 7-16 Eq. 29.4-1)
+            // The calculator outputs pressure, so we provide p = qz * G * Cf
+            const pressure = qz_struct * G * Cf;
+            windResults.chimney_results = {
+                Cf, ref, pressure, pressure_asd: pressure * 0.6,
+                h_struct, Kz_struct, qz_struct
+            };
+            windResults.is_chimney = true;
+            // Return early as the building-specific logic does not apply.
+            return windResults;
+        }
+
+        // --- Handle Trussed Towers ---
+        const is_truss_tower = inputs.structure_type.includes('Trussed Towers');
+        if (is_truss_tower) {
+            // Calculate qz at the centroid of the tower (h/2)
+            const { Kz: Kz_tower } = calculateKz(inputs.tower_height / 2, inputs.exposure_category, inputs.unit_system);
+            const { qz: qz_tower } = calculateVelocityPressure(Kz_tower, inputs.topographic_factor_Kzt, Kd, Ke, v_input, effective_standard, inputs.risk_category, inputs.unit_system);
+
+            const cf_options = {
+                structure_type: inputs.structure_type,
+                solidity_ratio: inputs.tower_solidity_ratio,
+                member_shape: inputs.tower_member_shape
+            };
+            const { Cf, ref } = getTrussedTowerCf(cf_options);
+            // Force F = qz * G * Cf * Af (ASCE 7-16 Eq. 29.6-1)
+            // The calculator outputs pressure, p = qz * G * Cf, to be applied to the solid area Af.
+            const pressure = qz_tower * G * Cf;
+            windResults.truss_tower_results = {
+                Cf, ref, pressure, pressure_asd: pressure * 0.6,
+                Kz_tower, qz_tower
+            };
+            windResults.is_truss_tower = true;
+            // Return early as the building-specific logic does not apply.
+            return windResults;
+        }
+
+        // --- Handle Arched Roofs ---
+        if (inputs.structure_type === 'Arched Roofs') {
+            const cn_options = {
+                r: inputs.arched_roof_rise,
+                B: inputs.building_width_B, // Span is the width
+                h: inputs.mean_roof_height, // Height to eave
+                spring_point: inputs.arched_roof_spring_point
+            };
+            const { cnMap, ref } = getArchedRoofCn(cn_options);
+            // Pressure p = qh * G * CN (ASCE 7-16 Eq. 27.3-3)
+            windResults.arched_roof_results = {
+                cnMap, ref,
+                pressures: Object.fromEntries(Object.entries(cnMap).map(([zone, CN]) => [
+                    zone, { CN, pressure: qz * G * CN, pressure_asd: qz * G * CN * 0.6 }
+                ]))
+            };
+            windResults.is_arched_roof = true;
+            // Return early as the building-specific logic does not apply.
+            return windResults;
+        }
+
         // Handle Open Buildings separately as they use Net Pressure Coefficients (CN)
         if (inputs.enclosure_classification === 'Open') {
-            if (['monoslope', 'pitched_troughed'].includes(inputs.roof_type)) {
-                const { cnMap, ref } = getOpenBuildingCnValues(inputs.roof_slope_deg, inputs.wind_obstruction === 'obstructed');
-                windResults.directional_results['open_roof'] = Object.entries(cnMap).map(([surface, cn_vals]) => {
-                    // p = qh * G * CN (ASCE 7-16 Eq. 27.3-2)
-                    const p_pos = qz * inputs.gust_effect_factor_g * cn_vals.cn_pos;
-                    const p_neg = qz * inputs.gust_effect_factor_g * cn_vals.cn_neg;
-                    return { surface, cp: null, cn_pos: cn_vals.cn_pos, cn_neg: cn_vals.cn_neg, p_pos, p_neg, p_pos_asd: p_pos * 0.6, p_neg_asd: p_neg * 0.6 };
-                });
+            // Step 3: Differentiate between low-rise and high-rise open buildings
+            if (is_high_rise) {
+                // --- New logic for Rooftop Structures on High-Rise Buildings ---
+                const { GCrh, GCrv, ref } = getRooftopStructureCoefficients(inputs);
+
+                // This was a key missing piece. The logic now correctly calculates pressures
+                // for rooftop structures on high-rise open buildings, which was previously
+                // falling through and causing empty results.
+
+                // The formula is P = qh * (GCr). The Gust Effect Factor is included in GCr.
+                const p_horizontal = qz * GCrh;
+                const p_vertical_uplift = qz * GCrv;
+
+                windResults.directional_results['rooftop_structure'] = [
+                    { surface: "Horizontal Drag Force Pressure", pressure: p_horizontal, pressure_asd: p_horizontal * 0.6, GCr: GCrh },
+                    { surface: "Vertical Uplift Force Pressure", pressure: p_vertical_uplift, pressure_asd: p_vertical_uplift * 0.6, GCr: GCrv }
+                ];
                 windResults.open_building_ref = ref;
+
             } else {
-                windResults.warnings.push("For Open buildings, only 'Monoslope' and 'Pitched/Troughed' roof types are currently supported by this calculator.");
+                // --- Existing logic for Low-Rise Open Buildings ---
+                if (['flat', 'monoslope', 'pitched_troughed'].includes(inputs.roof_type)) {
+                    const { cnMap, ref } = getOpenBuildingCnValues(inputs.roof_slope_deg, inputs.wind_obstruction === 'obstructed', inputs.roof_type);
+                    windResults.directional_results['open_roof'] = Object.entries(cnMap).map(([surface, cn_vals]) => {
+                        const p_pos = qz * G * cn_vals.cn_pos;
+                        const p_neg = qz * G * cn_vals.cn_neg;
+                        return { surface, cp: null, cn_pos: cn_vals.cn_pos, cn_neg: cn_vals.cn_neg, p_pos, p_neg, p_pos_asd: p_pos * 0.6, p_neg_asd: p_neg * 0.6 };
+                    });
+                    windResults.open_building_ref = ref;
+                } else {
+                    windResults.warnings.push("For Low-Rise Open buildings, only 'Flat', 'Monoslope', and 'Pitched/Troughed' roof types are currently supported.");
+                }
             }
             return windResults;
         }
@@ -1006,7 +1350,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
             windResults.warnings.push(...candc_results.warnings);
         }
 
-        // Torsional Load Case (ASCE 7-16/22 Fig 27.3-8, Case 2)
+        // Torsional Load Case (ASCE 7-16/22 Fig 27.4-8, Case 2)
         // Applies to enclosed and partially enclosed low-rise buildings
         if (!is_tall_building && ["Enclosed", "Partially Enclosed"].includes(inputs.enclosure_classification)) {
             const results_L = windResults.directional_results['perp_to_L'];
@@ -1049,9 +1393,7 @@ function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
  * @returns {object} An object containing all the input values.
  */
 function gatherWindInputs() {
-    const windInputs = gatherInputsFromIds(windInputIds);
-    const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
-    return { ...projectData, ...windInputs };
+    return gatherInputsFromIds(windInputIds);
 }
 
 /**
@@ -1060,7 +1402,7 @@ function gatherWindInputs() {
  * @returns {object} An object containing arrays of errors and warnings.
  */
 function validateWindInputs(inputs) {
-    const { errors, warnings } = validateInputs(inputs, validationRules.wind);
+    const { errors, warnings } = validateInputs(inputs, validationRules.wind, 'wind.js');
 
     // Add specific, inter-dependent validation logic here
     if (['gable', 'hip'].includes(inputs.roof_type) && inputs.roof_slope_deg > 45) {
@@ -1068,13 +1410,8 @@ function validateWindInputs(inputs) {
     }
     const isImperial = inputs.unit_system === 'imperial';
     const vRange = isImperial ? [85, 200] : [38, 90];
-    if (inputs.basic_wind_speed && (inputs.basic_wind_speed < vRange[0] || inputs.basic_wind_speed > vRange[1])) {
+    if (inputs.basic_wind_speed < vRange[0] || inputs.basic_wind_speed > vRange[1]) {
         warnings.push(`Wind speed ${inputs.basic_wind_speed} ${isImperial ? 'mph' : 'm/s'} is outside the typical ASCE 7 range (${vRange[0]}-${vRange[1]}).`);
-    }
-
-    // Logical geometry checks
-    if (inputs.eave_height > inputs.mean_roof_height) {
-        errors.push("Eave height cannot be greater than the mean roof height.");
     }
 
     return { errors, warnings };
@@ -1096,8 +1433,8 @@ function performWindCalculation(inputs, validation) { // This function was missi
 }
 function renderRoofPressureChart(canvasId, pressureData, building_dimension, design_method, units) { // This function was missing in the original context
     const factor = design_method === 'ASD' ? 0.6 : 1.0;
-    const labels = pressureData.map(p => p.distance.toFixed(1));
-    const data = pressureData.map(p => (p.p_neg * factor).toFixed(2));
+    const labels = pressureData.map(p => safeToFixed(p.distance, 1));
+    const data = pressureData.map(p => safeToFixed(p.p_neg * factor, 2));
 
     const ctx = document.getElementById(canvasId);
     if (!ctx || typeof Chart === 'undefined') {
@@ -1159,7 +1496,7 @@ function generateCandCDiagram(inputs, candc) { // This function was missing in t
     const min_a_val = unit_system === 'imperial' ? 3.0 : 0.9;
     a = Math.max(a, 0.04 * least_dim, min_a_val);
 
-    const a_val_str = a.toFixed(1);
+    const a_val_str = safeToFixed(a, 1);
     const a_str = `a = ${a_val_str} ${h_unit}`;
 
     let roof_diagram = '';
@@ -1258,40 +1595,47 @@ function generateCandCDiagram(inputs, candc) { // This function was missing in t
 }
 
 function generateWindSummary(inputs, directional_results, candc, p_unit) { // This function was missing in the original context
-    let gov_mwfrs_pos = { value: -Infinity, surface: 'N/A' };
-    let gov_mwfrs_neg = { value: Infinity, surface: 'N/A' };
-    let gov_candc_pos = { value: -Infinity, zone: 'N/A' };
-    let gov_candc_neg = { value: Infinity, zone: 'N/A' };
+    // FIX: Initialize with null to safely handle empty result arrays.
+    let gov_mwfrs_pos = { value: null, surface: 'N/A' };
+    let gov_mwfrs_neg = { value: null, surface: 'N/A' };
+    let gov_candc_pos = { value: null, zone: 'N/A' };
+    let gov_candc_neg = { value: null, zone: 'N/A' };
 
     // --- MWFRS Summary Logic ---
     if (directional_results) {
+        const all_mwfrs_pressures = [];
         Object.values(directional_results).forEach(resultSet => {
             if (!Array.isArray(resultSet)) return;
             resultSet.forEach(r => {
-                // Get the final ASD or LRFD values
-                const val1 = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
-                const val2 = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
-
-                // Check both calculated pressures for each surface against the overall max/min
-                if (val1 > gov_mwfrs_pos.value) gov_mwfrs_pos = { value: val1, surface: r.surface };
-                if (val2 > gov_mwfrs_pos.value) gov_mwfrs_pos = { value: val2, surface: r.surface };
-                
-                if (val1 < gov_mwfrs_neg.value) gov_mwfrs_neg = { value: val1, surface: r.surface };
-                if (val2 < gov_mwfrs_neg.value) gov_mwfrs_neg = { value: val2, surface: r.surface };
+                const val_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
+                const val_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
+                if (isFinite(val_pos)) all_mwfrs_pressures.push({ value: val_pos, surface: r.surface });
+                if (isFinite(val_neg)) all_mwfrs_pressures.push({ value: val_neg, surface: r.surface });
             });
         });
+
+        // FIX: Use reduce on the collected array to safely find max/min.
+        if (all_mwfrs_pressures.length > 0) {
+            gov_mwfrs_pos = all_mwfrs_pressures.reduce((max, p) => p.value > max.value ? p : max, { value: -Infinity });
+            gov_mwfrs_neg = all_mwfrs_pressures.reduce((min, p) => p.value < min.value ? p : min, { value: Infinity });
+        }
     }
 
     // --- C&C Summary Logic ---
     if (candc && candc.applicable && candc.pressures) {
+        const all_candc_pressures = [];
         for (const zone in candc.pressures) {
             const data = candc.pressures[zone];
-            // Use the final calculated pressures directly
-            const p_pos = inputs.design_method === 'ASD' ? data.p_pos * 0.6 : data.p_pos; // ASD factor applied once
-            const p_neg = inputs.design_method === 'ASD' ? data.p_neg * 0.6 : data.p_neg; // ASD factor applied once
-            
-            if (p_pos > gov_candc_pos.value) gov_candc_pos = { value: p_pos, zone };
-            if (p_neg < gov_candc_neg.value) gov_candc_neg = { value: p_neg, zone };
+            const p_pos = inputs.design_method === 'ASD' ? data.p_pos * 0.6 : data.p_pos;
+            const p_neg = inputs.design_method === 'ASD' ? data.p_neg * 0.6 : data.p_neg;
+            if (isFinite(p_pos)) all_candc_pressures.push({ value: p_pos, zone });
+            if (isFinite(p_neg)) all_candc_pressures.push({ value: p_neg, zone });
+        }
+
+        // FIX: Use reduce on the collected array to safely find max/min.
+        if (all_candc_pressures.length > 0) {
+            gov_candc_pos = all_candc_pressures.reduce((max, p) => p.value > max.value ? p : max, { value: -Infinity });
+            gov_candc_neg = all_candc_pressures.reduce((min, p) => p.value < min.value ? p : min, { value: Infinity });
         }
     }
 
@@ -1301,8 +1645,8 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
                     <button data-copy-target-id="wind-summary-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Summary</button>
                 </div>
                 <div class="copy-content grid grid-cols-1 md:grid-cols-2 gap-6 text-center mt-4">
-                    <div><h4 class="font-semibold text-lg mb-2">MWFRS</h4><p>Max Pressure: <strong class="text-xl">${(gov_mwfrs_pos.value).toFixed(2)} ${p_unit}</strong> <span class="text-xs">(${gov_mwfrs_pos.surface})</span></p><p>Max Suction: <strong class="text-xl">${(gov_mwfrs_neg.value).toFixed(2)} ${p_unit}</strong> <span class="text-xs">(${gov_mwfrs_neg.surface})</span></p></div>
-                    <div><h4 class="font-semibold text-lg mb-2">C&C</h4><p>Max Pressure: <strong class="text-xl">${(gov_candc_pos.value).toFixed(2)} ${p_unit}</strong> <span class="text-xs">(${gov_candc_pos.zone})</span></p><p>Max Suction: <strong class="text-xl">${(gov_candc_neg.value).toFixed(2)} ${p_unit}</strong> <span class="text-xs">(${gov_candc_neg.zone})</span></p></div>
+                    <div><h4 class="font-semibold text-lg mb-2">MWFRS</h4><p>Max Pressure: <strong class="text-xl">${safeToFixed(gov_mwfrs_pos.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_mwfrs_pos.surface})</span></p><p>Max Suction: <strong class="text-xl">${safeToFixed(gov_mwfrs_neg.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_mwfrs_neg.surface})</span></p></div>
+                    <div><h4 class="font-semibold text-lg mb-2">C&C</h4><p>Max Pressure: <strong class="text-xl">${safeToFixed(gov_candc_pos.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_candc_pos.zone})</span></p><p>Max Suction: <strong class="text-xl">${safeToFixed(gov_candc_neg.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_candc_neg.zone})</span></p></div>
                 </div>
              </div>`;
 }
@@ -1311,29 +1655,55 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
  * Generates the HTML for the "Design Parameters" section of the report.
  */
 function renderDesignParameters(inputs, intermediate, units) {
-    const { v_unit, h_unit, p_unit } = units; // p_unit was missing
+    const { v_unit, h_unit, p_unit } = units;
     
     let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="report-header">Design Parameters</h3>
+                <div class="flex justify-between items-center">
+                    <h3 class="report-header">1. Design Parameters</h3>
                     <button data-copy-target-id="design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
                 <div class="copy-content">
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>Risk Category:</strong> ${sanitizeHTML(inputs.risk_category)} <span class="ref">[ASCE 7, Table 1.5-1]</span></li>
-                        <li><strong>Basic Design Wind Speed (V):</strong> ${inputs.V_unreduced.toFixed(1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
+                        <li><strong>Basic Design Wind Speed (V):</strong> ${safeToFixed(inputs.V_unreduced, 1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
                         <li><strong>Building Dimensions (L x B):</strong> ${inputs.building_length_L} x ${inputs.building_width_B} ${h_unit.toUpperCase()}</li>
                         <li><strong>Exposure Category:</strong> ${sanitizeHTML(inputs.exposure_category)} <span class="ref">[ASCE 7, Sec. 26.7]</span></li>
                         <li><strong>Building Height (h):</strong> ${inputs.mean_roof_height} ${h_unit.toUpperCase()}</li>
-                        <li><strong>L/B Ratio (Wind ⊥ to L):</strong> ${(inputs.building_length_L / inputs.building_width_B).toFixed(2)} <span class="ref">[Used for Leeward Cp]</span></li>
-                        <li><strong>L/B Ratio (Wind ⊥ to B):</strong> ${(inputs.building_width_B / inputs.building_length_L).toFixed(2)} <span class="ref">[Used for Leeward Cp]</span></li>
-                        <li><strong>Wind Directionality Factor (K<sub>d</sub>):</strong> ${intermediate.Kd.toFixed(2)} <span class="ref">[${intermediate.Kd_ref}]</span></li>
-                        <li><strong>Topographic Factor (K<sub>zt</sub>):</strong> ${inputs.topographic_factor_Kzt.toFixed(2)} <span class="ref">[ASCE 7, Sec. 26.8]</span></li>
-                        <li><strong>Ground Elevation Factor (K<sub>e</sub>):</strong> ${intermediate.Ke.toFixed(3)} <span class="ref">[${intermediate.ke_ref}]</span></li>
-                        <li><strong>Gust-Effect Factor (G):</strong> ${inputs.gust_effect_factor_g.toFixed(2)} <span class="ref">[ASCE 7, Sec. 26.11]</span></li>
-                        <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${intermediate.Kz.toFixed(2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
-                        <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${inputs.GCpi_abs.toFixed(2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
+                        <li><strong>L/B Ratio (Wind ⊥ to L):</strong> ${safeToFixed(inputs.building_length_L / inputs.building_width_B, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
+                        <li><strong>L/B Ratio (Wind ⊥ to B):</strong> ${safeToFixed(inputs.building_width_B / inputs.building_length_L, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
+                        <li><strong>Wind Directionality Factor (K<sub>d</sub>):</strong> ${safeToFixed(intermediate.Kd, 2)} <span class="ref">[${intermediate.Kd_ref}]</span></li>
+                        <li><strong>Topographic Factor (K<sub>zt</sub>):</strong> ${safeToFixed(inputs.topographic_factor_Kzt, 2)} <span class="ref">[ASCE 7, Sec. 26.8]</span></li>
+                        <li><strong>Ground Elevation Factor (K<sub>e</sub>):</strong> ${safeToFixed(intermediate.Ke, 3)} <span class="ref">[${intermediate.ke_ref}]</span></li>
+                        <li><strong>Gust-Effect Factor (G):</strong> ${safeToFixed(inputs.gust_effect_factor_g, 2)} <span class="ref">[ASCE 7, Sec. 26.11]</span></li>
+                        <li><strong>Structure Type:</strong> ${sanitizeHTML(inputs.structure_type)} <span class="ref">[User Input]</span></li>
+                        ${inputs.structure_type === 'Open Signs/Frames' ? `
+                            <li class="pl-4"><strong>Solidity Ratio (ε):</strong> ${safeToFixed(inputs.solidity_ratio, 2)}</li>
+                            <li class="pl-4"><strong>Member Shape:</strong> ${sanitizeHTML(inputs.member_shape)}</li>
+                            ${inputs.member_shape === 'round' ? `<li class="pl-6"><strong>Member Diameter (b):</strong> ${safeToFixed(inputs.member_diameter, 2)} ${h_unit}</li>` : ''}
+                        ` : ''}
+                        ${inputs.structure_type === 'Solid Freestanding Signs/Walls' ? `
+                            <li class="pl-4"><strong>Sign Width (B):</strong> ${safeToFixed(inputs.sign_width_B, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Sign Height (s):</strong> ${safeToFixed(inputs.sign_height_s, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Clearance from Ground (z):</strong> ${safeToFixed(inputs.clearance_z, 2)} ${h_unit}</li>
+                        ` : ''}
+                        ${inputs.structure_type.startsWith('Chimneys, Tanks') ? `
+                            <li class="pl-4"><strong>Structure Height (h):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Width/Diameter (D):</strong> ${safeToFixed(inputs.chimney_diameter, 2)} ${h_unit}</li>
+                            ${(inputs.structure_type.includes('Square') || inputs.structure_type.includes('Hexagonal')) ? `<li class="pl-6"><strong>Corner Radius (r):</strong> ${safeToFixed(inputs.corner_radius_r, 2)} ${h_unit}</li>` : ''}
+                        ` : ''}
+                        ${inputs.structure_type.startsWith('Trussed Towers') ? `
+                            <li class="pl-4"><strong>Tower Height (h):</strong> ${safeToFixed(inputs.tower_height, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Tower Face Width (w):</strong> ${safeToFixed(inputs.tower_width, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Solidity Ratio (ε):</strong> ${safeToFixed(inputs.tower_solidity_ratio, 2)}</li>
+                            <li class="pl-4"><strong>Member Shape:</strong> ${sanitizeHTML(inputs.tower_member_shape)}</li>
+                        ` : ''}
+                        ${inputs.structure_type === 'Arched Roofs' ? `
+                            <li class="pl-4"><strong>Roof Rise (r):</strong> ${safeToFixed(inputs.arched_roof_rise, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Roof Spring Point:</strong> ${sanitizeHTML(inputs.arched_roof_spring_point)}</li>
+                        ` : ''}
+                        <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${safeToFixed(intermediate.Kz, 2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
+                        <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${safeToFixed(inputs.GCpi_abs, 2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
                         ${inputs.temporary_construction === 'Yes' ? `<li><strong>Reduction Factor for Temporary Construction:</strong> 0.8 <span class="ref">[NYC BC, SEC. 1619.3.3]</span></li>` : ''}
                     </ul>
                 </div>
@@ -1344,33 +1714,94 @@ function renderDesignParameters(inputs, intermediate, units) {
 /**
  * Generates the HTML for the "Detailed Calculation Breakdown" section.
  */
-function renderCalculationBreakdown(inputs, intermediate, units) {
-    const { h_unit, p_unit } = units; // This was missing
+function renderCalculationBreakdown(results, units) {
+    const { inputs, intermediate, open_sign_results, solid_sign_results, chimney_results, truss_tower_results } = results;
+    const { h_unit, p_unit } = units;
+
+    let breakdownContent = '';
+
+    if (open_sign_results) {
+        const { Cf, ref, pressure } = open_sign_results;
+        breakdownContent = `
+            <h4 class="font-semibold uppercase text-base">a) Open Sign Calculation (ASCE 7-16 Eq. 29.5-1)</h4>
+            <ul class="list-disc list-inside space-y-2 mt-2">
+                <li><strong>Velocity Pressure (q<sub>z</sub>):</strong> ${safeToFixed(intermediate.qz, 2)} ${p_unit} (Calculated at height h=${inputs.mean_roof_height} ${h_unit})</li>
+                <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(inputs.gust_effect_factor_g, 2)}</li>
+                <li><strong>Net Force Coefficient (C<sub>f</sub>):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(inputs.gust_effect_factor_g, 2)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
+                    <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of the sign face (A<sub>s</sub>).</div>
+                </li>
+            </ul>`;
+    } else if (solid_sign_results) {
+        const { CN, ref, pressure, Kz_sign, qz_sign } = solid_sign_results;
+        breakdownContent = `
+            <h4 class="font-semibold uppercase text-base">b) Solid Sign Calculation (ASCE 7-16 Eq. 29.3-1)</h4>
+            <ul class="list-disc list-inside space-y-2 mt-2">
+                <li><strong>Height to Sign Centroid (z):</strong> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</li>
+                <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_sign, 3)}</li>
+                <li><strong>Velocity Pressure (q<sub>z</sub>) at centroid:</strong> ${safeToFixed(qz_sign, 2)} ${p_unit}</li>
+                <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(inputs.gust_effect_factor_g, 2)}</li>
+                <li><strong>Net Pressure Coefficient (C<sub>N</sub>):</strong> ${safeToFixed(CN, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${safeToFixed(inputs.gust_effect_factor_g, 2)} &times; ${safeToFixed(CN, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
+                </li>
+            </ul>`;
+    } else if (chimney_results) {
+        const { Cf, ref, pressure, Kz_struct, qz_struct } = chimney_results;
+        breakdownContent = `
+            <h4 class="font-semibold uppercase text-base">c) Chimney/Tank Calculation (ASCE 7-16 Eq. 29.4-1)</h4>
+            <ul class="list-disc list-inside space-y-2 mt-2">
+                <li><strong>Height to Top of Structure (h):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li>
+                <li><strong>Exposure Coefficient (K<sub>z</sub>) at h:</strong> ${safeToFixed(Kz_struct, 3)}</li>
+                <li><strong>Velocity Pressure (q<sub>z</sub>) at h:</strong> ${safeToFixed(qz_struct, 2)} ${p_unit}</li>
+                <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(inputs.gust_effect_factor_g, 2)}</li>
+                <li><strong>Force Coefficient (C<sub>f</sub>):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${safeToFixed(inputs.gust_effect_factor_g, 2)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
+                </li>
+            </ul>`;
+    } else if (truss_tower_results) {
+        const { Cf, ref, pressure, Kz_tower, qz_tower } = truss_tower_results;
+        breakdownContent = `
+            <h4 class="font-semibold uppercase text-base">d) Trussed Tower Calculation (ASCE 7-16 Eq. 29.6-1)</h4>
+            <ul class="list-disc list-inside space-y-2 mt-2">
+                <li><strong>Height to Tower Centroid (z):</strong> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</li>
+                <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_tower, 3)}</li>
+                <li><strong>Velocity Pressure (q<sub>z</sub>) at centroid:</strong> ${safeToFixed(qz_tower, 2)} ${p_unit}</li>
+                <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(inputs.gust_effect_factor_g, 2)}</li>
+                <li><strong>Force Coefficient (C<sub>f</sub>):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${safeToFixed(inputs.gust_effect_factor_g, 2)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
+                    <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of one face (A<sub>f</sub>).</div>
+                </li>
+            </ul>`;
+    } else {
+        // Default breakdown for buildings
+        breakdownContent = `
+            <h4 class="font-semibold uppercase text-base">a) Intermediate Calculations</h4>
+            <ul class="list-disc list-inside space-y-2 mt-2">
+                <li><strong>Factors:</strong> I<sub>w</sub> = ${safeToFixed(intermediate.Iw, 2)}, K<sub>d</sub> = ${safeToFixed(intermediate.Kd, 2)}, K<sub>zt</sub> = ${safeToFixed(inputs.topographic_factor_Kzt, 2)}, G = ${safeToFixed(inputs.gust_effect_factor_g, 2)}, GC<sub>pi</sub> = &plusmn;${safeToFixed(inputs.GCpi_abs, 2)}</li>
+                <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${safeToFixed(intermediate.zg, 0)} ${h_unit}</li>
+                <li><strong>Elevation Factor (K<sub>e</sub>):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">Interpolated from ${intermediate.ke_ref} &rarr; K<sub>e</sub> = ${safeToFixed(intermediate.Ke, 3)}</div>
+                </li>
+                <li><strong>Exposure Coefficient (K<sub>z</sub>):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${safeToFixed(inputs.mean_roof_height, 2)} / ${safeToFixed(intermediate.zg, 0)})<sup>(2 / ${intermediate.alpha})</sup> = ${safeToFixed(intermediate.Kz, 3)}</div>
+                </li>
+                <li><strong>Velocity Pressure (q<sub>h</sub>):</strong>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">q<sub>h</sub> = 0.00256 &times; ${safeToFixed(intermediate.Kz, 3)} &times; ${safeToFixed(inputs.topographic_factor_Kzt, 2)} &times; ${safeToFixed(intermediate.Kd, 2)} &times; ${safeToFixed(intermediate.Ke, 3)} &times; ${safeToFixed(inputs.V_in, 1)}² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; ${safeToFixed(intermediate.Iw, 2)}` : ''} = ${safeToFixed(intermediate.qz, 2)} ${p_unit}</div>
+                </li>
+            </ul>`;
+    }
 
     let html = `<div id="calc-breakdown-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="report-header">Detailed Calculation Breakdown</h3>
+                <div class="flex justify-between items-center">
+                    <h3 class="report-header">2. Detailed Calculation Breakdown</h3>
                     <button data-copy-target-id="calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <div class="copy-content">
-                    <div class="calc-breakdown">
-                        <h4 class="font-semibold uppercase text-base">a) Intermediate Calculations</h4>
-                        <ul class="list-disc list-inside space-y-2 mt-2">
-                            <li><strong>Factors:</strong> I<sub>w</sub> = ${intermediate.Iw.toFixed(2)}, K<sub>d</sub> = ${intermediate.Kd.toFixed(2)}, K<sub>zt</sub> = ${inputs.topographic_factor_Kzt.toFixed(2)}, G = ${inputs.gust_effect_factor_g.toFixed(2)}, GC<sub>pi</sub> = &plusmn;${inputs.GCpi_abs.toFixed(2)}</li>
-                            <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${intermediate.zg.toFixed(0)} ${h_unit}</li>
-                            <li><strong>Elevation Factor (K<sub>e</sub>):</strong>
-                                <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">Interpolated from ${intermediate.ke_ref} &rarr; K<sub>e</sub> = ${intermediate.Ke.toFixed(3)}</div>
-                            </li>
-                            <li><strong>Exposure Coefficient (K<sub>z</sub>):</strong>
-                                <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${inputs.mean_roof_height.toFixed(2)} / ${intermediate.zg.toFixed(0)})<sup>(2 / ${intermediate.alpha})</sup> = ${intermediate.Kz.toFixed(3)}</div>
-                            </li>
-                            <li><strong>Velocity Pressure (q<sub>h</sub>):</strong>
-                                <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">q<sub>h</sub> = 0.00256 &times; ${intermediate.Kz.toFixed(3)} &times; ${inputs.topographic_factor_Kzt.toFixed(2)} &times; ${intermediate.Kd.toFixed(2)} &times; ${intermediate.Ke.toFixed(3)} &times; ${inputs.V_in.toFixed(1)}² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; ${intermediate.Iw.toFixed(2)}` : ''} = ${intermediate.qz.toFixed(2)} ${p_unit}</div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                <div class="copy-content"><div class="calc-breakdown">${breakdownContent}</div></div>
             </div>`;
     return html;
 }
@@ -1379,38 +1810,87 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
  * Renders the results table for Open Buildings.
  */
 function renderOpenBuildingResults(directional_results, open_building_ref, inputs, units) {
-    const { p_unit } = units; // This was missing
-    if (inputs.enclosure_classification !== 'Open') return '';
+    const { p_unit } = units;
+
+    // --- Path 1: Handle high-rise rooftop structure results ---
+    if (directional_results && directional_results.rooftop_structure) {
+        
+        let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">ROOFTOP STRUCTURE PRESSURES (p = q_h*GC_r)</h3></div>`;
+        
+        let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Rooftop Structure Pressures (${open_building_ref})</caption>
+            <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
+                <th>Force Direction</th><th>GC_r</th><th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
+            </tr></thead>
+            <tbody class="dark:text-gray-300 text-center">`;
+
+        directional_results.rooftop_structure.forEach(r => {
+            const pressure = inputs.design_method === 'ASD' ? r.pressure_asd : r.pressure;
+            tableHtml += `
+                <tr>
+                    <td>${r.surface}</td>
+                    <td>${safeToFixed(r.GCr || 0, 2)}</td>
+                    <td>${safeToFixed(pressure || 0, 2)}</td>
+                </tr>`;
+        });
+
+        tableHtml += `</tbody></table>`;
+        
+        // **CRITICAL FIX**: Return here to prevent fall-through to the low-rise logic.
+        return html + tableHtml;
+    }
+
+    // --- Path 2: Handle low-rise open building results (only runs if the above `if` is false) ---
+    // FIX: Coerce directional_results to an array to permanently fix TypeError.
+    // The data source can return a single object, an object with direction keys, or an array. 
+    // This defensive block ensures it's always a safe-to-iterate array.
+    let openRoofResults = [];
+    
+    if (Array.isArray(directional_results)) {
+        openRoofResults = directional_results;
+    } else if (directional_results && typeof directional_results === 'object') {
+        // If it's a non-array object, try to extract open_roof data
+        if (directional_results.open_roof && Array.isArray(directional_results.open_roof)) {
+            openRoofResults = directional_results.open_roof;
+        } else {
+            // If no open_roof array, try to flatten all values
+            openRoofResults = Object.values(directional_results).flat();
+        }
+    } else {
+        // If it's undefined, null, or another invalid type, default to empty array to prevent a crash.
+        console.warn("renderOpenBuildingResults(): directional_results was not iterable, defaulting to empty array.", directional_results);
+        openRoofResults = [];
+    }
 
     let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h*G*C_N)</h3></div>`;
-        let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Open Building Free Roof Pressures (${open_building_ref})</caption>
+
+    let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Open Building Free Roof Pressures (${open_building_ref})</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
                 <th>Roof Zone</th><th>C_N,pos</th><th>C_N,neg</th><th>Positive Pressure (${inputs.design_method}) [${p_unit}]</th><th>Negative Pressure (${inputs.design_method}) [${p_unit}]</th>
             </tr></thead>
             <tbody class="dark:text-gray-300 text-center">`;
-        
-        directional_results.open_roof.forEach(r => {
+
+    openRoofResults.forEach(r => {
             const p_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
             const p_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
             tableHtml += `
                 <tr>
                     <td>${r.surface}</td>
-                    <td>${r.cn_pos.toFixed(2)}</td>
-                    <td>${r.cn_neg.toFixed(2)}</td>
-                    <td>${p_pos.toFixed(2)}</td>
-                    <td>${p_neg.toFixed(2)}</td>
+                    <td>${safeToFixed(r.cn_pos || 0, 2)}</td>
+                    <td>${safeToFixed(r.cn_neg || 0, 2)}</td>
+                    <td>${safeToFixed(p_pos || 0, 2)}</td>
+                    <td>${safeToFixed(p_neg || 0, 2)}</td>
                 </tr>`;
         });
         tableHtml += `</tbody></table>`;
-    html += tableHtml;
-    return html;
+
+    return html + tableHtml;
 }
 
 /**
  * Renders a single directional results table for MWFRS.
  */
 function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermediate, units) {
-    const { p_unit } = units; // This was missing
+    const { p_unit } = units;
 
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
@@ -1434,14 +1914,14 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
             tableHtml += `
                 <tr>
                     <td>${sanitizeHTML(r.surface)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                    <td>${r.cp !== null ? r.cp.toFixed(2) : 'N/A'}</td>
-                    <td>${p_pos.toFixed(2)}</td>
-                    <td>${p_neg.toFixed(2)}</td>
+                    <td>${r.cp !== null ? safeToFixed(r.cp, 2) : 'N/A'}</td>
+                    <td>${safeToFixed(p_pos, 2)}</td>
+                    <td>${safeToFixed(p_neg, 2)}</td>
                 </tr>
                 <tr id="${detailId}" class="details-row"><td colspan="4" class="p-0"><div class="calc-breakdown">
                         <ul><li class="font-semibold"><b>Formula:</b> ${formula_str}</li>
-                            <li><b>Calculation (+GCpi):</b> ${p_pos.toFixed(2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${intermediate.qz.toFixed(2)}*${inputs.gust_effect_factor_g}*${r.cp.toFixed(2)} - ${intermediate.qz.toFixed(2)}*${inputs.GCpi_abs})</li>
-                            <li><b>Calculation (-GCpi):</b> ${p_neg.toFixed(2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${intermediate.qz.toFixed(2)}*${inputs.gust_effect_factor_g}*${r.cp.toFixed(2)} - ${intermediate.qz.toFixed(2)}*${-inputs.GCpi_abs})</li>
+                            <li><b>Calculation (+GCpi):</b> ${safeToFixed(p_pos, 2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${safeToFixed(intermediate.qz, 2)}*${inputs.gust_effect_factor_g}*${safeToFixed(r.cp, 2)} - ${safeToFixed(intermediate.qz, 2)}*${inputs.GCpi_abs})</li>
+                            <li><b>Calculation (-GCpi):</b> ${safeToFixed(p_neg, 2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${safeToFixed(intermediate.qz, 2)}*${inputs.gust_effect_factor_g}*${safeToFixed(r.cp, 2)} - ${safeToFixed(intermediate.qz, 2)}*${-inputs.GCpi_abs})</li>
                         </ul>
                     </div></td></tr>`;
         });
@@ -1453,10 +1933,10 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
  * Renders the entire MWFRS section, including diagrams and tables for both directions.
  */
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
-    const { h_unit } = units; // This was missing
+    const { h_unit } = units;
     let html = `<div id="mwfrs-section" class="mt-6 report-section-copyable">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header flex-grow">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
+        <div class="flex justify-between items-center">
+            <h3 class="report-header flex-grow">3. MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
             <button data-copy-target-id="mwfrs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1502,13 +1982,13 @@ function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_met
  * Renders the table for height-varying windward wall pressures.
  */
 function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs, units) {
-    const { h_unit, p_unit } = units; // This was missing
+    const { h_unit, p_unit } = units;
     if (!heightVaryingResults) return '';
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
 
     let html = `<div id="height-varying-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="report-header flex-grow">Height-Varying Windward Wall Pressures</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="report-header flex-grow">4. Height-Varying Windward Wall Pressures</h3>
                         <button data-copy-target-id="height-varying-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1526,15 +2006,15 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
     heightVaryingResults.forEach(result => {
             html += `
                 <tr>
-                    <td>${result.height.toFixed(1)}</td>
-                    <td>${result.Kz.toFixed(3)}</td>
-                    <td>${result.qz.toFixed(2)}</td>
-                    <td>${(result.p_pos * factor).toFixed(2)}</td>
+                    <td>${safeToFixed(result.height, 1)}</td>
+                    <td>${safeToFixed(result.Kz, 3)}</td>
+                    <td>${safeToFixed(result.qz, 2)}</td>
+                    <td>${safeToFixed(result.p_pos * factor, 2)}</td>
                 </tr>`;
         });
     html += `   <tr>
                         <td colspan="3" class="text-right font-semibold pr-4">Constant Leeward Pressure (Perp. to L):</td>
-                        <td>${(leeward_pressure * factor).toFixed(2)}</td>
+                        <td>${safeToFixed(leeward_pressure * factor, 2)}</td>
                     </tr>
                     </tbody></table></div>
                 </div>`;
@@ -1579,10 +2059,10 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
                                 <tbody class="dark:text-gray-300 text-center">`;
         roofPressureDist_L.forEach(r => {
             html += `<tr>
-                        <td>${r.distance.toFixed(1)}</td>
-                        <td>${r.distance_ratio.toFixed(2)}</td>
-                        <td>${r.cp.toFixed(2)}</td>
-                        <td>${(r.p_neg * factor).toFixed(2)}</td>
+                        <td>${safeToFixed(r.distance, 1)}</td>
+                        <td>${safeToFixed(r.distance_ratio, 2)}</td>
+                        <td>${safeToFixed(r.cp, 2)}</td>
+                        <td>${safeToFixed(r.p_neg * factor, 2)}</td>
                      </tr>`;
         });
         html += `           </tbody>
@@ -1595,10 +2075,10 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
                                 <tbody class="dark:text-gray-300 text-center">`;
             roofPressureDist_B.forEach(r => {
                 html += `<tr>
-                            <td>${r.distance.toFixed(1)}</td>
-                            <td>${r.distance_ratio.toFixed(2)}</td>
-                            <td>${r.cp.toFixed(2)}</td>
-                            <td>${(r.p_neg * factor).toFixed(2)}</td>
+                            <td>${safeToFixed(r.distance, 1)}</td>
+                            <td>${safeToFixed(r.distance_ratio, 2)}</td>
+                            <td>${safeToFixed(r.cp, 2)}</td>
+                            <td>${safeToFixed(r.p_neg * factor, 2)}</td>
                          </tr>`;
             });
         html += `           </tbody></table>
@@ -1613,7 +2093,7 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
  * Renders the Torsional Load Case section.
  */
 function renderTorsionalCase(torsional_case, inputs, units) {
-    if (!torsional_case) return ''; // This was missing
+    if (!torsional_case) return '';
     const { is_imp } = units;
         const m_unit = is_imp ? 'lb-ft' : 'kN-m';
         let Mt_L = is_imp ? torsional_case.perp_to_L.Mt : torsional_case.perp_to_L.Mt / 1000;
@@ -1624,8 +2104,8 @@ function renderTorsionalCase(torsional_case, inputs, units) {
         }
 
     return `<div id="torsional-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="report-header flex-grow">Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="report-header flex-grow">5. Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
                         <button data-copy-target-id="torsional-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1648,11 +2128,11 @@ function renderTorsionalCase(torsional_case, inputs, units) {
  * Renders the Components & Cladding (C&C) section.
  */
 function renderCandCSection(candc, inputs, units) {
-    if (!candc || !candc.applicable) return ''; // This was missing
+    if (!candc || !candc.applicable) return '';
     const { is_imp, p_unit } = units;
     let html = `<div id="candc-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="report-header flex-grow">Components & Cladding (C&C) Pressures</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="report-header flex-grow">6. Components & Cladding (C&C) Pressures</h3>
                         <button data-copy-target-id="candc-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1683,10 +2163,10 @@ function renderCandCSection(candc, inputs, units) {
                 const p_neg_asd = p_neg_lrfd * 0.6;
                 html += `<tr>
                             <td>${sanitizeHTML(zone)}</td>
-                            <td>${data.gcp_pos.toFixed(2)}</td>
-                            <td>${data.gcp_neg.toFixed(2)}</td>
-                            <td>${p_pos_lrfd.toFixed(2)} / ${p_neg_lrfd.toFixed(2)}</td>
-                            <td>${p_pos_asd.toFixed(2)} / ${p_neg_asd.toFixed(2)}</td>
+                            <td>${safeToFixed(data.gcp_pos, 2)}</td>
+                            <td>${safeToFixed(data.gcp_neg, 2)}</td>
+                            <td>${safeToFixed(p_pos_lrfd, 2)} / ${safeToFixed(p_neg_lrfd, 2)}</td>
+                            <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
                          </tr>`;
             }
         } else {
@@ -1701,7 +2181,7 @@ function renderCandCSection(candc, inputs, units) {
             for (const zone in candc.pressures) {
                 const data = candc.pressures[zone];
                 const pressure = inputs.design_method === 'ASD' ? data.p_neg * 0.6 : data.p_neg;
-                html += `<tr><td>${sanitizeHTML(zone)}</td><td>${data.gcp.toFixed(2)}</td><td>${pressure.toFixed(2)}</td></tr>`;
+                html += `<tr><td>${sanitizeHTML(zone)}</td><td>${safeToFixed(data.gcp, 2)}</td><td>${safeToFixed(pressure, 2)}</td></tr>`;
             }
         }
         html += `</tbody></table></div></div>`;
@@ -1712,29 +2192,55 @@ function renderCandCSection(candc, inputs, units) {
  * Generates the HTML for the "Design Parameters" section of the report.
  */
 function renderDesignParameters(inputs, intermediate, units) {
-    const { v_unit, h_unit, p_unit } = units; // p_unit was missing
+    const { v_unit, h_unit, p_unit } = units;
     
     let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="report-header">Design Parameters</h3>
-                    <button data-copy-target-id="design-parameters-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
+                <div class="flex justify-between items-center">
+                    <h3 class="report-header">1. Design Parameters</h3>
+                    <button data-copy-target-id="design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
                 <div class="copy-content">
                     <ul class="list-disc list-inside space-y-1">
-                    <li><strong>Risk Category:</strong> ${sanitizeHTML(inputs.risk_category)} <span class="ref">[ASCE 7, Table 1.5-1]</span></li>
-                    <li><strong>Basic Design Wind Speed (V):</strong> ${inputs.V_unreduced.toFixed(1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
-                    <li><strong>Building Dimensions (L x B):</strong> ${inputs.building_length_L} x ${inputs.building_width_B} ${h_unit.toUpperCase()}</li>
-                    <li><strong>Exposure Category:</strong> ${sanitizeHTML(inputs.exposure_category)} <span class="ref">[ASCE 7, Sec. 26.7]</span></li>
-                    <li><strong>Building Height (h):</strong> ${inputs.mean_roof_height} ${h_unit.toUpperCase()}</li>
-                    <li><strong>L/B Ratio (Wind ⊥ to L):</strong> ${(inputs.building_length_L / inputs.building_width_B).toFixed(2)} <span class="ref">[Used for Leeward Cp]</span></li>
-                    <li><strong>L/B Ratio (Wind ⊥ to B):</strong> ${(inputs.building_width_B / inputs.building_length_L).toFixed(2)} <span class="ref">[Used for Leeward Cp]</span></li>
-                    <li><strong>Wind Directionality Factor (K<sub>d</sub>):</strong> ${intermediate.Kd.toFixed(2)} <span class="ref">[${intermediate.Kd_ref}]</span></li>
-                    <li><strong>Topographic Factor (K<sub>zt</sub>):</strong> ${inputs.topographic_factor_Kzt.toFixed(2)} <span class="ref">[ASCE 7, Sec. 26.8]</span></li>
-                    <li><strong>Ground Elevation Factor (K<sub>e</sub>):</strong> ${intermediate.Ke.toFixed(2)} <span class="ref">[${intermediate.ke_ref}]</span></li>
-                    <li><strong>Gust-Effect Factor (G):</strong> ${inputs.gust_effect_factor_g.toFixed(2)} <span class="ref">[ASCE 7, Sec. 26.11]</span></li>
-                    <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${intermediate.Kz.toFixed(2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
-                    <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${inputs.GCpi_abs.toFixed(2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
+                        <li><strong>Risk Category:</strong> ${sanitizeHTML(inputs.risk_category)} <span class="ref">[ASCE 7, Table 1.5-1]</span></li>
+                        <li><strong>Basic Design Wind Speed (V):</strong> ${safeToFixed(inputs.V_unreduced, 1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
+                        <li><strong>Building Dimensions (L x B):</strong> ${inputs.building_length_L} x ${inputs.building_width_B} ${h_unit.toUpperCase()}</li>
+                        <li><strong>Exposure Category:</strong> ${sanitizeHTML(inputs.exposure_category)} <span class="ref">[ASCE 7, Sec. 26.7]</span></li>
+                        <li><strong>Building Height (h):</strong> ${inputs.mean_roof_height} ${h_unit.toUpperCase()}</li>
+                        <li><strong>L/B Ratio (Wind ⊥ to L):</strong> ${safeToFixed(inputs.building_length_L / inputs.building_width_B, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
+                        <li><strong>L/B Ratio (Wind ⊥ to B):</strong> ${safeToFixed(inputs.building_width_B / inputs.building_length_L, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
+                        <li><strong>Wind Directionality Factor (K<sub>d</sub>):</strong> ${safeToFixed(intermediate.Kd, 2)} <span class="ref">[${intermediate.Kd_ref}]</span></li>
+                        <li><strong>Topographic Factor (K<sub>zt</sub>):</strong> ${safeToFixed(inputs.topographic_factor_Kzt, 2)} <span class="ref">[ASCE 7, Sec. 26.8]</span></li>
+                        <li><strong>Ground Elevation Factor (K<sub>e</sub>):</strong> ${safeToFixed(intermediate.Ke, 3)} <span class="ref">[${intermediate.ke_ref}]</span></li>
+                        <li><strong>Gust-Effect Factor (G):</strong> ${safeToFixed(inputs.gust_effect_factor_g, 2)} <span class="ref">[ASCE 7, Sec. 26.11]</span></li>
+                        <li><strong>Structure Type:</strong> ${sanitizeHTML(inputs.structure_type)} <span class="ref">[User Input]</span></li>
+                        ${inputs.structure_type === 'Open Signs/Frames' ? `
+                            <li class="pl-4"><strong>Solidity Ratio (ε):</strong> ${safeToFixed(inputs.solidity_ratio, 2)}</li>
+                            <li class="pl-4"><strong>Member Shape:</strong> ${sanitizeHTML(inputs.member_shape)}</li>
+                            ${inputs.member_shape === 'round' ? `<li class="pl-6"><strong>Member Diameter (b):</strong> ${safeToFixed(inputs.member_diameter, 2)} ${h_unit}</li>` : ''}
+                        ` : ''}
+                        ${inputs.structure_type === 'Solid Freestanding Signs/Walls' ? `
+                            <li class="pl-4"><strong>Sign Width (B):</strong> ${safeToFixed(inputs.sign_width_B, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Sign Height (s):</strong> ${safeToFixed(inputs.sign_height_s, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Clearance from Ground (z):</strong> ${safeToFixed(inputs.clearance_z, 2)} ${h_unit}</li>
+                        ` : ''}
+                        ${inputs.structure_type.startsWith('Chimneys, Tanks') ? `
+                            <li class="pl-4"><strong>Structure Height (h):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Width/Diameter (D):</strong> ${safeToFixed(inputs.chimney_diameter, 2)} ${h_unit}</li>
+                            ${(inputs.structure_type.includes('Square') || inputs.structure_type.includes('Hexagonal')) ? `<li class="pl-6"><strong>Corner Radius (r):</strong> ${safeToFixed(inputs.corner_radius_r, 2)} ${h_unit}</li>` : ''}
+                        ` : ''}
+                        ${inputs.structure_type.startsWith('Trussed Towers') ? `
+                            <li class="pl-4"><strong>Tower Height (h):</strong> ${safeToFixed(inputs.tower_height, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Tower Face Width (w):</strong> ${safeToFixed(inputs.tower_width, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Solidity Ratio (ε):</strong> ${safeToFixed(inputs.tower_solidity_ratio, 2)}</li>
+                            <li class="pl-4"><strong>Member Shape:</strong> ${sanitizeHTML(inputs.tower_member_shape)}</li>
+                        ` : ''}
+                        ${inputs.structure_type === 'Arched Roofs' ? `
+                            <li class="pl-4"><strong>Roof Rise (r):</strong> ${safeToFixed(inputs.arched_roof_rise, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Roof Spring Point:</strong> ${sanitizeHTML(inputs.arched_roof_spring_point)}</li>
+                        ` : ''}
+                    <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${safeToFixed(intermediate.Kz, 2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
+                    <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${safeToFixed(inputs.GCpi_abs, 2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
                     ${inputs.temporary_construction === 'Yes' ? `<li><strong>Reduction Factor for Temporary Construction:</strong> 0.8 <span class="ref">[NYC BC, SEC. 1619.3.3]</span></li>` : ''}
                 </ul>
                 </div>
@@ -1746,27 +2252,27 @@ function renderDesignParameters(inputs, intermediate, units) {
  * Generates the HTML for the "Detailed Calculation Breakdown" section.
  */
 function renderCalculationBreakdown(inputs, intermediate, units) {
-    const { h_unit, p_unit } = units; // This was missing
+    const { h_unit, p_unit } = units;
 
     let html = `<div id="calc-breakdown-section" class="mt-6">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="report-header">Detailed Calculation Breakdown</h3>
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold uppercase">2. Detailed Calculation Breakdown</h3>
                     <button data-copy-target-id="calc-breakdown-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                 </div>
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
                 <div class="calc-breakdown copy-content">
                     <h4 class="font-semibold uppercase text-base">a) Intermediate Calculations</h4>
                     <ul class="list-disc list-inside space-y-2 mt-2">
-                        <li><strong>Factors:</strong> I<sub>w</sub> = ${intermediate.Iw.toFixed(2)}, K<sub>d</sub> = ${intermediate.Kd.toFixed(2)}, K<sub>zt</sub> = ${inputs.topographic_factor_Kzt.toFixed(2)}, G = ${inputs.gust_effect_factor_g.toFixed(2)}, GC<sub>pi</sub> = &plusmn;${inputs.GCpi_abs.toFixed(2)}</li>
-                        <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${intermediate.zg.toFixed(0)} ${h_unit}</li>
+                        <li><strong>Factors:</strong> I<sub>w</sub> = ${safeToFixed(intermediate.Iw, 2)}, K<sub>d</sub> = ${safeToFixed(intermediate.Kd, 2)}, K<sub>zt</sub> = ${safeToFixed(inputs.topographic_factor_Kzt, 2)}, G = ${safeToFixed(inputs.gust_effect_factor_g, 2)}, GC<sub>pi</sub> = &plusmn;${safeToFixed(inputs.GCpi_abs, 2)}</li>
+                        <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${safeToFixed(intermediate.zg, 0)} ${h_unit}</li>
                         <li><strong>Elevation Factor (K<sub>e</sub>):</strong>
-                            <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">Interpolated from ${intermediate.ke_ref} &rarr; K<sub>e</sub> = ${intermediate.Ke.toFixed(3)}</div>
+                            <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">Interpolated from ${intermediate.ke_ref} &rarr; K<sub>e</sub> = ${safeToFixed(intermediate.Ke, 3)}</div>
                         </li>
                         <li><strong>Exposure Coefficient (K<sub>z</sub>):</strong>
-                            <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${inputs.mean_roof_height.toFixed(2)} / ${intermediate.zg.toFixed(0)})<sup>(2 / ${intermediate.alpha})</sup> = ${intermediate.Kz.toFixed(3)}</div>
+                            <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${safeToFixed(inputs.mean_roof_height, 2)} / ${safeToFixed(intermediate.zg, 0)})<sup>(2 / ${intermediate.alpha})</sup> = ${safeToFixed(intermediate.Kz, 3)}</div>
                         </li>
                         <li><strong>Velocity Pressure (q<sub>h</sub>):</strong>
-                            <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">q<sub>h</sub> = 0.00256 &times; ${intermediate.Kz.toFixed(3)} &times; ${inputs.topographic_factor_Kzt.toFixed(2)} &times; ${intermediate.Kd.toFixed(2)} &times; ${intermediate.Ke.toFixed(3)} &times; ${inputs.V_in.toFixed(1)}² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; ${intermediate.Iw.toFixed(2)}` : ''} = ${intermediate.qz.toFixed(2)} ${p_unit}</div>
+                            <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">q<sub>h</sub> = 0.00256 &times; ${safeToFixed(intermediate.Kz, 3)} &times; ${safeToFixed(inputs.topographic_factor_Kzt, 2)} &times; ${safeToFixed(intermediate.Kd, 2)} &times; ${safeToFixed(intermediate.Ke, 3)} &times; ${safeToFixed(inputs.V_in, 1)}² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; ${safeToFixed(intermediate.Iw, 2)}` : ''} = ${safeToFixed(intermediate.qz, 2)} ${p_unit}</div>
                         </li>
                     </ul>
                 </div>
@@ -1778,29 +2284,76 @@ function renderCalculationBreakdown(inputs, intermediate, units) {
  * Renders the results table for Open Buildings.
  */
 function renderOpenBuildingResults(directional_results, open_building_ref, inputs, units) {
-    const { p_unit } = units; // This was missing
-    if (inputs.enclosure_classification !== 'Open') return '';
+    // --- Path 1: Handle high-rise rooftop structure results ---
+    // This checks if the data object contains the 'rooftop_structure' key.
+    const { p_unit } = units;
+
+    if (directional_results && directional_results.rooftop_structure) {
+        
+        let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">ROOFTOP STRUCTURE PRESSURES (p = q_h*GC_r)</h3></div>`;
+        
+        let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Rooftop Structure Pressures (${open_building_ref})</caption>
+            <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
+                <th>Force Direction</th><th>GC_r</th><th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
+            </tr></thead>
+            <tbody class="dark:text-gray-300 text-center">`;
+
+        directional_results.rooftop_structure.forEach(r => {
+            const pressure = inputs.design_method === 'ASD' ? r.pressure_asd : r.pressure;
+            tableHtml += `
+                <tr>
+                    <td>${r.surface}</td>
+                    <td>${safeToFixed(r.GCr || 0, 2)}</td>
+                    <td>${safeToFixed(pressure || 0, 2)}</td>
+                </tr>`;
+        });
+
+        tableHtml += `</tbody></table>`;
+        
+        // **CRITICAL FIX**: Return here to prevent fall-through to the low-rise logic.
+        return html + tableHtml;
+    }
+
+    // --- Path 2: Handle low-rise open building results (only runs if the above `if` is false) ---
+    // FIX: Coerce directional_results to an array to permanently fix TypeError.
+    // The data source can return a single object, an object with direction keys, or an array. 
+    // This defensive block ensures it's always a safe-to-iterate array.
+    if (!Array.isArray(directional_results)) {
+        if (directional_results && typeof directional_results === 'object' && !directional_results.length) {
+            // If it's a non-array object, convert its entries to an array.
+            // This handles cases like { perp_to_L: [...], perp_to_B: [...] }
+            directional_results = Object.values(directional_results).flat();
+        } else {
+            // If it's undefined, null, or another invalid type, default to an empty array to prevent a crash.
+            console.warn("renderOpenBuildingResults(): directional_results was not iterable, defaulting to empty array.", directional_results);
+            directional_results = [];
+        }
+    }
+    
+    const openRoofResults = directional_results;
 
     let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h*G*C_N)</h3></div>`;
-        let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Open Building Free Roof Pressures (${open_building_ref})</caption>
+
+    let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Open Building Free Roof Pressures (${open_building_ref})</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
                 <th>Roof Zone</th><th>C_N,pos</th><th>C_N,neg</th><th>Positive Pressure (${inputs.design_method}) [${p_unit}]</th><th>Negative Pressure (${inputs.design_method}) [${p_unit}]</th>
             </tr></thead>
             <tbody class="dark:text-gray-300 text-center">`;
-        
-        directional_results.open_roof.forEach(r => {
+
+    openRoofResults.forEach(r => {
             const p_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
             const p_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
             tableHtml += `
                 <tr>
                     <td>${r.surface}</td>
-                    <td>${r.cn_pos.toFixed(2)}</td>
-                    <td>${r.cn_neg.toFixed(2)}</td>
-                    <td>${p_pos.toFixed(2)}</td>
-                    <td>${p_neg.toFixed(2)}</td>
+                    <td>${safeToFixed(r.cn_pos || 0, 2)}</td>
+                    <td>${safeToFixed(r.cn_neg || 0, 2)}</td>
+                    <td>${safeToFixed(p_pos || 0, 2)}</td>
+                    <td>${safeToFixed(p_neg || 0, 2)}</td>
                 </tr>`;
         });
         tableHtml += `</tbody></table>`;
+
     html += tableHtml;
     return html;
 }
@@ -1809,7 +2362,7 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
  * Renders a single directional results table for MWFRS.
  */
 function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermediate, units) {
-    const { p_unit } = units; // This was missing
+    const { p_unit } = units;
 
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
@@ -1833,14 +2386,14 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
             tableHtml += `
                 <tr>
                     <td>${sanitizeHTML(r.surface)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                    <td>${r.cp !== null ? r.cp.toFixed(2) : 'N/A'}</td>
-                    <td>${p_pos.toFixed(2)}</td>
-                    <td>${p_neg.toFixed(2)}</td>
+                    <td>${r.cp !== null ? safeToFixed(r.cp, 2) : 'N/A'}</td>
+                    <td>${safeToFixed(p_pos, 2)}</td>
+                    <td>${safeToFixed(p_neg, 2)}</td>
                 </tr>
                 <tr id="${detailId}" class="details-row"><td colspan="4" class="p-0"><div class="calc-breakdown">
                         <ul><li class="font-semibold"><b>Formula:</b> ${formula_str}</li>
-                            <li><b>Calculation (+GCpi):</b> ${p_pos.toFixed(2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${intermediate.qz.toFixed(2)}*${inputs.gust_effect_factor_g}*${r.cp.toFixed(2)} - ${intermediate.qz.toFixed(2)}*${inputs.GCpi_abs})</li>
-                            <li><b>Calculation (-GCpi):</b> ${p_neg.toFixed(2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${intermediate.qz.toFixed(2)}*${inputs.gust_effect_factor_g}*${r.cp.toFixed(2)} - ${intermediate.qz.toFixed(2)}*${-inputs.GCpi_abs})</li>
+                            <li><b>Calculation (+GCpi):</b> ${safeToFixed(p_pos, 2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${safeToFixed(intermediate.qz, 2)}*${inputs.gust_effect_factor_g}*${safeToFixed(r.cp, 2)} - ${safeToFixed(intermediate.qz, 2)}*${inputs.GCpi_abs})</li>
+                            <li><b>Calculation (-GCpi):</b> ${safeToFixed(p_neg, 2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${safeToFixed(intermediate.qz, 2)}*${inputs.gust_effect_factor_g}*${safeToFixed(r.cp, 2)} - ${safeToFixed(intermediate.qz, 2)}*${-inputs.GCpi_abs})</li>
                         </ul>
                     </div></td></tr>`;
         });
@@ -1852,10 +2405,10 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
  * Renders the entire MWFRS section, including diagrams and tables for both directions.
  */
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
-    const { h_unit } = units; // This was missing
-    let html = `<div id="mwfrs-section" class="mt-6 report-section-copyable">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header flex-grow">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
+    const { h_unit } = units;
+    let html = `<div id="mwfrs-section" class="mt-6">
+        <div class="flex justify-between items-center text-center pt-4">
+            <h3 class="text-xl font-bold">MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
             <button data-copy-target-id="mwfrs-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
         </div>
         <div class="copy-content">
@@ -1903,13 +2456,13 @@ function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_met
  * Renders the table for height-varying windward wall pressures.
  */
 function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs, units) {
-    const { h_unit, p_unit } = units; // This was missing
+    const { h_unit, p_unit } = units;
     if (!heightVaryingResults) return '';
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
 
     let html = `<div id="height-varying-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="report-header flex-grow">Height-Varying Windward Wall Pressures</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-center flex-grow">Height-Varying Windward Wall Pressures</h3>
                         <button data-copy-target-id="height-varying-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1927,15 +2480,15 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
     heightVaryingResults.forEach(result => {
             html += `
                 <tr>
-                    <td>${result.height.toFixed(1)}</td>
-                    <td>${result.Kz.toFixed(3)}</td>
-                    <td>${result.qz.toFixed(2)}</td>
-                    <td>${(result.p_pos * factor).toFixed(2)}</td>
+                    <td>${safeToFixed(result.height, 1)}</td>
+                    <td>${safeToFixed(result.Kz, 3)}</td>
+                    <td>${safeToFixed(result.qz, 2)}</td>
+                    <td>${safeToFixed(result.p_pos * factor, 2)}</td>
                 </tr>`;
         });
     html += `   <tr>
                         <td colspan="3" class="text-right font-semibold pr-4">Constant Leeward Pressure (Perp. to L):</td>
-                        <td>${(leeward_pressure * factor).toFixed(2)}</td>
+                        <td>${safeToFixed(leeward_pressure * factor, 2)}</td>
                     </tr>
                     </tbody></table>
                     </div>
@@ -1947,7 +2500,7 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
  * Renders the Torsional Load Case section.
  */
 function renderTorsionalCase(torsional_case, inputs, units) {
-    // Added more robust check to prevent crash if sub-properties are missing // This was missing
+    // Added more robust check to prevent crash if sub-properties are missing
     if (!torsional_case || !torsional_case.perp_to_L || !torsional_case.perp_to_B) return '';
     const { is_imp } = units;
         const m_unit = is_imp ? 'lb-ft' : 'kN-m';
@@ -1959,8 +2512,8 @@ function renderTorsionalCase(torsional_case, inputs, units) {
         }
 
     return `<div id="torsional-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="report-header flex-grow">Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-center flex-grow">Torsional Load Case (ASCE 7 Fig. 27.4-8, Case 2)</h3>
                         <button data-copy-target-id="torsional-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -1983,11 +2536,11 @@ function renderTorsionalCase(torsional_case, inputs, units) {
  * Renders the Components & Cladding (C&C) section.
  */
 function renderCandCSection(candc, inputs, units) {
-    if (!candc || !candc.applicable) return ''; // This was missing
+    if (!candc || !candc.applicable) return '';
     const { is_imp, p_unit } = units;
     let html = `<div id="candc-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-8">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="report-header flex-grow">Components & Cladding (C&C) Pressures</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-center flex-grow">Components & Cladding (C&C) Pressures</h3>
                         <button data-copy-target-id="candc-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Section</button>
                     </div>
                     <div class="copy-content">
@@ -2018,10 +2571,10 @@ function renderCandCSection(candc, inputs, units) {
                 const p_neg_asd = p_neg_lrfd * 0.6;
                 html += `<tr>
                             <td>${sanitizeHTML(zone)}</td>
-                            <td>${data.gcp_pos.toFixed(2)}</td>
-                            <td>${data.gcp_neg.toFixed(2)}</td>
-                            <td>${p_pos_lrfd.toFixed(2)} / ${p_neg_lrfd.toFixed(2)}</td>
-                            <td>${p_pos_asd.toFixed(2)} / ${p_neg_asd.toFixed(2)}</td>
+                            <td>${safeToFixed(data.gcp_pos, 2)}</td>
+                            <td>${safeToFixed(data.gcp_neg, 2)}</td>
+                            <td>${safeToFixed(p_pos_lrfd, 2)} / ${safeToFixed(p_neg_lrfd, 2)}</td>
+                            <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
                          </tr>`;
             }
         } else {
@@ -2036,7 +2589,7 @@ function renderCandCSection(candc, inputs, units) {
             for (const zone in candc.pressures) {
                 const data = candc.pressures[zone];
                 const pressure = inputs.design_method === 'ASD' ? data.p_neg * 0.6 : data.p_neg;
-                html += `<tr><td>${sanitizeHTML(zone)}</td><td>${data.gcp.toFixed(2)}</td><td>${pressure.toFixed(2)}</td></tr>`;
+                html += `<tr><td>${sanitizeHTML(zone)}</td><td>${safeToFixed(data.gcp, 2)}</td><td>${safeToFixed(pressure, 2)}</td></tr>`;
             }
         }
         html += `</tbody></table></div></div>`;
@@ -2108,11 +2661,19 @@ document.addEventListener('click', async (event) => {
  * Main rendering orchestrator function.
  */
 function renderWindResults(results) {
-     if (!results) return;
+     if (!results || (!results.directional_results && !results.open_sign_results && !results.solid_sign_results && !results.chimney_results && !results.truss_tower_results)) {
+        // If there are no results to show, clear the container and exit.
+        const resultsContainer = document.getElementById('results-container');
+        if (resultsContainer) resultsContainer.innerHTML = '';
+        return;
+     }
      lastWindRunResults = results; // Cache the results
 
      const resultsContainer = document.getElementById('results-container');
-    const { inputs, intermediate, directional_results, jurisdiction_note, temporary_structure_note, warnings, torsional_case, open_building_ref, candc, mwfrs_method, heightVaryingResults_L } = results;
+    const {
+        inputs, intermediate, directional_results, jurisdiction_note, temporary_structure_note, warnings, torsional_case, open_building_ref, candc, mwfrs_method, heightVaryingResults_L,
+        open_sign_results, is_open_sign, solid_sign_results, is_solid_sign, chimney_results, is_chimney, truss_tower_results, is_truss_tower, arched_roof_results, is_arched_roof
+    } = results;
     const is_imp = inputs.unit_system === 'imperial';
     const [v_unit, h_unit, p_unit] = is_imp ? ['mph', 'ft', 'psf'] : ['m/s', 'm', 'Pa'];
     const units = { is_imp, v_unit, h_unit, p_unit };
@@ -2133,19 +2694,149 @@ function renderWindResults(results) {
     if (temporary_structure_note) html += `<div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-md"><p><strong>Project-Specific Allowance:</strong> ${temporary_structure_note}</p></div>`;
     if (warnings && warnings.length > 0) {
         html += renderValidationResults({ warnings, errors: [] });
-    }    // --- Assemble Report Sections ---
+    }
+
+    // --- Special rendering path for Arched Roofs ---
+    if (is_arched_roof) {
+        const { cnMap, ref, pressures } = arched_roof_results;
+        html += renderDesignParameters(inputs, intermediate, units);
+        html += renderCalculationBreakdown(inputs, intermediate, units);
+        html += `<div id="arched-roof-section" class="mt-6 report-section-copyable">
+                    <h3 class="report-header">3. Arched Roof Net Pressures</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
+                    <table class="w-full mt-4 border-collapse">
+                        <thead class="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                                <th>Roof Zone</th>
+                                <th>C<sub>N</sub></th>
+                                <th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-300 text-center">`;
+        for (const [zone, data] of Object.entries(pressures)) {
+            const final_pressure = inputs.design_method === 'ASD' ? data.pressure_asd : data.pressure;
+            html += `<tr>
+                        <td>${zone}</td>
+                        <td>${safeToFixed(data.CN, 3)}</td>
+                        <td>${safeToFixed(final_pressure, 2)}</td>
+                     </tr>`;
+        }
+        html += `</tbody></table></div>`;
+        html += `</div>`; // Close main container
+        resultsContainer.innerHTML = html;
+        return;
+    }
+
+    // --- Special rendering path for Trussed Towers ---
+    if (is_truss_tower) {
+        const { Cf, ref, pressure, pressure_asd, Kz_tower, qz_tower } = truss_tower_results;
+        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
+        html += renderDesignParameters(inputs, intermediate, units);
+        // Custom breakdown for trussed towers
+        html += `<div id="truss-tower-breakdown" class="mt-6 report-section-copyable">
+                    <h3 class="report-header">2. Trussed Tower Calculation Breakdown</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the tower's centroid height (h/2).</p>
+                    <div class="calc-breakdown">
+                        <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
+                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_tower, 3)}</p>
+                        <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_tower, 2)} ${p_unit}</p>
+                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
+                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the solid area of one face (A<sub>f</sub> = ε &times; w &times; h).</p>
+                    </div>
+                 </div>`;
+        html += `</div>`; // Close main container
+        resultsContainer.innerHTML = html;
+        return;
+    }
+
+    // --- Special rendering path for Chimneys/Tanks ---
+    if (is_chimney) {
+        const { Cf, ref, pressure, pressure_asd, h_struct, Kz_struct, qz_struct } = chimney_results;
+        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
+        html += renderDesignParameters(inputs, intermediate, units);
+        // Custom breakdown for chimneys/tanks
+        html += `<div id="chimney-breakdown" class="mt-6 report-section-copyable">
+                    <h3 class="report-header">2. Chimney/Tank Calculation Breakdown</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
+                    <div class="calc-breakdown">
+                        <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
+                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at h:</b> ${safeToFixed(Kz_struct, 3)}</p>
+                        <p><b>Velocity Pressure (q<sub>z</sub>) at h:</b> ${safeToFixed(qz_struct, 2)} ${p_unit}</p>
+                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
+                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the projected area normal to the wind (A = D &times; h).</p>
+                    </div>
+                 </div>`;
+        html += `</div>`; // Close main container
+        resultsContainer.innerHTML = html;
+        return;
+    }
+
+    // --- Special rendering path for Solid Signs ---
+    if (is_solid_sign) {
+        const { CN, ref, pressure, pressure_asd, h_sign, Kz_sign, qz_sign } = solid_sign_results;
+        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
+        html += renderDesignParameters(inputs, intermediate, units);
+        // Custom breakdown for solid signs
+        html += `<div id="solid-sign-breakdown" class="mt-6 report-section-copyable">
+                    <h3 class="report-header">2. Solid Sign Calculation Breakdown</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the sign's centroid height.</p>
+                    <div class="calc-breakdown">
+                        <p><b>Height to Sign Centroid (z):</b> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</p>
+                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_sign, 3)}</p>
+                        <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_sign, 2)} ${p_unit}</p>
+                        <p><b>Net Pressure Coefficient (C<sub>N</sub>):</b> ${safeToFixed(CN, 3)} (from ${ref})</p>
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(CN, 3)}</p>
+                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                    </div>
+                 </div>`;
+        html += `</div>`; // Close main container
+        resultsContainer.innerHTML = html;
+        return;
+    }
+    // --- Special rendering path for Open Signs ---
+    if (is_open_sign) {
+        const { Cf, ref, pressure, pressure_asd } = open_sign_results;
+        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
+        html += renderDesignParameters(inputs, intermediate, units);
+        html += renderCalculationBreakdown(inputs, intermediate, units);
+        html += `<div id="open-sign-section" class="mt-6 report-section-copyable">
+                    <h3 class="report-header">3. Open Sign Force Calculation</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">The design wind pressure below should be multiplied by the solid area of the sign (A<sub>s</sub>) to get the total design force (F).</p>
+                    <div class="calc-breakdown">
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub></p>
+                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.solidity_ratio})</p>
+                        <p><b>Design Wind Pressure (p):</b> ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                    </div>
+                 </div>`;
+        html += `</div>`; // Close main container
+        resultsContainer.innerHTML = html;
+        return; // End rendering for open signs
+    }
+    // --- Assemble Report Sections for Buildings ---
     html += renderDesignParameters(inputs, intermediate, units);
-    html += renderCalculationBreakdown(inputs, intermediate, units);
+    html += renderCalculationBreakdown(results, units);
 
     // --- Handle Open Buildings as a special case ---
-    const openBuildingHtml = renderOpenBuildingResults(directional_results, open_building_ref, inputs, units);
-    if (openBuildingHtml) {
+    // Handle both low-rise (open_roof) and high-rise (rooftop_structure) open buildings
+    const openBuildingData = directional_results.open_roof 
+        ? directional_results.open_roof 
+        : (directional_results.rooftop_structure ? directional_results : null);
+    const openBuildingHtml = openBuildingData 
+        ? renderOpenBuildingResults(openBuildingData, open_building_ref, inputs, units) 
+        : '<p class="text-center text-red-500">Could not calculate open building pressures for the given roof type.</p>';
+    if (inputs.enclosure_classification === 'Open') {
         html += `<div id="mwfrs-section" class="report-section-copyable">${openBuildingHtml}</div>`;
     } else {
         // --- Standard Enclosed/Partially Enclosed Building Sections ---
-        html += renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units);
-        const leeward_pressure_L = directional_results.perp_to_L.find(r => r.surface.includes("Leeward"))?.p_pos || 0;
-        html += renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure_L, inputs, units) || '';
+        if (directional_results.perp_to_L && directional_results.perp_to_B) {
+            html += renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units);
+            const leeward_pressure_L = directional_results.perp_to_L.find(r => r.surface.includes("Leeward"))?.p_pos || 0;
+            html += renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure_L, inputs, units);
+        }
         html += renderTorsionalCase(torsional_case, inputs, units);
         html += renderCandCSection(candc, inputs, units);
     }

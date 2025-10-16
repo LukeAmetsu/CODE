@@ -1008,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const finalHtml = `
         <div id="concrete-beam-report" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
             <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
+                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
                 <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
             </div>
             <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação da Viga Protendida (NBR 6118)</h2>

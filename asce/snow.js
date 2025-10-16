@@ -2,29 +2,14 @@ let lastSnowRunResults = null;
 
 const snowInputIds = [
     'snow_asce_standard', 'snow_unit_system', 'snow_risk_category', 'snow_design_method', 'snow_jurisdiction', 'snow_roof_type',
-    'snow_nycbc_minimum_roof_snow_load', 'snow_ground_snow_load', 'snow_surface_roughness_category',
-    'snow_exposure_condition', 'snow_thermal_condition', 'snow_roof_slope_degrees', 'snow_is_roof_slippery',
-    'snow_calculate_unbalanced', 'snow_calculate_drift', 'snow_calculate_sliding', 'snow_eave_to_ridge_distance_W',
-    'snow_is_simply_supported_prismatic', 'snow_winter_wind_parameter_W2', 'snow_upper_roof_length_lu',
+    'snow_nycbc_minimum_roof_snow_load', 'snow_ground_snow_load', 'snow_surface_roughness_category', 
+    'snow_exposure_condition', 'snow_thermal_condition', 'snow_roof_slope_degrees', 'snow_is_roof_slippery', 
+    'snow_calculate_unbalanced', 'snow_calculate_drift', 'snow_calculate_sliding', 'snow_eave_to_ridge_distance_W', 
+    'snow_is_simply_supported_prismatic', 'snow_winter_wind_parameter_W2', 'snow_upper_roof_length_lu', 
     'snow_height_difference_hc', 'snow_lower_roof_length_ll'
 ];
 
 const snowLoadCalculator = (() => {
-    function validateSnowInputs(inputs) {
-        const { errors, warnings } = validateInputs(inputs, validationRules.snow);
-
-        if (inputs.calculate_drift === 'Yes') {
-            if (inputs.lower_roof_length_ll <= 0) {
-                errors.push("Lower roof length (ll) must be positive to calculate drift loads.");
-            }
-            if (inputs.upper_roof_length_lu <= 0) {
-                errors.push("Upper roof length (lu) must be positive to calculate drift loads.");
-            }
-        }
-
-        return { errors, warnings };
-    }
-
     function calculateSlopeFactor(slope_deg, is_slippery, Ct, standard) {
         if (standard === "ASCE 7-22") {
             if (is_slippery) {
@@ -215,7 +200,7 @@ const snowLoadCalculator = (() => {
 
 
 function run(inputs, validation) {
-    const validationResult = validateSnowInputs(inputs);
+    const validationResult = { warnings: [], ...validation };
 
     // Add jurisdiction-specific warnings
     if (inputs.jurisdiction === "NYCBC 2022") {
@@ -223,11 +208,6 @@ function run(inputs, validation) {
         if (inputs.ground_snow_load < nycbc_min_pg) {
             validationResult.warnings.push(`The input ground snow load (p_g = ${inputs.ground_snow_load} psf) is less than the NYCBC 2022 minimum of ${nycbc_min_pg} psf. Verify the correct jurisdictional value.`);
         }
-    }
-
-    // If initial validation fails, return immediately
-    if (validationResult.errors.length > 0) {
-        return { ...validationResult, success: false };
     }
     
     // Ensure factors have default values
@@ -310,33 +290,6 @@ function run(inputs, validation) {
     return { run };
 })();
 
-/**
- * Displays a summary of the loaded project data on the snow calculator page.
- * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
- */
-function displayProjectDataSummary(projectData) {
-    const container = document.getElementById('project-data-summary-container');
-    if (!container) return;
-
-    if (!projectData || !projectData.building_length_L) {
-        container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
-        document.getElementById('run-snow-calculation-btn').disabled = true;
-        return;
-    }
-
-    const { asce_standard, risk_category, jurisdiction, roof_type, roof_slope_deg, eave_to_ridge_distance_W } = projectData;
-
-    container.innerHTML = `
-        <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
-        <ul class="text-sm space-y-1 mt-2 grid grid-cols-2">
-            <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
-            <li><strong>Risk Category:</strong> ${sanitizeHTML(risk_category)}</li>
-            <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
-            <li><strong>Roof Type:</strong> ${sanitizeHTML(roof_type)} (${roof_slope_deg.toFixed(1)}°)</li>
-            <li><strong>Eave-to-Ridge (W):</strong> ${eave_to_ridge_distance_W.toFixed(1)}</li>
-        </ul>`;
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     // Inject templates first
     injectHeader({
@@ -353,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const handleRunSnowCalculation = createCalculationHandler({
             inputIds: snowInputIds,
             storageKey: 'snow-calculator-inputs',
-        validatorFunction: snowLoadCalculator.validateSnowInputs,
+            validationRuleKey: 'snow',
             calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
             renderFunction: renderSnowResults,
             resultsContainerId: 'snow-results-container',
@@ -373,13 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
             el?.addEventListener('change', () => saveInputsToLocalStorage('snow-calculator-inputs', gatherInputsFromIds(snowInputIds)));
         });
 
-        // Load project data first to populate shared fields
-        const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
-        displayProjectDataSummary(projectData);
-        loadInputsFromLocalStorage('buildingProjectData', snowInputIds);
-        // Load snow-specific settings first, then override with shared project data.
         loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds, handleRunSnowCalculation);
-
     }, 50); // A small delay to ensure DOM is ready after injection
 });
 
@@ -457,7 +404,7 @@ function renderSnowDesignParameters(inputs, intermediate, units) {
     return `
         <div id="snow-design-parameters-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">Design Parameters</h3>
+                <h3 class="report-header flex-grow">A. Design Parameters</h3>
                 <button data-copy-target-id="snow-design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -500,13 +447,13 @@ function renderSnowCalculationBreakdown(inputs, intermediate, is_nycbc_min_gover
     return `
         <div id="snow-calc-breakdown-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">Detailed Calculation Breakdown</h3>
+                <h3 class="report-header flex-grow">B. Detailed Calculation Breakdown</h3>
                 <button data-copy-target-id="snow-calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <div class="calc-breakdown mt-0 border-none shadow-none p-0">
-                    <h4 class="font-semibold uppercase text-base">Balanced Snow Load Calculation</h4>
+                <div class="calc-breakdown mt-0">
+                    <h4 class="font-semibold uppercase text-base">a) Balanced Snow Load Calculation</h4>
                     <ul class="list-disc list-inside space-y-2 mt-2">
                         <li><strong>Factors:</strong> I<sub>s</sub> = ${safeIs.toFixed(2)}, C<sub>e</sub> = ${safeCe.toFixed(2)}, C<sub>t</sub> = ${safeCt.toFixed(2)}, C<sub>s</sub> = ${safeCs.toFixed(3)}</li>
                         <li><strong>Flat Roof Snow Load (p<sub>f</sub>):</strong>
@@ -532,7 +479,7 @@ function renderSnowDiagrams(inputs, unbalanced, drift, units) {
     return `
         <div id="snow-diagrams-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">Load Case Diagrams</h3>
+                <h3 class="report-header flex-grow">C. Load Case Diagrams</h3>
                 <button data-copy-target-id="snow-diagrams-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -622,7 +569,7 @@ function renderSnowLoadSummary(inputs, results, unbalanced, drift, sliding, unit
     return `
         <div id="snow-summary-section" class="mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
+                <h3 class="report-header flex-grow">D. Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
                 <button data-copy-target-id="snow-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
@@ -639,7 +586,7 @@ function renderSnowPartialLoading(partial, units) {
     return `
         <div id="snow-partial-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
             <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">Partial Loading (Continuous Beams)</h3>
+                <h3 class="report-header flex-grow">E. Partial Loading (Continuous Beams)</h3>
                 <button data-copy-target-id="snow-partial-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">

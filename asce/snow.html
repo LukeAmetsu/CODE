@@ -25,9 +25,6 @@
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
-        <div class="form-section mb-6" id="project-data-summary-container">
-            <!-- This will be populated by JS with data from project_definition.html -->
-        </div>
         <main id="snow-calculator-form">
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Column 1 -->
@@ -223,16 +220,15 @@
                             </div>
                          </div>
                     </div>
-                </div> <!-- End Column 3 -->
-
-                <div class="lg:col-span-3 mt-8 flex justify-center items-center gap-4 flex-wrap">
-                    <button id="load-snow-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
-                    <button id="save-snow-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save Inputs</button>
-                    <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                    <button id="run-snow-calculation-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Snow Load Calculation</button>
-                    <input type="file" id="snow-file-input" class="hidden" accept=".txt">
                 </div>
-            </div> <!-- End main 3-column grid -->
+    </div> <!-- This was the missing closing div -->
+    <div class="lg:col-span-3 mt-8 flex justify-center items-center gap-4 flex-wrap">
+        <button id="load-snow-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
+        <button id="save-snow-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save Inputs</button>
+        <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
+        <button id="run-snow-calculation-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Snow Load Calculation</button>
+        <input type="file" id="snow-file-input" class="hidden" accept=".txt">
+    </div>
         </main>
 
         <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>

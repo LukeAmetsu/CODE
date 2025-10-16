@@ -19,30 +19,6 @@ const comboInputIds = [
  * This function is called from combos.html after the DOM and templates are loaded.
  */
 function initializeApp() {
-    /**
-     * Displays a summary of the loaded project data on the combos calculator page.
-     * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
-     */
-    function displayProjectDataSummary(projectData) {
-        const container = document.getElementById('project-data-summary-container');
-        if (!container) return;
-
-        if (!projectData || !projectData.asce_standard) {
-            container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
-            document.getElementById('run-combo-calculation-btn').disabled = true;
-            return;
-        }
-
-        const { asce_standard, jurisdiction } = projectData;
-
-        container.innerHTML = `
-            <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
-            <ul class="text-sm space-y-1 mt-2 grid grid-cols-2">
-                <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
-                <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
-            </ul>`;
-    }
-
     function attachEventListeners() {
         function attachDebouncedListeners(ids, handler) {
             const debouncedHandler = debounce(handler, 300);
@@ -96,9 +72,6 @@ function initializeApp() {
 
     attachEventListeners();
     loadDataFromStorage();
-    const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
-    displayProjectDataSummary(projectData);
-    loadInputsFromLocalStorage('buildingProjectData', comboInputIds);
     loadInputsFromLocalStorage('combo-calculator-inputs', comboInputIds);
 }
 
@@ -219,13 +192,20 @@ function buildFormulaString(formula_def) {
 
 const comboStrategies = {
     'ASCE 7-16': {
-        prepareLoads: (loads, level, method) => {
-            // Correctly adjusts nominal wind to strength level ONLY for LRFD,
-            // as ASD combinations in ASCE 7-16 already use a 0.6 factor on nominal wind.
+        prepareLoads: (loads, level) => {
+            // --- FIX: Correctly handle ASCE 7-16 wind load levels ---
+            // ASCE 7-16 LRFD combinations (e.g., 1.0W) expect a STRENGTH-level wind load.
+            // ASCE 7-16 ASD combinations (e.g., 0.6W) expect a NOMINAL-level wind load.
+            // If the user provides a NOMINAL load but requests LRFD combinations, we must convert it.
+            // W_strength = W_nominal / 0.6
             const newScope = { ...loads };
             const adjustment_notes = {};
 
-            if (level === 'Nominal (Service/ASD)' && method === 'LRFD' && newScope.W) {
+            if (level === 'Nominal (Service/ASD)' && newScope.W) {
+                // This conversion is only needed for LRFD, but we apply it here and the ASD formulas
+                // will correctly factor it back down (e.g., 0.6 * (W_nom / 0.6) = W_nom).
+                // This is simpler than branching the logic for LRFD/ASD inside this function.
+                // The LRFD formulas will now correctly use the strength-level wind load.
                 newScope.W = newScope.W / 0.6;
                 adjustment_notes['Wind Load'] = `Input nominal wind load (W) was divided by 0.6 to get the required strength-level wind load for ASCE 7-16 LRFD combinations.`;
             }
@@ -236,15 +216,15 @@ const comboStrategies = {
             };
         },
         lrfdDefs: {
-            '1. 1.4D': [{ factor: 1.4, load: 'D' }],
-            '2. 1.2D + 1.6L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '3. 1.2D + 1.6(Lr|S|R) + (L|0.5W)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'S', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
-            '4. 1.2D + W + L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '5. 1.2D + E + L + 0.2S': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 0.2, load: 'S' }],
-            '6. 0.9D + W': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'W' }],
-            '7. 0.9D + E': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+            '1': [{ factor: 1.4, load: 'D' }],
+            '2': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '3': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'S', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '4': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 0.2, load: 'S' }],
+            '6': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'W' }],
+            '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
         },
-        // CORRECT ASD DEFINITIONS FOR ASCE 7-16
+        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
         asdDefs: {
             '1. D': [{ factor: 1.0, load: 'D' }],
             '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
@@ -259,21 +239,25 @@ const comboStrategies = {
         }
     },
     'ASCE 7-22': {
-        prepareLoads: (loads, level, method) => {
+        prepareLoads: (loads, level) => {
+            // All formulas in ASCE 7-22 LRFD and ASD use nominal-level loads directly with factors.
             // No pre-adjustment is necessary.
-            return { scope: { ...loads }, adjustment_notes: {} };
+            return {
+                scope: { ...loads },
+                adjustment_notes: {}
+            };
         },
         lrfdDefs: {
-            '1. 1.4D': [{ factor: 1.4, load: 'D' }],
-            '2. 1.2D + 1.6L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '3a. 1.2D + 1.6(Lr|R) + (L|0.5W)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
-            '3b. 1.2D + S + (L|0.5W)': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'S' }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
-            '4. 1.2D + 1.6W + L + 0.5(Lr|S|R)': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '5. 1.2D + E + L + S': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }],
-            '6. 0.9D + 1.6W': [{ factor: 0.9, load: 'D' }, { factor: 1.6, load: 'W' }],
-            '7. 0.9D + E': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+            '1': [{ factor: 1.4, load: 'D' }],
+            '2': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '3a': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '3b': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'S' }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
+            '4': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
+            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }], // Note: 1.0S, not 0.2S as in 7-16
+            '6': [{ factor: 0.9, load: 'D' }, { factor: 1.6, load: 'W' }],
+            '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
         },
-        // CORRECT ASD DEFINITIONS FOR ASCE 7-22
+        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
         asdDefs: {
             '1. D': [{ factor: 1.0, load: 'D' }],
             '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
@@ -323,8 +307,8 @@ const comboLoadCalculator = (() => {
             throw new Error(`Unsupported standard: ${standard}`);
         }
 
-        // The prepareLoads function now correctly handles the LRFD/ASD distinction for ASCE 7-16
-        const { scope, adjustment_notes } = strategy.prepareLoads(loads, level, method);
+        // The prepareLoads function is now much simpler but retained for future-proofing.
+        const { scope, adjustment_notes } = strategy.prepareLoads(loads, level);
         
         // **FIXED**: Directly choose the correct definition set and remove old dynamic generation logic.
         let formulaDefs;
@@ -400,7 +384,7 @@ const handleRunComboCalculation = createCalculationHandler({
             if (isWallScenario) {
                 scenario_loads.Lr = 0;
                 scenario_loads.R = 0;
-                scenario_loads.S = 0; // Walls don't have direct snow, rain, or roof live load.
+                scenario_loads.S = 0; // Walls don't have direct snow load.
             }
             
             scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
@@ -466,9 +450,7 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
     });
 
     let summaryHtml = `<div class="mt-8 report-section-copyable">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Governing Load Combinations Summary</h3>
-        </div>`;
+        <h3 class="report-header">B. Governing Load Combinations Summary</h3>`;
 
     summaryHtml += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">`;
 
@@ -482,17 +464,13 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
     // Filter the master list to only include scenarios that have results in the current calculation.
     const availableScenarios = masterScenarioOrder.filter(title => scenarios[title]);
 
-    availableScenarios.forEach((title, index) => {
+    availableScenarios.forEach(title => {
         const data = scenarios[title]; // We know data exists because of the filter above.
-        const cardId = `combo-summary-card-${index}`;
 
         const shortTitle = title.replace(' Analysis', '').replace(' Combinations', '');
         summaryHtml += `
-            <div id="${cardId}" class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col relative">
-                <button data-copy-target-id="${cardId}" class="copy-section-btn absolute top-2 right-2 bg-blue-500 text-white font-semibold p-1 rounded-md hover:bg-blue-600 text-xs print-hidden" data-copy-ignore title="Copy Card">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                </button>
-                <h4 class="font-semibold text-center text-base mb-2 pr-6">${shortTitle}</h4>
+            <div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col">
+                <h4 class="font-semibold text-center text-base mb-2">${shortTitle}</h4>
                 <div class="flex-grow space-y-2">
                     <div class="text-center">
                         <p class="text-sm">Max Pressure</p>
@@ -517,10 +495,10 @@ function generateComboSummary(all_gov_data, design_method, p_unit) {
 
     summaryHtml += `<div id="combo-overall-summary" class="mt-8 report-section-copyable">
             <div class="flex justify-between items-center">
-                <h3 class="report-header flex-grow">Overall Governing ${design_method} Loads</h3>
+                <h3 class="report-header flex-grow">C. Overall Governing ${design_method} Loads</h3>
                 <button data-copy-target-id="combo-overall-summary" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden" data-copy-ignore>Copy Summary</button>
             </div>
-            <h4 class="font-semibold mt-4">FINAL GOVERNING ${design_method} LOADS</h4>
+            <h4 class="font-semibold mt-4">1. FINAL GOVERNING ${design_method} LOADS</h4>
             <ul class="list-disc list-inside ml-4 space-y-1">
                 <li><strong>Overall Max Pressure:</strong> ${overallMax.value.toFixed(2)} ${p_unit}
                     <div class="pl-6 text-sm text-gray-500 dark:text-gray-400">From: ${overallMax.title.replace(' Analysis', '')}: ${overallMax.combo}</div>
@@ -617,7 +595,7 @@ function renderComboResults(fullResults) {
 
     html += `<div id="combo-inputs-section" class="report-section-copyable">
                 <div class="flex justify-between items-center">
-                    <h3 class="report-header">Input Loads</h3>
+                    <h3 class="report-header">A. Input Loads</h3>
                     <button data-copy-target-id="combo-inputs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>
                 <ul class="list-disc list-inside space-y-1">${generateInputLoadSummary(inputs, p_unit)}</ul>
@@ -626,7 +604,7 @@ function renderComboResults(fullResults) {
     // --- Base Load Combinations (No Wind/Snow) ---
     html += `<div id="combo-base-section" class="report-section-copyable mt-6">
              <div class="flex justify-between items-center">
-                <h3 class="report-header flex-grow">Base Load Combinations</h3>
+                <h3 class="report-header flex-grow">B. Base Load Combinations</h3>
                 <button data-copy-target-id="combo-base-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
              </div>
              <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">These combinations are constant across all scenarios.</p>
@@ -645,7 +623,7 @@ function renderComboResults(fullResults) {
     // --- Scenario-Specific Combinations ---
     html += `<div id="combo-scenario-section" class="report-section-copyable mt-6">
                 <div class="flex justify-between items-center">
-                    <h3 class="report-header flex-grow">Scenario-Specific Combinations</h3>
+                    <h3 class="report-header flex-grow">C. Scenario-Specific Combinations</h3>
                     <button data-copy-target-id="combo-scenario-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>`;
 

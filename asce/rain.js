@@ -6,22 +6,6 @@ const rainInputIds = [
 ];
 
 const rainLoadCalculator = (() => {
-    function validateRainInputs(inputs) {
-        const { errors, warnings } = validateInputs(inputs, validationRules.rain);
-
-        if (inputs.dh_auto_calc_toggle) {
-            if (inputs.rain_drain_type === 'scupper' && inputs.rain_scupper_width <= 0) {
-                errors.push("Scupper width must be a positive value to auto-calculate hydraulic head.");
-            }
-            if (inputs.rain_drain_type === 'drain' && inputs.rain_drain_diameter <= 0) {
-                errors.push("Drain diameter must be a positive value to auto-calculate hydraulic head.");
-            }
-        }
-
-        return { errors, warnings };
-    }
-
-
     function run(inputs) {
         // Use default values to prevent NaN errors if optional fields are empty
         const {
@@ -91,35 +75,12 @@ const rainLoadCalculator = (() => {
     return { run };
 })();
 
-/**
- * Displays a summary of the loaded project data on the rain calculator page.
- * @param {object} projectData - The comprehensive data loaded from 'buildingProjectData'.
- */
-function displayProjectDataSummary(projectData) {
-    const container = document.getElementById('project-data-summary-container');
-    if (!container) return;
-
-    if (!projectData || !projectData.asce_standard) {
-        container.innerHTML = `<h2>Project Data Not Found</h2><p class="text-red-500">Please define your project on the <a href="project_definition.html" class="underline">Project Definition</a> page first.</p>`;
-        document.getElementById('run-rain-calculation-btn').disabled = true;
-        return;
-    }
-
-    const { asce_standard, jurisdiction } = projectData;
-
-    container.innerHTML = `
-        <h2 class="flex justify-between items-center">Project Data <a href="project_definition.html" class="text-xs text-blue-500 hover:underline font-medium">Edit</a></h2>
-        <ul class="text-sm space-y-1 mt-2 grid grid-cols-2">
-            <li><strong>ASCE Standard:</strong> ${sanitizeHTML(asce_standard)}</li>
-            <li><strong>Jurisdiction:</strong> ${sanitizeHTML(jurisdiction)}</li>
-        </ul>`;
-}
 document.addEventListener('DOMContentLoaded', () => {
     const handleRunRainCalculation = createCalculationHandler({
         inputIds: rainInputIds,
         storageKey: 'rain-calculator-inputs',
-        validatorFunction: rainLoadCalculator.validateRainInputs,
-        calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
+        validationRuleKey: 'rain',
+    calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
         renderFunction: renderRainResults,
         resultsContainerId: 'rain-results-container',
         buttonId: 'run-rain-calculation-btn'
@@ -151,11 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial state setup
     // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
     setTimeout(() => {
-        const projectData = JSON.parse(localStorage.getItem('buildingProjectData')) || {};
-        displayProjectDataSummary(projectData);
-        loadInputsFromLocalStorage('buildingProjectData', rainInputIds);
-        // Load rain-specific settings first, then override with shared project data.
-        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds, handleRunRainCalculation);
+        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds);
     }, 100);
 });
 
@@ -209,8 +166,8 @@ function renderRainResults(results) {
 
     // --- Design Parameters Summary ---
     html += `<div id="rain-params-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="report-header">Design Parameters</h3>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="report-header">1. Design Parameters</h3>
                     <button data-copy-target-id="rain-params-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
                 </div>
                 <div class="copy-content">
@@ -227,17 +184,17 @@ function renderRainResults(results) {
 
     html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
              <div id="rain-summary-section" class="report-section-copyable">
-                <div class="flex justify-between items-center mb-2" data-copy-ignore>
-                    <h3 class="report-header flex-grow">Governing Load Summary</h3>
+                <div class="flex justify-between items-center mb-4" data-copy-ignore>
+                    <h3 class="report-header flex-grow">2. Governing Load Summary</h3>
                     <button data-copy-target-id="rain-summary-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden" data-copy-ignore>Copy Summary</button>
                 </div>
                 <div class="copy-content">
                 ${generateRainSummary({ design_method: inputs.rain_design_method }, results.results, p_unit, dh_calc_note)}
                 </div>
              </div>
-             <div id="rain-breakdown-section" class="report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header">Calculation Breakdown</h3>
+             <div id="rain-breakdown-section" class="border rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 space-y-4 report-section-copyable">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="report-header">3. Calculation Breakdown</h3>
                 <button data-copy-target-id="rain-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
             </div>
             <ul class="space-y-2">
