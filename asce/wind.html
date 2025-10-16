@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCE Wind Load Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // This script is in shared-utils.js, but needs to run early to prevent FOUC.
+        (function() {
+            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script src="../js/template.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="wind.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main id="calculator-form">
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div>
+        <div class="form-section">
+            <h2>General Parameters</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="asce_standard" class="block text-sm font-medium mb-1">ASCE Standard</label>
+                    <select id="asce_standard">
+                        <option value="ASCE 7-16" selected>ASCE 7-16</option>
+                        <option value="ASCE 7-22">ASCE 7-22</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="unit_system" class="block text-sm font-medium mb-1">Unit System</label>
+                    <select id="unit_system">
+                        <option value="imperial" selected>Imperial (mph, ft)</option>
+                        <option value="metric">Metric (m/s, m)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="risk_category" class="block text-sm font-medium mb-1">Risk Category</label>
+                    <select id="risk_category">
+                        <option value="I">I</option>
+                        <option value="II" selected>II</option>
+                        <option value="III">III</option>
+                        <option value="IV">IV</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="design_method" class="block text-sm font-medium mb-1">Design Method</label>
+                    <select id="design_method">
+                        <option value="ASD" selected>ASD</option>
+                        <option value="LRFD">LRFD</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h2>Building Properties</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="basic_wind_speed" class="block text-sm font-medium mb-1">Basic Wind Speed (V)</label>
+                    <input type="number" id="basic_wind_speed" value="115" min="70" max="200">
+                </div>
+                <div>
+                    <label for="exposure_category" class="block text-sm font-medium mb-1">Exposure Category</label>
+                    <select id="exposure_category" aria-label="Exposure Category for wind loading">
+                        <option value="B">B</option>
+                        <option value="C" selected>C</option>
+                        <option value="D">D</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="mean_roof_height" class="block text-sm font-medium mb-1">Mean Roof Height (h)</label>
+                    <input type="number" id="mean_roof_height" value="50" min="1">
+                </div>
+                <div>
+                    <label for="building_length_L" class="block text-sm font-medium mb-1">Building Length (L)</label>
+                    <input type="number" id="building_length_L" value="100" min="1">
+                </div>
+                <div>
+                    <label for="building_width_B" class="block text-sm font-medium mb-1">Building Width (B)</label>
+                    <input type="number" id="building_width_B" value="60" min="1">
+                </div>
+                <div>
+                    <label for="enclosure_classification" class="block text-sm font-medium mb-1">Enclosure Class.</label>
+                    <select id="enclosure_classification"
+                            data-ui-toggle-controller
+                            data-ui-toggle-target="#open-building-options"
+                            data-ui-toggle-condition-value="Open">
+                        <option value="Enclosed" selected>Enclosed</option>
+                        <option value="Partially Enclosed">Partially Enclosed</option>
+                        <option value="Open">Open</option>
+                    </select>
+                </div>
+                <div id="rooftop-structure-options" class="col-span-2 hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="enclosure_classification"
+                     data-ui-toggle-condition-value="Open">
+                    <p class="text-sm font-medium -mb-2">Rooftop Structure Dimensions (e.g., Scaffold)</p>
+                    <div>
+                        <label for="scaffold_width_Br" class="block text-sm">Width (B<sub>r</sub>, normal to wind)</label>
+                        <input type="number" id="scaffold_width_Br" value="20">
+                    </div>
+                    <div>
+                        <label for="scaffold_height_hr" class="block text-sm">Height (h<sub>r</sub>)</label>
+                        <input type="number" id="scaffold_height_hr" value="15">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div>
+         <div class="form-section">
+             <h2>Jurisdiction & Site</h2>
+             <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
+                    <select id="jurisdiction">
+                        <option value="ASCE 7" selected>ASCE 7</option>
+                        <option value="NYCBC 2022">NYCBC 2022</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="ground_elevation" class="block text-sm font-medium mb-1">Ground Elevation</label>
+                    <input type="number" id="ground_elevation" value="100">
+                </div>
+             </div>
+         </div>
+         <div class="form-section">
+             <h2>Roof Properties</h2>
+             <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="roof_type" class="block text-sm font-medium mb-1">Roof Type</label>
+                    <select id="roof_type">
+                        <option value="flat">Flat</option>
+                        <option value="gable" selected>Gable</option>
+                        <option value="hip">Hip</option>
+                        <option value="monoslope">Monoslope</option>
+                        <option value="pitched_troughed">Pitched/Troughed</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="roof_slope_deg" class="block text-sm font-medium mb-1">Roof Slope (degrees)</label>
+                    <input type="number" id="roof_slope_deg" value="30" min="0" max="90">
+                </div>
+             </div>
+             <div id="open-building-options" class="mt-4 space-y-4 hidden">
+                <label for="wind_obstruction" class="block text-sm font-medium mb-1">Wind Flow Obstruction (for Open Buildings)</label>
+                <select id="wind_obstruction">
+                    <option value="unobstructed" selected>Unobstructed (Clear Wind Flow)</option>
+                    <option value="obstructed">Obstructed (Blocked Wind Flow)</option>
+                </select>
+             </div>
+         </div>
+        <div class="form-section">
+            <h2>Components & Cladding (C&C)</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="effective_wind_area" class="block text-sm font-medium mb-1">Effective Wind Area (A, ft² or m²)</label>
+                    <input type="number" id="effective_wind_area" value="10">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Area of the component being considered. Typically 10 to 1000 sq ft.</p>
+                </div>
+            </div>
+        </div>
+        <div class="form-section hidden" id="tall-building-section">
+            <h2>Tall Building Parameters (h > 60 ft)</h2>
+            <div class="space-y-4">
+                <div data-ui-toggle-controller
+                     data-ui-toggle-target="#flexible-building-inputs"
+                     data-ui-toggle-condition-value="Flexible"
+                     data-ui-toggle-type="visibility">
+                    <label for="building_flexibility" class="block text-sm font-medium mb-1">Building Flexibility</label>
+                    <select id="building_flexibility">
+                        <option value="Rigid" selected>Rigid (G=0.85)</option>
+                        <option value="Flexible">Flexible (Calculate G)</option>
+                    </select>
+                </div>
+                <div id="flexible-building-inputs" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
+                    <div>
+                        <label for="fundamental_period" class="block text-sm font-medium mb-1">Fundamental Period (T1, sec)</label>
+                        <input type="number" id="fundamental_period" value="1.0" min="0.1" max="10">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div>
+        <div class="form-section">
+            <h2>Factors & Coefficients</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="structure_type" class="block text-sm font-medium mb-1">Structure Type</label>
+                    <select id="structure_type"
+                            data-ui-toggle-controller>
+                        <option selected>Buildings (MWFRS, C&C)</option>
+                        <option>Arched Roofs</option>
+                        <option>Circular Domes</option>
+                        <option>Chimneys, Tanks (Square)</option>
+                        <option>Chimneys, Tanks (Hexagonal)</option>
+                        <option>Chimneys, Tanks (Octagonal)</option>
+                        <option>Chimneys, Tanks (Round)</option>
+                        <option>Solid Freestanding Signs/Walls</option>
+                        <option>Open Signs/Frames</option>
+                        <option>Trussed Towers (Triangular, Square, Rectangular)</option>
+                        <option>Trussed Towers (All Other Cross Sections)</option>
+                    </select>
+                </div>
+                <div id="open-sign-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Open Signs/Frames">
+                    <div>
+                        <label for="solidity_ratio" class="block text-sm font-medium mb-1">Solidity Ratio (ε)</label>
+                        <input type="number" id="solidity_ratio" value="0.5" min="0.01" max="0.99" step="0.01">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ratio of solid area to gross area (A<sub>s</sub>/A<sub>g</sub>).</p>
+                    </div>
+                    <div>
+                        <label for="member_shape" class="block text-sm font-medium mb-1">Member Shape</label>
+                        <select id="member_shape"
+                                data-ui-toggle-controller
+                                data-ui-toggle-target="#round-member-options"
+                                data-ui-toggle-condition-value="round">
+                            <option value="flat" selected>Flat-Sided Members</option>
+                            <option value="round">Round Members</option>
+                        </select>
+                    </div>
+                    <div id="round-member-options" class="hidden">
+                        <label for="member_diameter" class="block text-sm font-medium mb-1">Typical Member Diameter (b)</label>
+                        <input type="number" id="member_diameter" value="0.5">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Diameter in feet or meters, depending on unit system.</p>
+                    </div>
+                </div>
+                <div id="solid-sign-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Solid Freestanding Signs/Walls">
+                    <div>
+                        <label for="sign_width_B" class="block text-sm font-medium mb-1">Sign Width (B)</label>
+                        <input type="number" id="sign_width_B" value="20">
+                    </div>
+                    <div>
+                        <label for="sign_height_s" class="block text-sm font-medium mb-1">Sign Height (s)</label>
+                        <input type="number" id="sign_height_s" value="10">
+                    </div>
+                    <div>
+                        <label for="clearance_z" class="block text-sm font-medium mb-1">Clearance from Ground (z)</label>
+                        <input type="number" id="clearance_z" value="10">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height from ground to bottom of sign.</p>
+                    </div>
+                </div>
+                <div id="chimney-tank-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal),Chimneys, Tanks (Octagonal),Chimneys, Tanks (Round)">
+                    <div>
+                        <label for="chimney_height" class="block text-sm font-medium mb-1">Structure Height (h)</label>
+                        <input type="number" id="chimney_height" value="80">
+                    </div>
+                    <div>
+                        <label for="chimney_diameter" class="block text-sm font-medium mb-1">Width/Diameter (D)</label>
+                        <input type="number" id="chimney_diameter" value="10">
+                    </div>
+                    <div id="chimney-corner-radius-option" data-ui-toggle-target-for="structure_type" data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal)">
+                        <label for="corner_radius_r" class="block text-sm font-medium mb-1">Corner Radius (r)</label>
+                        <input type="number" id="corner_radius_r" value="0">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Set to 0 for sharp corners.</p>
+                    </div>
+                </div>
+                <div id="arched-roof-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Arched Roofs">
+                    <div>
+                        <label for="arched_roof_rise" class="block text-sm font-medium mb-1">Roof Rise (r)</label>
+                        <input type="number" id="arched_roof_rise" value="15">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Vertical distance from spring line to roof crown.</p>
+                    </div>
+                    <div>
+                        <label for="arched_roof_spring_point" class="block text-sm font-medium mb-1">Roof Spring Point</label>
+                        <select id="arched_roof_spring_point">
+                            <option value="On Walls" selected>On Walls</option>
+                            <option value="On Ground">On Ground</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="trussed-tower-options" class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
+                     data-ui-toggle-target-for="structure_type"
+                     data-ui-toggle-condition-value="Trussed Towers (Triangular, Square, Rectangular),Trussed Towers (All Other Cross Sections)">
+                    <div>
+                        <label for="tower_height" class="block text-sm font-medium mb-1">Tower Height (h)</label>
+                        <input type="number" id="tower_height" value="100">
+                    </div>
+                    <div>
+                        <label for="tower_width" class="block text-sm font-medium mb-1">Tower Face Width (w)</label>
+                        <input type="number" id="tower_width" value="10">
+                    </div>
+                    <div>
+                        <label for="tower_solidity_ratio" class="block text-sm font-medium mb-1">Solidity Ratio (ε)</label>
+                        <input type="number" id="tower_solidity_ratio" value="0.3" min="0.01" max="0.99" step="0.01">
+                    </div>
+                    <div>
+                        <label for="tower_member_shape" class="block text-sm font-medium mb-1">Member Shape</label>
+                        <select id="tower_member_shape">
+                            <option value="flat" selected>Flat-Sided Members</option>
+                            <option value="round">Round Members</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="topographic_factor_Kzt" class="block text-sm font-medium mb-1">Topo. Factor (Kzt)</label>
+                    <input type="number" id="topographic_factor_Kzt" value="1">
+                </div>
+                <div>
+                    <label for="gust_effect_factor_g" class="block text-sm font-medium mb-1">Gust Effect Factor (G)</label>
+                    <input type="number" id="gust_effect_factor_g" value="0.85">
+                </div>
+                <div>
+                    <label for="temporary_construction" class="block text-sm font-medium mb-1">Temporary Construction?</label>
+                    <select id="temporary_construction">
+                        <option value="No" selected>No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="calculate_height_varying_pressure" class="block text-sm font-medium mb-1">Calc. Height-Varying Pressure?</label>
+                    <select id="calculate_height_varying_pressure">
+                        <option value="Yes" selected>Yes (for tall buildings)</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h2>Building Geometry Diagram</h2>
+            <div class="diagram">
+                <div class="max-w-xs mx-auto">
+                    <svg viewBox="0 0 400 250" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/></marker>
+                        </defs>
+                        <!-- Building Isometric -->
+                        <polygon points="100,150 200,200 350,125 250,75" class="svg-plate" style="fill:#dbeafe; stroke: #60a5fa;"/>
+                        <polygon points="100,50 100,150 250,75 250, -25" class="svg-member" style="fill: #e5e7eb; stroke: #9ca3af;"/>
+                        <polygon points="250,75 350,125 350,25 250,-25" class="svg-member" style="fill: #f3f4f6; stroke: #9ca3af;"/>
+
+                        <!-- Dimension Lines -->
+                        <path d="M100,45 L250,-30" class="svg-dim" stroke-dasharray="2,2"/>
+                        <path d="M255,-20 L255,85" class="svg-dim" stroke-dasharray="2,2"/>
+                        <path d="M100,155 L100,200 M200,205 L200,220" class="svg-dim"/>
+                        <path d="M100,210 L200,210" class="svg-dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+                        <text x="150" y="225" class="svg-dim-text">B (Width)</text>
+                        <path d="M205,200 L250,225 M355,125 L400,150" class="svg-dim"/>
+                        <path d="M227.5,212.5 L377.5,137.5" class="svg-dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+                        <text x="300" y="185" class="svg-dim-text">L (Length)</text>
+                        <path d="M80,50 L80,150" class="svg-dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+                        <text x="70" y="100" class="svg-dim-text" transform="rotate(-90 70,100)">h (Height)</text>
+
+                        <!-- Wind Arrow -->
+                        <path d="M50,100 L95,100" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)"/>
+                        <text x="55" y="95" class="svg-label">WIND</text>
+                        <text x="150" y="100" class="svg-label">Windward Face</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
+    <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
+    <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all">Save Inputs</button>
+    <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
+    <button id="run-calculation-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Wind Load Calculation</button>
+    <input type="file" id="wind-file-input" class="hidden" accept=".txt">
+</div>
+        </main>
+
+        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
+        <div id="results-container" class="mt-10 results-container"></div>
+        
+        <div id="footer-placeholder"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await injectHeader({
+                activePage: 'wind',
+                pageTitle: 'ASCE Wind Load Calculator',
+                headerPlaceholderId: 'header-placeholder'
+            });
+            await injectFooter({
+                footerPlaceholderId: 'footer-placeholder'
+            });
+        });
+    </script>
+</body>
+</html>
