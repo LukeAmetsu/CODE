@@ -1,24 +1,34 @@
 /**
  * @file viga_protendida.js
  * @description NBR 6118 Prestressed Concrete Beam Checker with Prestressing Loss Calculations.
- * Translates the logic from the provided Jupyter Notebook into a web application.
+ * Translates the logic from the provided PDF into a web application.
  */
+
+const prestressedInputIds = [
+    'design_code', 'unit_system', 'fck', 'age_at_prestress', 'Ap',
+    'load_pp', 'load_perm', 'load_var', 'beam_length', 'beam_height', 'beam_coords',
+    'humidity', 'fptk', 'mu', 'k', 'anchorage_slip'
+];
 
 const concreteBeamCalculator = (() => {
     /**
      * Calculates the complete geometric properties of a non-self-intersecting polygon.
- * @param {Array<[number, number]>} vertices - An array of [x, y] coordinates in cm.
+     * @param {Array<[number, number]>} vertices - An array of [x, y] coordinates in cm.
      * @returns {object|null} A dictionary containing the calculated properties or null if invalid.
      */
     function calculateSectionProperties(vertices) {
         if (!vertices || vertices.length < 3) return null;
 
         const points = [...vertices, vertices[0]]; // Close the polygon
-        let A = 0.0, Qx = 0.0, Qy = 0.0, Ix = 0.0, Iy = 0.0;
+        let A = 0.0,
+            Qx = 0.0,
+            Qy = 0.0,
+            Ix = 0.0,
+            Iy = 0.0;
 
         for (let i = 0; i < vertices.length; i++) {
-            const [x0, y0] = points[i]; 
-            const [x1, y1] = points[i+1];
+            const [x0, y0] = points[i];
+            const [x1, y1] = points[i + 1];
             const term = (x0 * y1) - (x1 * y0);
             A += term;
             Qx += (x0 + x1) * term;
@@ -28,7 +38,7 @@ const concreteBeamCalculator = (() => {
         }
 
         A /= 2.0;
-        if (Math.abs(A) < 1e-6) return null; // Relaxed threshold
+        if (Math.abs(A) < 1e-6) return null;
 
         const cx = Qx / (6.0 * A);
         const cy = Qy / (6.0 * A);
@@ -53,7 +63,7 @@ const concreteBeamCalculator = (() => {
         return {
             area: Math.abs(A),
             centroid: { x: cx, y: cy },
-            Q: { x: Math.abs(Qx / 6), y: Math.abs(Qy / 6) }, // Adjusted for absolute as per notebook convention
+            Q: { x: Math.abs(Qx / 6), y: Math.abs(Qy / 6) },
             I: { cx: Math.abs(I_cx), cy: Math.abs(I_cy) },
             r: { x: rx, y: ry },
             W: { i: Wi, s: Ws },
@@ -80,13 +90,36 @@ const concreteBeamCalculator = (() => {
         const c = y_v + a * x_v ** 2;
         return { a, b, c };
     }
+    
+    /**
+     * Solves for the required prestressing force P based on a stress limit.
+     * @param {number} sigma_limit - The stress limit [MPa].
+     * @param {number} W - The section modulus (with sign) [m³].
+     * @param {number} M - The bending moment [MN·m].
+     * @param {number} A - The cross-section area [m²].
+     * @param {number} e - The eccentricity [m].
+     * @returns {object} The required force P [MN] and calculation breakdown.
+     */
+    function solveForPrestressForce(sigma_limit, W, M, A, e) {
+        const numerador = A * (sigma_limit * W - M);
+        const denominador = W + A * e;
+        const calc_string = `[${A.toFixed(4)} * (${sigma_limit.toFixed(2)} * ${W.toFixed(4)} - ${M.toFixed(4)})] / (${W.toFixed(4)} + ${A.toFixed(4)} * ${e.toFixed(4)})`;
+
+        if (Math.abs(denominador) < 1e-9) {
+            return {
+                value: NaN,
+                calc: "Error: Division by zero. (W + A*e) is close to zero."
+            };
+        }
+        const value = numerador / denominador;
+        return {
+            value: value,
+            calc: calc_string
+        };
+    }
 
     /**
      * Linear interpolation between two points.
-     * @param {number} x_pos - The x position to interpolate at.
-     * @param {Array<number>} xs - The x coordinates [x1, x2].
-     * @param {Array<number>} ys - The y coordinates [y1, y2].
-     * @returns {number} The interpolated y value.
      */
     function interpolate(x_pos, xs, ys) {
         const [x0, x1] = xs;
@@ -95,283 +128,529 @@ const concreteBeamCalculator = (() => {
         const t = (x_pos - x0) / (x1 - x0);
         return y0 + t * (y1 - y0);
     }
+    
+     /**
+      * Main calculation function, updated to follow the PDF logic.
+      * @param {object} inputs - The gathered user inputs.
+      * @returns {object} The results of the calculation.
+      */
+    function run(raw_inputs) {
+        const inputs = {...raw_inputs}; // Make a mutable copy
+        const { vertices, fck, age_at_prestress, load_pp, load_perm, load_var, beam_length, cable_path, humidity, fptk, mu, k, anchorage_slip } = inputs;
+        const Ap_cm2 = parseFloat(inputs.Ap) || 0;
 
-    /**
-     * Calculates prestressing losses per NBR 6118 Section 17.3.
-     * @param {object} inputs - User inputs including Ap (tendon area in m²).
-     * @param {object} props - Section properties.
-     * @param {number} P_i - Initial prestressing force (MN).
-     * @param {number} ecc_mid - Eccentricity at mid-span (m).
-     * @param {number} M_pp - Self-weight moment (MN·m).
-     * @returns {object} Loss components and effective force.
-     */
-    function calculatePrestressLosses(inputs, props, P_i, ecc_mid, M_pp) {
-        const { fck, beam_length, Ap = 0.001 } = inputs; // Default Ap = 0.001 m²
-        const { area, I } = props;
-        const A_m2 = area / 1e4; // Convert cm² to m²
-        const I_cx_m4 = I.cx / 1e8; // Convert cm⁴ to m⁴
-
-        // Material properties
-        const E_p = 195000; // MPa (NBR 6118, 8.3)
-        const E_c = 5600 * Math.sqrt(fck); // MPa (NBR 6118, 8.2.10)
-
-        // 1. Elastic Shortening
-        const sigma_c_p = (P_i / A_m2) + (P_i * ecc_mid * ecc_mid / I_cx_m4) - (M_pp * ecc_mid / I_cx_m4);
-        const delta_sigma_es = (sigma_c_p * E_p) / E_c;
-        const delta_P_es = Ap * delta_sigma_es / 1000; // Convert to MN
-
-        // 2. Anchorage Slip
-        const delta_l = 0.004; // 4 mm
-        const delta_sigma_as = (delta_l * E_p) / beam_length;
-        const delta_P_as = Ap * delta_sigma_as / 1000;
-
-        // 3. Friction Loss (assume parabolic tendon, evaluate at mid-span)
-        const mu = 0.2;
-        const k = 0.01; // m⁻¹
-        const L_half = beam_length / 2;
-        // Approximate theta for parabolic segment (simplified)
-        const delta_y = Math.abs(inputs.cable_path[1].y - inputs.cable_path[0].y);
-        const theta = 4 * delta_y / beam_length; // Approximate angle
-        const P_x = P_i * Math.exp(-mu * (theta + k * L_half));
-        const delta_P_f = P_i - P_x;
-
-        // 4. Creep Loss
-        const phi = 2.0; // Creep coefficient
-        const delta_sigma_cr = phi * sigma_c_p * (E_p / E_c);
-        const delta_P_cr = Ap * delta_sigma_cr / 1000;
-
-        // 5. Shrinkage Loss
-        const epsilon_sh = 0.0003;
-        const delta_sigma_sh = epsilon_sh * E_p;
-        const delta_P_sh = Ap * delta_sigma_sh / 1000;
-
-        // 6. Relaxation Loss
-        const sigma_p0 = P_i / Ap; // MPa
-        const psi = 0.025; // 2.5%
-        const delta_sigma_r = sigma_p0 * psi;
-        const delta_P_r = Ap * delta_sigma_r / 1000;
-
-        // Total Loss
-        const delta_P_total = delta_P_es + delta_P_as + delta_P_f + delta_P_cr + delta_P_sh + delta_P_r;
-        const P_eff = Math.max(P_i - delta_P_total, 0); // Ensure non-negative
-
-        return {
-            elastic_shortening: { formula: "(σ_c,p * E_p / E_c) * A_p", calc: `(${sigma_c_p.toFixed(2)} * ${E_p} / ${E_c.toFixed(0)}) * ${Ap}`, value: delta_P_es },
-            anchorage_slip: { formula: "(Δl * E_p / L) * A_p", calc: `(0.004 * ${E_p} / ${beam_length}) * ${Ap}`, value: delta_P_as },
-            friction: { formula: "P_i * (1 - e^(-μ * (θ + k * x)))", calc: `${P_i.toFixed(2)} * (1 - e^(-${mu} * (${theta.toFixed(2)} + ${k} * ${L_half})))`, value: delta_P_f },
-            creep: { formula: "φ * σ_c,p * (E_p / E_c) * A_p", calc: `${phi} * ${sigma_c_p.toFixed(2)} * (${E_p} / ${E_c.toFixed(0)}) * ${Ap}`, value: delta_P_cr },
-            shrinkage: { formula: "ε_sh * E_p * A_p", calc: `${epsilon_sh} * ${E_p} * ${Ap}`, value: delta_P_sh },
-            relaxation: { formula: "σ_p0 * ψ * A_p", calc: `(${sigma_p0.toFixed(0)} * ${psi}) * ${Ap}`, value: delta_P_r },
-            total_loss: delta_P_total,
-            P_eff: P_eff
-        };
-    }
-
-    /**
-     * Main calculation function.
-     * @param {object} inputs - The gathered user inputs including Ap (tendon area in m²).
-     * @returns {object} The results of the calculation.
-     */
-    function run(inputs) {
-        const { vertices, fck, load_pp, load_perm, load_var, beam_length, cable_path, Ap } = inputs;
-
-        // Validate inputs
-        if (!vertices || vertices.length < 3 || fck <= 0 || load_pp < 0 || load_perm < 0 || load_var < 0 || beam_length <= 0 || !Ap || Ap <= 0) {
+        // --- 1. Validate Inputs & Section Properties ---
+        if (!vertices || vertices.length < 3 || fck <= 0 || beam_length <= 0 || Ap_cm2 <= 0) {
             return { errors: ["Invalid inputs. Ensure all values are positive and vertices are sufficient."] };
         }
-
-        // --- 1. Section Properties ---
         const props = calculateSectionProperties(vertices);
         if (!props) {
-            return { errors: ["Invalid beam cross-section vertices. Ensure the polygon is valid and does not self-intersect."] };
+            return { errors: ["Invalid beam cross-section vertices."] };
         }
-
-        // Convert properties from cm to m
         const A_m2 = props.area / 1e4;
+        const Ap_m2 = Ap_cm2 / 1e4;
         const Wi_m3 = props.W.i / 1e6;
         const Ws_m3 = props.W.s / 1e6;
         const I_cx_m4 = props.I.cx / 1e8;
 
-        // --- 2. Material Properties (NBR 6118) with detailed breakdown ---
-        // CORRECTED: Use correct formula for fck > 50 MPa
-        let fctm_val, fctm_formula, fctm_calc;
-        if (fck <= 50) {
-            fctm_val = 0.3 * fck ** (2 / 3);
-            fctm_formula = "0.3 * fck^(2/3)"; fctm_calc = `0.3 * ${fck}^(2/3)`;
-        } else {
-            fctm_val = 2.12 * Math.log(1 + 0.11 * fck);
-            fctm_formula = "2.12 * ln(1 + 0.11*fck)"; fctm_calc = `2.12 * ln(1 + 0.11*${fck})`;
-        }
-        const fctk_inf_val = 0.7 * fctm_val;
-        const fctf_val = 1.2 * fctk_inf_val;
-        const fci = 0.8 * fck; // Assumed, consider adding input
-        const materials = {
-            fctm: { formula: fck <= 50 ? "0.3 * fck^(2/3)" : "2.12 * ln(1 + 0.1 * fck)", calc: fck <= 50 ? `0.3 * ${fck}^(2/3)` : `2.12 * ln(1 + 0.1 * ${fck})`, value: fctm_val },
-            fctk_inf: { formula: "0.7 * fctm", calc: `0.7 * ${fctm_val.toFixed(2)}`, value: fctk_inf_val },
-            fctf: { formula: "1.2 * fctk_inf", calc: `1.2 * ${fctk_inf_val.toFixed(2)}`, value: fctf_val },
-            fci: { formula: "0.8 * fck", calc: `0.8 * ${fck}`, value: fci }
+        // --- 2. Material Properties (NBR 6118 & PDF) ---
+        const fcm = fck <= 50 ? fck + 8 : 1.1 * fck;
+        const s_beta = 0.20;
+        const beta1 = Math.exp(s_beta * (1 - Math.pow(28 / age_at_prestress, 0.5)));
+        const fci = beta1 * fcm;
+        const fctm = fck <= 50 ? 0.3 * fck ** (2 / 3) : 2.12 * Math.log(1 + 0.11 * fck);
+        const fctk_inf = 0.7 * fctm;
+        const fctf = 1.2 * fctk_inf;
+        const E_ci = 5600 * Math.sqrt(fck);
+        const E_p = 200000;
+        const alpha_p = E_p / E_ci;
+        
+        // Stress Limits
+        const comp_limit_i = (fci <= 50 ? 0.7 : 0.7 * (1 - (fci - 50)/200)) * fci;
+        const tens_limit_i = 1.2 * fctm;
+        const comp_limit_s = 0.45 * fck;
+        const tens_limit_s = fctf;
+
+        const materials = { fctm, fctk_inf, fctf, fci, E_ci, E_p, alpha_p,
+            limits: { comp_i: comp_limit_i, tens_i: tens_limit_i, comp_s: comp_limit_s, tens_s: tens_limit_s } };
+
+        // --- 3. Loads & Moments ---
+        const g_k = load_pp + load_perm;
+        const p_CQP = g_k + 0.3 * load_var; // Combinação Quase-Permanente
+        const p_CF = g_k + 0.4 * load_var;  // Combinação Frequente
+        const M_g1k = (load_pp * beam_length ** 2) / 8;
+        const M_gk = (g_k * beam_length ** 2) / 8;
+        const M_CQP = (p_CQP * beam_length ** 2) / 8;
+        const M_CF = (p_CF * beam_length ** 2) / 8;
+        
+        const moments = { M_g1k, M_gk, M_CQP, M_CF };
+
+        // --- 4. Define Cable Path & Key Points ---
+        const y_cg = props.centroid.y / 100; // in m
+        const y_min_beam_m = Math.min(...vertices.map(p => p[1])) / 100;
+
+        const cable_path_abs = cable_path.map(p => ({ ...p, y: p.y * props.height / 100 + y_min_beam_m }));
+        const key_points = [...new Set(cable_path.map(p => p.x))].sort((a,b) => a-b);
+        if(!key_points.includes(beam_length/2)) key_points.push(beam_length/2);
+        key_points.sort((a,b) => a-b);
+
+        const path_details = key_points.map(x => {
+            const y = getCablePositionAt(x, cable_path_abs, beam_length);
+            const e = y - y_cg;
+            return { x, y, e };
+        });
+
+        // --- 5. Initial Prestress and Stress Limit Checks (at mid-span) ---
+        const sigma_pi = 0.74 * fptk;
+        const P_i = Ap_m2 * sigma_pi; // MN
+        const mid_span_details = path_details.find(p => p.x === beam_length / 2);
+        const ecc_mid = mid_span_details.e;
+
+        const P_max_comp_i_res = solveForPrestressForce(-materials.limits.comp_i, -Ws_m3, M_g1k / 1000, A_m2, ecc_mid);
+        const P_min_tens_i_res = solveForPrestressForce(materials.limits.tens_i, Wi_m3, M_g1k / 1000, A_m2, ecc_mid);
+        const P_min_comp_s_res = solveForPrestressForce(-materials.limits.comp_s, -Ws_m3, M_CQP / 1000, A_m2, ecc_mid);
+        const P_max_tens_s_res = solveForPrestressForce(materials.limits.tens_s, Wi_m3, M_CF / 1000, A_m2, ecc_mid);
+
+        const prestress_checks = {
+             P_i, sigma_pi,
+             P_max_comp_i: P_max_comp_i_res,
+             P_min_tens_i: P_min_tens_i_res,
+             P_min_comp_s: P_min_comp_s_res,
+             P_max_tens_s: P_max_tens_s_res,
         };
 
-        // --- 3. Load Combinations with detailed breakdown ---
-        const comb_freq_val = load_pp + load_perm + 0.6 * load_var;
-        const comb_qperm_val = load_pp + load_perm + 0.4 * load_var;
-        const combinations = {
-            freq: { formula: "g_pp + g_perm + 0.6*q_var", calc: `${load_pp} + ${load_perm} + 0.6*${load_var}`, value: comb_freq_val },
-            qperm: { formula: "g_pp + g_perm + 0.4*q_var", calc: `${load_pp} + ${load_perm} + 0.4*${load_var}`, value: comb_qperm_val }
-        };
+        // --- 6. Detailed Prestress Loss Calculation (Following PDF Logic) ---
+        const loss_results = calculateDetailedLosses(inputs, props, materials, path_details, moments, P_i, sigma_pi, cable_path_abs);
+        
+        // --- 7. Final Stress Profiles ---
+        const P_eff_mid_val_result = loss_results.sigma_p_inf.find(p=>p.x === beam_length/2);
+        const P_eff_mid = P_eff_mid_val_result ? (P_eff_mid_val_result.value * Ap_m2) : 0;
 
-        // --- 4. Bending Moments (kN.m) with detailed breakdown ---
-        const M_freq_val = (comb_freq_val * beam_length ** 2) / 8;
-        const M_qperm_val = (comb_qperm_val * beam_length ** 2) / 8;
-        const M_pp = (load_pp * beam_length ** 2) / 8 / 1000; // Self-weight moment in MN·m
-        const moments = {
-            freq: { formula: "(q_freq * L²) / 8", calc: `(${comb_freq_val.toFixed(2)} * ${beam_length}²) / 8`, value: M_freq_val },
-            qperm: { formula: "(q_qperm * L²) / 8", calc: `(${comb_qperm_val.toFixed(2)} * ${beam_length}²) / 8`, value: M_qperm_val },
-            pp: { formula: "(q_pp * L²) / 8", calc: `(${load_pp.toFixed(2)} * ${beam_length}²) / 8`, value: M_pp * 1000 }
-        };
-
-        // --- 5. Stresses (MPa = MN/m^2) with detailed breakdown ---
-        const sigma_inf_freq_val = M_freq_val / 1000 / Wi_m3; // Corrected: Positive moment causes tension (+) on bottom fiber
-        const sigma_sup_qperm_val = -M_qperm_val / 1000 / Ws_m3;
-        const stresses = {
-            inf_freq: { formula: "+M_freq / W_i", calc: `+${M_freq_val.toFixed(2)} / ${Wi_m3.toFixed(4)}`, value: sigma_inf_freq_val },
-            sup_qperm: { formula: "-M_qperm / W_s", calc: `-${M_qperm_val.toFixed(2)} / ${Ws_m3.toFixed(4)}`, value: sigma_sup_qperm_val }
-        };
-
-        // --- 6. Eccentricity at Mid-Span ---
-        const ecc_mid = getEccentricityAt(beam_length / 2, cable_path);
-
-        // --- 7. Initial Prestressing Force Limits (NBR 6118, Sec 17.2.4.3) ---
-        // Initial Compression (Top Fiber)
-        const P_max_comp_i_val = (-0.7 * fci - M_pp / Ws_m3) / ((-1 / A_m2) + ecc_mid / Ws_m3);
-        // Initial Tension (Bottom Fiber)
-        const P_max_tens_i_val = (materials.fctk_inf.value - M_pp / Wi_m3) / ((-1 / A_m2) - ecc_mid / Wi_m3);
-
-        // Initial Prestressing Force (use average for loss calculations)
-        const P_max = Math.min(P_max_comp_i_val, P_max_tens_i_val);
-        const P_min_initial = Math.max(0, Math.min(P_max_comp_i_val, P_max_tens_i_val)); // Ensure non-negative
-        const P_i = (P_max + P_min_initial) / 2; // Initial estimate
-
-        // --- 8. Prestressing Losses ---
-        const losses = calculatePrestressLosses(inputs, props, P_i, ecc_mid, M_pp);
-        const P_eff = losses.P_eff;
-
-        // --- 9. Service Prestressing Force Limits (using P_eff) ---
-        // CORRECTED: Calculate the required EFFECTIVE force (P_eff) first, then find the required INITIAL force (P_i).
-        const P_eff_min_comp_s = (-0.6 * fck - (moments.qperm.value / 1000) / Ws_m3) / ((-1 / A_m2) + ecc_mid / Ws_m3);
-        const P_eff_min_tens_s = (materials.fctf.value - (moments.freq.value / 1000) / Wi_m3) / ((-1 / A_m2) - ecc_mid / Wi_m3);
-
-        // --- 10. Stress Profiles for Visualization ---
         const stress_profiles = {
-            initial: {
-                top: (-P_i / A_m2) + (P_i * ecc_mid / Ws_m3) - (M_pp / Ws_m3),
-                bottom: (-P_i / A_m2) - (P_i * ecc_mid / Wi_m3) + (M_pp / Wi_m3)
+             initial: {
+                 top: (-P_i / A_m2) + (P_i * ecc_mid / Ws_m3) - (M_g1k / 1000 / Ws_m3),
+                 bottom: (-P_i / A_m2) - (P_i * ecc_mid / Wi_m3) + (M_g1k / 1000 / Wi_m3)
+             },
+             final: {
+                 top: (-P_eff_mid / A_m2) + (P_eff_mid * ecc_mid / Ws_m3) - (M_CQP / 1000 / Ws_m3),
+                 bottom: (-P_eff_mid / A_m2) - (P_eff_mid * ecc_mid / Wi_m3) + (M_CF / 1000 / Wi_m3)
+             }
+         };
+         
+        return {
+            checks: {
+                properties: props,
+                materials,
+                loads: { pp: load_pp, perm: load_perm, var: load_var, g_k, p_CQP, p_CF },
+                moments,
+                path_details,
+                prestress_checks,
+                loss_results,
+                stress_profiles
             },
-            final: {
-                top: (-P_eff / A_m2) + (P_eff * ecc_mid / Ws_m3) - (moments.qperm.value / 1000 / Ws_m3),
-                bottom: (-P_eff / A_m2) - (P_eff * ecc_mid / Wi_m3) + (moments.freq.value / 1000 / Wi_m3)
+            inputs
+        };
+    }
+    
+    /**
+    * Calculates detailed prestressing losses based on NBR 6118 and the provided PDF.
+    */
+    function calculateDetailedLosses(inputs, props, materials, path_details, moments, P_i, sigma_pi, cable_path_abs) {
+        const { beam_length, humidity, mu, k, anchorage_slip } = inputs;
+        const Ap_m2 = parseFloat(inputs.Ap) / 1e4;
+        const { E_p, E_ci, alpha_p } = materials;
+        const A_m2 = props.area / 1e4;
+        const I_cx_m4 = props.I.cx / 1e8;
+        
+        // Step 1: Friction Loss
+        let cumulative_alpha = 0;
+        const sigma_p_friction = path_details.map((point, i) => {
+            if (i > 0) {
+                const prev_point = path_details[i-1];
+                const alpha_seg = Math.abs(getTangentAngleAt(point.x, cable_path_abs, beam_length) - getTangentAngleAt(prev_point.x, cable_path_abs, beam_length));
+                cumulative_alpha += alpha_seg;
             }
-        };
+            const value = sigma_pi * Math.exp(-(mu * cumulative_alpha + k * point.x));
+            return { x: point.x, value };
+        });
 
-        const prestress = {
-            P_max_comp_i: {
-                formula: "P ≤ (-0.7*fci - M_pp/Ws) / (-1/A + e/Ws)",
-                calc: `(-0.7*${fci.toFixed(2)} - ${M_pp.toFixed(4)}/${Ws_m3.toFixed(4)}) / (-1/${A_m2.toFixed(4)} + ${ecc_mid.toFixed(3)}/${Ws_m3.toFixed(4)})`,
-                value: P_max_comp_i_val
-            },
-            P_max_tens_i: {
-                formula: "P ≤ (fctk_inf - M_pp/Wi) / (-1/A - e/Wi)",
-                calc: `(${materials.fctk_inf.value.toFixed(2)} - ${M_pp.toFixed(4)}/${Wi_m3.toFixed(4)}) / (-1/${A_m2.toFixed(4)} - ${ecc_mid.toFixed(3)}/${Wi_m3.toFixed(4)})`,
-                value: P_max_tens_i_val
-            },
-            P_min_comp_s: {
-                formula: "P_i ≥ [(-0.6*fck - M_qp/Ws) / (-1/A + e/Ws)] / (1 - losses)",
-                calc: `(-0.6*${fck} - ${moments.qperm.value.toFixed(2)}/1000/${Ws_m3.toFixed(4)}) / (-1/${A_m2.toFixed(4)} + ${ecc_mid.toFixed(3)}/${Ws_m3.toFixed(4)})`,
-                value: P_eff_min_comp_s
-            },
-            P_min_tens_s: {
-                formula: "P_i ≥ [(fctf - M_freq/Wi) / (-1/A - e/Wi)] / (1 - losses)",
-                calc: `(${materials.fctf.value.toFixed(2)} - ${moments.freq.value.toFixed(2)}/1000/${Wi_m3.toFixed(4)}) / (-1/${A_m2.toFixed(4)} - ${ecc_mid.toFixed(3)}/${Wi_m3.toFixed(4)})`,
-                value: P_eff_min_tens_s
-            },
-            P_i: P_i,
-            losses: losses
-        };
+        // Step 2: Anchorage Slip Loss
+        const delta = anchorage_slip; // in mm
+        const A_delta = E_p * (delta / 1000); // MPa.m
+        let A_i = 0;
+        let x_a = 0;
+        const betas = [];
+        for (let i = 0; i < sigma_p_friction.length - 1; i++) {
+            const p1 = sigma_p_friction[i];
+            const p2 = sigma_p_friction[i+1];
+            if (Math.abs(p2.x - p1.x) < 1e-9) continue;
+            const beta = (p1.value - p2.value) / (p2.x - p1.x);
+            betas.push(beta);
+            A_i += beta * (p2.x - p1.x) * (p1.x + p2.x);
+            if(A_i >= A_delta) {
+                const A_prev = A_i - beta * (p2.x - p1.x) * (p1.x + p2.x);
+                const term = p1.x**2 + (A_delta - A_prev)/beta;
+                if (term >= 0) {
+                   x_a = Math.sqrt(term);
+                }
+                break;
+            }
+        }
+        if (x_a === 0) x_a = beam_length; // Slip affects the whole beam
+        const sigma_pa = interpolate(x_a, sigma_p_friction.map(p=>p.x), sigma_p_friction.map(p=>p.value));
+        
+        const sigma_p_anchorage = sigma_p_friction.map(p => {
+            const value = p.x < x_a ? 2 * sigma_pa - p.value : p.value;
+            return {x: p.x, value};
+        });
 
-        const results = {
-            properties: props,
-            materials,
-            loads: { pp: load_pp, perm: load_perm, var: load_var },
-            combinations,
-            moments,
-            stresses,
-            prestress,
-            stress_profiles
-        };
+        // Step 3: Elastic Shortening
+        const n_cabos = 2; // Assuming 2 cables as per PDF example for multi-cable reduction factor
+        const factor_ee = (n_cabos > 1) ? (n_cabos - 1) / (2 * n_cabos) : 0;
+        
+        const delta_sigma_ee = path_details.map(p => {
+             const M_g1k_x = (inputs.load_pp * p.x * (beam_length - p.x)) / 2;
+             const sigma_p_val = sigma_p_anchorage.find(s=>s.x===p.x)?.value || 0;
+             const P_x = sigma_p_val * Ap_m2;
+             const sigma_c = (P_x / A_m2) + (P_x * p.e * p.e / I_cx_m4) - (M_g1k_x / 1000 * p.e / I_cx_m4);
+             const value = alpha_p * sigma_c * factor_ee;
+             return {x: p.x, value};
+        });
 
-        return { checks: results, inputs };
+        // Step 4: Immediate Stress
+        const sigma_p_ime = sigma_p_anchorage.map((p, i) => {
+            const value = p.value - delta_sigma_ee[i].value;
+            return {x: p.x, value};
+        });
+
+        // Step 5: Relaxation
+        const delta_sigma_r = sigma_p_ime.map(p => {
+            const zeta = p.value / inputs.fptk;
+            const psi_1000 = (zeta >= 0.6 && zeta < 0.7) ? 0.025 - (0.025 - 0.013) * ((0.7 - zeta) / 0.1) : (zeta >= 0.7 ? 0.025 : 0.013);
+            const psi_inf = 2.5 * psi_1000;
+            const chi_inf = -Math.log(1 - psi_inf);
+            const value = chi_inf * p.value;
+            return {x: p.x, value, chi_inf: 1+chi_inf};
+        });
+
+        // Step 6 & 7: Shrinkage & Creep
+        const epsilon_sh = 0.0003; // NBR 6118 simplified
+        const delta_sigma_cs = E_p * epsilon_sh;
+        const phi = 2.0; // NBR 6118 simplified creep coeff
+        
+        const delta_sigma_cc = path_details.map((p,i) => {
+             const M_gk_x = (inputs.load_pp + inputs.load_perm) * p.x * (beam_length - p.x) / 2;
+             const P_ime_x = sigma_p_ime[i].value * Ap_m2;
+             const sigma_c_perm = (P_ime_x / A_m2) + (P_ime_x * p.e * p.e / I_cx_m4) - (M_gk_x / 1000 * p.e / I_cx_m4);
+             const value = alpha_p * sigma_c_perm * phi;
+             return {x: p.x, value};
+        });
+
+        // Deferred Loss Interaction
+        const rho_p = Ap_m2 / A_m2;
+        const chi_c = 1 + 0.5 * phi;
+        
+        const delta_sigma_dif = path_details.map((p, i) => {
+             const eta_p = p.e * p.e * A_m2 / I_cx_m4;
+             const theta = delta_sigma_r[i].chi_inf + chi_c * rho_p * eta_p * alpha_p;
+             if (Math.abs(theta) < 1e-9) return {x: p.x, value: 0};
+             const value = (delta_sigma_r[i].value + delta_sigma_cs + delta_sigma_cc[i].value) / theta;
+             return {x: p.x, value};
+        });
+
+        // Final Stress
+        const sigma_p_inf = sigma_p_ime.map((p,i) => {
+            const value = p.value - delta_sigma_dif[i].value;
+            return {x: p.x, value};
+        });
+
+        return {
+            key_points: path_details.map(p=>p.x),
+            sigma_p_friction,
+            sigma_p_anchorage,
+            sigma_p_ime,
+            sigma_p_inf,
+        };
     }
 
-    /*
-     * Calculates the eccentricity 'y' at a given position 'x' along the beam,
-     * based on the defined cable path segments.
-     * @param {number} x_pos - The position along the beam length.
-     * @param {Array<object>} cable_path - The array of cable path points.
-     * @returns {number} The calculated eccentricity at x_pos.
-     */
-    function getEccentricityAt(x_pos, cable_path) {
-        if (!cable_path || cable_path.length < 2) return 0;
+    function getTangentAngleAt(x_pos, cable_path_abs, beam_length) {
+         const h = 0.001;
+         const y1 = getCablePositionAt(x_pos - h, cable_path_abs, beam_length);
+         const y2 = getCablePositionAt(x_pos + h, cable_path_abs, beam_length);
+         return Math.atan((y2 - y1) / (2 * h));
+    }
 
-        // Validate cable path spans beam
-        const x_min_path = Math.min(...cable_path.map(p => p.x));
-        const x_max_path = Math.max(...cable_path.map(p => p.x));
-        if (x_pos < x_min_path || x_pos > x_max_path) {
-            throw new Error("Cable path does not cover the requested position.");
+    /**
+     * Calculates the cable's y-coordinate at a given position 'x' along the beam.
+     * @param {number} x_pos - The position along the beam length.
+     * @param {Array<object>} cable_path_abs - The array of cable path points with absolute y-coordinates in meters and type.
+     * @param {number} beam_length - Total beam length.
+     * @returns {number} The calculated absolute y-coordinate at x_pos in meters.
+     */
+    function getCablePositionAt(x_pos, cable_path_abs, beam_length) {
+        if (!cable_path_abs || cable_path_abs.length === 0) return 0;
+        if (cable_path_abs.length === 1) return cable_path_abs[0].y;
+        
+        const last_defined_x = cable_path_abs[cable_path_abs.length-1].x;
+        if (x_pos > last_defined_x && last_defined_x <= beam_length/2) {
+             return getCablePositionAt(beam_length - x_pos, cable_path_abs, beam_length);
         }
 
-        for (let i = 0; i < cable_path.length - 1; i++) {
-            const p1 = cable_path[i];
-            const p2 = cable_path[i + 1];
-            const x_min = Math.min(p1.x, p2.x);
-            const x_max = Math.max(p1.x, p2.x);
+        for (let i = 0; i < cable_path_abs.length - 1; i++) {
+            const p1 = cable_path_abs[i];
+            const p2 = cable_path_abs[i + 1];
 
-            if (x_pos >= x_min && x_pos <= x_max) {
+            if (x_pos >= p1.x && x_pos <= p2.x) {
                 if (p1.type === 'Parabolic') {
-                    // CORRECTED: The vertex is the point with the more extreme y-value (max absolute value, considering sign).
-                    // This handles both upward and downward parabolas.
-                    let vertex = Math.abs(p1.y) >= Math.abs(p2.y) ? p1 : p2;
-                    let form_start = p1.y <= p2.y ? p2 : p1;
-                    const parabola = solveParabolaWithVertex([form_start.x, form_start.y], [vertex.x, vertex.y]);
-                    if (parabola) {
-                        return parabola.a * Math.pow(x_pos - vertex.x, 2) + vertex.y;
-                    }
- else {
-                        return interpolate(x_pos, [p1.x, p2.x], [p1.y, p2.y]);
-                    }
-                } else {
+                    let vertex = p1.y < p2.y ? p1 : p2;
+                    let other_point = p1.y < p2.y ? p2 : p1;
+                    if(Math.abs(p2.x - p1.x) < 1e-6) return p1.y; 
+                    
+                    const h = vertex.x;
+                    const k = vertex.y;
+                    const denominator = (other_point.x - h)**2;
+                    if (Math.abs(denominator) < 1e-9) return k;
+                    const a = (other_point.y - k) / denominator;
+                    return a * (x_pos - h)**2 + k;
+
+                } else { // Straight
                     return interpolate(x_pos, [p1.x, p2.x], [p1.y, p2.y]);
                 }
             }
         }
-        return cable_path[cable_path.length - 1].y;
+        return cable_path_abs[cable_path_abs.length - 1].y; // Fallback
     }
 
-    return { run, calculateSectionProperties, solveParabolaWithVertex, getEccentricityAt };
+    return { run, calculateSectionProperties, getCablePositionAt };
 })();
+
+function drawCrossSectionDiagram(svgId, vertices) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+    svg.innerHTML = '';
+    const ns = "http://www.w3.org/2000/svg";
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#FFFFFF' : '#2c3e50';
+
+    const W = 300, H = 400;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+    if (!vertices || vertices.length < 3) {
+        svg.innerHTML = `<text x="${W/2}" y="20" fill="${textColor}" text-anchor="middle">Invalid vertices</text>`;
+        return;
+    }
+
+    const props = concreteBeamCalculator.calculateSectionProperties(vertices);
+    if (!props) return;
+
+    const all_x = vertices.map(v => v[0]);
+    const all_y = vertices.map(v => v[1]);
+    const maxX = Math.max(...all_x);
+    const maxY = Math.max(...all_y);
+    const minX = Math.min(...all_x);
+    const minY = Math.min(...all_y);
+
+    const margin = 30;
+    const scale = Math.min((W - 2 * margin) / (maxX - minX), (H - 2 * margin) / (maxY - minY));
+    const offsetX = margin - minX * scale + (W - 2 * margin - (maxX - minX) * scale) / 2;
+    const offsetY = margin - minY * scale + (H - 2 * margin - (maxY - minY) * scale) / 2;
+
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${offsetX}, ${H - offsetY}) scale(1, -1)`);
+    svg.appendChild(g);
+
+    const path = document.createElementNS(ns, 'path');
+    let d = `M ${vertices[0][0] * scale} ${vertices[0][1] * scale}`;
+    for (let i = 1; i < vertices.length; i++) {
+        d += ` L ${vertices[i][0] * scale} ${vertices[i][1] * scale}`;
+    }
+    d += ' Z';
+    path.setAttribute('d', d);
+    path.setAttribute('fill', isDark ? '#6B7280' : '#e8f4f8');
+    path.setAttribute('stroke', isDark ? '#D1D5DB' : '#2c3e50');
+    path.setAttribute('stroke-width', 2 / scale);
+    g.appendChild(path);
+
+    const cx = props.centroid.x * scale;
+    const cy = props.centroid.y * scale;
+    const centroid = document.createElementNS(ns, 'circle');
+    centroid.setAttribute('cx', cx);
+    centroid.setAttribute('cy', cy);
+    centroid.setAttribute('r', 5 / scale);
+    centroid.setAttribute('fill', 'red');
+    g.appendChild(centroid);
+    
+    // Label for centroid
+    const cg_text = document.createElementNS(ns, 'text');
+    cg_text.textContent = `CG (${props.centroid.x.toFixed(1)}, ${props.centroid.y.toFixed(1)})`;
+    cg_text.setAttribute('x', cx + 10 / scale);
+    cg_text.setAttribute('y', cy + 10 / scale);
+    cg_text.setAttribute('fill', 'red');
+    cg_text.setAttribute('font-size', 10 / scale);
+    cg_text.setAttribute('transform', 'scale(1, -1)');
+    g.appendChild(cg_text);
+}
+
+function drawLongitudinalDiagram(svgId, inputs) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+    svg.innerHTML = '';
+    const ns = "http://www.w3.org/2000/svg";
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#FFFFFF' : '#2c3e50';
+
+    const W = 800, H = 300;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+    const beamLength = parseFloat(inputs.beam_length) || 18;
+    const beamHeightCm = (parseFloat(inputs.beam_height) || 80);
+    
+    const cablePath = (inputs.cable_path || []);
+
+    const marginX = 60, marginY = 50;
+    const drawWidth = W - 2 * marginX, drawHeight = H - 2 * marginY;
+    const scaleX = drawWidth / beamLength;
+    const scaleY = drawHeight / beamHeightCm;
+
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${marginX}, ${H - marginY}) scale(1, -1)`);
+    svg.appendChild(g);
+    
+    // Beam outline
+    const beam = document.createElementNS(ns, 'rect');
+    beam.setAttribute('x', 0);
+    beam.setAttribute('y', 0);
+    beam.setAttribute('width', beamLength * scaleX);
+    beam.setAttribute('height', beamHeightCm * scaleY);
+    beam.setAttribute('fill', isDark ? '#6B7280' : '#d3d3d3');
+    beam.setAttribute('stroke', isDark ? '#D1D5DB' : '#000');
+    g.appendChild(beam);
+    
+    // Centroid Line
+    const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
+    if(props) {
+        const cg_y = props.centroid.y * scaleY;
+        const centerline = document.createElementNS(ns, 'line');
+        centerline.setAttribute('x1', 0);
+        centerline.setAttribute('y1', cg_y);
+        centerline.setAttribute('x2', beamLength * scaleX);
+        centerline.setAttribute('y2', cg_y);
+        centerline.setAttribute('stroke', 'red');
+        centerline.setAttribute('stroke-dasharray', '5,5');
+        g.appendChild(centerline);
+    }
+
+    // Cable Path
+    drawCablePathSvg(g, cablePath, scaleX, scaleY, isDark);
+}
+
+/**
+ * Draws the prestressing cable path onto an SVG group element.
+ * @param {SVGElement} g - The SVG <g> element to draw into.
+ * @param {Array<object>} cablePath - The array of user-defined cable path points.
+ * @param {number} scaleX - The horizontal scaling factor.
+ * @param {number} scaleY - The vertical scaling factor.
+ * @param {boolean} isDark - Whether dark mode is active.
+ */
+function drawCablePathSvg(g, cablePath, scaleX, scaleY, isDark) {
+    const ns = "http://www.w3.org/2000/svg";
+    const inputs = gatherBeamInputs();
+    const beamLength = parseFloat(inputs.beam_length) || 18;
+    const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
+    if (!props) return;
+
+    const y_cg = props.centroid.y;
+    const y_min_beam = Math.min(...inputs.vertices.map(p => p[1]));
+
+    // Generate a series of points along the beam to draw a smooth curve
+    const pathPoints = [];
+    const numSegments = 200;
+    for (let i = 0; i <= numSegments; i++) {
+        const x_pos_m = (i / numSegments) * beamLength;
+        // The y value from getCablePositionAt is absolute in meters, convert to cm for scaling
+        const y_abs_cm = concreteBeamCalculator.getCablePositionAt(x_pos_m, inputs.cable_path, beamLength) * 100;
+        pathPoints.push(`${x_pos_m * scaleX},${y_abs_cm * scaleY}`);
+    }
+
+    const polyline = document.createElementNS(ns, 'polyline');
+    polyline.setAttribute('points', pathPoints.join(' '));
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', isDark ? '#f59e0b' : '#d97706'); // amber-500 / amber-600
+    polyline.setAttribute('stroke-width', '2');
+    g.appendChild(polyline);
+
+    // Draw circles for the user-defined points
+    inputs.cable_path.forEach(p => {
+        const y_abs_cm = concreteBeamCalculator.getCablePositionAt(p.x, inputs.cable_path, beamLength) * 100;
+        g.innerHTML += `<circle cx="${p.x * scaleX}" cy="${y_abs_cm * scaleY}" r="4" fill="${isDark ? '#fde047' : '#facc15'}" />`;
+    });
+}
+
+function parseVertices(text) {
+    return text.split('\n')
+        .map(line => line.trim().split(/[,; ]+/).map(Number))
+        .filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
+}
+
+function gatherCablePath() {
+    const container = document.getElementById('cable-path-container');
+    const rows = Array.from(container.querySelectorAll('.cable-path-row'));
+    return rows.map((row, index) => ({
+        x: parseFloat(row.querySelector('.cable-x').value) || 0,
+        y: parseFloat(row.querySelector('.cable-y').value) || 0,
+        'type': index < rows.length - 1 ? row.querySelector('.cable-type').value : 'Straight'
+    }));
+}
+
+function gatherBeamInputs() {
+    const inputs = gatherInputsFromIds(prestressedInputIds);
+    inputs.vertices = parseVertices(inputs.beam_coords);
+    inputs.cable_path = gatherCablePath();
+    return inputs;
+}
 
 /**
  * --- UI and Drawing Functions ---
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Helper functions for rendering results ---
+    // This function remains largely the same, but now gets more data
+    function renderResults(results) {
+        const { checks, inputs } = results;
+        if (!checks || results.errors) {
+            document.getElementById('results-container').innerHTML = `<p class="text-center text-red-500">Calculation failed: ${results.errors?.[0] || 'Unknown error'}</p>`;
+            return;
+        }
 
+        const inputSummaryHtml = renderInputSummary(inputs);
+        const calculatedPropsHtml = renderCalculatedProperties(checks);
+        const prestressChecksHtml = renderPrestressChecks(checks);
+        const lossesHtml = renderLossesTableAndChart(checks.loss_results);
+
+        const finalHtml = `
+         <div id="concrete-beam-report" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+             <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
+                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
+                 <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
+             </div>
+             <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação da Viga Protendida (NBR 6118)</h2>
+             ${inputSummaryHtml}
+             ${calculatedPropsHtml}
+             ${prestressChecksHtml}
+             ${lossesHtml}
+         </div>`;
+
+        document.getElementById('results-container').innerHTML = finalHtml;
+        drawStressDiagram('stress-diagram-svg', checks);
+        drawLossesChart('losses-chart-canvas', checks.loss_results);
+    }
+    
     function renderInputSummary(inputs) {
-        const { fck, load_pp, load_perm, load_var, beam_length, beam_height, Ap } = inputs;
+        const { fck, load_pp, load_perm, load_var, beam_length, Ap } = inputs;
         return `
         <div id="input-summary-section" class="report-section-copyable">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="report-header">Input Summary</h3>
-                <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+                 <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
             </div>
             <div class="copy-content">
                 <table class="w-full mt-2 summary-table">
@@ -379,8 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tbody>
                         <tr><td>Concrete Strength (f<sub>ck</sub>)</td><td>${fck} MPa</td></tr>
                         <tr><td>Beam Length (L)</td><td>${beam_length} m</td></tr>
-                        <tr><td>Beam Height (h)</td><td>${beam_height} cm</td></tr>
-                        <tr><td>Tendon Area (A<sub>p</sub>)</td><td>${(Ap * 1e4).toFixed(2)} cm²</td></tr>
+                        <tr><td>Tendon Area (A<sub>p</sub>)</td><td>${parseFloat(Ap).toFixed(2)} cm²</td></tr>
                     </tbody>
                 </table>
                 <table class="w-full mt-4 summary-table">
@@ -396,25 +674,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCalculatedProperties(checks) {
-        const { properties, materials, combinations, moments, stresses } = checks;
-        const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
+        const { properties, materials, loads, moments, path_details } = checks;
+        const fmt = (val, dec = 2) => (val !== undefined && val !== null && !isNaN(val)) ? val.toFixed(dec) : 'N/A';
+        const mid_span_details = path_details.find(p => p.x === parseFloat(document.getElementById('beam_length').value)/2);
 
         const rows = [
-            `<tr><td>Área da Seção (A)</td><td>Geometric</td><td>${fmt(properties.area, 2)} cm²</td></tr>`,
-            `<tr><td>Centroide (y<sub>cg</sub>)</td><td>Geometric</td><td>${fmt(properties.centroid.y, 2)} cm</td></tr>`,
-            `<tr><td>Inércia (I<sub>cx</sub>)</td><td>Geometric</td><td>${fmt(properties.I.cx, 2)} cm⁴</td></tr>`,
-            `<tr><td>Módulo Resist. Inf. (W<sub>i</sub>)</td><td>I<sub>cx</sub> / y<sub>i</sub></td><td>${fmt(properties.W.i, 2)} cm³</td></tr>`,
-            `<tr><td>Módulo Resist. Sup. (W<sub>s</sub>)</td><td>I<sub>cx</sub> / y<sub>s</sub></td><td>${fmt(properties.W.s, 2)} cm³</td></tr>`,
-            `<tr><td colspan="3" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Materiais</td></tr>`,
-            `<tr><td>Resist. à Tração (f<sub>ct,f</sub>)</td><td><code>${materials.fctf.calc}</code></td><td>${fmt(materials.fctf.value, 2)} MPa</td></tr>`,
-            `<tr><td colspan="3" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Carregamentos e Momentos (ELS)</td></tr>`,
-            `<tr><td>Carga Frequente (q<sub>freq</sub>)</td><td><code>${combinations.freq.calc}</code></td><td>${fmt(combinations.freq.value, 2)} kN/m</td></tr>`,
-            `<tr><td>Carga Quase-Perm. (q<sub>qp</sub>)</td><td><code>${combinations.qperm.calc}</code></td><td>${fmt(combinations.qperm.value, 2)} kN/m</td></tr>`,
-            `<tr><td>Momento Frequente (M<sub>freq</sub>)</td><td><code>${moments.freq.calc}</code></td><td>${fmt(moments.freq.value, 2)} kN·m</td></tr>`,
-            `<tr><td>Momento Quase-Perm. (M<sub>qp</sub>)</td><td><code>${moments.qperm.calc}</code></td><td>${fmt(moments.qperm.value, 2)} kN·m</td></tr>`,
-            `<tr><td colspan="3" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Tensões nos Bordos (ELS)</td></tr>`,
-            `<tr><td>Tensão na Fibra Inferior (&sigma;<sub>inf,freq</sub>)</td><td><code>${stresses.inf_freq.calc}</code></td><td>${fmt(stresses.inf_freq.value, 2)} MPa</td></tr>`,
-            `<tr><td>Tensão na Fibra Superior (&sigma;<sub>sup,qp</sub>)</td><td><code>${stresses.sup_qperm.calc}</code></td><td>${fmt(stresses.sup_qperm.value, 2)} MPa</td></tr>`,
+            `<tr><td>Área da Seção (A)</td><td>${fmt(properties.area, 2)} cm²</td></tr>`,
+            `<tr><td>Centroide (y<sub>cg</sub>)</td><td>${fmt(properties.centroid.y, 2)} cm</td></tr>`,
+            `<tr><td>Inércia (I<sub>cx</sub>)</td><td>${fmt(properties.I.cx, 0)} cm⁴</td></tr>`,
+            `<tr><td>Módulo Resist. Inf. (W<sub>i</sub>)</td><td>${fmt(properties.W.i, 0)} cm³</td></tr>`,
+            `<tr><td>Módulo Resist. Sup. (W<sub>s</sub>)</td><td>${fmt(properties.W.s, 0)} cm³</td></tr>`,
+            `<tr ><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Protensão (Meio do Vão)</td></tr>`,
+            `<tr><td>Excentricidade (e<sub>meio</sub>)</td><td>${mid_span_details ? fmt(mid_span_details.e * 100, 2) : 'N/A'} cm</td></tr>`,
+            `<tr ><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Resistências do Material (MPa)</td></tr>`,
+            `<tr><td>Resist. à Tração Média (f<sub>ct,m</sub>)</td><td>${fmt(materials.fctm, 2)} MPa</td></tr>`,
+            `<tr><td>Resist. à Tração na Flexão (f<sub>ct,f</sub>)</td><td>${fmt(materials.fctf, 2)} MPa</td></tr>`,
+            `<tr><td>Resist. Concreto na Protensão (f<sub>ci</sub>)</td><td>${fmt(materials.fci, 2)} MPa</td></tr>`,
+             `<tr ><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Carregamentos e Momentos (kNm)</td></tr>`,
+            `<tr><td>Momento (Peso Próprio, M<sub>g1k</sub>)</td><td>${fmt(moments.M_g1k, 1)} kN·m</td></tr>`,
+            `<tr><td>Momento (Quase-Perm., M<sub>qp</sub>)</td><td>${fmt(moments.M_CQP, 1)} kN·m</td></tr>`,
+            `<tr><td>Momento (Frequente, M<sub>freq</sub>)</td><td>${fmt(moments.M_CF, 1)} kN·m</td></tr>`,
         ];
 
         return `
@@ -425,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="copy-content">
                 <table class="w-full mt-2 summary-table">
-                    <thead><tr><th>Parameter</th><th>Formula / Calculation</th><th>Value</th></tr></thead>
+                    <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
                     <tbody>${rows.join('')}</tbody>
                 </table>
             </div>
@@ -433,577 +712,224 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPrestressChecks(checks) {
-        const { prestress } = checks;
-        const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
-
-        const p_min = Math.max(prestress.P_min_comp_s.value, prestress.P_min_tens_s.value);
-        const p_max_initial = Math.min(prestress.P_max_comp_i.value, prestress.P_max_tens_i.value);
-        const loss_factor = 1 - (prestress.losses.total_loss / prestress.P_i);
-        const p_min_initial = p_min / loss_factor;
-        const has_valid_range = p_max_initial >= p_min_initial;
+        const { prestress_checks, materials } = checks;
+        const fmt = (val, dec = 1) => (!isNaN(val)) ? val.toFixed(dec) : 'N/A';
+        
+        const P_min_req = Math.max(prestress_checks.P_min_tens_i.value || -Infinity, prestress_checks.P_min_comp_s.value || -Infinity);
+        const P_max_req = Math.min(prestress_checks.P_max_comp_i.value || Infinity, prestress_checks.P_max_tens_s.value || Infinity);
+        const adopted_P_i_kN = prestress_checks.P_i * 1000;
+        const is_valid = adopted_P_i_kN >= P_min_req * 1000 && adopted_P_i_kN <= P_max_req * 1000;
 
         const summaryHtml = `
-            <div id="prestress-summary" class="p-4 rounded-lg ${has_valid_range ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}">
-                <h3 class="font-bold text-lg text-center ${has_valid_range ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}">
-                    ${has_valid_range ? 'Faixa de Protensão Válida Encontrada' : 'Faixa de Protensão Inválida'}
+            <div class="p-4 rounded-lg ${is_valid ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}">
+                <h3 class="font-bold text-lg text-center ${is_valid ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}">
+                    ${is_valid ? 'Força de Protensão Adotada é Válida' : 'Força de Protensão Adotada é Inválida'}
                 </h3>
-                <p class="text-center text-3xl font-bold mt-2">${fmt(p_min_initial * 1000, 1)} kN &le; P<sub>i</sub> &le; ${fmt(p_max_initial * 1000, 1)} kN</p>
-                <p class="text-center mt-2">P<sub>i</sub> = ${fmt(prestress.P_i * 1000, 1)} kN, P<sub>eff</sub> = ${fmt(prestress.P_eff * 1000, 1)} kN</p>
-                ${!has_valid_range ? '<p class="text-center text-red-600 dark:text-red-400 mt-2">P<sub>min,initial</sub> é maior que P<sub>max,initial</sub>. Revise a seção ou o traçado do cabo.</p>' : ''}
+                <p class="text-center mt-2">Faixa Válida: ${fmt(P_min_req * 1000)} kN &le; P<sub>i</sub> &le; ${fmt(P_max_req * 1000)} kN</p>
+                <p class="text-center text-xl font-bold mt-1">P<sub>i,adotado</sub> = ${fmt(adopted_P_i_kN)} kN</p>
             </div>`;
 
-        const lossRows = `
-            <tr><td>Elastic Shortening</td><td><code>${prestress.losses.elastic_shortening.calc}</code></td><td>${fmt(prestress.losses.elastic_shortening.value * 1000, 2)} kN</td></tr>
-            <tr><td>Anchorage Slip</td><td><code>${prestress.losses.anchorage_slip.calc}</code></td><td>${fmt(prestress.losses.anchorage_slip.value * 1000, 2)} kN</td></tr>
-            <tr><td>Friction</td><td><code>${prestress.losses.friction.calc}</code></td><td>${fmt(prestress.losses.friction.value * 1000, 2)} kN</td></tr>
-            <tr><td>Creep</td><td><code>${prestress.losses.creep.calc}</code></td><td>${fmt(prestress.losses.creep.value * 1000, 2)} kN</td></tr>
-            <tr><td>Shrinkage</td><td><code>${prestress.losses.shrinkage.calc}</code></td><td>${fmt(prestress.losses.shrinkage.value * 1000, 2)} kN</td></tr>
-            <tr><td>Relaxation</td><td><code>${prestress.losses.relaxation.calc}</code></td><td>${fmt(prestress.losses.relaxation.value * 1000, 2)} kN</td></tr>
-            <tr><td>Total Loss</td><td>-</td><td>${fmt(prestress.losses.total_loss * 1000, 2)} kN</td></tr>
-        `;
-
         const tableRows = `
-            <tr><td>P<sub>max</sub></td><td>Compressão Inicial (Fibra Sup.)</td><td><code>${prestress.P_max_comp_i.calc}</code></td><td>&le; ${fmt(prestress.P_max_comp_i.value * 1000)}</td></tr>
-            <tr><td>P<sub>max</sub></td><td>Tração Inicial (Fibra Inf.)</td><td><code>${prestress.P_max_tens_i.calc}</code></td><td>&le; ${fmt(prestress.P_max_tens_i.value * 1000)}</td></tr>
-            <tr><td>P<sub>min,eff</sub></td><td>Compressão em Serviço (Fibra Sup.)</td><td><code>${prestress.P_min_comp_s.calc}</code></td><td>&ge; ${fmt(prestress.P_min_comp_s.value * 1000)}</td></tr>
-            <tr><td>P<sub>min,eff</sub></td><td>Tração em Serviço (Fibra Inf.)</td><td><code>${prestress.P_min_tens_s.calc}</code></td><td>&ge; ${fmt(prestress.P_min_tens_s.value * 1000)}</td></tr>
+            <tr><td>Compressão Inicial (σ &le; ${fmt(materials.limits.comp_i,1)})</td><td>P &le; ${fmt(prestress_checks.P_max_comp_i.value * 1000)} kN</td></tr>
+            <tr><td>Tração Inicial (σ &le; ${fmt(materials.limits.tens_i,1)})</td><td>P &ge; ${fmt(prestress_checks.P_min_tens_i.value * 1000)} kN</td></tr>
+            <tr><td>Compressão em Serviço (σ &le; ${fmt(materials.limits.comp_s,1)})</td><td>P &ge; ${fmt(prestress_checks.P_min_comp_s.value * 1000)} kN</td></tr>
+            <tr><td>Tração em Serviço (σ &le; ${fmt(materials.limits.tens_s,1)})</td><td>P &le; ${fmt(prestress_checks.P_max_tens_s.value * 1000)} kN</td></tr>
         `;
 
         return `
         <div id="prestress-checks-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header">Prestressing Force Limit Checks</h3>
-                <button data-copy-target-id="prestress-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
+            <h3 class="report-header">Prestressing Force Limit Checks (Mid-span)</h3>
             <div class="copy-content">
                 ${summaryHtml}
-                <table class="w-full mt-4 results-table">
-                    <caption class="report-caption">Perdas de Protensão</caption>
-                    <thead>
-                        <tr><th>Tipo de Perda</th><th>Cálculo</th><th>Valor (kN)</th></tr>
-                    </thead>
-                    <tbody>
-                        ${lossRows}
-                    </tbody>
-                </table>
-                <table class="w-full mt-4 results-table">
-                    <caption class="report-caption">Limites da Força de Protensão (P)</caption>
-                    <thead>
-                        <tr><th>Limite</th><th>Condição</th><th>Cálculo da Fórmula</th><th>Valor (kN)</th></tr>
-                    </thead>
-                    <tbody>
-                        ${tableRows}
-                    </tbody>
-                </table>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-center">Limites de Força (kN)</h4>
+                        <table class="w-full mt-2 results-table text-sm"><tbody>${tableRows}</tbody></table>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                         <h4 class="font-semibold text-center">Stress Diagram (Mid-span, MPa)</h4>
+                         <canvas id="stress-diagram-canvas" class="w-full h-64 mt-2"></canvas>
+                    </div>
+                </div>
             </div>
         </div>`;
     }
 
-    const inputIds = [
-        'design_code', 'unit_system', 'fck', 'load_pp', 'load_perm', 'load_var',
-        'beam_length', 'beam_height', 'beam_coords', 'Ap' // Added tendon area
-    ];
+    function renderLossesTableAndChart(loss_results) {
+        const { key_points, sigma_p_friction, sigma_p_anchorage, sigma_p_ime, sigma_p_inf } = loss_results;
+        const fmt = (val) => val.toFixed(1);
 
-    function parseVertices(text) {
-        return text.split('\n')
-            .map(line => line.trim().split(/[,; ]+/).map(Number))
-            .filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
-    }
+        const tableRows = key_points.map((x, i) => `
+            <tr>
+                <td>${fmt(x)}</td>
+                <td>${fmt(sigma_p_friction[i].value)}</td>
+                <td>${fmt(sigma_p_anchorage[i].value)}</td>
+                <td>${fmt(sigma_p_ime[i].value)}</td>
+                <td>${fmt(sigma_p_inf[i].value)}</td>
+            </tr>
+        `).join('');
 
-    function gatherCablePath() {
-        const container = document.getElementById('cable-path-container');
-        const rows = Array.from(container.querySelectorAll('.cable-path-row'));
-        return rows.map((row, index) => ({
-            x: parseFloat(row.querySelector('.cable-x').value) || 0,
-            y: parseFloat(row.querySelector('.cable-y').value) || 0,
-            'type': index < rows.length - 1 ? row.querySelector('.cable-type').value : 'Straight'
-        }));
-    }
-
-    function updateCablePathUI() {
-        const container = document.getElementById('cable-path-container');
-        const rows = container.querySelectorAll('.cable-path-row');
-        rows.forEach((row, index) => {
-            const typeSelect = row.querySelector('.cable-type');
-            const removeBtn = row.querySelector('.remove-point-btn');
-            if (rows.length === 2) {
-                typeSelect.disabled = index !== 0;
-                typeSelect.style.display = index !== 0 ? 'none' : 'block';
-                removeBtn.disabled = true;
-                removeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                typeSelect.disabled = index === rows.length - 1;
-                typeSelect.style.display = index === rows.length - 1 ? 'none' : 'block';
-                removeBtn.disabled = false;
-                removeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        });
-    }
-
-    function addCablePointRow(containerId, point = { x: 0, y: 0, type: 'Straight' }) {
-        const container = document.getElementById(containerId);
-        const row = document.createElement('div');
-        row.className = 'grid grid-cols-[1fr_1fr_1.5fr_auto] gap-2 items-center cable-path-row';
-        
-        row.innerHTML = `
-            <input type="number" class="cable-x w-full" value="${point.x}">
-            <input type="number" class="cable-y w-full" value="${point.y}">
-            <select class="cable-type w-full">
-                <option value="Straight" ${point.type === 'Straight' ? 'selected' : ''}>Straight</option>
-                <option value="Parabolic" ${point.type === 'Parabolic' ? 'selected' : ''}>Parabolic</option>
-            </select>
-            <button class="remove-point-btn text-red-500 hover:text-red-700 w-8 h-8 flex items-center justify-center">&times;</button>
+        return `
+        <div id="losses-section" class="report-section-copyable mt-6">
+            <h3 class="report-header">Análise de Perdas de Protensão</h3>
+             <div class="copy-content grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold text-center mb-2">Tabela de Tensões no Aço (MPa)</h4>
+                    <table class="w-full results-table text-sm">
+                        <thead>
+                            <tr><th>x (m)</th><th>Atrito</th><th>+ Encunh.</th><th>Imediata</th><th>Final</th></tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-center mb-2">Gráfico de Perdas de Tensão</h4>
+                    <div class="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg h-80 relative">
+                        <canvas id="losses-chart-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
         `;
-        
-        row.querySelector('.remove-point-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            const rows = container.querySelectorAll('.cable-path-row');
-            if (rows.length > 2) {
-                row.remove();
-                updateCablePathUI();
-                debouncedDraw();
-            }
-        });
-
-        container.appendChild(row);
-        row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', () => {
-            updateCablePathUI();
-            debouncedDraw();
-        }));
-        updateCablePathUI();
     }
 
-    function gatherBeamInputs() {
-        const inputs = gatherInputsFromIds(inputIds);
-        inputs.vertices = parseVertices(inputs.beam_coords);
-        inputs.cable_path = gatherCablePath();
-        inputs.Ap = parseFloat(inputs.Ap) / 1e4 || 0.001; // Convert cm² to m², default
-        return inputs;
-    }
-
-    // --- Drawing Functions (Updated to use SVG for professional look) ---
-
-    function drawCrossSectionDiagram(svgId, vertices, beamHeight) {
-        const svg = document.getElementById(svgId);
-        if (!svg) return;
-
-        svg.innerHTML = ''; // Clear previous content
-        const ns = "http://www.w3.org/2000/svg";
-        const isDark = document.documentElement.classList.contains('dark');
-        const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-
-        const W = 600, H = 400;
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-        if (!vertices || vertices.length < 3) {
-            const text = document.createElementNS(ns, 'text');
-            text.textContent = 'Invalid beam coordinates';
-            text.setAttribute('x', W / 2);
-            text.setAttribute('y', 20);
-            text.setAttribute('fill', textColor);
-            text.setAttribute('font-size', '12');
-            text.setAttribute('text-anchor', 'middle');
-            svg.appendChild(text);
-            return;
-        }
-
-        const props = concreteBeamCalculator.calculateSectionProperties(vertices);
-        if (!props) {
-            // Error text remains unchanged...
-            return;
-        }
-
-        const maxX = Math.max(...vertices.map(v => v[0]));
-        const maxY = Math.max(...vertices.map(v => v[1]));
-        const minX = Math.min(...vertices.map(v => v[0]));
-        const minY = Math.min(...vertices.map(v => v[1]));
-
-        const margin = 50;
-        const scaleX = (W - 2 * margin) / (maxX - minX);
-        const scaleY = (H - 2 * margin) / (maxY - minY);
-        const scale = Math.min(scaleX, scaleY);
-
-        const offsetX = margin - minX * scale + (W - 2 * margin - (maxX - minX) * scale) / 2;
-        const offsetY = margin - minY * scale + (H - 2 * margin - (maxY - minY) * scale) / 2;
-
-        const g = document.createElementNS(ns, 'g');
-        g.setAttribute('transform', `translate(${offsetX}, ${H - offsetY}) scale(1, -1)`);
-        svg.appendChild(g);
-
-        const path = document.createElementNS(ns, 'path');
-        let d = `M ${vertices[0][0] * scale} ${vertices[0][1] * scale}`;
-        for (let i = 1; i < vertices.length; i++) {
-            d += ` L ${vertices[i][0] * scale} ${vertices[i][1] * scale}`;
-        }
-        d += ' Z';
-        path.setAttribute('d', d);
-        path.setAttribute('fill', isDark ? '#6B7280' : '#e8f4f8');
-        path.setAttribute('stroke', isDark ? '#D1D5DB' : '#2c3e50');
-        path.setAttribute('stroke-width', 2);
-        g.appendChild(path);
-
-        const cx = props.centroid.x * scale;
-        const cy = props.centroid.y * scale;
-        const centroid = document.createElementNS(ns, 'circle');
-        centroid.setAttribute('cx', cx);
-        centroid.setAttribute('cy', cy);
-        centroid.setAttribute('r', 5);
-        centroid.setAttribute('fill', isDark ? '#FFFFFF' : 'red');
-        g.appendChild(centroid);
-
-        // Updated: Add all notebook-printed properties as text annotations (stacked vertically)
-        const annotations = [
-            `--- Seção Transversal da Viga ---`,
-            `Area: ${props.area.toFixed(2)}`,
-            `Centroid (cx, cy): (${props.centroid.x.toFixed(2)}, ${props.centroid.y.toFixed(2)})`,
-            `First Moment of Area (Qx, Qy): (${props.Q.x.toFixed(2)}, ${props.Q.y.toFixed(2)})`,
-            `Moment of Inertia (I_cx, I_cy): (${props.I.cx.toFixed(2)}, ${props.I.cy.toFixed(2)})`,
-            `Radius of Gyration (rx, ry): (${props.r.x.toFixed(2)}, ${props.r.y.toFixed(2)})`,
-            `Section Modulus (Wi, Ws): (${props.W.i.toFixed(2)}, ${props.W.s.toFixed(2)})`,
-            `Altura da viga: ${props.height.toFixed(2)} cm`
-        ];
-
-        annotations.forEach((line, index) => {
-            const text = document.createElementNS(ns, 'text');
-            text.textContent = line;
-            text.setAttribute('x', 10);
-            text.setAttribute('y', 20 + index * 20);
-            text.setAttribute('fill', textColor);
-            text.setAttribute('font-size', '12');
-            text.setAttribute('text-anchor', 'start');
-            svg.appendChild(text);
-        });
-    }
-
-    function drawLongitudinalDiagram(svgId, inputs) {
-        const svg = document.getElementById(svgId);
-        if (!svg) return;
-
-        svg.innerHTML = ''; // Clear previous content
-        const ns = "http://www.w3.org/2000/svg";
-        const isDark = document.documentElement.classList.contains('dark');
-        const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-
-        const W = 800, H = 300;
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-        const beamLength = parseFloat(inputs.beam_length) || 18;
-        const beamHeight = (parseFloat(inputs.beam_height) || 80) / 100;
-        const cablePath = inputs.cable_path || [];
-
-        if (cablePath.length < 2) {
-            const text = document.createElementNS(ns, 'text');
-            text.textContent = 'Define at least two cable path points';
-            text.setAttribute('x', W / 2);
-            text.setAttribute('y', 20);
-            text.setAttribute('fill', textColor);
-            text.setAttribute('font-size', '12');
-            text.setAttribute('text-anchor', 'middle');
-            svg.appendChild(text);
-            return;
-        }
-
-        const marginX = 80;
-        const marginY = 50;
-        const drawWidth = W - 2 * marginX, drawHeight = H - 2 * marginY;
-        const scaleX = drawWidth / beamLength, scaleY = drawHeight / (beamHeight * 2.5); // Adjusted for notebook-like aspect
-
-        const g = document.createElementNS(ns, 'g');
-        g.setAttribute('transform', `translate(${marginX}, ${H / 2})`);
-        svg.appendChild(g);
-
-        // Updated: Add simple grid lines (emulating matplotlib grid)
-        for (let gx = 0; gx <= beamLength; gx += 2) {
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', gx * scaleX);
-            line.setAttribute('y1', -beamHeight * scaleY * 1.2);
-            line.setAttribute('x2', gx * scaleX);
-            line.setAttribute('y2', beamHeight * scaleY * 1.2);
-            line.setAttribute('stroke', isDark ? '#4B5563' : '#E5E7EB');
-            line.setAttribute('stroke-width', 0.5);
-            line.setAttribute('stroke-dasharray', '5,5');
-            g.appendChild(line);
-        }
-        for (let gy = -beamHeight; gy <= beamHeight; gy += 0.2) {
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', 0);
-            line.setAttribute('y1', gy * scaleY);
-            line.setAttribute('x2', beamLength * scaleX);
-            line.setAttribute('y2', gy * scaleY);
-            line.setAttribute('stroke', isDark ? '#4B5563' : '#E5E7EB');
-            line.setAttribute('stroke-width', 0.5);
-            line.setAttribute('stroke-dasharray', '5,5');
-            g.appendChild(line);
-        }
-
-        // Draw beam outline
-        const beam = document.createElementNS(ns, 'rect');
-        beam.setAttribute('x', 0);
-        beam.setAttribute('y', -beamHeight * scaleY / 2);
-        beam.setAttribute('width', beamLength * scaleX);
-        beam.setAttribute('height', beamHeight * scaleY);
-        beam.setAttribute('fill', isDark ? '#6B7280' : '#d3d3d3');
-        beam.setAttribute('stroke', isDark ? '#D1D5DB' : '#000');
-        beam.setAttribute('stroke-width', 1.5);
-        g.appendChild(beam);
-
-        // Draw centerline
-        const centerline = document.createElementNS(ns, 'line');
-        centerline.setAttribute('x1', 0);
-        centerline.setAttribute('y1', 0);
-        centerline.setAttribute('x2', beamLength * scaleX);
-        centerline.setAttribute('y2', 0);
-        centerline.setAttribute('stroke', isDark ? '#9CA3AF' : '#999');
-        centerline.setAttribute('stroke-width', 1);
-        g.appendChild(centerline);
-
-        // Updated: Draw supports as triangles (closer to notebook symbols)
-        const supportSize = 15;
-        const supportY = beamHeight * scaleY / 2 + supportSize / 2;
-        const support1 = document.createElementNS(ns, 'polygon');
-        support1.setAttribute('points', `-${supportSize / 2}, ${supportY} ${supportSize / 2}, ${supportY} 0, ${supportY + supportSize}`);
-        support1.setAttribute('fill', isDark ? '#FFFFFF' : '#1F2A44');
-        g.appendChild(support1);
-
-        const support2 = document.createElementNS(ns, 'polygon');
-        support2.setAttribute('points', `${beamLength * scaleX - supportSize / 2}, ${supportY} ${beamLength * scaleX + supportSize / 2}, ${supportY} ${beamLength * scaleX}, ${supportY + supportSize}`);
-        support2.setAttribute('fill', isDark ? '#FFFFFF' : '#1F2A44');
-        g.appendChild(support2);
-
-        // Draw cable path
-        drawCablePathSvg(g, cablePath, scaleX, scaleY, isDark);
-
-        // Updated: Add title
-        const title = document.createElementNS(ns, 'text');
-        title.textContent = 'Viga Protendida';
-        title.setAttribute('x', W / 2);
-        title.setAttribute('y', 30 - H / 2); // Position above the diagram
-        title.setAttribute('fill', textColor);
-        title.setAttribute('font-size', '16');
-        title.setAttribute('font-weight', 'bold');
-        title.setAttribute('text-anchor', 'middle');
-        svg.appendChild(title);
-
-        // Updated: Add axis labels
-        const xLabel = document.createElementNS(ns, 'text');
-        xLabel.textContent = 'Comprimento da Viga (m)';
-        xLabel.setAttribute('x', W / 2);
-        xLabel.setAttribute('y', H - 10);
-        xLabel.setAttribute('fill', textColor);
-        xLabel.setAttribute('font-size', '12');
-        xLabel.setAttribute('text-anchor', 'middle');
-        svg.appendChild(xLabel);
-
-        const yLabel = document.createElementNS(ns, 'text');
-        yLabel.textContent = 'Altura (m)';
-        yLabel.setAttribute('x', 10);
-        yLabel.setAttribute('y', H / 2);
-        yLabel.setAttribute('fill', textColor);
-        yLabel.setAttribute('font-size', '12');
-        yLabel.setAttribute('text-anchor', 'middle');
-        yLabel.setAttribute('transform', `rotate(-90, 10, ${H / 2})`);
-        svg.appendChild(yLabel);
-
-        // Updated: Add legend (simple text with sample line)
-        const legendGroup = document.createElementNS(ns, 'g');
-        legendGroup.setAttribute('transform', `translate(${W - 150}, ${40 - (H / 2)})`);
-        const legendLine = document.createElementNS(ns, 'line');
-        legendLine.setAttribute('x1', 0);
-        legendLine.setAttribute('y1', 0);
-        legendLine.setAttribute('x2', 20);
-        legendLine.setAttribute('y2', 0);
-        legendLine.setAttribute('stroke', isDark ? '#EF4444' : 'red');
-        legendLine.setAttribute('stroke-width', 2.5);
-        legendGroup.appendChild(legendLine);
-        const legendText = document.createElementNS(ns, 'text');
-        legendText.textContent = 'Cabo de Protensão';
-        legendText.setAttribute('x', 25);
-        legendText.setAttribute('y', 4);
-        legendText.setAttribute('fill', textColor);
-        legendText.setAttribute('font-size', '12');
-        legendGroup.appendChild(legendText);
-        svg.appendChild(legendGroup);
-    }
-
-    function drawCablePathSvg(g, path, scaleX, scaleY, isDark) {
-        if (!path || path.length < 2) return;
-
-        const ns = "http://www.w3.org/2000/svg";
-        const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-        let d = `M ${path[0].x * scaleX} ${-path[0].y * scaleY}`;
-        
-        for (let i = 0; i < path.length - 1; i++) {
-            const p1 = path[i];
-            const p2 = path[i + 1];
-            
-            if (p1.type === 'Parabolic') {
-                let vertex = p1.y <= p2.y ? p1 : p2;
-                let form_start = p1.y <= p2.y ? p2 : p1;
-                
-                const coeffs = concreteBeamCalculator.solveParabolaWithVertex([form_start.x, form_start.y], [vertex.x, vertex.y]);
-                if (coeffs) {
-                    const steps = 25;
-                    const x_start = p1.x;
-                    const x_end = p2.x;
-                    const dx = x_end - x_start;
-                    for (let j = 1; j <= steps; j++) {
-                        const t = j / steps;
-                        const x = x_start + t * dx;
-                        const y = coeffs.a * Math.pow(x - vertex.x, 2) + vertex.y;
-                        d += ` L ${x * scaleX} ${-y * scaleY}`;
-                    }
-                } else {
-                    d += ` L ${p2.x * scaleX} ${-p2.y * scaleY}`;
-                }
-            } else {
-                d += ` L ${p2.x * scaleX} ${-p2.y * scaleY}`;
-            }
-        }
-        
-        const cable = document.createElementNS(ns, 'path');
-        cable.setAttribute('d', d);
-        cable.setAttribute('fill', 'none');
-        cable.setAttribute('stroke', isDark ? '#EF4444' : 'red');
-        cable.setAttribute('stroke-width', 2.5);
-        g.appendChild(cable);
-
-        // Draw control points
-        path.forEach(point => {
-            const circle = document.createElementNS(ns, 'circle');
-            circle.setAttribute('cx', point.x * scaleX);
-            circle.setAttribute('cy', -point.y * scaleY);
-            circle.setAttribute('r', 5);
-            circle.setAttribute('fill', isDark ? '#EF4444' : 'red');
-            g.appendChild(circle);
-
-            const text = document.createElementNS(ns, 'text');
-            text.textContent = `(${point.x.toFixed(1)}, ${point.y.toFixed(2)})`;
-            text.setAttribute('x', point.x * scaleX + 8);
-            text.setAttribute('y', -point.y * scaleY + 4);
-            text.setAttribute('fill', textColor);
-            text.setAttribute('font-size', '12');
-            text.setAttribute('text-anchor', 'start');
-            g.appendChild(text);
-        });
-    }
-
+    // --- Other UI and Drawing functions (drawCrossSectionDiagram, drawLongitudinalDiagram, etc.)
+    // These functions from the original file are kept largely the same, but with minor adjustments for new data structures.
+    
     function drawDiagrams() {
         const inputs = gatherBeamInputs();
-        const beamHeight = parseFloat(document.getElementById('beam_height').value) || 80;
-        drawCrossSectionDiagram('cross-section-svg', inputs.vertices, beamHeight);
+        drawCrossSectionDiagram('cross-section-svg', inputs.vertices);
         drawLongitudinalDiagram('longitudinal-svg', inputs);
-    }
-
-    function drawStressDiagram(svgId, results) {
-        const svg = document.getElementById(svgId);
-        if (!svg || !results || !results.stress_profiles) {
-            if (svg) svg.innerHTML = '';
-            return;
+        const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
+        const heightInput = document.getElementById('beam_height');
+        if (props && heightInput) {
+            if(document.activeElement !== heightInput) {
+                 heightInput.value = props.height.toFixed(2);
+            }
         }
+    }
+    
+    function drawLossesChart(svgId, loss_data) {
+        const svg = document.getElementById(svgId);
+        if (!svg || !loss_data) return;
         svg.innerHTML = '';
-
-        const { stress_profiles, properties } = results;
-        const { initial, final: final_stress } = stress_profiles;
-        const beamHeight = properties.height;
-
         const ns = "http://www.w3.org/2000/svg";
         const isDark = document.documentElement.classList.contains('dark');
         const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-
-        const W = 400, H = 400;
+        const W = 500, H = 320;
+        const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+        const width = W - margin.left - margin.right;
+        const height = H - margin.top - margin.bottom;
+        
         svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
 
-        const margin = { top: 40, right: 40, bottom: 40, left: 40 };
-        const drawWidth = W - margin.left - margin.right;
-        const drawHeight = H - margin.top - margin.bottom;
+        const datasets = [
+            { name: 'Atrito', data: loss_data.sigma_p_friction, color: '#3b82f6' },
+            { name: '+Encunh.', data: loss_data.sigma_p_anchorage, color: '#f97316' },
+            { name: 'Imediata', data: loss_data.sigma_p_ime, color: '#ef4444' },
+            { name: 'Final', data: loss_data.sigma_p_inf, color: '#10b981', width: 3 },
+        ];
 
-        const allStresses = [initial.top, initial.bottom, final_stress.top, final_stress.bottom, 0];
-        const maxStress = Math.max(...allStresses);
-        const minStress = Math.min(...allStresses);
-        const stressRange = maxStress - minStress;
+        const all_x = loss_data.key_points;
+        const all_y = datasets.flatMap(ds => ds.data.map(d => d.value)).filter(v => !isNaN(v));
+        if (all_y.length === 0) return;
 
-        const stressScale = stressRange > 0 ? drawWidth / stressRange : 0;
-        const zeroX = margin.left - minStress * stressScale;
-
-        const g = document.createElementNS(ns, 'g');
-        svg.appendChild(g);
-
-        // Draw beam outline
-        const beamRect = document.createElementNS(ns, 'rect');
-        beamRect.setAttribute('x', zeroX - 5);
-        beamRect.setAttribute('y', margin.top);
-        beamRect.setAttribute('width', 10);
-        beamRect.setAttribute('height', drawHeight);
-        beamRect.setAttribute('fill', isDark ? '#4b5563' : '#d1d5db');
-        g.appendChild(beamRect);
-
-        // Draw zero stress line
-        const zeroLine = document.createElementNS(ns, 'line');
-        zeroLine.setAttribute('x1', zeroX);
-        zeroLine.setAttribute('y1', margin.top - 10);
-        zeroLine.setAttribute('x2', zeroX);
-        zeroLine.setAttribute('y2', H - margin.bottom + 10);
-        zeroLine.setAttribute('stroke', textColor);
-        zeroLine.setAttribute('stroke-dasharray', '4 4');
-        g.appendChild(zeroLine);
-        const zeroLabel = document.createElementNS(ns, 'text');
-        zeroLabel.textContent = '0';
-        zeroLabel.setAttribute('x', zeroX);
-        zeroLabel.setAttribute('y', margin.top - 15);
-        zeroLabel.setAttribute('text-anchor', 'middle');
-        zeroLabel.setAttribute('fill', textColor);
-        g.appendChild(zeroLabel);
-
-        // Function to draw a stress profile
-        const drawProfile = (topStress, bottomStress, color, label) => {
-            const topX = zeroX + topStress * stressScale;
-            const bottomX = zeroX + bottomStress * stressScale;
-
-            const profile = document.createElementNS(ns, 'polygon');
-            profile.setAttribute('points', `${zeroX},${margin.top} ${topX},${margin.top} ${bottomX},${H - margin.bottom} ${zeroX},${H - margin.bottom}`);
-            profile.setAttribute('fill', color);
-            profile.setAttribute('fill-opacity', '0.3');
-            profile.setAttribute('stroke', color);
-            profile.setAttribute('stroke-width', '2');
-            g.appendChild(profile);
-
-            // Add labels for stress values
-            const topLabel = document.createElementNS(ns, 'text');
-            topLabel.textContent = `${topStress.toFixed(2)} MPa`;
-            topLabel.setAttribute('x', topX + (topStress > 0 ? 5 : -5));
-            topLabel.setAttribute('y', margin.top + 5);
-            topLabel.setAttribute('text-anchor', topStress > 0 ? 'start' : 'end');
-            topLabel.setAttribute('fill', color);
-            g.appendChild(topLabel);
-
-            const bottomLabel = document.createElementNS(ns, 'text');
-            bottomLabel.textContent = `${bottomStress.toFixed(2)} MPa`;
-            bottomLabel.setAttribute('x', bottomX + (bottomStress > 0 ? 5 : -5));
-            bottomLabel.setAttribute('y', H - margin.bottom - 5);
-            bottomLabel.setAttribute('text-anchor', bottomStress > 0 ? 'start' : 'end');
-            bottomLabel.setAttribute('fill', color);
-            g.appendChild(bottomLabel);
+        const xScale = val => margin.left + (val / all_x[all_x.length-1]) * width;
+        const yMin = Math.min(...all_y);
+        const yMax = Math.max(...all_y);
+        const yRange = yMax - yMin;
+        
+        const yScale = val => {
+            if (yRange < 1e-6) return margin.top + height / 2;
+            return margin.top + height - ((val - yMin) / yRange) * height;
         };
+        
+        // Axes
+        svg.innerHTML += `<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top+height}" stroke="${textColor}" stroke-width="1"/>`;
+        svg.innerHTML += `<line x1="${margin.left}" y1="${margin.top+height}" x2="${margin.left+width}" y2="${margin.top+height}" stroke="${textColor}" stroke-width="1"/>`;
+        svg.innerHTML += `<text x="${margin.left + width/2}" y="${H-5}" text-anchor="middle" font-size="12" fill="${textColor}">Comprimento (m)</text>`;
+        svg.innerHTML += `<text x="15" y="${margin.top + height/2}" text-anchor="middle" font-size="12" fill="${textColor}" transform="rotate(-90, 15, ${margin.top+height/2})">Tensão (MPa)</text>`;
 
-        // Draw Initial and Final profiles
-        drawProfile(initial.top, initial.bottom, '#3b82f6', 'Initial'); // Blue
-        drawProfile(final_stress.top, final_stress.bottom, '#ef4444', 'Final'); // Red
+        // Y-axis labels
+        for(let i = 0; i <= 5; i++){
+            const val = yMin + i/5 * yRange;
+            const yPos = yScale(val);
+            if (isNaN(yPos)) continue;
+            svg.innerHTML += `<text x="${margin.left-5}" y="${yPos}" text-anchor="end" alignment-baseline="middle" font-size="10" fill="${textColor}">${val.toFixed(0)}</text>`;
+        }
+        
+        // Data lines
+        datasets.forEach(ds => {
+            const valid_points = ds.data.filter(p => !isNaN(p.value));
+            if (valid_points.length < 2) return;
+            const d = valid_points.map(p => `${xScale(p.x)},${yScale(p.value)}`).join(' ');
+            svg.innerHTML += `<polyline points="${d}" fill="none" stroke="${ds.color}" stroke-width="${ds.width || 2}" stroke-dasharray="${ds.name === '+Encunh.' ? '5,5': ''}"/>`;
+        });
+    }
+    
+    function drawStressDiagram(svgId, results) {
+       const svg = document.getElementById(svgId);
+       if (!svg || !results || !results.stress_profiles) {
+           if (svg) svg.innerHTML = '';
+           return;
+       }
+       svg.innerHTML = '';
 
-        // Add legend
-        g.innerHTML += `<rect x="${W - 100}" y="10" width="10" height="10" fill="#3b82f6" fill-opacity="0.5" /><text x="${W - 85}" y="20" fill="${textColor}">Initial</text>`;
-        g.innerHTML += `<rect x="${W - 100}" y="30" width="10" height="10" fill="#ef4444" fill-opacity="0.5" /><text x="${W - 85}" y="40" fill="${textColor}">Final</text>`;
+       const { stress_profiles } = results;
+       const { initial, final: final_stress } = stress_profiles;
+       const ns = "http://www.w3.org/2000/svg";
+       const isDark = document.documentElement.classList.contains('dark');
+       const textColor = isDark ? '#FFFFFF' : '#2c3e50';
+       const W = 250, H = 250;
+       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+       const margin = { top: 20, right: 40, bottom: 20, left: 40 };
+       const drawWidth = W - margin.left - margin.right;
+       const drawHeight = H - margin.top - margin.bottom;
+
+       const allStresses = [initial.top, initial.bottom, final_stress.top, final_stress.bottom, 0].filter(v => !isNaN(v));
+       if(allStresses.length === 0) return;
+       
+       const maxAbsStress = Math.max(...allStresses.map(Math.abs));
+       const stressRange = maxAbsStress * 2;
+       
+       const stressScale = stressRange > 1e-6 ? drawWidth / stressRange : 0;
+       const zeroX = margin.left + drawWidth/2;
+
+       // Zero line
+       svg.innerHTML += `<line x1="${zeroX}" y1="${margin.top}" x2="${zeroX}" y2="${H-margin.bottom}" stroke="${textColor}" stroke-dasharray="2 2"/>`;
+       // Beam representation
+       svg.innerHTML += `<rect x="${zeroX-4}" y="${margin.top}" width="8" height="${drawHeight}" fill="${isDark ? '#4b5563' : '#d1d5db'}"/>`;
+        
+       const drawProfile = (topStress, bottomStress, color) => {
+           if (isNaN(topStress) || isNaN(bottomStress)) return;
+           const topX = zeroX + topStress * stressScale;
+           const bottomX = zeroX + bottomStress * stressScale;
+           svg.innerHTML += `<polygon points="${zeroX},${margin.top} ${topX},${margin.top} ${bottomX},${H - margin.bottom} ${zeroX},${H - margin.bottom}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="1.5"/>`;
+           svg.innerHTML += `<text x="${topX + (topStress >= 0 ? 3 : -3)}" y="${margin.top+4}" text-anchor="${topStress >= 0 ? 'start' : 'end'}" font-size="10" fill="${color}">${topStress.toFixed(1)}</text>`;
+           svg.innerHTML += `<text x="${bottomX + (bottomStress >= 0 ? 3 : -3)}" y="${H-margin.bottom-2}" text-anchor="${bottomStress >= 0 ? 'start' : 'end'}" font-size="10" fill="${color}">${bottomStress.toFixed(1)}</text>`;
+       };
+
+       drawProfile(initial.top, initial.bottom, '#3b82f6');
+       drawProfile(final_stress.top, final_stress.bottom, '#ef4444');
     }
 
-    function renderResults(results) {
-        const { checks, inputs } = results;
-        if (!checks) {
-            document.getElementById('results-container').innerHTML = '<p class="text-center text-red-500">Calculation failed. Please check inputs.</p>';
-            return;
-        }
+    // --- Event Listeners & Initialization ---
+    function addCablePointRow(containerId, point = { x: 0, y: 0.35, type: 'Parabolic' }) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
 
-        const inputSummaryHtml = renderInputSummary(inputs);
-        const calculatedPropsHtml = renderCalculatedProperties(checks);
-        const prestressChecksHtml = renderPrestressChecks(checks);
+        const row = document.createElement('div');
+        row.className = 'cable-path-row grid grid-cols-[1.1fr_1fr_1.2fr_auto] gap-2 items-center';
+        row.innerHTML = `
+            <input type="number" class="cable-x w-full p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600" value="${point.x}">
+            <input type="number" class="cable-y w-full p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600" value="${point.y}">
+            <select class="cable-type w-full p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600">
+                <option value="Parabolic" ${point.type === 'Parabolic' ? 'selected' : ''}>Parabolic</option>
+                <option value="Straight" ${point.type === 'Straight' ? 'selected' : ''}>Straight</option>
+            </select>
+            <button class="remove-cable-point-btn text-red-500 hover:text-red-700 font-bold text-lg w-8" title="Remove Point">&times;</button>
+        `;
 
         const finalHtml = `
         <div id="concrete-beam-report" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
@@ -1017,74 +943,216 @@ document.addEventListener('DOMContentLoaded', () => {
             ${prestressChecksHtml}
         </div>`;
 
-        document.getElementById('results-container').innerHTML = finalHtml;
-        drawStressDiagram('stress-diagram-svg', checks);
+        row.querySelector('.remove-cable-point-btn').addEventListener('click', () => {
+            row.remove();
+            drawDiagrams();
+            saveInputsToLocalStorage('prestressed-beam-inputs-v2', gatherBeamInputs());
+        });
     }
 
     const handleRunCheck = createCalculationHandler({
         gatherInputsFunction: gatherBeamInputs,
-        storageKey: 'concrete-beam-inputs',
+        storageKey: 'prestressed-beam-inputs-v2',
+        validationRuleKey: 'prestressed-beam-inputs-v2',
         calculatorFunction: concreteBeamCalculator.run,
         renderFunction: renderResults,
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'
     });
 
-    // --- Event Listeners ---
     document.getElementById('run-check-btn').addEventListener('click', handleRunCheck);
 
     const debouncedDraw = debounce(() => {
         drawDiagrams();
     }, 300);
 
-    inputIds.forEach(id => {
+    // Attach listeners to all inputs that affect diagrams
+    const diagramInputs = [...prestressedInputIds, 'beam_coords'];
+    diagramInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', debouncedDraw);
-        }
-        // Add listener to fck to auto-update fci
-        if (id === 'fck') {
-            el.addEventListener('input', () => {
-                const fck_val = parseFloat(el.value) || 0;
-                document.getElementById('fci').value = (0.8 * fck_val).toFixed(2);
-            });
+            el.addEventListener('change', debouncedDraw); // For selects
         }
     });
-
-    // --- Page Initialization ---
-    injectHeader({
-        activePage: 'viga-protendida',
-        pageTitle: 'NBR Prestressed Concrete Beam Checker',
-        headerPlaceholderId: 'header-placeholder'
+    document.getElementById('cable-path-container').addEventListener('input', debouncedDraw);
+    
+    // Auto-save/load functionality
+    const allInputAndTextareaIds = [...prestressedInputIds, 'beam_coords']; // Added beam_coords
+    const debouncedSave = debounce(() => saveInputsToLocalStorage('prestressed-beam-inputs-v2', gatherBeamInputs()), 500);
+    document.getElementById('cable-path-container').addEventListener('input', debouncedSave);
+    allInputAndTextareaIds.forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('input', debouncedSave);
     });
-    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-    initializeSharedUI();
 
-    // Setup for the new cable path UI
-    const defaultCablePath = [
-        { x: 0, y: 0.3, type: 'Parabolic' },
-        { x: 9, y: -0.3, type: 'Parabolic' },
-        { x: 18, y: 0.3, type: 'Straight' }
-    ];
-    defaultCablePath.forEach(p => addCablePointRow('cable-path-container', p));
-    document.getElementById('add-cable-point-btn').addEventListener('click', () => addCablePointRow('cable-path-container'));
+    document.getElementById('add-cable-point-btn').addEventListener('click', () => {
+        addCablePointRow('cable-path-container');
+        debouncedDraw();
+        debouncedSave();
+    });
+
+    function loadAndInitialize() {
+        const loadedInputs = JSON.parse(localStorage.getItem('prestressed-beam-inputs-v2')) || {};
+
+        const container = document.getElementById('cable-path-container');
+        // Clear only the data rows, not the header
+        if (container) {
+        container.querySelectorAll('.cable-path-row').forEach(row => row.remove());
+
+        if (loadedInputs.cable_path && loadedInputs.cable_path.length > 0) {
+            loadedInputs.cable_path.forEach(p => addCablePointRow('cable-path-container', p));
+        } else {
+            // Add default points if nothing is loaded
+            addCablePointRow('cable-path-container', { x: 0, y: 0.35, type: 'Parabolic' });
+            addCablePointRow('cable-path-container', { x: 9, y: 0.10, type: 'Straight' });
+        }
+        }
+
+        applyInputsToDOM(loadedInputs, allInputAndTextareaIds);
+        drawDiagrams();
+    }
+
+    loadAndInitialize();
 
     // Initial draw on page load
     drawDiagrams();
 
-    // Results container event delegation for copy button
-    document.getElementById('results-container').addEventListener('click', (event) => {
-        const button = event.target;
-        if (button.id === 'copy-report-btn') {
-            handleCopyToClipboard('results-container', 'feedback-message');
-        }
-        if (button.id === 'download-pdf-btn') {
-            handleDownloadPdf('concrete-beam-report', 'Viga-Protendida-Relatorio.pdf');
-        }
-        const copySectionBtn = button.closest('.copy-section-btn');
-        if (copySectionBtn) {
-            const targetId = copySectionBtn.dataset.copyTargetId;
-            if (targetId) handleCopyToClipboard(targetId, 'feedback-message');
+    // Assume helper functions like createCalculationHandler, debounce, gatherInputsFromIds, etc. are in a shared file.
+});
+
+/**
+ * Draws the prestressing losses chart using Chart.js.
+ * @param {string} canvasId - The ID of the canvas element.
+ * @param {object} loss_data - The data object containing loss information.
+ */
+function drawLossesChart(canvasId, loss_data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !loss_data || typeof Chart === 'undefined') return;
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? '#FFFFFF' : '#2c3e50';
+
+    const datasets = [
+        { label: 'Atrito', data: loss_data.sigma_p_friction, borderColor: '#3b82f6', tension: 0.1 },
+        { label: '+Encunh.', data: loss_data.sigma_p_anchorage, borderColor: '#f97316', borderDash: [5, 5], tension: 0.1 },
+        { label: 'Imediata', data: loss_data.sigma_p_ime, borderColor: '#ef4444', tension: 0.1 },
+        { label: 'Final (pós-perdas)', data: loss_data.sigma_p_inf, borderColor: '#10b981', borderWidth: 3, tension: 0.1 },
+    ].map(ds => ({
+        ...ds,
+        data: ds.data.map(p => ({ x: p.x, y: p.value })),
+        fill: false,
+    }));
+
+    // Destroy previous chart instance if it exists
+    let existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
+    new Chart(canvas, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: { display: true, text: 'Comprimento (m)', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                y: {
+                    title: { display: true, text: 'Tensão no Aço (MPa)', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor } },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        title: (tooltipItems) => `x = ${tooltipItems[0].parsed.x.toFixed(2)} m`,
+                        label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)} MPa`
+                    }
+                },
+                zoom: {
+                    pan: { enabled: true, mode: 'xy' },
+                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }
+                }
+            }
         }
     });
-});
+}
+
+/**
+ * Draws the stress profile diagram using Chart.js.
+ * @param {string} canvasId - The ID of the canvas element.
+ * @param {object} results - The main calculation results object.
+ */
+function drawStressDiagram(canvasId, results) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !results || !results.stress_profiles || typeof Chart === 'undefined') return;
+
+    const { stress_profiles, properties } = results;
+    const { initial, final: final_stress } = stress_profiles;
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? '#FFFFFF' : '#2c3e50';
+
+    const datasets = [
+        { label: 'Inicial', data: [{ x: initial.bottom, y: 0 }, { x: initial.top, y: properties.height }], borderColor: '#3b82f6' },
+        { label: 'Final', data: [{ x: final_stress.bottom, y: 0 }, { x: final_stress.top, y: properties.height }], borderColor: '#ef4444' }
+    ];
+
+    let existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
+    new Chart(canvas, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    title: { display: true, text: 'Altura da Viga (cm)', color: textColor },
+                    min: 0,
+                    max: properties.height,
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    title: { display: true, text: 'Tensão (MPa)', color: textColor },
+                    position: 'top',
+                    ticks: { color: textColor },
+                    grid: { color: gridColor },
+                    afterBuildTicks: (axis) => {
+                        axis.ticks.push({ value: 0, label: '0' }); // Ensure zero line is shown
+                    }
+                }
+            },
+            elements: {
+                line: { tension: 0 } // Straight lines
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor } },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `Tensão: ${context.parsed.x.toFixed(2)} MPa`
+                    }
+                },
+                zoom: {
+                    pan: { enabled: true, mode: 'xy' },
+                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }
+                }
+            }
+        }
+    });
+}

@@ -124,5 +124,19 @@ const validationRules = {
         'Lb': { min: 0.1, required: true, label: 'Dist. entre Contenções (Lb)' },
         'Nsd': { required: true, label: 'Força Axial (Nsd)' },
         'Msdx': { required: true, label: 'Momento Fletor (Msdx)' }
+    },
+    'prestressed-beam-inputs-v2': {
+        'fck': { min: 1, required: true, label: 'Concrete fck' },
+        'age_at_prestress': { min: 1, required: true, label: 'Age at Prestress' },
+        'Ap': { min: 0.1, required: true, label: 'Tendon Area (Ap)' },
+        'load_pp': { min: 0, required: true, label: 'Self-Weight' },
+        'load_perm': { min: 0, required: true, label: 'Permanent Load' },
+        'load_var': { min: 0, required: true, label: 'Variable Load' },
+        'beam_length': { min: 0.1, required: true, label: 'Beam Length' },
+        'beam_coords': { required: true, label: 'Cross-Section Vertices' },
+        'fptk': { min: 1000, required: true, label: 'fptk' },
+        'mu': { min: 0, required: true, label: 'Friction Coeff. (mu)' },
+        'k': { min: 0, required: true, label: 'Wobble Coeff. (k)' },
+        'anchorage_slip': { min: 0, required: true, label: 'Anchorage Slip' }
     }
 };
