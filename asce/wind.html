@@ -62,6 +62,13 @@
                         <option value="LRFD">LRFD</option>
                     </select>
                 </div>
+                <div id="mwfrs-method-container">
+                    <label for="mwfrs_method" class="block text-sm font-medium mb-1">MWFRS Method</label>
+                    <select id="mwfrs_method">
+                        <option value="Directional">Directional Procedure (Ch. 27)</option>
+                        <option value="Envelope" selected>Envelope Procedure (Ch. 28)</option>
+                    </select>
+                </div>
             </div>
         </div>
         <div class="form-section">
@@ -102,17 +109,45 @@
                         <option value="Open">Open</option>
                     </select>
                 </div>
+                <div class="col-span-2">
+                    <label for="has_rooftop_equipment" class="flex items-center space-x-2 text-sm font-medium">
+                        <input type="checkbox" id="has_rooftop_equipment" data-ui-toggle-controller data-ui-toggle-target="#rooftop-structure-options" data-ui-toggle-condition-checked="true">
+                        <span>Calculate Rooftop Equipment?</span>
+                    </label>
+                </div>
                 <div id="rooftop-structure-options" class="col-span-2 hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4"
-                     data-ui-toggle-target-for="enclosure_classification"
-                     data-ui-toggle-condition-value="Open">
-                    <p class="text-sm font-medium -mb-2">Rooftop Structure Dimensions (e.g., Scaffold)</p>
+                     >
+                    <p class="text-sm font-medium -mb-2">Rooftop Structure Details</p>
                     <div>
-                        <label for="scaffold_width_Br" class="block text-sm">Width (B<sub>r</sub>, normal to wind)</label>
-                        <input type="number" id="scaffold_width_Br" value="20">
+                        <label for="rooftop_structure_type" class="block text-sm">Rooftop Structure Type</label>
+                        <select id="rooftop_structure_type" data-ui-toggle-controller>
+                            <option value="Solid Equipment">Solid Equipment</option>
+                            <option value="Open-Frame Scaffold">Open-Frame Scaffold</option>
+                        </select>
                     </div>
-                    <div>
-                        <label for="scaffold_height_hr" class="block text-sm">Height (h<sub>r</sub>)</label>
-                        <input type="number" id="scaffold_height_hr" value="15">
+                    <div id="rooftop-solid-equipment-inputs" class="space-y-4" data-ui-toggle-target-for="rooftop_structure_type" data-ui-toggle-condition-value="Solid Equipment">
+                        <div>
+                            <label for="rooftop_equipment_height_hr" class="block text-sm">Equipment Height (h<sub>r</sub>)</label>
+                            <input type="number" id="rooftop_equipment_height_hr" value="10">
+                        </div>
+                        <div>
+                            <label for="rooftop_equipment_width_Br" class="block text-sm">Equipment Width (B<sub>r</sub>, normal to wind)</label>
+                            <input type="number" id="rooftop_equipment_width_Br" value="20">
+                        </div>
+                        <div>
+                            <label for="rooftop_equipment_length_Lr" class="block text-sm">Equipment Length (L<sub>r</sub>, parallel to wind)</label>
+                            <input type="number" id="rooftop_equipment_length_Lr" value="15">
+                        </div>
+                    </div>
+                    <div id="rooftop-open-frame-inputs" class="space-y-4 hidden" data-ui-toggle-target-for="rooftop_structure_type" data-ui-toggle-condition-value="Open-Frame Scaffold">
+                        <div>
+                            <label for="rooftop_solidity_ratio" class="block text-sm">Solidity Ratio (ε)</label>
+                            <input type="number" id="rooftop_solidity_ratio" value="0.5" min="0.01" max="0.99" step="0.01">
+                        </div>
+                        <div>
+                            <label for="rooftop_location_x" class="block text-sm">Distance from Windward Edge (x)</label>
+                            <input type="number" id="rooftop_location_x" value="10">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -151,6 +186,32 @@
                 <div>
                     <label for="roof_slope_deg" class="block text-sm font-medium mb-1">Roof Slope (degrees)</label>
                     <input type="number" id="roof_slope_deg" value="30" min="0" max="90">
+                </div>
+                <div class="col-span-2">
+                    <label for="has_parapet" class="flex items-center space-x-2 text-sm font-medium">
+                        <input type="checkbox" id="has_parapet" data-ui-toggle-controller data-ui-toggle-target="#parapet-inputs" data-ui-toggle-condition-checked="true">
+                        <span>Building has Parapets?</span>
+                    </label>
+                </div>
+             </div>
+             <div id="parapet-inputs" class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
+                <div>
+                    <label for="parapet_height_hp" class="block text-sm font-medium mb-1">Parapet Height (h<sub>p</sub>)</label>
+                    <input type="number" id="parapet_height_hp" value="3">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height of the parapet above the roof surface.</p>
+                </div>
+             </div>
+             <div class="col-span-2 mt-2">
+                <label for="has_overhang" class="flex items-center space-x-2 text-sm font-medium">
+                    <input type="checkbox" id="has_overhang" data-ui-toggle-controller data-ui-toggle-target="#overhang-inputs" data-ui-toggle-condition-checked="true">
+                    <span>Building has Roof Overhangs?</span>
+                </label>
+             </div>
+             <div id="overhang-inputs" class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4 col-span-2">
+                <div>
+                    <label for="overhang_length" class="block text-sm font-medium mb-1">Overhang Horizontal Projection</label>
+                    <input type="number" id="overhang_length" value="3">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Length of the roof overhang.</p>
                 </div>
              </div>
              <div id="open-building-options" class="mt-4 space-y-4 hidden">

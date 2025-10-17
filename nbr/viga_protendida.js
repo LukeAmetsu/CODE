@@ -4,11 +4,42 @@
  * Translates the logic from the provided PDF into a web application.
  */
 
-const prestressedInputIds = [
-    'design_code', 'unit_system', 'fck', 'age_at_prestress', 'Ap',
-    'load_pp', 'load_perm', 'load_var', 'beam_length', 'beam_height', 'beam_coords',
-    'humidity', 'fptk', 'mu', 'k', 'anchorage_slip'
-];
+/**
+ * Manages gathering all user inputs from the DOM.
+ */
+const inputManager = {
+    /** List of standard input element IDs to gather. */
+    inputIds: [
+        'design_code', 'unit_system', 'fck', 'age_at_prestress', 'Ap', 'Kperdas', 'N_cables',
+        'load_pp', 'load_perm', 'load_var', 'beam_length', 'beam_height', 'beam_coords',
+        'humidity', 'fptk', 'mu', 'k', 'anchorage_slip'
+    ],
+
+    /**
+     * Parses a multiline string of coordinates into an array of [x, y] pairs.
+     * @param {string} text - The string from the textarea.
+     * @returns {Array<[number, number]>} An array of vertex coordinates.
+     */
+    _parseVertices(text) {
+        return text.split('\n')
+            .map(line => line.trim().split(/[,; ]+/).map(Number))
+            .filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
+    },
+
+    /**
+     * Gathers the cable path data from the dynamic form rows.
+     * @returns {Array<object>} An array of cable path point objects.
+     */
+    _gatherCablePath() {
+        const container = document.getElementById('cable-path-container');
+        const rows = Array.from(container.querySelectorAll('.cable-path-row'));
+        return rows.map((row, index) => ({
+            x: parseFloat(row.querySelector('.cable-x').value) || 0,
+            y: parseFloat(row.querySelector('.cable-y').value) || 0,
+            'type': index < rows.length - 1 ? row.querySelector('.cable-type').value : 'Straight'
+        }));
+    },
+};
 
 const concreteBeamCalculator = (() => {
     /**
@@ -19,57 +50,80 @@ const concreteBeamCalculator = (() => {
     function calculateSectionProperties(vertices) {
         if (!vertices || vertices.length < 3) return null;
 
-        const points = [...vertices, vertices[0]]; // Close the polygon
+        // The formulas used here are based on Green's theorem for calculating properties of polygons.
+        // This is often known as the "shoelace formula" or "surveyor's formula".
+        // See: https://en.wikipedia.org/wiki/Shoelace_formula
+        // And: https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
+
+        const points = [...vertices, vertices[0]]; // Close the polygon by repeating the first vertex at the end.
         let A = 0.0,
-            Qx = 0.0,
-            Qy = 0.0,
-            Ix = 0.0,
-            Iy = 0.0;
+            Qx = 0.0, // First moment of area about the x-axis
+            Qy = 0.0, // First moment of area about the y-axis
+            Ix = 0.0, // Second moment of area about the x-axis (from origin)
+            Iy = 0.0; // Second moment of area about the y-axis (from origin)
 
         for (let i = 0; i < vertices.length; i++) {
             const [x0, y0] = points[i];
             const [x1, y1] = points[i + 1];
+
+            // This term is the signed area of the trapezoid formed by the segment and the x-axis.
             const term = (x0 * y1) - (x1 * y0);
+
+            // Sum of signed areas of trapezoids gives 2 * Area of the polygon.
             A += term;
-            Qx += (x0 + x1) * term;
-            Qy += (y0 + y1) * term;
-            Ix += (y0 ** 2 + y0 * y1 + y1 ** 2) * term;
-            Iy += (x0 ** 2 + x0 * x1 + x1 ** 2) * term;
+
+            // First moment of area (used to find the centroid).
+            Qy += (y0 + y1) * term; // about x-axis
+            Qx += (x0 + x1) * term; // about y-axis
+
+            // Second moment of area (moment of inertia) with respect to the origin.
+            Ix += (y0 ** 2 + y0 * y1 + y1 ** 2) * term; // about x-axis
+            Iy += (x0 ** 2 + x0 * x1 + x1 ** 2) * term; // about y-axis
         }
 
+        // The area is half the accumulated sum.
         A /= 2.0;
         if (Math.abs(A) < 1e-6) return null;
 
+        // Centroid coordinates (cx, cy). The division by 6*A is part of the formula.
         const cx = Qx / (6.0 * A);
         const cy = Qy / (6.0 * A);
 
+        // Moment of inertia with respect to the origin. The division by 12 is part of the formula.
         const I_origin_x = Ix / 12.0;
         const I_origin_y = Iy / 12.0;
 
+        // Use the parallel axis theorem to transfer the moment of inertia to the centroidal axis.
+        // I_centroid = I_origin - Area * distance^2
         const I_cx = I_origin_x - A * cy ** 2;
         const I_cy = I_origin_y - A * cx ** 2;
 
-        const rx = Math.sqrt(Math.abs(I_cx) / Math.abs(A));
-        const ry = Math.sqrt(Math.abs(I_cy) / Math.abs(A));
-
+        // Find distances from the centroid to the top (ys) and bottom (yi) fibers.
         const y_min = Math.min(...vertices.map(p => p[1]));
         const y_max = Math.max(...vertices.map(p => p[1]));
         const yi = cy - y_min;
         const ys = y_max - cy;
 
+        // Section modulus (W = I / y).
         const Wi = Math.abs(yi) > 1e-6 ? Math.abs(I_cx) / Math.abs(yi) : Infinity;
         const Ws = Math.abs(ys) > 1e-6 ? Math.abs(I_cx) / Math.abs(ys) : Infinity;
+        //Auxiliary Modulus for prestressing calculations
+        const ki = Math.abs(yi) > 1e-6 ? Math.abs(Ws) / Math.abs(A) : Infinity;
+        const ks = Math.abs(ys) > 1e-6 ? Math.abs(Wi) / Math.abs(A) : Infinity;
 
         return {
             area: Math.abs(A),
             centroid: { x: cx, y: cy },
             Q: { x: Math.abs(Qx / 6), y: Math.abs(Qy / 6) },
             I: { cx: Math.abs(I_cx), cy: Math.abs(I_cy) },
-            r: { x: rx, y: ry },
+            r: { x: Math.sqrt(Math.abs(I_cx) / Math.abs(A)), y: Math.sqrt(Math.abs(I_cy) / Math.abs(A)) }, // Radius of gyration
             W: { i: Wi, s: Ws },
             height: y_max - y_min,
             yi,
-            ys
+            ys,
+            y_min,
+            y_max,
+            ki, ks
         };
     }
 
@@ -128,6 +182,119 @@ const concreteBeamCalculator = (() => {
         const t = (x_pos - x0) / (x1 - x0);
         return y0 + t * (y1 - y0);
     }
+
+    /**
+     * Calculates concrete and steel material properties based on NBR 6118.
+     * @param {object} inputs - Object containing fck and age_at_prestress.
+     * @returns {object} An object with all calculated material properties and limits.
+     */
+    function calculateMaterialProperties({ fck, age_at_prestress }) {
+        // NBR 6118: 8.2.4 - Mean compressive strength of concrete.
+        const fcm = fck <= 50 ? fck + 8 : 1.1 * fck;
+        // NBR 6118: 8.2.10.1 - Coefficient 's' for cement type (0.20 for CP III, IV).
+        const s_beta = 0.20;
+        // NBR 6118: 8.2.10.1 - Coefficient to account for strength gain over time 't'.
+        const beta1 = Math.exp(s_beta * (1 - Math.pow(28 / age_at_prestress, 0.5)));
+        // NBR 6118: 8.2.10.1 - Compressive strength at age 't' (age_at_prestress).
+        const fci = beta1 * fcm;
+        // NBR 6118: 8.2.5 - Mean tensile strength.
+        const fctm = fck <= 50 ? 0.3 * fck ** (2 / 3) : 2.12 * Math.log(1 + 0.11 * fck);
+        // NBR 6118: 8.2.5 - Lower characteristic tensile strength.
+        const fctk_inf = 0.7 * fctm;
+        // Characteristic tensile strength in flexure. Often taken as fctk,sup, but here using a common simplification.
+        const fctf = 1.2 * fctk_inf;
+        // NBR 6118: 8.2.8 - Initial (tangent) modulus of elasticity for concrete.
+        const E_ci = 5600 * Math.sqrt(fck);
+        // Modulus of elasticity for prestressing steel (assumed).
+        const E_p = 200000;
+        // Modular ratio between steel and concrete.
+        const alpha_p = E_p / E_ci;
+
+        // Stress Limits (NBR 6118: 17.2.4.3)
+        const comp_limit_i = (fci <= 50 ? 0.7 : 0.7 * (1 - (fci - 50) / 200)) * fci;
+        const tens_limit_i = 1.2 * fctm;
+        const comp_limit_s = 0.45 * fck;
+        const tens_limit_s = fctf;
+
+        return {
+            fctm, fctk_inf, fctf, fci, E_ci, E_p, alpha_p,
+            limits: { comp_i: comp_limit_i, tens_i: tens_limit_i, comp_s: comp_limit_s, tens_s: tens_limit_s }
+        };
+    }
+
+    /**
+     * Calculates service loads and corresponding bending moments.
+     * @param {object} inputs - Object containing load_pp, load_perm, load_var, and beam_length.
+     * @returns {object} An object with calculated loads and moments.
+     */
+    function calculateLoadsAndMoments({ load_pp, load_perm, load_var, beam_length }) {
+        const g_k = load_pp + load_perm;
+        const p_CQP = g_k + 0.4 * load_var; // Combinação Quase-Permanente
+        const p_CF = g_k + 0.6 * load_var;  // Combinação Frequente
+        const M_g1k = (load_pp * beam_length ** 2) / 8;
+        const M_gk = (g_k * beam_length ** 2) / 8;
+        const M_CQP = (p_CQP * beam_length ** 2) / 8;
+        const M_CF = (p_CF * beam_length ** 2) / 8;
+
+        return {
+            loads: { g_k, p_CQP, p_CF },
+            moments: { M_g1k, M_gk, M_CQP, M_CF }
+        };
+    }
+
+    /**
+     * Performs initial prestress checks to determine the valid force range.
+     * @param {object} params - An object containing all necessary parameters.
+     * @returns {object} An object with the results of the prestress checks.
+     */
+    function performInitialPrestressChecks({ fptk, Ap_m2, ecc_mid, materials, moments, A_m2, Ws_m3, Wi_m3 }) {
+        const sigma_pi = 0.74 * fptk;
+        const P_i = Ap_m2 * sigma_pi; // MN
+
+        const P_max_comp_i_res = solveForPrestressForce(-materials.limits.comp_i, -Ws_m3, moments.M_g1k / 1000, A_m2, ecc_mid);
+        const P_min_tens_i_res = solveForPrestressForce(materials.limits.tens_i, Wi_m3, moments.M_g1k / 1000, A_m2, ecc_mid);
+        const P_min_comp_s_res = solveForPrestressForce(-materials.limits.comp_s, -Ws_m3, moments.M_CQP / 1000, A_m2, ecc_mid);
+        const P_max_tens_s_res = solveForPrestressForce(materials.limits.tens_s, Wi_m3, moments.M_CF / 1000, A_m2, ecc_mid);
+
+        return {
+            P_i, sigma_pi,
+            P_max_comp_i: P_max_comp_i_res,
+            P_min_tens_i: P_min_tens_i_res,
+            P_min_comp_s: P_min_comp_s_res,
+            P_max_tens_s: P_max_tens_s_res,
+        };
+    }
+
+    /**
+     * Calculates an initial estimate for the required prestressing force.
+     * @param {object} params - An object containing all necessary parameters.
+     * @returns {object} An object with the results of the estimation.
+     */
+    function calculateInitialPrestressEstimate({ moments, materials, props, Kperdas, N_cables, ecc_mid, Ap, fptk }) {
+        // Calculate force per cable: P_cable = Ap * 0.74 * fptk
+        const P_cable = (Ap / 100*100) * (0.74 * fptk*1000); // Ap in cm², fptk in MPa (N/mm²), result in kN
+
+        const M_aux_kNm = Math.max(moments.M_CF, moments.M_CQP) - (props.W.i / 1e6) * materials.fctf*1000; // M in kNm, Wi in m3
+        const ks_m = props.ks / 100; // convert cm to m
+        const denominator = ks_m + Math.abs(ecc_mid);
+
+        let P_est_i = 0;
+        if (Math.abs(denominator) > 1e-9) {
+            P_est_i = (M_aux_kNm) / denominator; // P_est_i in MN
+        }
+
+        const P_est_i_kN = P_est_i;
+        const Pest_perdas = Kperdas > 0 ? P_est_i_kN / Kperdas : 0;
+        const num_tendons = (P_cable > 0 && N_cables > 0) ? Math.ceil((Pest_perdas / P_cable) / N_cables) : 0;
+
+        return {
+            M_aux_kNm,
+            ks_m,
+            P_est_i: P_est_i_kN,
+            Pest_perdas,
+            num_tendons
+        };
+    }
     
      /**
       * Main calculation function, updated to follow the PDF logic.
@@ -136,7 +303,7 @@ const concreteBeamCalculator = (() => {
       */
     function run(raw_inputs) {
         const inputs = {...raw_inputs}; // Make a mutable copy
-        const { vertices, fck, age_at_prestress, load_pp, load_perm, load_var, beam_length, cable_path, humidity, fptk, mu, k, anchorage_slip } = inputs;
+        const { vertices, fck, beam_length, cable_path } = inputs;
         const Ap_cm2 = parseFloat(inputs.Ap) || 0;
 
         // --- 1. Validate Inputs & Section Properties ---
@@ -154,36 +321,10 @@ const concreteBeamCalculator = (() => {
         const I_cx_m4 = props.I.cx / 1e8;
 
         // --- 2. Material Properties (NBR 6118 & PDF) ---
-        const fcm = fck <= 50 ? fck + 8 : 1.1 * fck;
-        const s_beta = 0.20;
-        const beta1 = Math.exp(s_beta * (1 - Math.pow(28 / age_at_prestress, 0.5)));
-        const fci = beta1 * fcm;
-        const fctm = fck <= 50 ? 0.3 * fck ** (2 / 3) : 2.12 * Math.log(1 + 0.11 * fck);
-        const fctk_inf = 0.7 * fctm;
-        const fctf = 1.2 * fctk_inf;
-        const E_ci = 5600 * Math.sqrt(fck);
-        const E_p = 200000;
-        const alpha_p = E_p / E_ci;
-        
-        // Stress Limits
-        const comp_limit_i = (fci <= 50 ? 0.7 : 0.7 * (1 - (fci - 50)/200)) * fci;
-        const tens_limit_i = 1.2 * fctm;
-        const comp_limit_s = 0.45 * fck;
-        const tens_limit_s = fctf;
-
-        const materials = { fctm, fctk_inf, fctf, fci, E_ci, E_p, alpha_p,
-            limits: { comp_i: comp_limit_i, tens_i: tens_limit_i, comp_s: comp_limit_s, tens_s: tens_limit_s } };
+        const materials = calculateMaterialProperties(inputs);
 
         // --- 3. Loads & Moments ---
-        const g_k = load_pp + load_perm;
-        const p_CQP = g_k + 0.3 * load_var; // Combinação Quase-Permanente
-        const p_CF = g_k + 0.4 * load_var;  // Combinação Frequente
-        const M_g1k = (load_pp * beam_length ** 2) / 8;
-        const M_gk = (g_k * beam_length ** 2) / 8;
-        const M_CQP = (p_CQP * beam_length ** 2) / 8;
-        const M_CF = (p_CF * beam_length ** 2) / 8;
-        
-        const moments = { M_g1k, M_gk, M_CQP, M_CF };
+        const { loads, moments } = calculateLoadsAndMoments(inputs);
 
         // --- 4. Define Cable Path & Key Points ---
         const y_cg = props.centroid.y / 100; // in m
@@ -201,26 +342,15 @@ const concreteBeamCalculator = (() => {
         });
 
         // --- 5. Initial Prestress and Stress Limit Checks (at mid-span) ---
-        const sigma_pi = 0.74 * fptk;
-        const P_i = Ap_m2 * sigma_pi; // MN
         const mid_span_details = path_details.find(p => p.x === beam_length / 2);
         const ecc_mid = mid_span_details.e;
-
-        const P_max_comp_i_res = solveForPrestressForce(-materials.limits.comp_i, -Ws_m3, M_g1k / 1000, A_m2, ecc_mid);
-        const P_min_tens_i_res = solveForPrestressForce(materials.limits.tens_i, Wi_m3, M_g1k / 1000, A_m2, ecc_mid);
-        const P_min_comp_s_res = solveForPrestressForce(-materials.limits.comp_s, -Ws_m3, M_CQP / 1000, A_m2, ecc_mid);
-        const P_max_tens_s_res = solveForPrestressForce(materials.limits.tens_s, Wi_m3, M_CF / 1000, A_m2, ecc_mid);
-
-        const prestress_checks = {
-             P_i, sigma_pi,
-             P_max_comp_i: P_max_comp_i_res,
-             P_min_tens_i: P_min_tens_i_res,
-             P_min_comp_s: P_min_comp_s_res,
-             P_max_tens_s: P_max_tens_s_res,
-        };
+        const prestress_checks = performInitialPrestressChecks({ ...inputs, Ap_m2, ecc_mid, materials, moments, A_m2, Ws_m3, Wi_m3 });
+        
+        // --- 5b. Preliminary Prestress Estimation (as requested) ---
+        const prestress_estimation = calculateInitialPrestressEstimate({ ...inputs, moments, materials, props, ecc_mid });
 
         // --- 6. Detailed Prestress Loss Calculation (Following PDF Logic) ---
-        const loss_results = calculateDetailedLosses(inputs, props, materials, path_details, moments, P_i, sigma_pi, cable_path_abs);
+        const loss_results = calculateDetailedLosses(inputs, props, materials, path_details, moments, prestress_checks.P_i, prestress_checks.sigma_pi, cable_path_abs);
         
         // --- 7. Final Stress Profiles ---
         const P_eff_mid_val_result = loss_results.sigma_p_inf.find(p=>p.x === beam_length/2);
@@ -228,12 +358,12 @@ const concreteBeamCalculator = (() => {
 
         const stress_profiles = {
              initial: {
-                 top: (-P_i / A_m2) + (P_i * ecc_mid / Ws_m3) - (M_g1k / 1000 / Ws_m3),
-                 bottom: (-P_i / A_m2) - (P_i * ecc_mid / Wi_m3) + (M_g1k / 1000 / Wi_m3)
+                 top: (-prestress_checks.P_i / A_m2) + (prestress_checks.P_i * ecc_mid / Ws_m3) - (moments.M_g1k / 1000 / Ws_m3),
+                 bottom: (-prestress_checks.P_i / A_m2) - (prestress_checks.P_i * ecc_mid / Wi_m3) + (moments.M_g1k / 1000 / Wi_m3)
              },
              final: {
-                 top: (-P_eff_mid / A_m2) + (P_eff_mid * ecc_mid / Ws_m3) - (M_CQP / 1000 / Ws_m3),
-                 bottom: (-P_eff_mid / A_m2) - (P_eff_mid * ecc_mid / Wi_m3) + (M_CF / 1000 / Wi_m3)
+                 top: (-P_eff_mid / A_m2) + (P_eff_mid * ecc_mid / Ws_m3) - (moments.M_CQP / 1000 / Ws_m3),
+                 bottom: (-P_eff_mid / A_m2) - (P_eff_mid * ecc_mid / Wi_m3) + (moments.M_CF / 1000 / Wi_m3)
              }
          };
          
@@ -241,10 +371,11 @@ const concreteBeamCalculator = (() => {
             checks: {
                 properties: props,
                 materials,
-                loads: { pp: load_pp, perm: load_perm, var: load_var, g_k, p_CQP, p_CF },
+                loads: { pp: inputs.load_pp, perm: inputs.load_perm, var: inputs.load_var, ...loads },
                 moments,
                 path_details,
                 prestress_checks,
+                prestress_estimation,
                 loss_results,
                 stress_profiles
             },
@@ -387,330 +518,445 @@ const concreteBeamCalculator = (() => {
      * @param {number} beam_length - Total beam length.
      * @returns {number} The calculated absolute y-coordinate at x_pos in meters.
      */
-    function getCablePositionAt(x_pos, cable_path_abs, beam_length) {
+    function getCablePositionAt(x_pos, cable_path_abs, beam_length) { // This version is corrected to prevent infinite recursion.
         if (!cable_path_abs || cable_path_abs.length === 0) return 0;
         if (cable_path_abs.length === 1) return cable_path_abs[0].y;
-        
-        const last_defined_x = cable_path_abs[cable_path_abs.length-1].x;
-        if (x_pos > last_defined_x && last_defined_x <= beam_length/2) {
-             return getCablePositionAt(beam_length - x_pos, cable_path_abs, beam_length);
+
+        let eval_x = x_pos; // Use a mutable variable for the position to be evaluated.
+        const last_defined_x = cable_path_abs[cable_path_abs.length - 1].x;
+
+        // Check if the requested point is in the "mirrored" symmetric half of the beam.
+        if (x_pos > last_defined_x && last_defined_x <= (beam_length / 2) + 1e-6) {
+            eval_x = beam_length - x_pos;
         }
 
+        // Loop through the defined segments to find the one containing our evaluation point.
         for (let i = 0; i < cable_path_abs.length - 1; i++) {
             const p1 = cable_path_abs[i];
             const p2 = cable_path_abs[i + 1];
 
-            if (x_pos >= p1.x && x_pos <= p2.x) {
+            // Check if the evaluation point is within the current segment.
+            if (eval_x >= p1.x - 1e-9 && eval_x <= p2.x + 1e-9) {
                 if (p1.type === 'Parabolic') {
+                    // Determine vertex and other point for the parabola equation y = a(x-h)^2 + k
                     let vertex = p1.y < p2.y ? p1 : p2;
                     let other_point = p1.y < p2.y ? p2 : p1;
-                    if(Math.abs(p2.x - p1.x) < 1e-6) return p1.y; 
-                    
+                    if (Math.abs(p2.x - p1.x) < 1e-6) return p1.y;
+
                     const h = vertex.x;
                     const k = vertex.y;
-                    const denominator = (other_point.x - h)**2;
-                    if (Math.abs(denominator) < 1e-9) return k;
+                    const denominator = (other_point.x - h) ** 2;
+                    if (Math.abs(denominator) < 1e-9) return k; // Avoid division by zero
                     const a = (other_point.y - k) / denominator;
-                    return a * (x_pos - h)**2 + k;
+                    
+                    return a * (eval_x - h) ** 2 + k;
 
-                } else { // Straight
-                    return interpolate(x_pos, [p1.x, p2.x], [p1.y, p2.y]);
+                } else { // 'Straight' segment
+                    return interpolate(eval_x, [p1.x, p2.x], [p1.y, p2.y]);
                 }
             }
         }
-        return cable_path_abs[cable_path_abs.length - 1].y; // Fallback
-    }
 
-    return { run, calculateSectionProperties, getCablePositionAt };
+        // Fallback for cases where x_pos is exactly at the last point or beyond the defined path
+        // in a non-symmetric case.
+        return cable_path_abs[cable_path_abs.length - 1].y;
+    }
+    
+    return { run, calculateSectionProperties, getCablePositionAt }; // Expose main run function
 })();
 
-function drawCrossSectionDiagram(svgId, vertices) {
-    const svg = document.getElementById(svgId);
-    if (!svg) return;
-    svg.innerHTML = '';
-    const ns = "http://www.w3.org/2000/svg";
+/**
+ * Draws the beam's cross-section on a canvas using Chart.js.
+ * @param {string} canvasId - The ID of the canvas element.
+ * @param {Array<[number, number]>} vertices - An array of [x, y] coordinates for the cross-section in cm.
+ */
+function drawCrossSectionDiagram(canvasId, vertices) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+
     const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     const textColor = isDark ? '#FFFFFF' : '#2c3e50';
 
-    const W = 300, H = 400;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    let existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
 
     if (!vertices || vertices.length < 3) {
-        svg.innerHTML = `<text x="${W/2}" y="20" fill="${textColor}" text-anchor="middle">Invalid vertices</text>`;
+        // Optionally render a message on the canvas if vertices are invalid
         return;
     }
 
     const props = concreteBeamCalculator.calculateSectionProperties(vertices);
     if (!props) return;
 
+    // --- Start: 1:1 Scale Calculation ---
     const all_x = vertices.map(v => v[0]);
     const all_y = vertices.map(v => v[1]);
-    const maxX = Math.max(...all_x);
-    const maxY = Math.max(...all_y);
     const minX = Math.min(...all_x);
+    const maxX = Math.max(...all_x);
     const minY = Math.min(...all_y);
+    const maxY = Math.max(...all_y);
 
-    const margin = 30;
-    const scale = Math.min((W - 2 * margin) / (maxX - minX), (H - 2 * margin) / (maxY - minY));
-    const offsetX = margin - minX * scale + (W - 2 * margin - (maxX - minX) * scale) / 2;
-    const offsetY = margin - minY * scale + (H - 2 * margin - (maxY - minY) * scale) / 2;
+    const rangeX = maxX - minX;
+    const rangeY = maxY - minY;
+    const maxRange = Math.max(rangeX, rangeY) * 1.1; // Add 10% padding
 
-    const g = document.createElementNS(ns, 'g');
-    g.setAttribute('transform', `translate(${offsetX}, ${H - offsetY}) scale(1, -1)`);
-    svg.appendChild(g);
+    const centerX = props.centroid.x;
+    const centerY = props.centroid.y;
+    // --- End: 1:1 Scale Calculation ---
 
-    const path = document.createElementNS(ns, 'path');
-    let d = `M ${vertices[0][0] * scale} ${vertices[0][1] * scale}`;
-    for (let i = 1; i < vertices.length; i++) {
-        d += ` L ${vertices[i][0] * scale} ${vertices[i][1] * scale}`;
-    }
-    d += ' Z';
-    path.setAttribute('d', d);
-    path.setAttribute('fill', isDark ? '#6B7280' : '#e8f4f8');
-    path.setAttribute('stroke', isDark ? '#D1D5DB' : '#2c3e50');
-    path.setAttribute('stroke-width', 2 / scale);
-    g.appendChild(path);
+    const sectionData = [...vertices, vertices[0]].map(p => ({ x: p[0], y: p[1] }));
 
-    const cx = props.centroid.x * scale;
-    const cy = props.centroid.y * scale;
-    const centroid = document.createElementNS(ns, 'circle');
-    centroid.setAttribute('cx', cx);
-    centroid.setAttribute('cy', cy);
-    centroid.setAttribute('r', 5 / scale);
-    centroid.setAttribute('fill', 'red');
-    g.appendChild(centroid);
-    
-    // Label for centroid
-    const cg_text = document.createElementNS(ns, 'text');
-    cg_text.textContent = `CG (${props.centroid.x.toFixed(1)}, ${props.centroid.y.toFixed(1)})`;
-    cg_text.setAttribute('x', cx + 10 / scale);
-    cg_text.setAttribute('y', cy + 10 / scale);
-    cg_text.setAttribute('fill', 'red');
-    cg_text.setAttribute('font-size', 10 / scale);
-    cg_text.setAttribute('transform', 'scale(1, -1)');
-    g.appendChild(cg_text);
-}
-
-function drawLongitudinalDiagram(svgId, inputs) {
-    const svg = document.getElementById(svgId);
-    if (!svg) return;
-    svg.innerHTML = '';
-    const ns = "http://www.w3.org/2000/svg";
-    const isDark = document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-
-    const W = 800, H = 300;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-    const beamLength = parseFloat(inputs.beam_length) || 18;
-    const beamHeightCm = (parseFloat(inputs.beam_height) || 80);
-    
-    const cablePath = (inputs.cable_path || []);
-
-    const marginX = 60, marginY = 50;
-    const drawWidth = W - 2 * marginX, drawHeight = H - 2 * marginY;
-    const scaleX = drawWidth / beamLength;
-    const scaleY = drawHeight / beamHeightCm;
-
-    const g = document.createElementNS(ns, 'g');
-    g.setAttribute('transform', `translate(${marginX}, ${H - marginY}) scale(1, -1)`);
-    svg.appendChild(g);
-    
-    // Beam outline
-    const beam = document.createElementNS(ns, 'rect');
-    beam.setAttribute('x', 0);
-    beam.setAttribute('y', 0);
-    beam.setAttribute('width', beamLength * scaleX);
-    beam.setAttribute('height', beamHeightCm * scaleY);
-    beam.setAttribute('fill', isDark ? '#6B7280' : '#d3d3d3');
-    beam.setAttribute('stroke', isDark ? '#D1D5DB' : '#000');
-    g.appendChild(beam);
-    
-    // Centroid Line
-    const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
-    if(props) {
-        const cg_y = props.centroid.y * scaleY;
-        const centerline = document.createElementNS(ns, 'line');
-        centerline.setAttribute('x1', 0);
-        centerline.setAttribute('y1', cg_y);
-        centerline.setAttribute('x2', beamLength * scaleX);
-        centerline.setAttribute('y2', cg_y);
-        centerline.setAttribute('stroke', 'red');
-        centerline.setAttribute('stroke-dasharray', '5,5');
-        g.appendChild(centerline);
-    }
-
-    // Cable Path
-    drawCablePathSvg(g, cablePath, scaleX, scaleY, isDark);
-}
-
-/**
- * Draws the prestressing cable path onto an SVG group element.
- * @param {SVGElement} g - The SVG <g> element to draw into.
- * @param {Array<object>} cablePath - The array of user-defined cable path points.
- * @param {number} scaleX - The horizontal scaling factor.
- * @param {number} scaleY - The vertical scaling factor.
- * @param {boolean} isDark - Whether dark mode is active.
- */
-function drawCablePathSvg(g, cablePath, scaleX, scaleY, isDark) {
-    const ns = "http://www.w3.org/2000/svg";
-    const inputs = gatherBeamInputs();
-    const beamLength = parseFloat(inputs.beam_length) || 18;
-    const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
-    if (!props) return;
-
-    const y_cg = props.centroid.y;
-    const y_min_beam = Math.min(...inputs.vertices.map(p => p[1]));
-
-    // Generate a series of points along the beam to draw a smooth curve
-    const pathPoints = [];
-    const numSegments = 200;
-    for (let i = 0; i <= numSegments; i++) {
-        const x_pos_m = (i / numSegments) * beamLength;
-        // The y value from getCablePositionAt is absolute in meters, convert to cm for scaling
-        const y_abs_cm = concreteBeamCalculator.getCablePositionAt(x_pos_m, inputs.cable_path, beamLength) * 100;
-        pathPoints.push(`${x_pos_m * scaleX},${y_abs_cm * scaleY}`);
-    }
-
-    const polyline = document.createElementNS(ns, 'polyline');
-    polyline.setAttribute('points', pathPoints.join(' '));
-    polyline.setAttribute('fill', 'none');
-    polyline.setAttribute('stroke', isDark ? '#f59e0b' : '#d97706'); // amber-500 / amber-600
-    polyline.setAttribute('stroke-width', '2');
-    g.appendChild(polyline);
-
-    // Draw circles for the user-defined points
-    inputs.cable_path.forEach(p => {
-        const y_abs_cm = concreteBeamCalculator.getCablePositionAt(p.x, inputs.cable_path, beamLength) * 100;
-        g.innerHTML += `<circle cx="${p.x * scaleX}" cy="${y_abs_cm * scaleY}" r="4" fill="${isDark ? '#fde047' : '#facc15'}" />`;
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Cross-Section',
+                data: sectionData,
+                borderColor: isDark ? '#D1D5DB' : '#2c3e50',
+                backgroundColor: isDark ? '#6B7280' : '#e8f4f8',
+                borderWidth: 2,
+                fill: true,
+                showLine: true,
+                pointRadius: 0,
+                tension: 0,
+            }, {
+                label: 'Centroid (CG)',
+                data: [{ x: props.centroid.x, y: props.centroid.y }],
+                pointBackgroundColor: 'red',
+                pointRadius: 5,
+                showLine: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: { display: true, text: 'x (cm)', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: gridColor },
+                    // Set min/max to enforce 1:1 aspect ratio
+                    min: centerX - maxRange / 2,
+                    max: centerX + maxRange / 2,
+                },
+                y: {
+                    title: { display: true, text: 'y (cm)', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: gridColor },
+                    // Set min/max to enforce 1:1 aspect ratio
+                    min: centerY - maxRange / 2,
+                    max: centerY + maxRange / 2,
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            if (context.dataset.label === 'Centroid (CG)') {
+                                return `CG: (${context.parsed.x.toFixed(1)}, ${context.parsed.y.toFixed(1)}) cm`;
+                            }
+                            return `(${context.parsed.x.toFixed(1)}, ${context.parsed.y.toFixed(1)}) cm`;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
-function parseVertices(text) {
-    return text.split('\n')
-        .map(line => line.trim().split(/[,; ]+/).map(Number))
-        .filter(pair => pair.length === 2 && !isNaN(pair[0]) && !isNaN(pair[1]));
-}
+/**
+ * Draws the longitudinal view of the beam, including the centroid and cable path, on a canvas.
+ * @param {string} canvasId - The ID of the canvas element.
+ * @param {object} inputs - The user inputs object, containing beam_length, cable_path, and vertices.
+ */
+function drawLongitudinalDiagram(canvasId, inputs) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
 
-function gatherCablePath() {
-    const container = document.getElementById('cable-path-container');
-    const rows = Array.from(container.querySelectorAll('.cable-path-row'));
-    return rows.map((row, index) => ({
-        x: parseFloat(row.querySelector('.cable-x').value) || 0,
-        y: parseFloat(row.querySelector('.cable-y').value) || 0,
-        'type': index < rows.length - 1 ? row.querySelector('.cable-type').value : 'Straight'
-    }));
-}
+    const isDark = document.documentElement.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? '#FFFFFF' : '#2c3e50';
 
-function gatherBeamInputs() {
-    const inputs = gatherInputsFromIds(prestressedInputIds);
-    inputs.vertices = parseVertices(inputs.beam_coords);
-    inputs.cable_path = gatherCablePath();
-    return inputs;
+    let existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
+    const { beam_length, cable_path } = inputs;
+    const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
+    if (!props) return;
+
+    const beamOutline = [
+        { x: 0, y: props.y_min }, { x: beam_length, y: props.y_min },
+        { x: beam_length, y: props.y_max }, { x: 0, y: props.y_max }, { x: 0, y: props.y_min }
+    ];
+
+    const centroidLine = [{ x: 0, y: props.centroid.y }, { x: beam_length, y: props.centroid.y }];
+
+    const cablePoints = [];
+    const numSegments = 200;
+    for (let i = 0; i <= numSegments; i++) {
+        const x_pos = (i / numSegments) * beam_length;
+        const y_abs_m = concreteBeamCalculator.getCablePositionAt(x_pos, cable_path, beam_length);
+        cablePoints.push({ x: x_pos, y: y_abs_m * 100 }); // convert to cm
+    }
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Beam Outline',
+                data: beamOutline,
+                borderColor: isDark ? '#D1D5DB' : '#000',
+                backgroundColor: isDark ? '#6B7280' : '#d3d3d3',
+                borderWidth: 1,
+                fill: true,
+                tension: 0,
+                pointRadius: 0,
+                order: 3
+            }, {
+                label: 'Centroid',
+                data: centroidLine,
+                borderColor: 'red',
+                borderDash: [5, 5],
+                borderWidth: 1.5,
+                pointRadius: 0,
+                tension: 0,
+                order: 2
+            }, {
+                label: 'Cable Path',
+                data: cablePoints,
+                borderColor: isDark ? '#f59e0b' : '#d97706',
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                tension: 0.1,
+                order: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: { display: true, text: 'Comprimento (m)', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                y: {
+                    title: { display: true, text: 'Altura (cm)', color: textColor },
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor } },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        title: (tooltipItems) => `x = ${tooltipItems[0].parsed.x.toFixed(2)} m`,
+                        label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(2)} cm`
+                    }
+                }
+            }
+        }
+    });
 }
 
 /**
  * --- UI and Drawing Functions ---
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // This function remains largely the same, but now gets more data
+    /**
+     * Creates an HTML element with specified properties and children. A lightweight helper for DOM creation.
+     * @param {string} tag - The HTML tag name.
+     * @param {object} [props={}] - An object with properties to set on the element (e.g., className, textContent, id).
+     * @param {(Node|string)[]} [children=[]] - An array of child nodes or strings to append.
+     * @returns {HTMLElement} The created element.
+     */
+    function h(tag, props = {}, children = []) {
+        const el = document.createElement(tag);
+        Object.entries(props).forEach(([key, value]) => {
+            if (key === 'style' && typeof value === 'object') {
+                Object.assign(el.style, value);
+            } else if (key in el) {
+                el[key] = value;
+            } else {
+                el.setAttribute(key, value);
+            }
+        });
+        children.forEach(child => {
+            if (typeof child === 'string') {
+                el.appendChild(document.createTextNode(child));
+            } else if (child instanceof Node) {
+                el.appendChild(child);
+            }
+        });
+        return el;
+    }
+
+    /**
+     * Helper to create a standard report section with a header and copy button.
+     * @param {string} id - The ID for the section container.
+     * @param {string} title - The title for the report header.
+     * @param {HTMLElement[]} contentChildren - An array of child elements for the content area.
+     * @returns {HTMLElement} The complete section element.
+     */
+    function createReportSection(id, title, contentChildren) {
+        return h('div', { id, className: 'report-section-copyable' }, [
+            h('div', { className: 'flex justify-between items-center mb-2' }, [
+                h('h3', { className: 'report-header' }, [title]),
+                h('button', { 'data-copy-target-id': id, className: 'copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden' }, ['Copy Section'])
+            ]),
+            h('div', { className: 'copy-content' }, contentChildren)
+        ]);
+    }
+
+    /**
+     * Helper to create a summary table.
+     * @param {string} captionText - The caption for the table.
+     * @param {Array<[string, string]>} rowsData - An array of [label, value] pairs for the table rows.
+     * @param {string} [marginTop='mt-2'] - Optional margin-top class.
+     * @returns {HTMLTableElement} The created table element.
+     */
+    function createSummaryTable(captionText, rowsData, marginTop = 'mt-2') {
+        return h('table', { className: `w-full ${marginTop} summary-table` }, [
+            h('caption', { className: 'report-caption' }, [captionText]),
+            h('tbody', {}, rowsData.map(([label, value]) =>
+                h('tr', {}, [
+                    h('td', {}, [label]),
+                    h('td', {}, [value])
+                ])
+            ))
+        ]);
+    }
+
+    /**
+     * Renders the entire calculation report into the DOM.
+     * It orchestrates calls to more specific rendering functions.
+     * @param {object} results - The main results object from the `run` function.
+     * @param {object} results.checks - The detailed calculation checks and results.
+     * @param {object} results.inputs - The user inputs used for the calculation.
+     * @param {Array<string>} [results.errors] - An array of error messages if the calculation failed.
+     * @returns {void}
+     */
     function renderResults(results) {
+        const resultsContainer = document.getElementById('results-container');
         const { checks, inputs } = results;
         if (!checks || results.errors) {
-            document.getElementById('results-container').innerHTML = `<p class="text-center text-red-500">Calculation failed: ${results.errors?.[0] || 'Unknown error'}</p>`;
+            resultsContainer.innerHTML = ''; // Clear previous results
+            resultsContainer.appendChild(h('p', { className: 'text-center text-red-500' }, [`Calculation failed: ${results.errors?.[0] || 'Unknown error'}`]));
             return;
         }
 
-        const inputSummaryHtml = renderInputSummary(inputs);
-        const calculatedPropsHtml = renderCalculatedProperties(checks);
-        const prestressChecksHtml = renderPrestressChecks(checks);
-        const lossesHtml = renderLossesTableAndChart(checks.loss_results);
+        const reportFragment = document.createDocumentFragment();
+        const reportContainer = h('div', { id: 'concrete-beam-report', className: 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6' }, [
+            h('div', { className: 'flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden' }, [
+                h('button', { id: 'download-pdf-btn', className: 'bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm' }, ['Download PDF']),
+                h('button', { id: 'copy-report-btn', className: 'bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm' }, ['Copiar Relatório'])
+            ]),
+            h('h2', { className: 'text-2xl font-bold text-center border-b pb-2' }, ['Relatório de Verificação da Viga Protendida (NBR 6118)']),
+            renderInputSummary(inputs),
+            renderCalculatedProperties(checks),
+            renderPrestressChecks(checks),
+            renderPrestressEstimation(checks),
+            renderLossesTableAndChart(checks.loss_results)
+        ]);
 
-        const finalHtml = `
-         <div id="concrete-beam-report" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
-             <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
-                 <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
-             </div>
-             <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação da Viga Protendida (NBR 6118)</h2>
-             ${inputSummaryHtml}
-             ${calculatedPropsHtml}
-             ${prestressChecksHtml}
-             ${lossesHtml}
-         </div>`;
+        reportFragment.appendChild(reportContainer);
+        resultsContainer.innerHTML = ''; // Clear previous content
+        resultsContainer.appendChild(reportFragment);
 
-        document.getElementById('results-container').innerHTML = finalHtml;
-        drawStressDiagram('stress-diagram-svg', checks);
+        drawStressDiagram('stress-diagram-canvas', checks);
         drawLossesChart('losses-chart-canvas', checks.loss_results);
     }
     
+    /**
+     * Generates the HTML for the input summary section of the report.
+     * @param {object} inputs - The user inputs object.
+     * @returns {HTMLElement} The HTMLElement for the input summary section.
+     */
     function renderInputSummary(inputs) {
         const { fck, load_pp, load_perm, load_var, beam_length, Ap } = inputs;
-        return `
-        <div id="input-summary-section" class="report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header">Input Summary</h3>
-                 <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
-            <div class="copy-content">
-                <table class="w-full mt-2 summary-table">
-                    <caption class="report-caption">General & Material Properties</caption>
-                    <tbody>
-                        <tr><td>Concrete Strength (f<sub>ck</sub>)</td><td>${fck} MPa</td></tr>
-                        <tr><td>Beam Length (L)</td><td>${beam_length} m</td></tr>
-                        <tr><td>Tendon Area (A<sub>p</sub>)</td><td>${parseFloat(Ap).toFixed(2)} cm²</td></tr>
-                    </tbody>
-                </table>
-                <table class="w-full mt-4 summary-table">
-                    <caption class="report-caption">Service Loads (ELS)</caption>
-                    <tbody>
-                        <tr><td>Self-Weight (g<sub>pp</sub>)</td><td>${load_pp} kN/m</td></tr>
-                        <tr><td>Permanent Load (g<sub>perm</sub>)</td><td>${load_perm} kN/m</td></tr>
-                        <tr><td>Variable Load (q<sub>var</sub>)</td><td>${load_var} kN/m</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>`;
+        const generalRows = [
+            ['Concrete Strength (f<sub>ck</sub>)', `${fck} MPa`],
+            ['Beam Length (L)', `${beam_length} m`],
+            ['Tendon Area (A<sub>p</sub>)', `${parseFloat(Ap).toFixed(2)} cm²`]
+        ];
+        const loadRows = [
+            ['Self-Weight (g<sub>pp</sub>)', `${load_pp} kN/m`],
+            ['Permanent Load (g<sub>perm</sub>)', `${load_perm} kN/m`],
+            ['Variable Load (q<sub>var</sub>)', `${load_var} kN/m`]
+        ];
+
+        return createReportSection('input-summary-section', 'Input Summary', [
+            createSummaryTable('General & Material Properties', generalRows),
+            createSummaryTable('Service Loads (ELS)', loadRows, 'mt-4')
+        ]);
     }
 
+    /**
+     * Generates the HTML for the calculated properties and demands section of the report.
+     * @param {object} checks - The `checks` object from the main calculation results.
+     * @returns {HTMLElement} The HTMLElement for the calculated properties section.
+     */
     function renderCalculatedProperties(checks) {
         const { properties, materials, loads, moments, path_details } = checks;
         const fmt = (val, dec = 2) => (val !== undefined && val !== null && !isNaN(val)) ? val.toFixed(dec) : 'N/A';
         const mid_span_details = path_details.find(p => p.x === parseFloat(document.getElementById('beam_length').value)/2);
 
-        const rows = [
-            `<tr><td>Área da Seção (A)</td><td>${fmt(properties.area, 2)} cm²</td></tr>`,
-            `<tr><td>Centroide (y<sub>cg</sub>)</td><td>${fmt(properties.centroid.y, 2)} cm</td></tr>`,
-            `<tr><td>Inércia (I<sub>cx</sub>)</td><td>${fmt(properties.I.cx, 0)} cm⁴</td></tr>`,
-            `<tr><td>Módulo Resist. Inf. (W<sub>i</sub>)</td><td>${fmt(properties.W.i, 0)} cm³</td></tr>`,
-            `<tr><td>Módulo Resist. Sup. (W<sub>s</sub>)</td><td>${fmt(properties.W.s, 0)} cm³</td></tr>`,
-            `<tr ><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Protensão (Meio do Vão)</td></tr>`,
-            `<tr><td>Excentricidade (e<sub>meio</sub>)</td><td>${mid_span_details ? fmt(mid_span_details.e * 100, 2) : 'N/A'} cm</td></tr>`,
-            `<tr ><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Resistências do Material (MPa)</td></tr>`,
-            `<tr><td>Resist. à Tração Média (f<sub>ct,m</sub>)</td><td>${fmt(materials.fctm, 2)} MPa</td></tr>`,
-            `<tr><td>Resist. à Tração na Flexão (f<sub>ct,f</sub>)</td><td>${fmt(materials.fctf, 2)} MPa</td></tr>`,
-            `<tr><td>Resist. Concreto na Protensão (f<sub>ci</sub>)</td><td>${fmt(materials.fci, 2)} MPa</td></tr>`,
-             `<tr ><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Carregamentos e Momentos (kNm)</td></tr>`,
-            `<tr><td>Momento (Peso Próprio, M<sub>g1k</sub>)</td><td>${fmt(moments.M_g1k, 1)} kN·m</td></tr>`,
-            `<tr><td>Momento (Quase-Perm., M<sub>qp</sub>)</td><td>${fmt(moments.M_CQP, 1)} kN·m</td></tr>`,
-            `<tr><td>Momento (Frequente, M<sub>freq</sub>)</td><td>${fmt(moments.M_CF, 1)} kN·m</td></tr>`,
+        const geometricRows = [
+            ['Área da Seção (A)', `${fmt(properties.area, 2)} cm²`],
+            ['Centroide (y<sub>cg</sub>)', `${fmt(properties.centroid.y, 2)} cm`],
+            ['Inércia (I<sub>cx</sub>)', `${fmt(properties.I.cx, 0)} cm⁴`],
+            ['Módulo Resist. Inf. (W<sub>i</sub>)', `${fmt(properties.W.i, 0)} cm³`],
+            ['Módulo Resist. Sup. (W<sub>s</sub>)', `${fmt(properties.W.s, 0)} cm³`],
+            ['Módulo Auxiliar Inf. (k<sub>i</sub>)', `${fmt(properties.ki, 2)} cm`],
+            ['Módulo Auxiliar Sup. (k<sub>s</sub>)', `${fmt(properties.ks, 2)} cm`],
+            ['Excentricidade (e<sub>meio</sub>)', `${mid_span_details ? fmt(mid_span_details.e * 100, 2) : 'N/A'} cm`],
         ];
 
-        return `
-        <div id="calculated-props-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header">Calculated Properties & Demands</h3>
-                <button data-copy-target-id="calculated-props-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
-            <div class="copy-content">
-                <table class="w-full mt-2 summary-table">
-                    <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-                    <tbody>${rows.join('')}</tbody>
-                </table>
-            </div>
-        </div>`;
+        const materialRows = [
+            ['Resist. à Tração Média (f<sub>ct,m</sub>)', `${fmt(materials.fctm, 2)} MPa`],
+            ['Resist. à Tração na Flexão (f<sub>ct,f</sub>)', `${fmt(materials.fctf, 2)} MPa`],
+            ['Resist. Concreto na Protensão (f<sub>ci</sub>)', `${fmt(materials.fci, 2)} MPa`],
+        ];
+
+        const loadComboRows = [
+            ['Carga Permanente (g<sub>k</sub>)', `${fmt(loads.g_k, 2)} kN/m`, `g<sub>pp</sub> + g<sub>perm</sub>`],
+            ['Comb. Quase-Permanente (p<sub>qp</sub>)', `${fmt(loads.p_CQP, 2)} kN/m`, `g<sub>k</sub> + 0.3 &times; q<sub>k</sub>`],
+            ['Comb. Frequente (p<sub>freq</sub>)', `${fmt(loads.p_CF, 2)} kN/m`, `g<sub>k</sub> + 0.4 &times; q<sub>k</sub>`],
+        ];
+
+        const momentRows = [
+            ['Momento (Peso Próprio, M<sub>g1k</sub>)', `${fmt(moments.M_g1k, 1)} kN·m`],
+            ['Momento (Quase-Perm., M<sub>qp</sub>)', `${fmt(moments.M_CQP, 1)} kN·m`],
+            ['Momento (Frequente, M<sub>freq</sub>)', `${fmt(moments.M_CF, 1)} kN·m`],
+        ];
+
+        return createReportSection('calculated-props-section', 'Calculated Properties & Demands', [
+            createSummaryTable('Geometric Properties', geometricRows, 'mt-2'),
+            createSummaryTable('Material Properties', materialRows, 'mt-4'),
+            h('table', { className: 'w-full mt-4 summary-table' }, [
+                h('caption', { className: 'report-caption' }, ['Load Combinations (ELS)']),
+                h('tbody', {}, loadComboRows.map(([label, value, formula]) => h('tr', {}, [h('td', { innerHTML: label }), h('td', { innerHTML: value }), h('td', { innerHTML: formula, className: 'text-right text-xs text-gray-500' })])))
+            ]),
+            createSummaryTable('Applied Loads & Moments', momentRows, 'mt-4')
+        ]);
     }
 
+    /**
+     * Generates the HTML for the prestressing force limit checks section.
+     * @param {object} checks - The `checks` object from the main calculation results.
+     * @returns {HTMLElement} The HTMLElement for the prestress checks section.
+     */
     function renderPrestressChecks(checks) {
         const { prestress_checks, materials } = checks;
         const fmt = (val, dec = 1) => (!isNaN(val)) ? val.toFixed(dec) : 'N/A';
@@ -719,87 +965,105 @@ document.addEventListener('DOMContentLoaded', () => {
         const P_max_req = Math.min(prestress_checks.P_max_comp_i.value || Infinity, prestress_checks.P_max_tens_s.value || Infinity);
         const adopted_P_i_kN = prestress_checks.P_i * 1000;
         const is_valid = adopted_P_i_kN >= P_min_req * 1000 && adopted_P_i_kN <= P_max_req * 1000;
+        
+        const summaryEl = h('div', { className: `p-4 rounded-lg ${is_valid ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}` }, [
+            h('h3', { className: `font-bold text-lg text-center ${is_valid ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}` }, [is_valid ? 'Força de Protensão Adotada é Válida' : 'Força de Protensão Adotada é Inválida']),
+            h('p', { className: 'text-center mt-2' }, [`Faixa Válida: ${fmt(P_min_req * 1000)} kN ≤ Pᵢ ≤ ${fmt(P_max_req * 1000)} kN`]),
+            h('p', { className: 'text-center text-xl font-bold mt-1' }, [`Pᵢ,adotado = ${fmt(adopted_P_i_kN)} kN`])
+        ]);
 
-        const summaryHtml = `
-            <div class="p-4 rounded-lg ${is_valid ? 'bg-green-100 dark:bg-green-900/50' : 'bg-red-100 dark:bg-red-900/50'}">
-                <h3 class="font-bold text-lg text-center ${is_valid ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}">
-                    ${is_valid ? 'Força de Protensão Adotada é Válida' : 'Força de Protensão Adotada é Inválida'}
-                </h3>
-                <p class="text-center mt-2">Faixa Válida: ${fmt(P_min_req * 1000)} kN &le; P<sub>i</sub> &le; ${fmt(P_max_req * 1000)} kN</p>
-                <p class="text-center text-xl font-bold mt-1">P<sub>i,adotado</sub> = ${fmt(adopted_P_i_kN)} kN</p>
-            </div>`;
+        const tableRows = [
+            h('tr', {}, [h('td', { innerHTML: `Compressão Inicial (σ ≤ ${fmt(materials.limits.comp_i, 1)})` }), h('td', {}, [`P ≤ ${fmt(prestress_checks.P_max_comp_i.value * 1000)} kN`])]),
+            h('tr', {}, [h('td', { innerHTML: `Tração Inicial (σ ≤ ${fmt(materials.limits.tens_i, 1)})` }), h('td', {}, [`P ≥ ${fmt(prestress_checks.P_min_tens_i.value * 1000)} kN`])]),
+            h('tr', {}, [h('td', { innerHTML: `Compressão em Serviço (σ ≤ ${fmt(materials.limits.comp_s, 1)})` }), h('td', {}, [`P ≥ ${fmt(prestress_checks.P_min_comp_s.value * 1000)} kN`])]),
+            h('tr', {}, [h('td', { innerHTML: `Tração em Serviço (σ ≤ ${fmt(materials.limits.tens_s, 1)})` }), h('td', {}, [`P ≤ ${fmt(prestress_checks.P_max_tens_s.value * 1000)} kN`])]),
+        ];
 
-        const tableRows = `
-            <tr><td>Compressão Inicial (σ &le; ${fmt(materials.limits.comp_i,1)})</td><td>P &le; ${fmt(prestress_checks.P_max_comp_i.value * 1000)} kN</td></tr>
-            <tr><td>Tração Inicial (σ &le; ${fmt(materials.limits.tens_i,1)})</td><td>P &ge; ${fmt(prestress_checks.P_min_tens_i.value * 1000)} kN</td></tr>
-            <tr><td>Compressão em Serviço (σ &le; ${fmt(materials.limits.comp_s,1)})</td><td>P &ge; ${fmt(prestress_checks.P_min_comp_s.value * 1000)} kN</td></tr>
-            <tr><td>Tração em Serviço (σ &le; ${fmt(materials.limits.tens_s,1)})</td><td>P &le; ${fmt(prestress_checks.P_max_tens_s.value * 1000)} kN</td></tr>
-        `;
-
-        return `
-        <div id="prestress-checks-section" class="report-section-copyable mt-6">
-            <h3 class="report-header">Prestressing Force Limit Checks (Mid-span)</h3>
-            <div class="copy-content">
-                ${summaryHtml}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                        <h4 class="font-semibold text-center">Limites de Força (kN)</h4>
-                        <table class="w-full mt-2 results-table text-sm"><tbody>${tableRows}</tbody></table>
-                    </div>
-                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                         <h4 class="font-semibold text-center">Stress Diagram (Mid-span, MPa)</h4>
-                         <canvas id="stress-diagram-canvas" class="w-full h-64 mt-2"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>`;
+        return createReportSection('prestress-checks-section', 'Prestressing Force Limit Checks (Mid-span)', [
+            summaryEl,
+            h('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4 mt-4' }, [
+                h('div', { className: 'bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg' }, [
+                    h('h4', { className: 'font-semibold text-center' }, ['Limites de Força (kN)']),
+                    h('table', { className: 'w-full mt-2 results-table text-sm' }, [h('tbody', {}, tableRows)])
+                ]),
+                h('div', { className: 'bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg' }, [
+                    h('h4', { className: 'font-semibold text-center' }, ['Stress Diagram (Mid-span, MPa)']),
+                    h('div', { className: 'relative h-64 w-full mt-2' }, [h('canvas', { id: 'stress-diagram-canvas' })])
+                ])
+            ])
+        ]);
     }
 
+    /**
+     * Generates the HTML for the initial prestress estimation section.
+     * @param {object} checks - The `checks` object from the main calculation results.
+     * @returns {HTMLElement} The HTMLElement for the prestress estimation section.
+     */
+    function renderPrestressEstimation(checks) {
+        const { prestress_estimation } = checks; // This object is now populated by the new function
+        const fmt = (val, dec = 2) => (!isNaN(val)) ? val.toFixed(dec) : 'N/A';
+
+        const rowsData = [
+            ['Momento Auxiliar (M<sub>aux</sub>)', `${fmt(prestress_estimation.M_aux_kNm, 1)} kN·m`],
+            ['Módulo do Núcleo (k<sub>s</sub>)', `${fmt(prestress_estimation.ks_m, 3)} m`],
+            ['Força de Protensão Inicial Estimada (P<sub>est,i</sub>)', `${fmt(prestress_estimation.P_est_i, 1)} kN`],
+            ['Força Estimada com Perdas (P<sub>est,perdas</sub>)', `${fmt(prestress_estimation.Pest_perdas, 1)} kN`],
+            ['Número de Vãos Estimado', `${prestress_estimation.num_tendons} vãos`],
+        ];
+
+        return createReportSection('prestress-estimation-section', 'Estimativa Inicial de Protensão', [
+            h('p', { className: 'text-sm text-gray-500 dark:text-gray-400 mb-2' }, ['Esta é uma estimativa preliminar para auxiliar no dimensionamento inicial.']),
+            h('table', { className: 'w-full mt-2 summary-table' }, [
+                h('tbody', {}, rowsData.map(([label, value]) => h('tr', {}, [h('td', { innerHTML: label }), h('td', { innerHTML: value })])))
+            ])
+        ]);
+    }
+    /**
+     * Generates the HTML for the prestress loss analysis section, including a table and a chart placeholder.
+     * @param {object} loss_results - The `loss_results` object from the main calculation results.
+     * @returns {HTMLElement} The HTMLElement for the losses analysis section.
+     */
     function renderLossesTableAndChart(loss_results) {
         const { key_points, sigma_p_friction, sigma_p_anchorage, sigma_p_ime, sigma_p_inf } = loss_results;
         const fmt = (val) => val.toFixed(1);
 
-        const tableRows = key_points.map((x, i) => `
-            <tr>
-                <td>${fmt(x)}</td>
-                <td>${fmt(sigma_p_friction[i].value)}</td>
-                <td>${fmt(sigma_p_anchorage[i].value)}</td>
-                <td>${fmt(sigma_p_ime[i].value)}</td>
-                <td>${fmt(sigma_p_inf[i].value)}</td>
-            </tr>
-        `).join('');
+        const tableHeader = h('thead', {}, [h('tr', {}, ['x (m)', 'Atrito', '+ Encunh.', 'Imediata', 'Final'].map(text => h('th', {}, [text])))]);
+        const tableBody = h('tbody', {}, key_points.map((x, i) => h('tr', {}, [
+            h('td', {}, [fmt(x)]),
+            h('td', {}, [fmt(sigma_p_friction[i].value)]),
+            h('td', {}, [fmt(sigma_p_anchorage[i].value)]),
+            h('td', {}, [fmt(sigma_p_ime[i].value)]),
+            h('td', {}, [fmt(sigma_p_inf[i].value)])
+        ])));
 
-        return `
-        <div id="losses-section" class="report-section-copyable mt-6">
-            <h3 class="report-header">Análise de Perdas de Protensão</h3>
-             <div class="copy-content grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    <h4 class="font-semibold text-center mb-2">Tabela de Tensões no Aço (MPa)</h4>
-                    <table class="w-full results-table text-sm">
-                        <thead>
-                            <tr><th>x (m)</th><th>Atrito</th><th>+ Encunh.</th><th>Imediata</th><th>Final</th></tr>
-                        </thead>
-                        <tbody>${tableRows}</tbody>
-                    </table>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-center mb-2">Gráfico de Perdas de Tensão</h4>
-                    <div class="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg h-80 relative">
-                        <canvas id="losses-chart-canvas"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
+        return createReportSection('losses-section', 'Análise de Perdas de Protensão', [
+            h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' }, [
+                h('div', {}, [
+                    h('h4', { className: 'font-semibold text-center mb-2' }, ['Tabela de Tensões no Aço (MPa)']),
+                    h('table', { className: 'w-full results-table text-sm' }, [tableHeader, tableBody])
+                ]),
+                h('div', {}, [
+                    h('h4', { className: 'font-semibold text-center mb-2' }, ['Gráfico de Perdas de Tensão']),
+                    h('div', { className: 'p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg' }, [
+                        h('div', { className: 'relative h-80' }, [h('canvas', { id: 'losses-chart-canvas' })])
+                    ])
+                ])
+            ])
+        ]);
     }
 
     // --- Other UI and Drawing functions (drawCrossSectionDiagram, drawLongitudinalDiagram, etc.)
     // These functions from the original file are kept largely the same, but with minor adjustments for new data structures.
     
     function drawDiagrams() {
-        const inputs = gatherBeamInputs();
-        drawCrossSectionDiagram('cross-section-svg', inputs.vertices);
-        drawLongitudinalDiagram('longitudinal-svg', inputs);
+        // Use the new inputManager to gather all inputs
+        const inputs = gatherInputsFromIds(inputManager.inputIds);
+        inputs.vertices = inputManager._parseVertices(inputs.beam_coords);
+        inputs.cable_path = inputManager._gatherCablePath();
+
+        // Now draw the diagrams with the gathered inputs
+        drawCrossSectionDiagram('cross-section-canvas', inputs.vertices);
+        drawLongitudinalDiagram('longitudinal-canvas', inputs);
         const props = concreteBeamCalculator.calculateSectionProperties(inputs.vertices);
         const heightInput = document.getElementById('beam_height');
         if (props && heightInput) {
@@ -809,111 +1073,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function drawLossesChart(svgId, loss_data) {
-        const svg = document.getElementById(svgId);
-        if (!svg || !loss_data) return;
-        svg.innerHTML = '';
-        const ns = "http://www.w3.org/2000/svg";
-        const isDark = document.documentElement.classList.contains('dark');
-        const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-        const W = 500, H = 320;
-        const margin = { top: 20, right: 20, bottom: 40, left: 50 };
-        const width = W - margin.left - margin.right;
-        const height = H - margin.top - margin.bottom;
-        
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-        const datasets = [
-            { name: 'Atrito', data: loss_data.sigma_p_friction, color: '#3b82f6' },
-            { name: '+Encunh.', data: loss_data.sigma_p_anchorage, color: '#f97316' },
-            { name: 'Imediata', data: loss_data.sigma_p_ime, color: '#ef4444' },
-            { name: 'Final', data: loss_data.sigma_p_inf, color: '#10b981', width: 3 },
-        ];
-
-        const all_x = loss_data.key_points;
-        const all_y = datasets.flatMap(ds => ds.data.map(d => d.value)).filter(v => !isNaN(v));
-        if (all_y.length === 0) return;
-
-        const xScale = val => margin.left + (val / all_x[all_x.length-1]) * width;
-        const yMin = Math.min(...all_y);
-        const yMax = Math.max(...all_y);
-        const yRange = yMax - yMin;
-        
-        const yScale = val => {
-            if (yRange < 1e-6) return margin.top + height / 2;
-            return margin.top + height - ((val - yMin) / yRange) * height;
-        };
-        
-        // Axes
-        svg.innerHTML += `<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top+height}" stroke="${textColor}" stroke-width="1"/>`;
-        svg.innerHTML += `<line x1="${margin.left}" y1="${margin.top+height}" x2="${margin.left+width}" y2="${margin.top+height}" stroke="${textColor}" stroke-width="1"/>`;
-        svg.innerHTML += `<text x="${margin.left + width/2}" y="${H-5}" text-anchor="middle" font-size="12" fill="${textColor}">Comprimento (m)</text>`;
-        svg.innerHTML += `<text x="15" y="${margin.top + height/2}" text-anchor="middle" font-size="12" fill="${textColor}" transform="rotate(-90, 15, ${margin.top+height/2})">Tensão (MPa)</text>`;
-
-        // Y-axis labels
-        for(let i = 0; i <= 5; i++){
-            const val = yMin + i/5 * yRange;
-            const yPos = yScale(val);
-            if (isNaN(yPos)) continue;
-            svg.innerHTML += `<text x="${margin.left-5}" y="${yPos}" text-anchor="end" alignment-baseline="middle" font-size="10" fill="${textColor}">${val.toFixed(0)}</text>`;
-        }
-        
-        // Data lines
-        datasets.forEach(ds => {
-            const valid_points = ds.data.filter(p => !isNaN(p.value));
-            if (valid_points.length < 2) return;
-            const d = valid_points.map(p => `${xScale(p.x)},${yScale(p.value)}`).join(' ');
-            svg.innerHTML += `<polyline points="${d}" fill="none" stroke="${ds.color}" stroke-width="${ds.width || 2}" stroke-dasharray="${ds.name === '+Encunh.' ? '5,5': ''}"/>`;
-        });
-    }
-    
-    function drawStressDiagram(svgId, results) {
-       const svg = document.getElementById(svgId);
-       if (!svg || !results || !results.stress_profiles) {
-           if (svg) svg.innerHTML = '';
-           return;
-       }
-       svg.innerHTML = '';
-
-       const { stress_profiles } = results;
-       const { initial, final: final_stress } = stress_profiles;
-       const ns = "http://www.w3.org/2000/svg";
-       const isDark = document.documentElement.classList.contains('dark');
-       const textColor = isDark ? '#FFFFFF' : '#2c3e50';
-       const W = 250, H = 250;
-       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-       const margin = { top: 20, right: 40, bottom: 20, left: 40 };
-       const drawWidth = W - margin.left - margin.right;
-       const drawHeight = H - margin.top - margin.bottom;
-
-       const allStresses = [initial.top, initial.bottom, final_stress.top, final_stress.bottom, 0].filter(v => !isNaN(v));
-       if(allStresses.length === 0) return;
-       
-       const maxAbsStress = Math.max(...allStresses.map(Math.abs));
-       const stressRange = maxAbsStress * 2;
-       
-       const stressScale = stressRange > 1e-6 ? drawWidth / stressRange : 0;
-       const zeroX = margin.left + drawWidth/2;
-
-       // Zero line
-       svg.innerHTML += `<line x1="${zeroX}" y1="${margin.top}" x2="${zeroX}" y2="${H-margin.bottom}" stroke="${textColor}" stroke-dasharray="2 2"/>`;
-       // Beam representation
-       svg.innerHTML += `<rect x="${zeroX-4}" y="${margin.top}" width="8" height="${drawHeight}" fill="${isDark ? '#4b5563' : '#d1d5db'}"/>`;
-        
-       const drawProfile = (topStress, bottomStress, color) => {
-           if (isNaN(topStress) || isNaN(bottomStress)) return;
-           const topX = zeroX + topStress * stressScale;
-           const bottomX = zeroX + bottomStress * stressScale;
-           svg.innerHTML += `<polygon points="${zeroX},${margin.top} ${topX},${margin.top} ${bottomX},${H - margin.bottom} ${zeroX},${H - margin.bottom}" fill="${color}" fill-opacity="0.2" stroke="${color}" stroke-width="1.5"/>`;
-           svg.innerHTML += `<text x="${topX + (topStress >= 0 ? 3 : -3)}" y="${margin.top+4}" text-anchor="${topStress >= 0 ? 'start' : 'end'}" font-size="10" fill="${color}">${topStress.toFixed(1)}</text>`;
-           svg.innerHTML += `<text x="${bottomX + (bottomStress >= 0 ? 3 : -3)}" y="${H-margin.bottom-2}" text-anchor="${bottomStress >= 0 ? 'start' : 'end'}" font-size="10" fill="${color}">${bottomStress.toFixed(1)}</text>`;
-       };
-
-       drawProfile(initial.top, initial.bottom, '#3b82f6');
-       drawProfile(final_stress.top, final_stress.bottom, '#ef4444');
-    }
-
     // --- Event Listeners & Initialization ---
     function addCablePointRow(containerId, point = { x: 0, y: 0.35, type: 'Parabolic' }) {
         const container = document.getElementById(containerId);
@@ -931,27 +1090,23 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="remove-cable-point-btn text-red-500 hover:text-red-700 font-bold text-lg w-8" title="Remove Point">&times;</button>
         `;
 
-        const finalHtml = `
-        <div id="concrete-beam-report" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
-            <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-                 <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
-            </div>
-            <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação da Viga Protendida (NBR 6118)</h2>
-            ${inputSummaryHtml}
-            ${calculatedPropsHtml}
-            ${prestressChecksHtml}
-        </div>`;
-
         row.querySelector('.remove-cable-point-btn').addEventListener('click', () => {
             row.remove();
             drawDiagrams();
-            saveInputsToLocalStorage('prestressed-beam-inputs-v2', gatherBeamInputs());
+            const currentInputs = gatherInputsFromIds(inputManager.inputIds);
+            currentInputs.vertices = inputManager._parseVertices(currentInputs.beam_coords);
+            currentInputs.cable_path = inputManager._gatherCablePath();
+            saveInputsToLocalStorage('prestressed-beam-inputs-v2', currentInputs);
         });
+
+        container.appendChild(row);
     }
 
+    const gatherAllInputs = () => {
+        return { ...gatherInputsFromIds(inputManager.inputIds), vertices: inputManager._parseVertices(document.getElementById('beam_coords').value), cable_path: inputManager._gatherCablePath() };
+    };
     const handleRunCheck = createCalculationHandler({
-        gatherInputsFunction: gatherBeamInputs,
+        gatherInputsFunction: gatherAllInputs,
         storageKey: 'prestressed-beam-inputs-v2',
         validationRuleKey: 'prestressed-beam-inputs-v2',
         calculatorFunction: concreteBeamCalculator.run,
@@ -967,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 300);
 
     // Attach listeners to all inputs that affect diagrams
-    const diagramInputs = [...prestressedInputIds, 'beam_coords'];
+    const diagramInputs = inputManager.inputIds.filter(id => id !== 'beam_height').concat(['beam_coords']);
     diagramInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -978,8 +1133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cable-path-container').addEventListener('input', debouncedDraw);
     
     // Auto-save/load functionality
-    const allInputAndTextareaIds = [...prestressedInputIds, 'beam_coords']; // Added beam_coords
-    const debouncedSave = debounce(() => saveInputsToLocalStorage('prestressed-beam-inputs-v2', gatherBeamInputs()), 500);
+    const allInputAndTextareaIds = [...inputManager.inputIds, 'beam_coords']; // Added beam_coords
+    const debouncedSave = debounce(() => saveInputsToLocalStorage('prestressed-beam-inputs-v2', gatherAllInputs()), 500);
     document.getElementById('cable-path-container').addEventListener('input', debouncedSave);
     allInputAndTextareaIds.forEach(id => {
         const el = document.getElementById(id);
@@ -1105,8 +1260,8 @@ function drawStressDiagram(canvasId, results) {
     const textColor = isDark ? '#FFFFFF' : '#2c3e50';
 
     const datasets = [
-        { label: 'Inicial', data: [{ x: initial.bottom, y: 0 }, { x: initial.top, y: properties.height }], borderColor: '#3b82f6' },
-        { label: 'Final', data: [{ x: final_stress.bottom, y: 0 }, { x: final_stress.top, y: properties.height }], borderColor: '#ef4444' }
+        { label: 'Inicial', data: [{ x: initial.bottom, y: properties.y_min }, { x: initial.top, y: properties.y_max }], borderColor: '#3b82f6' },
+        { label: 'Final', data: [{ x: final_stress.bottom, y: properties.y_min }, { x: final_stress.top, y: properties.y_max }], borderColor: '#ef4444' }
     ];
 
     let existingChart = Chart.getChart(canvas);
@@ -1123,8 +1278,8 @@ function drawStressDiagram(canvasId, results) {
             scales: {
                 y: {
                     title: { display: true, text: 'Altura da Viga (cm)', color: textColor },
-                    min: 0,
-                    max: properties.height,
+                    min: properties.y_min,
+                    max: properties.y_max,
                     ticks: { color: textColor },
                     grid: { color: gridColor }
                 },

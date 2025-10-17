@@ -391,28 +391,26 @@ async function convertSvgToPng(svg) {
             clone.innerHTML = backgroundRect + clone.innerHTML;
             const xml = new XMLSerializer().serializeToString(clone);
             const svg64 = btoa(unescape(encodeURIComponent(xml)));
-            const dataUrl = 'data:image/svg+xml;base64,' + svg64;
+            const dataUrl = `data:image/svg+xml;base64,${svg64}`;
 
             const image = new Image();
             image.onload = () => {
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
-                const ctx = canvas.getContext('2d');
-
-                ctx.fillRect(0, 0, width, height);
-                ctx.drawImage(image, 0, 0);
-
-                const pngImage = new Image();
-                pngImage.src = canvas.toDataURL('image/png');
-                pngImage.style.maxWidth = '100%';
-                pngImage.style.height = 'auto';
-                resolve(pngImage);
+                const ctx = canvas.getContext('2d');                
+                if (ctx) {
+                    ctx.drawImage(image, 0, 0);
+                    const pngImage = new Image();
+                    pngImage.src = canvas.toDataURL('image/png');
+                    pngImage.style.maxWidth = '100%';
+                    pngImage.style.height = 'auto';
+                    resolve(pngImage);
+                } else {
+                    reject(new Error("Could not get canvas context."));
+                }
             };
-            image.onerror = (e) => {
-                console.error("Image loading error during SVG conversion:", e);
-                reject(new Error("Image could not be loaded for conversion."));
-            };
+            image.onerror = (e) => reject(new Error("Image could not be loaded for conversion."));
             image.src = dataUrl;
         } catch (e) {
             console.error('Error during SVG to PNG conversion:', e);

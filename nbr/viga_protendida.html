@@ -72,6 +72,17 @@
                                 <label for="fptk" class="block text-sm font-medium mb-1">Tendon f<sub>ptk</sub> (MPa)</label>
                                 <input type="number" id="fptk" value="1900" data-validate="positive">
                             </div>
+                            <div class="col-span-2 pt-2 border-t dark:border-gray-600">
+                                <p class="text-sm font-medium mb-2">Parâmetros para Estimativa Inicial</p>
+                            </div>
+                            <div>
+                                <label for="Kperdas" class="block text-sm font-medium mb-1">Fator de Perdas (K<sub>perdas</sub>)</label>
+                                <input type="number" id="Kperdas" value="0.85" step="0.01" data-validate="positive">
+                            </div>
+                            <div>
+                                <label for="N_cables" class="block text-sm font-medium mb-1">Cabos por Vão</label>
+                                <input type="number" id="N_cables" value="4" data-validate="integer,positive">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -144,8 +155,8 @@
                 <div class="space-y-6 md:col-span-2 lg:col-span-1">
                     <div class="form-section">
                         <h2>Cross-Section Diagram</h2>
-                        <div class="diagram h-[400px] relative mt-4">
-                            <svg id="cross-section-svg" class="w-full h-full"></svg>
+                        <div class="relative h-[400px] mt-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                            <canvas id="cross-section-canvas"></canvas>
                         </div>
                     </div>
                     <div class="form-section">
@@ -164,8 +175,8 @@
             <div class="mt-6">
                 <div class="form-section w-full">
                     <h2 class="text-center">Longitudinal View</h2>
-                    <div class="diagram h-[350px] relative mt-4">
-                        <svg id="longitudinal-svg" class="w-full h-full"></svg>
+                    <div class="relative h-[350px] mt-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <canvas id="longitudinal-canvas"></canvas>
                     </div>
                 </div>
             </div>
