@@ -42,7 +42,7 @@ async function injectHeader(options) {
 
     // Build the sub-navigation HTML
     const subNavHtml = currentSubNavSet.map(link => `
-        <a href="${pathPrefix}${link.href}" class="px-4 py-2 text-sm font-medium rounded-md z-10 transition-colors ${link.key === trimmedActivePage ? 'toggle-active' : 'toggle-inactive'}">
+        <a href="${pathPrefix}${link.href}" class="px-4 py-2 text-sm font-medium rounded-md z-10 transition-colors ${link.key === activePage ? 'toggle-active' : 'toggle-inactive'}">
             ${link.text}
         </a>
     `).join('');

@@ -1040,6 +1040,16 @@ function drawLongitudinalDiagram(canvasId, inputs) {
         cablePoints.push({ x: x_pos, y: y_abs_m * 100 }); // convert to cm
     }
 
+    // --- Adiciona padding aos eixos X e Y ---
+    const xPadding = beam_length * 0.05; // 5% de padding em cada lado
+    const scaleMinX = -xPadding;
+    const scaleMaxX = beam_length + xPadding;
+
+    const yRange = props.y_max - props.y_min;
+    const yPadding = yRange * 0.1; // 10% de padding
+    const scaleMinY = props.y_min - yPadding;
+    const scaleMaxY = props.y_max + yPadding;
+
     new Chart(canvas, {
         type: 'line',
         data: {
@@ -1081,12 +1091,16 @@ function drawLongitudinalDiagram(canvasId, inputs) {
                     type: 'linear',
                     title: { display: true, text: 'Comprimento (m)', color: textColor },
                     ticks: { color: textColor },
-                    grid: { color: gridColor }
+                    grid: { color: gridColor },
+                    min: scaleMinX,
+                    max: scaleMaxX
                 },
                 y: {
                     title: { display: true, text: 'Altura (cm)', color: textColor },
                     ticks: { color: textColor },
-                    grid: { color: gridColor }
+                    grid: { color: gridColor },
+                    min: scaleMinY,
+                    max: scaleMaxY
                 }
             },
             plugins: {
@@ -1108,6 +1122,15 @@ function drawLongitudinalDiagram(canvasId, inputs) {
  * --- EVENT LISTENERS AND DOM MANIPULATION ---
  */
 document.addEventListener('DOMContentLoaded', () => {
+        // Injeta o cabeçalho e rodapé padrão da aplicação
+        injectHeader({
+            activePage: 'viga-protendida',
+            pageTitle: 'Verificador de Viga Protendida (NBR 6118)',
+            headerPlaceholderId: 'header-placeholder'
+        });
+        injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+        initializeSharedUI();
+
     /**
      * A helper function to create DOM elements.
      */
@@ -1169,6 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reportEl = h('div', { id: 'concrete-beam-report', className: 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6' }, [
             h('div', { className: 'flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden' }, [
                 h('button', { id: 'download-pdf-btn', className: 'bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm' }, ['Download PDF']),
+                h('button', { id: 'download-word-btn', className: 'bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm' }, ['Download Word']),
                 h('button', { id: 'copy-report-btn', className: 'bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm' }, ['Copiar Relatório Completo'])
             ]),
             h('h2', { className: 'text-2xl font-bold text-center border-b pb-2' }, ['Relatório de Verificação da Viga Protendida (NBR 6118)']),
@@ -1185,6 +1209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsDiv.appendChild(reportEl);
 
         document.getElementById('download-pdf-btn')?.addEventListener('click', () => handleDownloadPdf('concrete-beam-report', 'Viga-Protendida-Relatorio.pdf'));
+        document.getElementById('download-word-btn')?.addEventListener('click', () => handleDownloadWord('concrete-beam-report', 'Viga-Protendida-Relatorio.docx'));
         document.getElementById('copy-report-btn')?.addEventListener('click', () => handleCopyToClipboard('concrete-beam-report', 'feedback-message'));
         resultsDiv.querySelectorAll('.copy-section-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -1781,6 +1806,9 @@ function drawLossesChart(canvasId, loss_data) {
 /**
  * Draws the stress profile diagram using Chart.js.
  */
+/**
+ * Draws the stress profile diagram using Chart.js, including the cross-section line and horizontal stress indicators.
+ */
 function drawStressDiagram(canvasId, results) {
     const chartCanvas = document.getElementById(canvasId);
     if (!chartCanvas || !results || !results.stress_profiles || typeof Chart === 'undefined') return;
@@ -1791,9 +1819,81 @@ function drawStressDiagram(canvasId, results) {
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     const textColor = isDark ? '#FFFFFF' : '#2c3e50';
 
+    // --- NOVO PLUGIN PARA DESENHAR AS LINHAS HORIZONTAIS ---
+    const horizontalStressLines = {
+        id: 'horizontalStressLines',
+        afterDatasetsDraw(chart, args, options) {
+            const { ctx, chartArea: { top, bottom }, scales: { x, y } } = chart;
+            ctx.save();
+
+            // Percorre os datasets de 'Inicial' e 'Final'
+            chart.getDatasetMeta(0).data.forEach(datapoint => {
+                ctx.beginPath();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)'; // Cor do 'Inicial' com transparência
+                ctx.moveTo(x.getPixelForValue(0), datapoint.y); // Começa na linha central (x=0)
+                ctx.lineTo(datapoint.x, datapoint.y); // Vai até o ponto de tensão
+                ctx.stroke();
+            });
+
+            chart.getDatasetMeta(1).data.forEach(datapoint => {
+                ctx.beginPath();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)'; // Cor do 'Final' com transparência
+                ctx.moveTo(x.getPixelForValue(0), datapoint.y);
+                ctx.lineTo(datapoint.x, datapoint.y);
+                ctx.stroke();
+            });
+
+            ctx.restore();
+        }
+    };
+    // --- FIM DO PLUGIN ---
+
+    // Coleta todos os valores de tensão para encontrar os limites
+    const allStresses = [
+        initial.top, initial.bottom,
+        final_stress.top, final_stress.bottom,
+        0 // Garante que a linha x=0 esteja sempre visível
+    ];
+
+    // Calcula o mínimo e o máximo, e adiciona uma "folga"
+    const stressMin = Math.min(...allStresses);
+    const stressMax = Math.max(...allStresses);
+    const xPadding = (stressMax - stressMin) * 0.1;
+    const scaleMinX = stressMin - xPadding;
+    const scaleMaxX = stressMax + xPadding;
+
+    // --- NOVO: Adiciona padding ao eixo Y ---
+    const yPadding = (properties.y_max - properties.y_min) * 0.1;
+    const scaleMinY = properties.y_min - yPadding;
+    const scaleMaxY = properties.y_max + yPadding;
+
     const datasets = [
-        { label: 'Inicial', data: [{ x: initial.bottom, y: properties.y_min }, { x: initial.top, y: properties.y_max }], borderColor: '#3b82f6' },
-        { label: 'Final', data: [{ x: final_stress.bottom, y: properties.y_min }, { x: final_stress.top, y: properties.y_max }], borderColor: '#ef4444' }
+        { 
+            label: 'Inicial', 
+            data: [{ x: initial.bottom, y: properties.y_min }, { x: initial.top, y: properties.y_max }], 
+            borderColor: '#3b82f6', 
+            showLine: true,
+            order: 1 // Garante que esta linha fique na frente
+        },
+        { 
+            label: 'Final', 
+            data: [{ x: final_stress.bottom, y: properties.y_min }, { x: final_stress.top, y: properties.y_max }], 
+            borderColor: '#ef4444', 
+            showLine: true,
+            order: 2 // Garante que esta linha fique na frente
+        },
+        // --- NOVO DATASET PARA A LINHA VERTICAL DA SEÇÃO ---
+        {
+            label: 'Seção',
+            data: [{ x: 0, y: properties.y_min }, { x: 0, y: properties.y_max }],
+            borderColor: isDark ? '#E5E7EB' : '#1F2937', // Cor da seção
+            borderWidth: 2,
+            showLine: true,
+            pointRadius: 0, // Sem pontos nos extremos
+            order: 3 // Garante que a seção fique atrás das linhas de tensão
+        }
     ];
 
     let existingChart = Chart.getChart(chartCanvas);
@@ -1802,32 +1902,42 @@ function drawStressDiagram(canvasId, results) {
     }
 
     new Chart(chartCanvas, {
-        type: 'line',
+        type: 'scatter',
         data: { datasets },
+        // --- REGISTRA O NOVO PLUGIN AQUI ---
+        plugins: [horizontalStressLines],
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
                 y: {
                     title: { display: true, text: 'Altura da Viga (cm)', color: textColor },
-                    min: properties.y_min,
-                    max: properties.y_max,
+                    min: scaleMinY,
+                    max: scaleMaxY,
                     ticks: { color: textColor },
                     grid: { color: gridColor }
                 },
                 x: {
                     title: { display: true, text: 'Tensão (MPa)', color: textColor },
                     position: 'top',
+                    min: scaleMinX,
+                    max: scaleMaxX,
                     ticks: { color: textColor },
-                    grid: { color: gridColor },
-                    afterBuildTicks: (axis) => {
-                        axis.ticks.push({ value: 0, label: '0' }); // Ensure zero line is shown
-                    }
+                    grid: { color: gridColor }
                 }
             },
             elements: { line: { tension: 0 } },
             plugins: {
-                legend: { position: 'bottom', labels: { color: textColor } },
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: textColor,
+                        // Filtra a legenda para não mostrar 'Seção'
+                        filter: (legendItem, chartData) => {
+                            return legendItem.text !== 'Seção';
+                        }
+                    } 
+                },
                 tooltip: {
                     callbacks: {
                         label: (context) => `Tensão: ${context.parsed.x.toFixed(2)} MPa`
