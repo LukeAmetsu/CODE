@@ -1583,7 +1583,10 @@ async function populateShapeDropdown() {
 }
 
 async function handleShapeSelection() {
-    const shapeName = document.getElementById('aisc_shape_select').value;
+    const shapeSelect = document.getElementById('aisc_shape_select');
+    if (!shapeSelect) return; // Se o elemento não existe na página, não faça nada.
+
+    const shapeName = shapeSelect.value;
     const geometryInputs = ['d', 'bf', 'tf', 'tw'];
     const manualPropInputs = ['Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual'];
 

@@ -23,9 +23,8 @@ function debounce(func, wait) {
  */
 const inputManager = {
     /** List of standard input element IDs to gather. */
-    inputIds: [
-        'design_code', 'unit_system', 'fck', 'age_at_prestress', 'Ap', 'Kperdas', 'num_cables',
-        'num_strands_per_cable', // <-- ADICIONADO: Número de cordoalhas agora é uma entrada direta
+    inputIds: [ // Removido num_cables e num_strands_per_cable
+        'design_code', 'unit_system', 'fck', 'age_at_prestress', 'Ap', 'Kperdas',
         'load_pp', 'load_perm', 'load_var', 'beam_length', 'beam_height', 'beam_coords', 'Ep',
         'humidity', 'fptk', 'mu', 'k', 'anchorage_slip', 'exposed_perimeter',
         'cement_s_factor', 'cement_alpha_factor'
@@ -57,6 +56,20 @@ const inputManager = {
             'type': index < rows.length - 1 ? row.querySelector('.cable-type').value : 'Straight'
         }));
     },
+
+    /**
+     * Gathers the individual cable definitions from the dynamic form rows.
+     * @returns {Array<object>} An array of cable definition objects.
+     */
+    _gatherCableDefinitions() {
+        const container = document.getElementById('cables-definition-container');
+        if (!container) return [];
+        return Array.from(container.querySelectorAll('.cable-definition-row')).map(row => ({
+            num_strands: parseInt(row.querySelector('.cable-num-strands').value, 10) || 0,
+            jacking_side: row.querySelector('.cable-jacking-side').value,
+            sequence: parseInt(row.querySelector('.cable-sequence').value, 10) || 0,
+        }));
+    }
 };
 
 const concreteBeamCalculator = (() => {
@@ -305,13 +318,13 @@ const concreteBeamCalculator = (() => {
      * @returns {object} An object with the results of the prestress checks.
      */
     function performInitialPrestressChecks({ fptk, Ap_total_m2, ecc_mid, materials, moments, A_m2, Ws_m3, Wi_m3, Kperdas }) {
-        const sigma_pi = 0.74 * fptk;
+        const sigma_pi = 0.74 * fptk; // Tensão inicial de protensão
         const P_i = Ap_total_m2 * sigma_pi; // MN
 
         // Checks at prestressing time (k_perdas = 1.0)
         const P_max_comp_i_res = solveForPrestressForce(-materials.limits.comp_i, -Ws_m3, moments.M_g1k / 1000, A_m2, ecc_mid, 1.0);
         const P_min_tens_i_res = solveForPrestressForce(materials.limits.tens_i, Wi_m3, moments.M_g1k / 1000, A_m2, ecc_mid, 1.0);
-        
+
         // Checks in service (uses k_perdas to convert P_inf to equivalent P_i)
         const P_min_comp_s_res = solveForPrestressForce(-materials.limits.comp_s, -Ws_m3, moments.M_CQP / 1000, A_m2, ecc_mid, Kperdas);
         const P_max_tens_s_res = solveForPrestressForce(materials.limits.tens_s, Wi_m3, moments.M_CF / 1000, A_m2, ecc_mid, Kperdas);
@@ -330,26 +343,26 @@ const concreteBeamCalculator = (() => {
      * @param {object} params - An object containing all necessary parameters.
      * @returns {object} An object with the results of the estimation.
      */
-    function calculateInitialPrestressEstimate({ moments, materials, props, Kperdas, num_cables, ecc_mid, Ap, fptk }) {
+    function calculateInitialPrestressEstimate({ moments, materials, props, Kperdas, cable_definitions, ecc_mid, Ap, fptk }) {
         const Ap_single_cm2 = parseFloat(Ap) || 0;
         const P_strand_kN = (Ap_single_cm2 * 0.74 * fptk) / 10;
         const M_aux_kNm = Math.max(moments.M_CF - (props.W.i / 1e6) * materials.fctf * 1000, moments.M_CQP);
         const ks_m = props.ks / 100; // convert cm to m
         const denominator = ks_m + ecc_mid;
-
+        const num_cables = cable_definitions.length;
         let P_est_i = 0;
         if (Math.abs(denominator) > 1e-9) {
             P_est_i = (M_aux_kNm) / denominator; // This is in kN
         }
         const Pest_perdas = Kperdas > 0 ? P_est_i / Kperdas : 0; // Total force required before losses
-        const num_tendons = (P_strand_kN > 0 && num_cables > 0) ? Math.ceil(Pest_perdas / (P_strand_kN * num_cables)) : 0;
+        const num_strands_per_cable = (P_strand_kN > 0 && num_cables > 0) ? Math.ceil(Pest_perdas / (P_strand_kN * num_cables)) : 0;
 
         return {
             M_aux_kNm,
             ks_m,
             P_est_i,
             Pest_perdas,
-            num_tendons, // This is strands PER CABLE
+            num_strands_per_cable,
             P_cable: P_strand_kN
         };
     }
@@ -362,16 +375,16 @@ const concreteBeamCalculator = (() => {
     function run(raw_inputs) {
         const inputs = { ...raw_inputs }; // Make a mutable copy
 
-        const { vertices, fck, beam_length, cable_path, Ap, num_cables, num_strands_per_cable } = inputs;
-        
+        const { vertices, fck, beam_length, cable_path, Ap, cable_definitions } = inputs;
+
         // --- 1. Calculate Total Steel Area from DIRECT INPUTS ---
         const Ap_single_cm2 = parseFloat(Ap) || 0;
-        const total_strands = (parseFloat(num_cables) || 0) * (parseFloat(num_strands_per_cable) || 0);
+        const total_strands = cable_definitions.reduce((sum, cable) => sum + cable.num_strands, 0);
         const Ap_total_cm2 = Ap_single_cm2 * total_strands;
         const Ap_total_m2 = Ap_total_cm2 / 1e4;
 
         // --- 2. Validate Inputs & Section Properties ---
-        if (!vertices || vertices.length < 3 || fck <= 0 || beam_length <= 0 || Ap_total_cm2 <= 0 || num_cables <= 0) {
+        if (!vertices || vertices.length < 3 || fck <= 0 || beam_length <= 0 || Ap_total_cm2 <= 0 || cable_definitions.length === 0) {
             return { errors: ["Invalid inputs. Ensure all values (fck, length, Ap, N_cables) are positive and vertices are sufficient."] };
         }
         const props = calculateSectionProperties(vertices);
@@ -424,10 +437,10 @@ const concreteBeamCalculator = (() => {
         // --- 6. Initial Prestress and Stress Limit Checks (at mid-span) ---
         const mid_span_details = path_details.find(p => Math.abs(p.x - beam_length / 2) < 1e-9) || path_details[Math.floor(path_details.length/2)];
         const ecc_mid = mid_span_details.e;
-        const prestress_checks = performInitialPrestressChecks({ ...inputs, Ap_total_m2, ecc_mid, materials, moments, A_m2, Ws_m3, Wi_m3, Kperdas: inputs.Kperdas });
-       
+        const prestress_checks = performInitialPrestressChecks({ ...inputs, Ap_total_m2, ecc_mid, materials, moments, A_m2, Ws_m3, Wi_m3 });
+
         // --- 7. Detailed Prestress Loss Calculation ---
-        const loss_results = calculateDetailedLosses(inputs, props, materials, path_details, moments, prestress_checks.sigma_pi, cable_path_abs, Ap_total_m2, x_a_result);
+        const loss_results = calculateSequentialLosses(inputs, props, materials, path_details, moments, prestress_checks.sigma_pi, cable_path_abs);
 
         // --- 8. Final Stress Profiles ---
         const P_eff_mid_val_result = loss_results.sigma_p_inf.find(p=>p.x === beam_length/2);
@@ -443,12 +456,15 @@ const concreteBeamCalculator = (() => {
                  bottom: (-P_eff_mid / A_m2) - (P_eff_mid * ecc_mid / Wi_m3) + (moments.M_CF / 1000 / Wi_m3) // Momento positivo comprime embaixo
              }
          };
-         
+
+        // --- 9. Serviceability Limit State (SLS) Stress Checks ---
+        const sls_checks = performSlsChecks(stress_profiles, materials);
+
         // --- 9. Ultimate Limit State (ULS/ELU) Checks ---
         const uls_checks = performUlsChecks(inputs, props, loss_results, Ap_total_m2);
         
         // --- 10. Preliminary Prestress Estimation (for reporting only) ---
-        const prestress_estimation = calculateInitialPrestressEstimate({ ...inputs, moments, materials, props, ecc_mid });
+        const prestress_estimation = calculateInitialPrestressEstimate({ ...inputs, moments, materials, props, ecc_mid, cable_definitions });
 
         return {
             checks: {
@@ -461,6 +477,7 @@ const concreteBeamCalculator = (() => {
                 prestress_estimation, // For reporting
                 loss_results,
                 stress_profiles,
+                sls_checks,
                 uls_checks
             },
             inputs
@@ -821,7 +838,7 @@ const concreteBeamCalculator = (() => {
      * @param {number} y_max_cm - The maximum y-coordinate of the section (top fiber) [cm].
      * @returns {{area: number, static_moment_y: number, centroid_y: number}} Properties of the compressed area.
      */
-    function calculateCompressedAreaProperties(vertices, compression_depth_cm, y_max_cm) {
+    function calculateCompressedAreaProperties(vertices, compression_depth_cm, y_max_cm) { // No changes needed here
         if (compression_depth_cm <= 0) return { area: 0, static_moment_y: 0, centroid_y: y_max_cm };
         const y_clip = y_max_cm - compression_depth_cm;
 
@@ -918,14 +935,14 @@ const concreteBeamCalculator = (() => {
  * --- EVENT LISTENERS AND DOM MANIPULATION ---
  */
 document.addEventListener('DOMContentLoaded', async () => {
-
+    const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
     /**
      * A helper function to create DOM elements.
      */
     function h(tag, props = {}, children = []) {
         const el = document.createElement(tag);
         if (props && typeof props === 'object') {
-            Object.entries(props).forEach(([key, val]) => {
+            Object.entries(props).forEach(([key, val]) => { // This helper is fine
                 if (key === 'className') el.className = val;
                 else if (key === 'style' && typeof val === 'object') Object.assign(el.style, val);
                 else if (key in el) el[key] = val;
@@ -941,6 +958,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.insertAdjacentHTML('beforeend', String(children));
         }
         return el;
+    }
+
+    function addCableDefinitionRow(containerId, cable = { num_strands: 12, jacking_side: 'esquerda', sequence: 1 }) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const rowEl = document.createElement('div');
+        rowEl.className = 'cable-definition-row grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center';
+
+        rowEl.appendChild(h('input', { type: 'number', className: 'cable-num-strands w-full p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600', value: cable.num_strands, 'data-validate': 'integer,positive' }));
+        
+        const jackingSideSelect = h('select', { className: 'cable-jacking-side w-full p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600' });
+        jackingSideSelect.innerHTML = `
+            <option value="esquerda" ${cable.jacking_side === 'esquerda' ? 'selected' : ''}>Esquerda</option>
+            <option value="direita" ${cable.jacking_side === 'direita' ? 'selected' : ''}>Direita</option>
+        `;
+        rowEl.appendChild(jackingSideSelect);
+
+        rowEl.appendChild(h('input', { type: 'number', className: 'cable-sequence w-full p-1 border rounded-md dark:bg-gray-700 dark:border-gray-600', value: cable.sequence, 'data-validate': 'integer,positive' }));
+
+        const removeButton = h('button', { className: 'remove-cable-btn text-red-500 hover:text-red-700 font-bold text-lg w-8', title: 'Remover Cabo' }, ['&times;']);
+        removeButton.onclick = () => {
+            rowEl.remove();
+            debouncedSave();
+        };
+        rowEl.appendChild(removeButton);
+
+        container.appendChild(rowEl);
     }
 
     function addCablePointRow(containerId, point = { x: 0, y: 0.35, type: 'Parabolic' }) {
@@ -974,13 +1019,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const gatherAllInputs = () => {
         const inputs = inputManager.inputIds.reduce((acc, id) => {
-            const el = document.getElementById(id);
+            const el = document.getElementById(id); // This is fine
             if (el) acc[id] = (el.type === 'number') ? parseFloat(el.value) || 0 : el.value;
             else acc[id] = 0;
             return acc;
         }, {});
         inputs.vertices = inputManager._parseVertices(document.getElementById('beam_coords')?.value);
         inputs.cable_path = inputManager._gatherCablePath();
+        inputs.cable_definitions = inputManager._gatherCableDefinitions();
         return inputs;
     };
 
@@ -1011,13 +1057,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         report.addSection('Estimativa de Protensão', renderPrestressEstimation(checks, inputs), 'prestress-estimation-section');
 
         // Section 4: Detailed Loss Calculations
-        report.addSection('Cálculo das Perdas de Protensão', renderDetailedLossCalculations(checks.loss_results), 'detailed-losses-section');
+        report.addSection('Cálculo das Perdas de Protensão', renderDetailedLossCalculations(checks.loss_results, inputs), 'detailed-losses-section');
 
         // Section 5: Losses Table and Chart
         report.addSection('Resumo das Perdas e Gráfico', renderLossesTableAndChart(checks.loss_results), 'losses-section');
 
         // Section 6: Prestress Checks
         report.addSection('Verificação da Força de Protensão', renderPrestressChecks(checks), 'prestress-checks-section');
+
+        // Section 6.5: SLS Checks
+        report.addSection('Verificação de Tensões no Estado Limite de Serviço (ELS)', renderSlsChecks(checks), 'sls-checks-section');
 
         // Section 7: ULS Checks
         report.addSection('Verificação de Flexão no Estado Limite Último (ELU)', renderUlsChecks(checks), 'uls-checks-section');
@@ -1026,22 +1075,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // After rendering, draw the charts
         drawStressDiagram('stress-diagram-canvas', results.checks);
-        drawLossesChart('losses-chart-canvas', checks.loss_results);
+        drawEquivalentStressChart('equivalent-stress-chart-canvas', checks.loss_results);
+        drawIndividualCableChart('individual-cables-chart-canvas', checks.loss_results);
     }
    
     /**
      * Generates the HTML for the input summary section of the report.
      */
     function renderInputSummary(inputs, checks) {
-        const { fck, load_pp, load_perm, load_var, beam_length, Ap, num_cables, num_strands_per_cable, cable_path } = inputs;
-        const total_strands = (parseFloat(num_cables) || 0) * (parseFloat(num_strands_per_cable) || 0);
+        const { fck, load_pp, load_perm, load_var, beam_length, Ap, cable_definitions, cable_path } = inputs;
+        const total_strands = cable_definitions.reduce((sum, cable) => sum + cable.num_strands, 0);
         const total_Ap = (parseFloat(Ap) || 0) * total_strands;
 
         const generalRows = `
             <tr><td>Resistência do Concreto (f<sub>ck</sub>)</td><td>${fck} MPa</td></tr>
             <tr><td>Comprimento da Viga (L)</td><td>${beam_length} m</td></tr>
             <tr><td>Área Total de Protensão (A<sub>p,total</sub>)</td><td><b>${total_Ap.toFixed(2)} cm²</b> (${total_strands} cordoalhas)</td></tr>
-            <tr><td>Configuração</td><td>${num_cables} cabos &times; ${num_strands_per_cable} cordoalhas/cabo</td></tr>
         `;
         const loadRows = `
             <tr><td>Peso Próprio (g<sub>pp</sub>)</td><td>${load_pp} kN/m</td></tr>
@@ -1049,10 +1098,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             <tr><td>Carga Variável (q<sub>var</sub>)</td><td>${load_var} kN/m</td></tr>
         `;
         const cablePathRows = cable_path.map(p => `<tr><td>${p.x.toFixed(2)}</td><td>${p.y.toFixed(3)}</td><td>${p.type}</td></tr>`).join('');
+        const cableDefRows = cable_definitions.map((c, i) => `<tr><td>Cabo ${i+1}</td><td>${c.num_strands}</td><td>${c.jacking_side}</td><td>${c.sequence}</td></tr>`).join('');
 
         return `
             <table class="w-full mt-2 summary-table"><caption>Parâmetros Gerais e Materiais</caption><tbody>${generalRows}</tbody></table>
             <table class="w-full mt-4 summary-table"><caption>Cargas de Serviço (ELS)</caption><tbody>${loadRows}</tbody></table>
+            <table class="w-full mt-4 summary-table text-center"><caption>Definição dos Cabos</caption><thead><tr><th>Cabo</th><th>Nº Cordoalhas</th><th>Lado Tracionado</th><th>Sequência</th></tr></thead><tbody>${cableDefRows}</tbody></table>
             <table class="w-full mt-4 summary-table text-center"><caption>Traçado do Cabo</caption><thead><tr><th>X (m)</th><th>Y (m)</th><th>Tipo</th></tr></thead><tbody>${cablePathRows}</tbody></table>
         `;
     }
@@ -1100,46 +1151,42 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Generates the HTML for the initial prestress estimation section.
      */
     function renderPrestressEstimation(checks, inputs) {
-        const { prestress_estimation } = checks;
-        const total_strands_estimated = prestress_estimation.num_tendons * inputs.num_cables;
+        const { prestress_estimation } = checks; // This is fine, it uses num_cables from the new structure
+        const total_strands_estimated = prestress_estimation.num_strands_per_cable * inputs.cable_definitions.length;
         const rows = `
             <tr><td>Momento Auxiliar (M<sub>aux</sub>)</td><td>${fmt(prestress_estimation.M_aux_kNm, 1)} kN·m</td></tr>
             <tr><td>Força por Cordoalha (P<sub>cordoalha</sub>)</td><td>${fmt(prestress_estimation.P_cable, 1)} kN</td></tr>
             <tr><td>Força Total Estimada (P<sub>est,total</sub>)</td><td>${fmt(prestress_estimation.Pest_perdas, 1)} kN</td></tr>
-            <tr><td>Número de Cordoalhas por Cabo (Estimado)</td><td><b>${prestress_estimation.num_tendons}</b></td></tr>
-            <tr><td>Número Total de Cordoalhas (Estimado)</td><td><b>${total_strands_estimated}</b> (${inputs.num_cables} cabos &times; ${prestress_estimation.num_tendons} cordoalhas/cabo)</td></tr>
+            <tr><td>Número de Cordoalhas por Cabo (Estimado)</td><td><b>${prestress_estimation.num_strands_per_cable}</b></td></tr>
+            <tr><td>Número Total de Cordoalhas (Estimado)</td><td><b>${total_strands_estimated}</b> (${inputs.cable_definitions.length} cabos &times; ${prestress_estimation.num_strands_per_cable} cordoalhas/cabo)</td></tr>
         `;
         return `<p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Esta é uma estimativa preliminar para auxiliar no dimensionamento inicial. A verificação final utiliza os valores de entrada definidos pelo usuário.</p>
                 <table class="w-full mt-2 summary-table"><tbody>${rows}</tbody></table>`;
     }
    
     /**
-     * Generates the HTML for the detailed prestress loss calculation section.
+     * Generates the HTML for the detailed prestress loss calculation section, now simplified.
      */
-    function renderDetailedLossCalculations(loss_results) {
+    function renderDetailedLossCalculations(loss_results, inputs) {
         // This function is complex and generates a lot of specific HTML.
         // For this refactoring, we'll keep its internal logic but ensure it returns a single HTML string.
         // The original implementation using a helper `h` function is replaced with template literals.
         if (!loss_results || !loss_results.detailed_calcs) return '';
         const { detailed_calcs } = loss_results;
-
+        const { shrinkage, creep_coefficient } = detailed_calcs;
         const createCalcSubSection = (title, content) => `<div class="mb-6 break-inside-avoid"><h4 class="font-semibold text-md border-b-2 border-gray-200 dark:border-gray-700 pb-1 mb-3">${title}</h4><div class="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-2">${content}</div></div>`;
         const createCalcLine = (innerHTML) => `<div class="font-mono text-sm overflow-x-auto">${innerHTML}</div>`;
         
-        const frictionContent = detailed_calcs.friction.map(c => createCalcLine(`σ<sub>p</sub>(x=${c.x.toFixed(1)}) = <b>${c.value.toFixed(1)} MPa</b> <span class="text-xs text-gray-500 dark:text-gray-400 float-right">${c.calc}</span>`)).join('');
-        const anchorageContent = `
-            ${createCalcLine(`<b>Área de Perda (A<sub>δ</sub>)</b> = E<sub>p</sub> &times; (δ / 1000) = <b>${loss_results.detailed_calcs.anchorage.A_delta.value.toFixed(1)} MPa·m</b>`)}
-            <hr class="my-2 border-gray-300 dark:border-gray-600">
-            ${createCalcLine(`Distância de Acomodação (<b>x<sub>a</sub></b>) = <b>${loss_results.detailed_calcs.anchorage.x_a.toFixed(2)} m</b>`)}
-            ${createCalcLine(`Tensão na Acomodação (<b>σ<sub>pa</sub></b>) = <b>${loss_results.detailed_calcs.anchorage.sigma_pa.toFixed(1)} MPa</b>`)}
+        const timeDependentContent = `
+            ${createCalcLine(`<b>Perda por Retração (Δσ<sub>cs</sub>):</b> ${shrinkage.value.toFixed(1)} MPa`)}
+            ${createCalcLine(`<b>Coeficiente de Fluência (φ):</b> ${creep_coefficient.value.toFixed(3)}`)}
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">As perdas por retração, fluência e relaxação são calculadas e aplicadas a cada cabo para determinar o perfil de tensão final.</p>
         `;
-        const immediateStressContent = loss_results.sigma_p_ime.map(c => createCalcLine(`Tensão (<b>σ<sub>p,ime</sub></b>) em x=${c.x.toFixed(1)}m = <b>${c.value.toFixed(1)} MPa</b>`)).join('');
 
         return `
-            <h4 class="font-semibold text-lg mb-2 text-center">Perdas Imediatas</h4>
-            ${createCalcSubSection('Perda por Atrito', frictionContent)}
-            ${createCalcSubSection('Perda por Acomodação da Ancoragem', anchorageContent)}
-            ${createCalcSubSection('Tensões após perdas imediatas:', immediateStressContent)}
+            <h4 class="font-semibold text-lg mb-2 text-center">Perdas Progressivas</h4>
+            ${createCalcSubSection('Cálculo das Perdas Dependentes do Tempo', timeDependentContent)}
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">As perdas imediatas (atrito, acomodação, encurtamento elástico) são agora calculadas sequencialmente para cada cabo. O gráfico abaixo mostra os perfis de tensão finais resultantes.</p>
         `;
     }
 
@@ -1147,28 +1194,76 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Generates the HTML for the prestress loss analysis section, including a table and a chart placeholder.
      */
     function renderLossesTableAndChart(loss_results) {
-        const { key_points, sigma_p_friction, sigma_p_anchorage, sigma_p_ime, sigma_p_inf } = loss_results;
+        const { key_points, sigma_p_inf, cable_stress_profiles, detailed_calcs } = loss_results;
+        if (!key_points || !sigma_p_inf || !cable_stress_profiles) return '';
+    
+        const cableHeaders = Object.keys(cable_stress_profiles).map(seq => `<th>Cabo ${seq} (MPa)</th>`).join('');
+    
         const tableRows = key_points.map((point, i) => `
             <tr class="text-center">
                 <td>${fmt(point.x, 1)}</td>
-                <td>${fmt(sigma_p_friction[i].value, 1)}</td>
-                <td>${fmt(sigma_p_anchorage[i].value, 1)}</td>
-                <td>${fmt(sigma_p_ime[i].value, 1)}</td>
+                ${Object.values(cable_stress_profiles).map(profile => `<td>${fmt(profile[i].value, 1)}</td>`).join('')}
                 <td>${fmt(sigma_p_inf[i].value, 1)}</td>
             </tr>`).join('');
-
-        return `<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    
+        return `<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="lg:col-span-2">
-                <h4 class="font-semibold text-center mb-2">Tabela de Tensões no Aço (MPa)</h4>
+                <h4 class="font-semibold text-center mb-2">Tabela de Tensões Finais no Aço (MPa)</h4>
                 <div class="overflow-x-auto">
                     <table class="w-full results-table text-sm">
-                        <thead><tr><th>x (m)</th><th>σ<sub>p</sub> (Atrito)</th><th>σ'<sub>p</sub> (+Encunh.)</th><th>σ<sub>p,ime</sub> (Imediata)</th><th>σ<sub>p,inf</sub> (Final)</th></tr></thead>
+                        <thead><tr><th>x (m)</th>${cableHeaders}<th>σ<sub>p,eq</sub> (Final)</th></tr></thead>
                         <tbody>${tableRows}</tbody>
                     </table>
                 </div>
             </div>
-            <div class="lg:col-span-3"><h4 class="font-semibold text-center mb-2">Gráfico de Perdas de Tensão</h4><div class="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg"><div class="relative h-80"><canvas id="losses-chart-canvas"></canvas></div></div></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div>
+                <h4 class="font-semibold text-center mb-2">Perfil de Tensão Final (Equivalente)</h4>
+                <div class="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div class="relative h-80"><canvas id="equivalent-stress-chart-canvas"></canvas></div>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-semibold text-center mb-2">Perfis de Tensão Finais (Individuais)</h4>
+                <div class="p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div class="relative h-80"><canvas id="individual-cables-chart-canvas"></canvas></div>
+                </div>
+            </div>
         </div>`;
+    }
+
+    /**
+     * Generates the HTML for the Serviceability Limit State (SLS) stress checks section.
+     */
+    function renderSlsChecks(checks) {
+        const { sls_checks, materials } = checks;
+        if (!sls_checks) return '';
+
+        const check_data = [
+            { name: 'Compressão na Protensão (Fibra Superior)', check: sls_checks.initial_compression, unit: 'MPa' },
+            { name: 'Tração na Protensão (Fibra Inferior)', check: sls_checks.initial_tension, unit: 'MPa' },
+            { name: 'Compressão em Serviço (Fibra Superior)', check: sls_checks.final_compression, unit: 'MPa' },
+            { name: 'Tração em Serviço (Fibra Inferior)', check: sls_checks.final_tension, unit: 'MPa' }
+        ];
+
+        const rows = check_data.map(item => {
+            const { name, check, unit } = item;
+            const ratio = Math.abs(check.limit) > 1e-6 ? check.demand / check.limit : (check.demand === 0 ? 0 : Infinity);
+            const status = check.pass ? '<span class="pass">OK</span>' : '<span class="fail">FALHA</span>';
+            return `<tr>
+                        <td>${name}</td>
+                        <td>${fmt(check.demand, 2)} ${unit}</td>
+                        <td>${fmt(check.limit, 2)} ${unit}</td>
+                        <td>${fmt(ratio, 3)}</td>
+                        <td>${status}</td>
+                    </tr>`;
+        }).join('');
+
+        return `<table class="w-full mt-2 results-table">
+                    <thead><tr><th>Verificação</th><th>Tensão Calculada (σ)</th><th>Tensão Limite (σ<sub>lim</sub>)</th><th>Razão</th><th>Status</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
     }
 
     /**
@@ -1256,13 +1351,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const loadedInputs = JSON.parse(savedData);
             if (loadedInputs && loadedInputs.cable_path) {
                 const container = document.getElementById('cable-path-container');
-                container.innerHTML = ''; // Clear default rows
+                const cableDefContainer = document.getElementById('cables-definition-container');
+                container.innerHTML = ''; // Clear default path rows
+                if (cableDefContainer) cableDefContainer.innerHTML = ''; // Clear default cable def rows
                 loadedInputs.cable_path.forEach(point => addCablePointRow('cable-path-container', point));
+                loadedInputs.cable_definitions.forEach(cable => addCableDefinitionRow('cables-definition-container', cable));
             }
         } else {
             // Default initial state if no saved data
             addCablePointRow('cable-path-container', { x: 0, y: 0.55, type: 'Straight' });
             addCablePointRow('cable-path-container', { x: 9, y: 0.10, type: 'Straight' });
+            addCableDefinitionRow('cables-definition-container', { num_strands: 12, jacking_side: 'esquerda', sequence: 1 });
+            addCableDefinitionRow('cables-definition-container', { num_strands: 12, jacking_side: 'direita', sequence: 2 });
         }
         drawDiagrams(); // Initial draw
 
@@ -1277,6 +1377,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         document.getElementById('add-cable-point-btn').addEventListener('click', () => {
             addCablePointRow('cable-path-container');
+        });
+        document.getElementById('add-cable-btn').addEventListener('click', () => {
+            addCableDefinitionRow('cables-definition-container');
         });
     }
     

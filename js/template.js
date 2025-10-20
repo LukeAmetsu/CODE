@@ -1,4 +1,27 @@
 /**
+ * Carrega dinamicamente o script JavaScript específico para a página da calculadora atual.
+ * Isso evita o carregamento de todos os scripts em todas as páginas, prevenindo conflitos.
+ * @param {string} pageKey - A chave única da página (ex: 'wind', 'viga-protendida').
+ */
+function loadPageSpecificScript(pageKey) {
+    const navConfig = window.NAV_CONFIG; // Assume que navConfig está disponível globalmente
+    if (!navConfig) {
+        console.error("Configuração de navegação (nav-config.json) não encontrada.");
+        return;
+    }
+
+    // Encontra o link do sub-menu que corresponde à pageKey para obter o caminho do script
+    const link = navConfig.mainNav.flatMap(item => item.subNav || []).find(sub => sub.key === pageKey);
+    if (link && link.href) {
+        const scriptPath = `../${link.href.replace('.html', '.js')}`;
+        const script = document.createElement('script');
+        script.src = scriptPath;
+        script.defer = true;
+        document.head.appendChild(script);
+    }
+}
+
+/**
  * Injects a shared header and navigation template into the page.
  * This reduces HTML duplication across multiple calculator pages.
  * It now supports a two-level navigation structure.
@@ -27,6 +50,7 @@ async function injectHeader(options) {
     try {
         const response = await fetch(`${pathPrefix}js/nav-config.json`);
         navConfig = await response.json();
+        window.NAV_CONFIG = navConfig; // Armazena a configuração globalmente para uso posterior
     } catch (error) {
         console.error("Failed to load nav-config.json:", error);
         placeholder.innerHTML = `<p class="text-red-500 text-center">Error: Could not load navigation.</p>`;
@@ -79,6 +103,9 @@ async function injectHeader(options) {
     `;
 
     placeholder.innerHTML = headerHtml;
+
+    // Após injetar o cabeçalho, carrega o script específico da página
+    loadPageSpecificScript(activePage);
 }
 
 /**
