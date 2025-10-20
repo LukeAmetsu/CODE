@@ -475,7 +475,7 @@ function convertElementToPlainText(element) {
     const textParts = [];
     element.querySelectorAll('h1, h2, h3, h4, p, li, tr, caption').forEach(el => {
         const tagName = el.tagName.toLowerCase();
-        let line = el.innerText.trim();
+        let line = el.innerText?.trim() ?? '';
         if (tagName === 'h1') textParts.push(`\n# ${line}\n\n`);
         else if (tagName === 'h2') textParts.push(`\n## ${line}\n\n`);
         else if (tagName === 'h3') textParts.push(`\n### ${line}\n`);
@@ -483,7 +483,7 @@ function convertElementToPlainText(element) {
         else if (tagName === 'caption') textParts.push(`\n--- ${line} ---\n`);
         else if (tagName === 'li') textParts.push(`* ${line}`); // Keep li as is
         else if (tagName === 'tr') {
-            const cells = Array.from(el.querySelectorAll('th, td')).map(cell => cell.innerText.trim());
+            const cells = Array.from(el.querySelectorAll('th, td')).map(cell => cell.innerText?.trim() ?? '');
             textParts.push(cells.join('\t|\t')); // Tab-separated for better column alignment
         } else if (tagName === 'p') textParts.push(line);
     });
@@ -514,7 +514,7 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
         let conversionFailures = 0;
         const svgElements = Array.from(clone.querySelectorAll('svg'));
         if (svgElements.length > 0) {
-            showFeedback(`Converting ${svgElements.length} diagram(s) to images...`, false, feedbackElId);
+            showFeedback(`Convertendo ${svgElements.length} diagrama(s) para imagens...`, false, feedbackElId);
             // Use Promise.all to run conversions in parallel for better performance.
             await Promise.all(svgElements.map(async (svg) => {
                 try {
@@ -537,7 +537,7 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
             }
         });
 
-        showFeedback('Copying to clipboard...', false, feedbackElId);
+        showFeedback('Copiando para a área de transferência...', false, feedbackElId);
 
         // Generate final HTML and Text content, consistent with handleDownloadWord
         const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
@@ -550,14 +550,14 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
             new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
         ]);
 
-        let feedback = 'Report and diagrams copied successfully!';
+        let feedback = 'Relatório e diagramas copiados com sucesso!';
         if (conversionFailures > 0) {
-            feedback = `Report copied, but ${conversionFailures} diagram(s) could not be converted.`;
+            feedback = `Relatório copiado, mas ${conversionFailures} diagrama(s) não puderam ser convertidos.`;
         }
         showFeedback(feedback, false, feedbackElId);
     } catch (err) {
         console.error('Clipboard API failed:', err);
-        showFeedback('Copy failed. Your browser may not support this feature.', true, feedbackElId);
+        showFeedback('A cópia falhou. Seu navegador pode não suportar este recurso.', true, feedbackElId);
     }
 }
 
@@ -840,6 +840,9 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
         reader.onload = (e) => {
             try {
                 const inputs = JSON.parse(e.target.result);
+                // Temporarily store the full parsed object for complex loaders to use
+                localStorage.setItem('temp-loaded-inputs', JSON.stringify(inputs));
+
                 if (inputs._appVersion !== appVersion) {
                     showFeedback(`Warning: File is from an older version (v${inputs._appVersion || '?'}). Some inputs may not load correctly.`, true, feedbackElId);
                 }
@@ -854,6 +857,7 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
                 // Reset file input to allow loading the same file again
                 event.target.value = ''; 
                 if (displayEl) displayEl.textContent = ''; // Clear filename display after processing
+                localStorage.removeItem('temp-loaded-inputs'); // Clean up temp storage
             }
         };
         reader.readAsText(file);

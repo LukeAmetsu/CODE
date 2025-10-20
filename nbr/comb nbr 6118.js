@@ -227,4 +227,9 @@ function generateReportHandler() {
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
         handleDownloadPdf('nbr-report-content', 'NBR-Combinacoes-Relatorio.pdf');
     });
+    // FIX: Add event listener for the copy button
+    const copyBtn = reportOutput.querySelector('.copy-section-btn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => handleCopyToClipboard('nbr-report-content', 'feedback-message'));
+    }
 }

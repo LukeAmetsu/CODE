@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NBR Prestressed Concrete Beam Checker</title>
+    <title>Verificador de Viga Protendida (NBR 6118)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -33,25 +33,25 @@
                 <!-- Column 1: General & Material -->
                 <div class="space-y-6">
                     <div class="form-section">
-                        <h2>General Parameters</h2>
+                        <h2>Parâmetros Gerais</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="design_code" class="block text-sm font-medium mb-1">Design Code</label>
+                                <label for="design_code" class="block text-sm font-medium mb-1">Norma de Cálculo</label>
                                 <input type="text" id="design_code" value="NBR 6118" class="w-full p-2 bg-gray-100 dark:bg-gray-800 rounded-md" readonly>
                             </div>
                             <div>
-                                <label for="unit_system" class="block text-sm font-medium mb-1">Unit System</label>
+                                <label for="unit_system" class="block text-sm font-medium mb-1">Sistema de Unidades</label>
                                 <select id="unit_system">
-                                    <option value="metric" selected>Metric (MPa, kN, m)</option>
+                                    <option value="metric" selected>Métrico (MPa, kN, m)</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     <div class="form-section">
-                        <h2>Material Properties</h2>
+                        <h2>Propriedades dos Materiais</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="fck" class="block text-sm font-medium mb-1">Concrete f<sub>ck</sub> (MPa)</label>
+                                <label for="fck" class="block text-sm font-medium mb-1">Concreto f<sub>ck</sub> (MPa)</label>
                                 <input type="number" id="fck" value="30">
                             </div>
                             <div>
@@ -62,15 +62,36 @@
                         </div>
                     </div>
                     <div class="form-section">
-                        <h2>Prestressing Parameters</h2>
+                        <h2>Propriedades do Cimento (Fluência/Retração)</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="Ap" class="block text-sm font-medium mb-1">Tendon Area (A<sub>p</sub>, cm²)</label>
+                                <label for="cement_s_factor" class="block text-sm font-medium mb-1">Tipo de Cimento (fator s)</label>
+                                <select id="cement_s_factor" data-validate="positive">
+                                    <option value="0.38">Slow Hardening (CP III, IV)</option>
+                                    <option value="0.25" selected>Normal Hardening (CP I, II)</option>
+                                    <option value="0.20">Rapid Hardening (CP V-ARI)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="cement_alpha_factor" class="block text-sm font-medium mb-1">Velocidade de Endurecimento (fator α)</label>
+                                <input type="number" id="cement_alpha_factor" value="1" step="0.1" data-validate="positive">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h2>Parâmetros da Protensão</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="Ap" class="block text-sm font-medium mb-1">Área da Cordoalha (A<sub>p</sub>, cm²)</label>
                                 <input type="number" id="Ap" value="12.5" data-validate="positive">
                             </div>
                             <div>
-                                <label for="fptk" class="block text-sm font-medium mb-1">Tendon f<sub>ptk</sub> (MPa)</label>
+                                <label for="fptk" class="block text-sm font-medium mb-1">Aço f<sub>ptk</sub> (MPa)</label>
                                 <input type="number" id="fptk" value="1900" data-validate="positive">
+                            </div>
+                            <div>
+                                <label for="Ep" class="block text-sm font-medium mb-1">Aço E<sub>p</sub> (MPa)</label>
+                                <input type="number" id="Ep" value="200000" data-validate="positive">
                             </div>
                             <div class="col-span-2 pt-2 border-t dark:border-gray-600">
                                 <p class="text-sm font-medium mb-2">Parâmetros para Estimativa Inicial</p>
@@ -80,8 +101,12 @@
                                 <input type="number" id="Kperdas" value="0.85" step="0.01" data-validate="positive">
                             </div>
                             <div>
-                                <label for="N_cables" class="block text-sm font-medium mb-1">Cabos por Vão</label>
-                                <input type="number" id="N_cables" value="4" data-validate="integer,positive">
+                                <label for="num_cables" class="block text-sm font-medium mb-1">Número de Cabos</label>
+                                <input type="number" id="num_cables" value="2" data-validate="integer,positive">
+                            </div>
+                            <div>
+                                <label for="num_strands_per_cable" class="block text-sm font-medium mb-1">Cordoalhas por Cabo</label>
+                                <input type="number" id="num_strands_per_cable" value="12" data-validate="integer,positive" readonly class="w-full p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
                             </div>
                         </div>
                     </div>
@@ -90,18 +115,18 @@
                 <!-- Column 2: Geometry -->
                 <div class="space-y-6">
                     <div class="form-section">
-                        <h2>Beam Geometry</h2>
+                        <h2>Geometria da Viga</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="beam_length" class="block text-sm font-medium mb-1">Total Length (m)</label>
+                                <label for="beam_length" class="block text-sm font-medium mb-1">Comprimento Total (m)</label>
                                 <input type="number" id="beam_length" value="18">
                             </div>
                             <div>
-                                <label for="beam_height" class="block text-sm font-medium mb-1">Total Height (cm)</label>
+                                <label for="beam_height" class="block text-sm font-medium mb-1">Altura Total (cm)</label>
                                 <input type="number" id="beam_height" value="80" readonly class="w-full p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
                             </div>
                             <div class="col-span-2">
-                                <label for="beam_coords" class="block text-sm font-medium mb-1">Cross-Section Vertices (cm)</label>
+                                <label for="beam_coords" class="block text-sm font-medium mb-1">Vértices da Seção Transversal (cm)</label>
                                 <textarea id="beam_coords" rows="6" class="w-full p-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 font-mono text-sm">0, 80
 300, 80
 300, 65
@@ -110,29 +135,29 @@
 130, 0
 130, 65
 0, 65</textarea>
-                                <p class="text-xs text-gray-500 mt-1">Enter (x, y) pairs, one per line. The shape will be closed automatically.</p>
+                                <p class="text-xs text-gray-500 mt-1">Insira pares (x, y), um por linha. A forma será fechada automaticamente.</p>
                             </div>
                         </div>
                     </div>
                     <div class="form-section">
-                        <h2>Prestressing Cable Path</h2>
-                        <p class="text-xs mb-2">Define the cable path points from left to right. The 'y' value is the eccentricity from the section's centroid.</p>
+                        <h2>Traçado dos Cabos de Protensão</h2>
+                        <p class="text-xs mb-2">Defina os pontos do traçado do cabo da esquerda para a direita. O valor 'y' é a altura do cabo nesse ponto.</p>
                         <div id="cable-path-container" class="space-y-2 p-2 border rounded-md dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50">
                             <div class="grid grid-cols-[1.1fr_1fr_1.2fr_auto] gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400">
                                 <span>X (m)</span>
                                 <span>Y (m)</span>
-                                <span>Segment to Next</span>
+                                <span>Segmento até o Próximo</span>
                                 <span class="w-8"></span>
                             </div>
                             <!-- Cable path points will be injected here by JS -->
                         </div>
-                        <button id="add-cable-point-btn" class="mt-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-3 py-1 rounded">+ Add Point</button>
+                        <button id="add-cable-point-btn" class="mt-2 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-3 py-1 rounded">+ Adicionar Ponto</button>
                     </div>
                     <div class="form-section">
-                        <h2>Prestressing Losses</h2>
+                        <h2>Perdas de Protensão</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="anchorage_slip" class="block text-sm font-medium mb-1">Anchorage Slip (mm)</label>
+                                <label for="anchorage_slip" class="block text-sm font-medium mb-1">Acomodação da Ancoragem (mm)</label>
                                 <input type="number" id="anchorage_slip" value="6" data-validate="positive">
                             </div>
                             <div>
@@ -140,12 +165,16 @@
                                 <input type="number" id="humidity" value="75" data-validate="positive">
                             </div>
                             <div>
-                                <label for="mu" class="block text-sm font-medium mb-1">Friction Coeff. (μ)</label>
+                                <label for="mu" class="block text-sm font-medium mb-1">Coef. de Atrito (μ)</label>
                                 <input type="number" id="mu" value="0.2" data-validate="positive">
                             </div>
                             <div>
-                                <label for="k" class="block text-sm font-medium mb-1">Wobble Coeff. (k/m)</label>
+                                <label for="k" class="block text-sm font-medium mb-1">Coef. de Ondulação (k/m)</label>
                                 <input type="number" id="k" value="0.002" data-validate="positive">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="exposed_perimeter" class="block text-sm font-medium mb-1">Perímetro Exposto (u_ar, m)</label>
+                                <input type="number" id="exposed_perimeter" value="3.5" data-validate="positive">
                             </div>
                         </div>
                     </div>
@@ -154,18 +183,18 @@
                 <!-- Column 3: Cross-Section Diagram -->
                 <div class="space-y-6 md:col-span-2 lg:col-span-1">
                     <div class="form-section">
-                        <h2>Cross-Section Diagram</h2>
+                        <h2>Diagrama da Seção Transversal</h2>
                         <div class="relative h-[400px] mt-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                             <canvas id="cross-section-canvas"></canvas>
                         </div>
                     </div>
                     <div class="form-section">
-                        <h2>Applied Loads</h2>
-                        <p class="text-xs mb-2">Service loads in kN/m.</p>
+                        <h2>Cargas Aplicadas</h2>
+                        <p class="text-xs mb-2">Cargas de serviço em kN/m.</p>
                         <div class="space-y-4">
-                            <div><label for="load_pp" class="block text-sm font-medium mb-1">Self-Weight (kN/m)</label><input type="number" id="load_pp" value="23.5"></div>
-                            <div><label for="load_perm" class="block text-sm font-medium mb-1">Permanent Load (kN/m)</label><input type="number" id="load_perm" value="14"></div>
-                            <div><label for="load_var" class="block text-sm font-medium mb-1">Variable Load (kN/m)</label><input type="number" id="load_var" value="28"></div>
+                            <div><label for="load_pp" class="block text-sm font-medium mb-1">Peso Próprio (kN/m)</label><input type="number" id="load_pp" value="23.5"></div>
+                            <div><label for="load_perm" class="block text-sm font-medium mb-1">Carga Permanente (kN/m)</label><input type="number" id="load_perm" value="14"></div>
+                            <div><label for="load_var" class="block text-sm font-medium mb-1">Carga Variável (kN/m)</label><input type="number" id="load_var" value="28"></div>
                         </div>
                     </div>
                 </div>
@@ -174,7 +203,7 @@
             <!-- Longitudinal Diagram Row -->
             <div class="mt-6">
                 <div class="form-section w-full">
-                    <h2 class="text-center">Longitudinal View</h2>
+                    <h2 class="text-center">Vista Longitudinal</h2>
                     <div class="relative h-[350px] mt-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <canvas id="longitudinal-canvas"></canvas>
                     </div>
@@ -186,7 +215,7 @@
                 <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Salvar</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
                 <input type="file" id="file-input" class="hidden" accept=".txt,.json">
-                <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Check</button>
+                <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Verificar Viga</button>
             </div>
         </main>
 
