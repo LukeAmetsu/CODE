@@ -515,9 +515,9 @@ function renderSnowResults(results) {
     const safePartial = partial || {};
     
     const units = {
-        p_unit: safeInputs.unit_system === 'imperial' ? 'psf' : 'kPa',
-        f_unit: safeInputs.unit_system === 'imperial' ? 'plf' : 'kN/m',
-        l_unit: safeInputs.unit_system === 'imperial' ? 'ft' : 'm',
+        p_unit: safeInputs.snow_unit_system === 'imperial' ? 'psf' : 'kPa',
+        f_unit: safeInputs.snow_unit_system === 'imperial' ? 'plf' : 'kN/m',
+        l_unit: safeInputs.snow_unit_system === 'imperial' ? 'ft' : 'm',
     };
 
     const report = new ReportBuilder({
@@ -530,6 +530,7 @@ function renderSnowResults(results) {
 
     report.addSection('Design Parameters', renderSnowDesignParameters(safeInputs, safeIntermediate, units), 'snow-design-parameters-section');
     report.addSection('Detailed Calculation Breakdown', renderSnowCalculationBreakdown(safeInputs, safeIntermediate, is_nycbc_min_governed, units), 'snow-calc-breakdown-section');
+    report.addSection(null, renderSnowNotesAndWarnings(safeInputs, is_nycbc_min_governed, warnings));
     report.addSection('Load Case Diagrams', renderSnowDiagrams(safeInputs, safeUnbalanced, safeDrift, units), 'snow-diagrams-section');
     report.addSection(`Governing Load Summary (${safeInputs.design_method || 'ASD'})`, renderSnowLoadSummary(safeInputs, safeFinalResults, safeUnbalanced, safeDrift, safeSliding, units), 'snow-summary-section');
     

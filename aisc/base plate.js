@@ -1788,16 +1788,13 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
 }
 
 function renderResults(results) {
-    const { checks, geomChecks, inputs, warnings } = results;
+    const { checks, geomChecks, inputs, warnings, design_method } = results;
 
     const report = new ReportBuilder({
         reportId: 'baseplate-report-content',
-        title: 'Base Plate & Anchorage Check Results'
+        title: 'Base Plate & Anchorage Check Results',
+        warnings: warnings
     });
-
-    if (warnings && warnings.length > 0) {
-        report.addSection('Warnings', renderValidationResults({ warnings, errors: [] }));
-    }
 
     report.addSection('Input Summary', renderBasePlateInputSummary(inputs), 'input-summary-section');
     report.addSection('Calculated Geometry', renderCalculatedGeometry(inputs), 'calculated-geometry-section');

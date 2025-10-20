@@ -136,6 +136,36 @@ function initializeUiToggles() {
 }
 
 /**
+ * Creates a DOM element with specified attributes, properties, and children.
+ * A more robust and safer alternative to building HTML strings.
+ * @param {string} tag - The HTML tag for the element.
+ * @param {object} [props={}] - An object of attributes and properties (e.g., { className: '...', id: '...' }).
+ * @param {Array<Node|string>} [children=[]] - An array of child nodes or strings to append.
+ * @returns {HTMLElement} The created DOM element.
+ */
+function createDOMElement(tag, props = {}, children = []) {
+    const el = document.createElement(tag);
+
+    for (const [key, value] of Object.entries(props)) {
+        if (key === 'className') {
+            el.className = value;
+        } else if (key === 'dataset') {
+            for (const [dataKey, dataValue] of Object.entries(value)) {
+                el.dataset[dataKey] = dataValue;
+            }
+        } else {
+            el.setAttribute(key, value);
+        }
+    }
+
+    for (const child of children) {
+        if (child instanceof Node) el.appendChild(child);
+        else if (child !== null && child !== undefined) el.insertAdjacentHTML('beforeend', String(child));
+    }
+    return el;
+}
+
+/**
  * Initializes the "Back to Top" button functionality.
  * It shows the button on scroll and handles the scroll-to-top action.
  */
@@ -455,6 +485,33 @@ function createWordCompatibleHTML(content, title, cssStyles) {
 }
 
 /**
+ * Creates Word-compatible HTML structure with a header and basic styling.
+ * @param {string} content - The main HTML content of the report.
+ * @param {string} title - The title for the report header.
+ * @returns {string} A full HTML document string formatted for MS Word.
+ */
+function createWordCompatibleHTML(content, title) {
+    const cssStyles = `
+        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; page-break-inside: avoid; }
+        th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
+        th { background-color: #f0f0f0; font-weight: bold; }
+        caption { font-weight: bold; text-align: center; margin-bottom: 0.5em; font-size: 14pt; }
+        h1, h2, h3, h4 { font-family: 'Arial', sans-serif; }
+        h1 { font-size: 16pt; text-align: center; }
+        h2 { font-size: 14pt; border-bottom: 1px solid #000; margin-top: 1.5em; }
+        h3 { font-size: 13pt; }
+        .pass { color: #008000; font-weight: bold; }
+        .fail { color: #ff0000; font-weight: bold; }
+    `;
+    return `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head><meta charset='utf-8'><title>${title}</title><style>${cssStyles}</style></head>
+        <body><h1>${title}</h1>${content}</body>
+        </html>`;
+}
+
+/**
  * Converts an HTML element to a structured plain text string.
  * @param {HTMLElement} element - The HTML element to convert.
  * @returns {string} A plain text representation of the element's content.
@@ -656,7 +713,121 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
     }
 
     const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle);
+    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
+
+    const blob = new Blob([finalHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showFeedback('Word document download started.', false, feedbackElId);
+}
+
+/**
+ * Downloads the content of a given container as a Microsoft Word (.doc) file.
+ * It converts SVGs to PNGs and formats the HTML for Word compatibility.
+ * @param {string} containerId - The ID of the container with the report content.
+ * @param {string} filename - The desired filename for the downloaded Word file.
+ * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ */
+async function handleDownloadWord(containerId, filename, feedbackElId = 'feedback-message') {
+    const reportContainer = document.getElementById(containerId);
+    if (!reportContainer) {
+        showFeedback('Report container not found for Word export.', true, feedbackElId);
+        return;
+    }
+
+    showFeedback('Generating Word document...', false, feedbackElId);
+
+    const clone = reportContainer.cloneNode(true);
+    clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
+    clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
+    
+    // Remove empty table rows that might be left after removing buttons
+    clone.querySelectorAll('tr').forEach(tr => {
+        if (tr.innerText.trim() === '') {
+            tr.remove();
+        }
+    });
+    // Convert SVGs to PNGs
+    const svgElements = Array.from(clone.querySelectorAll('svg'));
+    if (svgElements.length > 0) {
+        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
+        await Promise.all(svgElements.map(async (svg) => {
+            try {
+                const pngImage = await convertSvgToPng(svg);
+                if (pngImage && svg.parentNode) {
+                    svg.parentNode.replaceChild(pngImage, svg);
+                }
+            } catch (error) {
+                console.warn("SVG to PNG conversion failed for Word export:", error);
+            }
+        }));
+    }
+
+    const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
+    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
+
+    const blob = new Blob([finalHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showFeedback('Word document download started.', false, feedbackElId);
+}
+
+/**
+ * Downloads the content of a given container as a Microsoft Word (.doc) file.
+ * It converts SVGs to PNGs and formats the HTML for Word compatibility.
+ * @param {string} containerId - The ID of the container with the report content.
+ * @param {string} filename - The desired filename for the downloaded Word file.
+ * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ */
+async function handleDownloadWord(containerId, filename, feedbackElId = 'feedback-message') {
+    const reportContainer = document.getElementById(containerId);
+    if (!reportContainer) {
+        showFeedback('Report container not found for Word export.', true, feedbackElId);
+        return;
+    }
+
+    showFeedback('Generating Word document...', false, feedbackElId);
+
+    const clone = reportContainer.cloneNode(true);
+    clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
+    clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
+    
+    // Remove empty table rows that might be left after removing buttons
+    clone.querySelectorAll('tr').forEach(tr => {
+        if (tr.innerText.trim() === '') {
+            tr.remove();
+        }
+    });
+    // Convert SVGs to PNGs
+    const svgElements = Array.from(clone.querySelectorAll('svg'));
+    if (svgElements.length > 0) {
+        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
+        await Promise.all(svgElements.map(async (svg) => {
+            try {
+                const pngImage = await convertSvgToPng(svg);
+                if (pngImage && svg.parentNode) {
+                    svg.parentNode.replaceChild(pngImage, svg);
+                }
+            } catch (error) {
+                console.warn("SVG to PNG conversion failed for Word export:", error);
+            }
+        }));
+    }
+
+    const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
+    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
 
     const blob = new Blob([finalHtml], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
@@ -1045,12 +1216,14 @@ class ReportBuilder {
      * @param {string} options.reportId - The ID for the main report container.
      * @param {string} options.title - The main title of the report.
      * @param {Array<object>} [options.actionButtons] - Optional array of custom action buttons.
+     * @param {string[]} [options.warnings] - Optional array of warning messages to display at the top.
      */
     constructor(options) {
         this.reportId = options.reportId;
         this.title = options.title;
         this.actionButtons = options.actionButtons || [];
         this.sections = [];
+        this.warnings = options.warnings || [];
     }
 
     /**
@@ -1093,71 +1266,99 @@ class ReportBuilder {
      * @param {string} containerId - The ID of the DOM element to render the report into.
      */
     render(containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) {
+        const mainContainer = document.getElementById(containerId);
+        if (!mainContainer) {
             console.error(`Report container with ID "${containerId}" not found.`);
             return;
         }
+        mainContainer.innerHTML = ''; // Clear previous content
 
-        const actionButtonsHtml = this.actionButtons.map(btn =>
-            `<button id="${btn.id}" class="bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden ${btn.classes || ''}">${btn.text}</button>`
-        ).join('');
+        // --- Build Header ---
+        const actionButtons = this.actionButtons.map(btn =>
+            createDOMElement('button', { id: btn.id, className: `bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden ${btn.classes || ''}` }, [btn.text])
+        );
 
-        const sectionsHtml = this.sections.map((section, index) => {
+        const header = createDOMElement('div', { className: 'flex justify-between items-center border-b-2 border-gray-300 dark:border-gray-600 pb-4 mb-4' }, [
+            createDOMElement('h2', { className: 'text-2xl font-bold' }, [this.title]),
+            createDOMElement('div', { className: 'flex items-center gap-2 print-hidden' }, [
+                createDOMElement('button', { id: 'toggle-all-details-btn', className: 'bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs', dataset: { state: 'hidden' } }, ['Show All Details']),
+                ...actionButtons,
+                createDOMElement('button', { id: 'copy-report-btn', className: 'bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs' }, ['Copy']),
+                createDOMElement('button', { id: 'download-word-btn', className: 'bg-blue-800 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-900 text-xs' }, ['Word']),
+                createDOMElement('button', { id: 'download-pdf-btn', className: 'bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-xs' }, ['Download PDF'])
+            ])
+        ]);
+
+        // --- Build Report Container ---
+        const reportContainer = createDOMElement('div', { id: this.reportId, className: 'p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg' });
+        reportContainer.appendChild(header);
+
+        // --- Add Warnings Section (if any) ---
+        if (this.warnings.length > 0) {
+            const warningsContainer = createDOMElement('div', { className: 'report-section-container' });
+            warningsContainer.innerHTML = renderValidationResults({ warnings: this.warnings, errors: [] });
+            reportContainer.appendChild(warningsContainer);
+        }
+
+        // --- Build and Add Each Section ---
+        this.sections.forEach((section, index) => {
             const sectionId = section.sectionId || `${this.reportId}-section-${index}`;
-            const contentId = `${sectionId}-content`; // Unique ID for the content wrapper
-            let content;
+            const contentId = `${sectionId}-content`;
 
-            if (section.type === 'table') {
-                const { headers, rows } = section.tableConfig;
-                const headerHtml = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
-                const bodyHtml = rows.map((row, rowIndex) => {
-                    if (row.type === 'subheader') {
-                        return `<tr class="bg-gray-100 dark:bg-gray-700 font-semibold"><td colspan="${headers.length}">${row.content}</td></tr>`;
-                    }
-                    const detailId = `${sectionId}-detail-${rowIndex}`;
-                    const cellsHtml = row.cells.map(cell => `<td>${cell}</td>`).join('');
-                    const detailsButton = row.details ? `<button data-toggle-id="${detailId}" class="toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs">[Show]</button>` : '';
-                    const detailsRow = row.details ? `<tr id="${detailId}" class="details-row hidden"><td colspan="${headers.length}" class="p-0"><div class="calc-breakdown">${row.details}</div></td></tr>` : '';
-                    
-                    // Inject the button into the first cell
-                    const firstCellContent = `<td>${row.cells[0]} ${detailsButton}</td>`;
-                    const otherCellsContent = row.cells.slice(1).map(cell => `<td>${cell}</td>`).join('');
+            const sectionEl = createDOMElement('div', { id: sectionId, className: 'report-section-copyable mt-6' });
 
-                    return `<tr class="border-t dark:border-gray-700">${firstCellContent}${otherCellsContent}</tr>${detailsRow}`;
-                }).join('');
-                content = `<table class="w-full mt-2 results-table">${headerHtml}<tbody>${bodyHtml}</tbody></table>`;
-            } else {
-                content = section.htmlContent;
+            if (section.title) {
+                sectionEl.appendChild(createDOMElement('div', { className: 'flex justify-between items-center mb-2' }, [
+                    createDOMElement('h3', { className: 'report-header' }, [section.title]),
+                    createDOMElement('button', { className: 'copy-section-btn bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden', dataset: { copyTargetId: contentId } }, ['Copy Section'])
+                ]));
             }
 
-            const sectionTitleHtml = section.title ? `<div class="flex justify-between items-center mb-2">
-                <h3 class="report-header">${section.title}</h3>
-                <button data-copy-target-id="${contentId}" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>` : '';
+            const contentContainer = createDOMElement('div', { id: contentId, className: 'copy-content' });
 
-            return `<div id="${sectionId}" class="report-section-container mt-6">
-                        ${sectionTitleHtml}
-                        <div id="${contentId}" class="copy-content">${content}</div>
-                    </div>`;
-                }).join('');
+            // Handle different section types
+            if (section.type === 'table') {
+                const { headers, rows } = section.tableConfig;
+                const table = createDOMElement('table', { className: 'w-full mt-2 results-table' });
+                const thead = createDOMElement('thead', {}, [createDOMElement('tr', {}, headers.map(h => createDOMElement('th', {}, [h])))]);
+                const tbody = createDOMElement('tbody');
 
-        const mainReportHtml = `
-            <div id="${this.reportId}" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-                <div class="flex justify-between items-center border-b-2 border-gray-300 dark:border-gray-600 pb-4 mb-4">
-                    <h2 class="text-2xl font-bold">${this.title}</h2>
-                    <div class="flex items-center gap-2 print-hidden">
-                        <button id="toggle-all-details-btn" class="bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs" data-state="hidden">Show All Details</button>
-                        ${actionButtonsHtml}
-                        <button id="copy-report-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Report</button>
-                        <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-xs">Download PDF</button>
-                    </div>
-                </div>
-                ${sectionsHtml}
-            </div>
-        `;
+                rows.forEach((row, rowIndex) => {
+                    if (row.type === 'subheader') {
+                        tbody.appendChild(createDOMElement('tr', { className: 'bg-gray-100 dark:bg-gray-700 font-semibold' }, [createDOMElement('td', { colspan: headers.length }, [row.content])]));
+                    } else {
+                        const detailId = `${sectionId}-detail-${rowIndex}`;
+                        const detailsButton = row.details ? createDOMElement('button', { className: 'toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs', dataset: { toggleId: detailId } }, ['[Show]']) : null;
+                        
+                        const tr = createDOMElement('tr', { className: 'border-t dark:border-gray-700' });
+                        row.cells.forEach((cell, cellIndex) => {
+                            const td = createDOMElement('td');
+                            td.innerHTML = cell; // Use innerHTML to render potential HTML in cells
+                            if (cellIndex === 0 && detailsButton) {
+                                td.appendChild(document.createTextNode(' '));
+                                td.appendChild(detailsButton);
+                            }
+                            tr.appendChild(td);
+                        });
+                        tbody.appendChild(tr);
 
-        container.innerHTML = mainReportHtml;
+                        if (row.details) {
+                            const detailsRow = createDOMElement('tr', { id: detailId, className: 'details-row hidden' }, [createDOMElement('td', { colspan: headers.length, className: 'p-0' }, [createDOMElement('div', { className: 'calc-breakdown' }, [row.details])])]);
+                            tbody.appendChild(detailsRow);
+                        }
+                    }
+                });
+                table.append(thead, tbody);
+                contentContainer.appendChild(table);
+            } else {
+                contentContainer.innerHTML = section.htmlContent || '';
+            }
+
+            sectionEl.appendChild(contentContainer);
+            reportContainer.appendChild(sectionEl);
+        });
+
+        mainContainer.appendChild(reportContainer);
     }
 }
 
@@ -1190,6 +1391,14 @@ function attachReportEventListeners(containerId, config) {
             }
         }
 
+        // --- Copy Section ---
+        if (target.matches('.copy-section-btn')) {
+            const copyTargetId = target.dataset.copyTargetId;
+            if (copyTargetId) {
+                handleCopyToClipboard(copyTargetId);
+            }
+        }
+
         // --- Toggle all details ---
         if (target.id === 'toggle-all-details-btn') {
             const shouldShow = target.dataset.state === 'hidden';
@@ -1204,15 +1413,19 @@ function attachReportEventListeners(containerId, config) {
             handleCopyToClipboard(reportId);
         }
 
-        // --- Copy Section ---
-        if (target.matches('.copy-section-btn')) {
-            const copyTargetId = target.dataset.copyTargetId;
-            if (copyTargetId) handleCopyToClipboard(copyTargetId);
-        }
-
         // --- Download PDF ---
         if (target.id === 'download-pdf-btn') {
             handleDownloadPdf(reportId, `${filenamePrefix}.pdf`);
+        }
+
+        // --- Download Word ---
+        if (target.id === 'download-word-btn') {
+            handleDownloadWord(reportId, `${filenamePrefix}.doc`);
+        }
+
+        // --- Download Word ---
+        if (target.id === 'download-word-btn') {
+            handleDownloadWord(reportId, `${filenamePrefix}.doc`);
         }
 
         // --- Custom "Send to Combos" button ---

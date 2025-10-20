@@ -442,21 +442,18 @@ function generateInputLoadRows(inputs, p_unit) {
 function renderComboResults(fullResults) {
     if (!fullResults || !fullResults.success) return;
     lastComboRunResults = fullResults;
-    
+
     const report = new ReportBuilder({
         reportId: 'combo-report-content',
-        title: `Load Combination Report (${fullResults.inputs.combo_asce_standard})`
+        title: `Load Combination Report (${fullResults.inputs.combo_asce_standard})`,
+        warnings: fullResults.warnings
     });
-    
+
     // Display adjustment notes if they exist
     const adjustment_notes = fullResults.scenarios_data[Object.keys(fullResults.scenarios_data)[0]]?.adjustment_notes;
     if (adjustment_notes && Object.keys(adjustment_notes).length > 0) {
         const notesHtml = `<ul class="list-disc list-inside mt-2 text-sm">${Object.values(adjustment_notes).map(note => `<li>${note}</li>`).join('')}</ul>`;
         report.addSection('Input Load Adjustments', `<div class="validation-message warning">${notesHtml}</div>`);
-    }
-
-    if (fullResults.warnings && fullResults.warnings.length > 0) {
-        report.addSection('Warnings', renderValidationResults({ warnings: fullResults.warnings, errors: [] }));
     }
 
     const { inputs } = fullResults;

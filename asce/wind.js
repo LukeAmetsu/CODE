@@ -2386,16 +2386,13 @@ function renderWindResults(results) {
     const report = new ReportBuilder({
         reportId: 'wind-report-content',
         title: `WIND LOAD REPORT (${inputs.effective_standard})`,
+        warnings: warnings,
         actionButtons: [
             { id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-purple-600 hover:bg-purple-700' }
         ]
     });
 
     if (jurisdiction_note) report.addSection(null, `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md"><p><strong>Jurisdiction Note:</strong> ${jurisdiction_note}</p></div>`);
-    if (temporary_structure_note) report.addSection(null, `<div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-md"><p><strong>Project-Specific Allowance:</strong> ${temporary_structure_note}</p></div>`);
-    if (warnings && warnings.length > 0) {
-        report.addSection('Warnings', renderValidationResults({ warnings, errors: [] }));
-    }
 
     report.addSection('Design Parameters', renderDesignParameters(results.inputs, results.intermediate, units), 'design-parameters-section');
     report.addSection('Detailed Calculation Breakdown', renderCalculationBreakdown(results, units), 'calc-breakdown-section');
