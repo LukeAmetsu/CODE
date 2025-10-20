@@ -13,26 +13,33 @@ const LOAD_TYPES = {
     'Outras Ações Variáveis (Q)': { isVariable: true, psi0: 0.8, psi1: 0.6, psi2: 0.4, gamma_q: 1.4 },
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-
-    injectHeader({
+document.addEventListener('DOMContentLoaded', async () => {
+    initializeApp({
         activePage: 'comb-nbr',
-        pageTitle: 'Gerador Interativo de Combinações NBR 8681',
-        headerPlaceholderId: 'header-placeholder'
+        pageTitle: 'Gerador de Combinações NBR (8681 / 6118)',
+        inputIds: [], // Not needed as we use a custom gatherer
+        calculationHandler: createCalculationHandler({
+            gatherInputsFunction: gatherNbrLoads,
+            calculatorFunction: nbrComboCalculator.calculate,
+            renderFunction: renderNbrComboResults,
+            resultsContainerId: 'report-output',
+            buttonId: 'generate-report-btn',
+            feedbackElId: 'feedback-message'
+        }),
+        onReady: () => {
+            const loadsContainer = document.getElementById('loads-container');
+            const addLoadBtn = document.getElementById('add-load-btn');
+            addLoadBtn.addEventListener('click', () => addLoadRow(loadsContainer));
+            addLoadRow(loadsContainer); // Add initial row
+        }
     });
-    injectFooter({
-        footerPlaceholderId: 'footer-placeholder'
-    });
+});
 
-    const loadsContainer = document.getElementById('loads-container');
-    const addLoadBtn = document.getElementById('add-load-btn');
-    const generateReportBtn = document.getElementById('generate-report-btn');
-    
-    function addLoadRow(load = { name: '', type: 'Uso Residencial (Q)', value: 1.0 }) {
+function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {
         const rowId = `row-${Date.now()}`;
         const row = document.createElement('div');
         row.id = rowId;
-        row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center';
+        row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center load-row';
 
         const loadName = document.createElement('input');
         loadName.type = 'text';
@@ -51,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const loadValue = document.createElement('input');
         loadValue.type = 'number';
         loadValue.placeholder = 'Valor (ex: 10)';
-        loadValue.className = 'load-value';
+        loadValue.className = 'load-value w-full';
         loadValue.value = load.value;
 
         const removeButton = document.createElement('button');
@@ -64,16 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
         row.appendChild(loadValue);
         row.appendChild(removeButton);
 
-        loadsContainer.appendChild(row);
-    }
-
-    addLoadBtn.addEventListener('click', addLoadRow);
-    generateReportBtn.addEventListener('click', generateReportHandler);
-    initializeSharedUI();
-
-    // Add initial row
-    addLoadRow();
-});
+    container.appendChild(row);
+}
 
 const nbrComboCalculator = (() => {
     function calculate(userLoads) {
@@ -179,57 +178,46 @@ const nbrComboCalculator = (() => {
     return { calculate };
 })();
 
-function generateReportHandler() {
-    const reportOutput = document.getElementById('report-output');
-    const userLoads = Array.from(document.getElementById('loads-container').children)
-        .map(row => ({
+function gatherNbrLoads() {
+    return Array.from(document.querySelectorAll('.load-row')).map(row => {
+        return {
             name: row.querySelector('.load-name').value,
             type: row.querySelector('.load-type').value,
             value: parseFloat(row.querySelector('.load-value').value) || 0
-        }))
-        .filter(l => l.name && l.type);
-    
-    if (userLoads.length === 0) {
-        reportOutput.innerHTML = `<p class="text-red-500 text-center">Por favor, adicione pelo menos um carregamento com nome, tipo e valor definidos.</p>`;
-        return;
-    }
-    
-    const { combinations } = nbrComboCalculator.calculate(userLoads);
+        };
+    }).filter(l => l.name && l.type);
+}
 
-    // --- Render HTML ---
-    let html = `<div id="nbr-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
-                <div class="flex justify-end gap-2 -mt-2 -mr-2 print-hidden">
-                    <button data-copy-target-id="nbr-report-content" class="copy-section-btn bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
-                    <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Baixar PDF</button>
-                </div>`;
-    
-    function createSectionHTML(title, combos) {
-        if (combos.length === 0) return '';
-        let sectionHTML = `<div class="form-section !p-4"><h3 class="report-header">${title}</h3><div class="space-y-3 mt-3">`;
-        combos.forEach(c => {
-             sectionHTML += `<div class="p-3 bg-gray-100 dark:bg-gray-700/50 rounded-md">
-                                <p class="font-semibold text-gray-800 dark:text-gray-300">${c.title}</p>
-                                <p class="text-sm text-blue-600 dark:text-blue-400 font-mono break-words">${c.formula} = <b>${c.result.toFixed(2)}</b></p>
-                             </div>`;
-        });
-        sectionHTML += `</div></div>`;
-        return sectionHTML;
-    }
+function renderNbrComboResults(fullResults) {
+    const { combinations, inputs } = fullResults;
 
-    html += createSectionHTML('ELU - Combinações Normais', combinations.elu);
-    html += createSectionHTML('ELS - Combinação Rara', combinations.els_rara);
-    html += createSectionHTML('ELS - Combinação Frequente', combinations.els_freq);
-    html += createSectionHTML('ELS - Combinação Quase-Permanente', combinations.els_qp);
-    
-    html += `</div>`;
-    reportOutput.innerHTML = html;
-
-    document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
-        handleDownloadPdf('nbr-report-content', 'NBR-Combinacoes-Relatorio.pdf');
+    const report = new ReportBuilder({
+        reportId: 'nbr-report-content',
+        title: 'Relatório de Combinações NBR (8681 / 6118)',
     });
-    // FIX: Add event listener for the copy button
-    const copyBtn = reportOutput.querySelector('.copy-section-btn');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => handleCopyToClipboard('nbr-report-content', 'feedback-message'));
-    }
+
+    const inputSummaryRows = inputs.map(load => {
+        return { cells: [load.name, load.type, load.value.toFixed(2)] };
+    });
+
+    report.addTableSection('Cargas de Entrada', {
+        headers: ['Nome da Carga', 'Tipo (NBR 8681)', 'Valor'],
+        rows: inputSummaryRows
+    }, 'nbr-inputs-summary');
+
+    const createComboTableSection = (title, combos) => {
+        if (!combos || combos.length === 0) return;
+
+        const rows = combos.map(c => ({
+            cells: [c.title, `<code class="text-sm">${c.formula}</code>`, `<b>${c.result.toFixed(2)}</b>`]
+        }));
+        report.addTableSection(title, { headers: ['Combinação', 'Fórmula', 'Resultado'], rows });
+    };
+
+    createComboTableSection('ELU - Combinações Últimas', combinations.elu);
+    createComboTableSection('ELS - Combinação Rara', combinations.els_rara);
+    createComboTableSection('ELS - Combinação Frequente', combinations.els_freq);
+    createComboTableSection('ELS - Combinação Quase-Permanente', combinations.els_qp);
+
+    report.render('report-output');
 }

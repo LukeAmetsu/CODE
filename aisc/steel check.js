@@ -1176,55 +1176,7 @@ const steelChecker = (() => {
         };
     }
 
-    function validateInputs(inputs) {
-        const errors = [];
-        const warnings = [];
-
-        if (inputs.Fy <= 0 || inputs.Fy > 100) {
-            errors.push("Yield Strength (Fy) must be between 0 and 100 ksi.");
-        }
-        if (inputs.Fy < 36 || inputs.Fy > 80) {
-            warnings.push("Unusual steel grade. Verify Fy value.");
-        }
-
-        if (inputs.Fu <= inputs.Fy) {
-            errors.push("Ultimate Strength (Fu) must be greater than Fy.");
-        }
-        if (inputs.E <= 0 || inputs.E > 50000) {
-            errors.push("Modulus of Elasticity (E) should be around 29,000 ksi for steel.");
-        }
-
-        if (inputs.d <= 0) errors.push("Section depth must be positive.");
-        if (inputs.tf <= 0) errors.push("Flange thickness must be positive.");
-
-        if (Math.abs(inputs.Pu_or_Pa) > 10000) {
-            warnings.push("Very high axial load - verify units (kips expected).");
-        }
-        if (Math.abs(inputs.Mux_or_Max) > 10000) {
-            warnings.push("Very high moment - verify units (kip-ft expected).");
-        }
-
-        if (inputs.section_type === 'I-Shape') {
-            if (inputs.d < 2 * inputs.tf) {
-                errors.push("Depth (d) must be greater than twice the flange thickness (tf).");
-            }
-            if (inputs.bf < inputs.tw) {
-                errors.push("Flange width (bf) must be greater than the web thickness (tw).");
-            }
-        }
-
-        // Add guard for K and Lb
-        if (inputs.K <= 0) {
-            errors.push("Effective length factor (K) must be positive.");
-        }
-        if (inputs.Lb_input < 0) {
-            errors.push("Unbraced length (Lb) cannot be negative.");
-        }
-
-        return { errors, warnings };
-    }
-
-    function run(inputs) {
+    function run(inputs, validation) {
         inputs.Fy = parseFloat(inputs.Fy) || 0;
         inputs.Fu = parseFloat(inputs.Fu) || 0;
         inputs.is_end_bearing = inputs.is_end_bearing === 'true';
@@ -1239,12 +1191,6 @@ const steelChecker = (() => {
         if (errors.length > 0) return { errors, warnings, checks: {} };
 
         const props = getSectionProperties(inputs);
-
-        // After getting properties, if rts was calculated, update the UI input field to show it.
-        const rtsInput = document.getElementById('rts_manual');
-        if (rtsInput && props.rts > 0 && rtsInput.value !== props.rts.toFixed(5)) {
-            rtsInput.value = props.rts.toFixed(5);
-        }
 
         const shear_results = checkShear(props, inputs);        
         const isHighShear = Math.abs(inputs.Vu_or_Va) > 0.6 * shear_results.phiVn_or_Vn_omega;
@@ -1312,25 +1258,14 @@ const steelChecker = (() => {
 function getSectionProperties(inputs) {
     // If a shape is selected from the dropdown, its properties are already in the manual input fields.
     // We can build the properties object directly from there. This handles both selected shapes and pure manual input.
-    const props = {
-        type: inputs.section_type,
-        d: parseFloat(inputs.d) || 0,
-        bf: parseFloat(inputs.bf) || 0,
-        tf: parseFloat(inputs.tf) || 0,
-        tw: parseFloat(inputs.tw) || 0,
-        Ag: parseFloat(inputs.Ag_manual) || 0,
-        Ix: parseFloat(inputs.I_manual) || 0,
-        Sx: parseFloat(inputs.Sx_manual) || 0,
-        Zx: parseFloat(inputs.Zx_manual) || 0,
-        Iy: parseFloat(inputs.Iy_manual) || 0,
-        Sy: parseFloat(inputs.Sy_manual) || 0,
-        Zy: parseFloat(inputs.Zy_manual) || 0,
-        ry: parseFloat(inputs.ry_manual) || 0,
-        rts: parseFloat(inputs.rts_manual) || 0,
-        J: parseFloat(inputs.J_manual) || 0,
-        Cw: parseFloat(inputs.Cw_manual) || 0,
-        k_des: parseFloat(inputs.k_des) || parseFloat(inputs.tf) || 0
-    };
+    const props = {};
+    const propIds = ['section_type', 'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'k_des'];
+    propIds.forEach(id => {
+        const key = id.replace('_manual', '');
+        const value = inputs[id];
+        props[key] = (typeof value === 'string' && !isNaN(parseFloat(value))) ? parseFloat(value) : value;
+    });
+    props.k_des = props.k_des || props.tf || 0;
 
     // Calculate derived properties
     props.h = props.d - 2 * props.k_des;
@@ -1345,13 +1280,14 @@ function getSectionProperties(inputs) {
         props.x_bar = props.x_bar || 0; // Use database value if available, else 0
     }
 
+    props.rts_was_calculated = false;
     // If rts is missing for an I-shape, calculate it per AISC 360-22 Eq. F2-7
     if ((!props.rts || props.rts === 0) && ['W-Shape', 'S-Shape', 'M-Shape', 'HP-Shape'].includes(props.type)) {
         // Correct implementation of AISC F2-7 for doubly symmetric I-shapes
         if (props.bf > 0 && props.Sx > 0) {
-            const ho = props.d - props.tf;
             const rts_squared = (Math.sqrt(props.Iy * props.Cw)) / props.Sx;
             props.rts = Math.sqrt(rts_squared);
+            props.rts_was_calculated = true;
         }
     }
 
@@ -1612,7 +1548,8 @@ function generateSteelBreakdownHtml(name, data, results) {
         default:
             return 'Breakdown not available for this check.';
     }
-    return `<h4 class="font-semibold">${name}</h4>${content}`;
+    // Return content without a leading heading — the ReportBuilder will render the section title.
+    return `${content}`;
 }
 
 async function populateShapeDropdown() {
@@ -1685,12 +1622,6 @@ function renderSteelInputSummary(inputs) {
     const { design_method, aisc_standard, steel_material, Fy, Fu, Lb_input, K, Cb, Pu_or_Pa, Vu_or_Va, Mux_or_Max, Muy_or_May, Tu_or_Ta, deflection_span, deflection_limit, actual_deflection_input } = inputs;
 
     return `
-    <div id="input-summary-section" class="report-section-copyable">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Input Summary</h3>
-            <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                 <caption class="report-caption">General & Material Properties</caption>
                 <tbody>
@@ -1719,13 +1650,16 @@ function renderSteelInputSummary(inputs) {
                     <tr><td>Actual Deflection</td><td>${actual_deflection_input} in</td></tr>
                 </tbody>
             </table>
-        </div>
-    </div>`;
+    `;
 }
 
 function renderSteelPropertySummary(properties) {
     const selectedShape = lastSteelRunResults?.inputs?.aisc_shape_select || 'Manual Input';
     const fmt = (val, dec = 2) => (typeof val === 'number' && isFinite(val)) ? val.toFixed(dec) : 'N/A';
+
+    const rts_display_val = properties.rts_was_calculated 
+        ? `${fmt(properties.rts, 2)} <span class="text-xs text-gray-500 dark:text-gray-400">(Calculated)</span>`
+        : fmt(properties.rts, 2);
 
     const rows = [
         `<tr><td>Section Type</td><td>${properties.type}</td></tr>`,
@@ -1748,22 +1682,15 @@ function renderSteelPropertySummary(properties) {
         `<tr><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Torsional Properties</td></tr>`,
         `<tr><td>Torsional Constant (J)</td><td>${fmt(properties.J, 2)} in⁴</td></tr>`,
         `<tr><td>Warping Constant (C<sub>w</sub>)</td><td>${fmt(properties.Cw, 2)} in⁶</td></tr>`,
-        `<tr><td>Radius of Gyration (r<sub>ts</sub>)</td><td>${fmt(properties.rts, 2)} in</td></tr>`
+        `<tr><td>Radius of Gyration (r<sub>ts</sub>)</td><td>${rts_display_val} in</td></tr>`
     ];
 
     return `
-    <div id="property-summary-section" class="report-section-copyable mt-6">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Section Properties</h3>
-            <button data-copy-target-id="property-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
-            <table class="w-full mt-2 summary-table">
-                <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-                <tbody>${rows.join('')}</tbody>
-            </table>
-        </div>
-    </div>`;
+        <table class="w-full mt-2 summary-table">
+            <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+            <tbody>${rows.join('')}</tbody>
+        </table>
+    `;
 }
 
 function renderSlendernessChecks(results) {
@@ -1794,22 +1721,15 @@ function renderSlendernessChecks(results) {
     if (rows.length === 0) return ''; // Don't render the table if no slenderness checks were applicable
 
     return `
-    <div id="slenderness-checks-section" class="report-section-copyable mt-6">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Section Compactness (AISC B4)</h3>
-            <button data-copy-target-id="slenderness-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
-            <table class="w-full mt-2 summary-table">
-                <thead>
-                    <tr><th>Element</th><th>Ratio</th><th>Limits</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                    ${rows.join('')}
-                </tbody>
-            </table>
-        </div>
-    </div>`;
+        <table class="w-full mt-2 summary-table">
+            <thead>
+                <tr><th>Element</th><th>Ratio</th><th>Limits</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                ${rows.join('')}
+            </tbody>
+        </table>
+    `;
 }
 
 function renderSteelStrengthChecks(results) {
@@ -1822,18 +1742,18 @@ function renderSteelStrengthChecks(results) {
     };
 
     const createRow = (name, demand, capacity, ratio, status, data) => {
-        if (capacity === 0 && demand === 0) return '';
+        if ((capacity === 0 || !isFinite(capacity)) && (demand === 0 || !isFinite(demand))) return '';
         const detailId = `detail-${name.replace(/[\s\(\)]/g, '-')}`;
         const breakdownHtml = generateSteelBreakdownHtml(name, data, results);
         return `
             <tr class="border-t dark:border-gray-700">
-                <td>${name} <span class="ref">[${data.reference}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
+                <td>${name} <span class="ref">[${data.reference}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs">[Show]</button></td>
                 <td>${fmt(demand, 2)}</td>
                 <td>${fmt(capacity, 2)}</td>
                 <td>${fmt(ratio, 3)}</td>
                 <td>${status}</td>
             </tr>
-            <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td></tr>
+            <tr id="${detailId}" class="details-row hidden"><td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td></tr>
         `;
     };
 
@@ -1852,18 +1772,11 @@ function renderSteelStrengthChecks(results) {
     ].filter(Boolean).join('');
 
     return `
-        <div id="strength-checks-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header">Strength & Serviceability Checks (${inputs.design_method})</h3>
-                <button data-copy-target-id="strength-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
-            <div class="copy-content">
-                <table class="w-full mt-2 results-table">
-                    <thead><tr><th>Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
-                    <tbody>${strengthRows}</tbody>
-                </table>
-            </div>
-        </div>`;
+        <table id="strength-checks-table" class="w-full mt-2 results-table">
+            <thead><tr><th>Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
+            <tbody>${strengthRows}</tbody>
+        </table>
+    `;
 }
 
 function renderSteelResults(results) {
@@ -1871,129 +1784,61 @@ function renderSteelResults(results) {
     const { inputs, properties, warnings, errors } = results;
     const resultsContainer = document.getElementById('steel-results-container');
 
+    const report = new ReportBuilder({
+        reportId: 'steel-check-report-content',
+        title: `Steel Section Check Results (${inputs.design_method})`
+    });
+
     if (errors && errors.length > 0) {
-        resultsContainer.innerHTML = renderValidationResults({ errors, warnings });
+        report.addSection('Errors', renderValidationResults({ errors, warnings }));
+        report.render(resultsContainer.id);
         return;
     }
 
-    const inputSummaryHtml = renderSteelInputSummary(inputs);
-    const propertySummaryHtml = renderSteelPropertySummary(properties);
-    const slendernessChecksHtml = renderSlendernessChecks(results);
-    const strengthChecksHtml = renderSteelStrengthChecks(results);
+    report.addSection('Input Summary', renderSteelInputSummary(inputs), 'input-summary-section');
+    report.addSection('Section Properties', renderSteelPropertySummary(properties), 'property-summary-section');
+    report.addSection('Section Compactness (AISC B4)', renderSlendernessChecks(results), 'slenderness-checks-section');
+    report.addSection(`Strength & Serviceability Checks (${inputs.design_method})`, renderSteelStrengthChecks(results), 'strength-checks-section');
 
-    const finalHtml = `
-        <div id="steel-check-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
-            <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
-                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Show All Details</button>
-                <button id="print-report-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm">Print Report</button>
-                <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>
-            </div>
-            <h2 class="report-title text-center">Steel Section Check Results (${inputs.design_method})</h2>
-            ${inputSummaryHtml}
-            ${propertySummaryHtml}
-            ${slendernessChecksHtml}
-            ${strengthChecksHtml}
-        </div>
-    `;
-    resultsContainer.innerHTML = finalHtml;
+    report.render(resultsContainer.id);
 }
 
 // --- DOMContentLoaded: Initialize UI ---
-document.addEventListener('DOMContentLoaded', () => {
-    injectHeader({
-        activePage: 'steel-check',
-        pageTitle: 'AISC Steel Section Design Checker',
-        headerPlaceholderId: 'header-placeholder'
-    });
-
-    injectFooter({
-        footerPlaceholderId: 'footer-placeholder'
-    });
-    initializeSharedUI();
-
-    function populateMaterialDropdowns() {
-        const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
-            `<option value="${grade}">${grade}</option>`
-        ).join('');
-
-        const select = document.getElementById('steel_material');
-        if (select) {
-            select.innerHTML = gradeOptions;
-            select.value = 'A992';
-            select.addEventListener('change', (e) => {
-                const grade = AISC_SPEC.getSteelGrade(e.target.value);
-                if (grade) {
-                    document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
-                    document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
-                }
-            });
-            select.dispatchEvent(new Event('change'));
-        }
-    }
-
+document.addEventListener('DOMContentLoaded', async () => {
     const handleRunSteelCheck = createCalculationHandler({
         gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
         storageKey: 'steel-check-inputs',
         validatorFunction: (inputs) => {
-            lastSteelRunResults = null; // Clear previous results on new run
-            return steelChecker.validateInputs(inputs);
+            const { errors, warnings } = steelChecker.validateInputs(inputs);
+            return { errors, warnings };
         },
         calculatorFunction: steelChecker.run,
         renderFunction: renderSteelResults,
         resultsContainerId: 'steel-results-container',
-        buttonId: 'run-steel-check-btn' // Add button ID for loading state
+        buttonId: 'run-steel-check-btn'
     });
 
-    // --- Event Listeners ---
-    document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);
-    document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(steelCheckInputIds, 'steel-check-inputs.txt'));
-    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
-    document.getElementById('file-input').addEventListener('change', createLoadInputsHandler(steelCheckInputIds, handleRunSteelCheck));
-    document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
-    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-
-    // --- Auto-save to Local Storage (with debouncing) ---
-    const debouncedSave = debounce(() => {
-        saveInputsToLocalStorage('steel-check-inputs', gatherInputsFromIds(steelCheckInputIds));
-    }, 300);
-    steelCheckInputIds.forEach(id => {
-        const el = document.getElementById(id);
-        el?.addEventListener('input', debouncedSave);
-    });
-
-    // --- Initial Setup ---
-    populateMaterialDropdowns();
-    populateShapeDropdown();
-    updateGeometryInputsUI();
-    loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
-
-    // --- Results Container Event Delegation ---
-    document.getElementById('steel-results-container').addEventListener('click', (event) => {
-        const target = event.target;
-        const toggleBtn = target.closest('.toggle-details-btn');
-        const copyBtn = target.closest('.copy-section-btn');
-
-        if (toggleBtn) {
-            const detailId = toggleBtn.dataset.toggleId;
-            const detailRow = document.getElementById(detailId);
-            detailRow?.classList.toggle('is-visible');
-            toggleBtn.textContent = detailRow?.classList.contains('is-visible') ? '[Hide]' : '[Show]';
-        } else if (target.id === 'toggle-all-details-btn') {
-            handleToggleAllDetails(target, '#steel-results-container');
-        } else if (target.id === 'copy-report-btn') {
-            handleCopyToClipboard('steel-check-report-content', 'feedback-message');
-        } else if (target.id === 'download-pdf-btn') {
-            handleDownloadPdf('steel-check-report-content', 'Steel-Check-Report.pdf');
-        } else if (target.id === 'print-report-btn') {
-            window.print();
-        } else if (target.id === 'download-word-btn') {
-            handleDownloadWord('steel-check-report-content', 'Steel-Check-Report.doc');
-        } else if (copyBtn) {
-            const targetId = copyBtn.dataset.copyTargetId;
-            if (targetId) {
-                handleCopyToClipboard(targetId, 'feedback-message');
+    await initializeApp({
+        activePage: 'steel-check',
+        pageTitle: 'AISC Steel Section Design Checker',
+        inputIds: steelCheckInputIds,
+        calculationHandler: handleRunSteelCheck,
+        buttonId: 'run-steel-check-btn',
+        onReady: (loadedInputs) => {
+            populateMaterialDropdowns();
+            populateShapeDropdown();
+            updateGeometryInputsUI();
+            document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
+            document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+            attachReportEventListeners('steel-results-container', {
+                reportId: 'steel-check-report-content',
+                filenamePrefix: 'Steel-Check-Report',
+                toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+            });
+            if (loadedInputs) {
+                // If inputs were loaded from storage, we might want to run the check automatically.
+                // For now, we'll just ensure the UI is updated.
+                // To run automatically, you could call: handleRunSteelCheck();
             }
         }
     });

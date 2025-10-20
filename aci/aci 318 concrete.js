@@ -44,70 +44,73 @@ const aciCalculator = (() => {
     return { calculate };
 })();
 
+function generateAciBreakdownHtml(check) {
+    const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
+
+    if (check.type === 'flexure') {
+        return format_list([
+            `<b>Effective Depth (d):</b> ${check.details.d.toFixed(3)} in`,
+            `<b>Area of Steel (A<sub>s</sub>):</b> ${check.details.As.toFixed(3)} in²`,
+            `<b>Depth of Compression Block (a):</b> ${check.details.a.toFixed(3)} in`,
+            `<b>Neutral Axis Depth (c):</b> ${check.details.c.toFixed(3)} in`,
+            `<b>Tensile Strain (&epsilon;<sub>t</sub>):</b> ${check.details.strain_t.toFixed(5)} (${check.details.strain_t >= 0.005 ? 'Tension-Controlled' : 'Transition'})`,
+            `<b>Strength Reduction Factor (&phi;<sub>f</sub>):</b> ${check.details.phi_f.toFixed(3)}`,
+        ]);
+    }
+    if (check.type === 'shear') {
+        return format_list([
+            `<b>Concrete Capacity (V<sub>c</sub>):</b> ${(check.details.Vc / 1000).toFixed(2)} kips`,
+            `<b>Stirrup Capacity (V<sub>s</sub>):</b> ${(check.details.Vs / 1000).toFixed(2)} kips`,
+            `<b>Max Stirrup Capacity (V<sub>s,max</sub>):</b> ${(check.details.Vs_max / 1000).toFixed(2)} kips`,
+        ]);
+    }
+    return 'Details not available.';
+}
+
 function renderAciResults(calc_results) {
     const { inputs, results } = calc_results;
-    const summaryContainer = document.getElementById('summary-results');
-    const resultsContainer = document.getElementById('results-container');
+
+    const report = new ReportBuilder({
+        reportId: 'aci-report-content',
+        title: 'Detailed Calculation Report (ACI 318-19)',
+    });
+
+    const inputRows = [
+        { cells: ["Concrete Strength (f'c)", `${calc_results.inputs.fc} psi`] },
+        { cells: ["Steel Yield Strength (fy)", `${calc_results.inputs.fy} psi`] },
+        { cells: ["Beam Geometry (b x h)", `${calc_results.inputs.b}" x ${calc_results.inputs.h}"`] },
+        { cells: ["Flexural Reinforcement", `${calc_results.inputs.num_bars} - #${calc_results.inputs.bar_size} bars`] },
+        { cells: ["Shear Reinforcement", `#${calc_results.inputs.stirrup_size} @ ${calc_results.inputs.stirrup_spacing}" (${calc_results.inputs.stirrup_legs} legs)`] },
+        { cells: ["Factored Moment (Mu)", `${calc_results.inputs.Mu / 12000} kip-ft`] },
+        { cells: ["Factored Shear (Vu)", `${calc_results.inputs.Vu / 1000} kips`] },
+    ];
+    report.addTableSection('Input Summary', { headers: ['Parameter', 'Value'], rows: inputRows }, 'aci-input-summary');
 
     const M_ratio = results.phiMn > 0 ? inputs.Mu / results.phiMn : Infinity;
     const V_ratio = results.phiVn > 0 ? inputs.Vu / results.phiVn : Infinity;
-    const getStatus = (ratio) => ratio <= 1.0 ? `<span class="pass">OK</span>` : `<span class="fail">FAIL</span>`;
 
-    summaryContainer.innerHTML = `
-        <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Flexure (M<sub>u</sub> / &phi;M<sub>n</sub>):</span> <strong class="${M_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${M_ratio.toFixed(3)}</strong></p>
-        </div>
-        <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Shear (V<sub>u</sub> / &phi;V<sub>n</sub>):</span> <strong class="${V_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${V_ratio.toFixed(3)}</strong></p>
-        </div>
-    `;
+    const flexureRow = {
+        cells: ['Moment Capacity', `${(inputs.Mu / 12000).toFixed(2)} kip-ft`, `${(results.phiMn / 12000).toFixed(2)} kip-ft`, M_ratio.toFixed(3), `${(M_ratio * 100).toFixed(1)}%`, M_ratio <= 1.0 ? '<span class="pass">OK</span>' : '<span class="fail">FAIL</span>'],
+        details: generateAciBreakdownHtml({ type: 'flexure', details: results.flexure_details })
+    };
+    report.addTableSection('Flexural Design Check', {
+        headers: ['Check', 'Demand', 'Capacity', 'Ratio', 'Utilization (%)', 'Status'],
+        rows: [flexureRow]
+    }, 'aci-flexure-check');
 
-    resultsContainer.innerHTML = `
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-            <h2 class="text-2xl font-bold text-center border-b pb-2">Detailed Calculation Report (ACI 318-19)</h2>
-            <table class="w-full mt-4">
-                <caption>Design Checks</caption>
-                <thead><tr><th>Check</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
-                <tbody>
-                    <tr>
-                        <td>Flexure</td>
-                        <td>${(inputs.Mu / 12000).toFixed(2)} kip-ft</td>
-                        <td>${(results.phiMn / 12000).toFixed(2)} kip-ft</td>
-                        <td>${M_ratio.toFixed(3)}</td>
-                        <td>${getStatus(M_ratio)}</td>
-                    </tr>
-                    <tr>
-                        <td>Shear</td>
-                        <td>${(inputs.Vu / 1000).toFixed(2)} kips</td>
-                        <td>${(results.phiVn / 1000).toFixed(2)} kips</td>
-                        <td>${V_ratio.toFixed(3)}</td>
-                        <td>${getStatus(V_ratio)}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="calc-breakdown mt-4">
-                <h4>Flexure Breakdown</h4>
-                <ul>
-                    <li>Effective Depth (d): ${results.flexure_details.d.toFixed(2)} in</li>
-                    <li>Area of Steel (A<sub>s</sub>): ${results.flexure_details.As.toFixed(2)} in²</li>
-                    <li>Depth of Compression Block (a): ${results.flexure_details.a.toFixed(2)} in</li>
-                    <li>Neutral Axis Depth (c): ${results.flexure_details.c.toFixed(2)} in</li>
-                    <li>Tensile Strain (&epsilon;<sub>t</sub>): ${results.flexure_details.strain_t.toFixed(4)} (${results.flexure_details.strain_t >= 0.005 ? 'Tension-Controlled' : 'Transition'})</li>
-                    <li>Strength Reduction Factor (&phi;<sub>f</sub>): ${results.flexure_details.phi_f.toFixed(2)}</li>
-                </ul>
-            </div>
-            <div class="calc-breakdown mt-4">
-                <h4>Shear Breakdown</h4>
-                <ul>
-                    <li>Concrete Capacity (V<sub>c</sub>): ${(results.shear_details.Vc/1000).toFixed(2)} kips</li>
-                    <li>Stirrup Capacity (V<sub>s</sub>): ${(results.shear_details.Vs/1000).toFixed(2)} kips</li>
-                    <li>Max Stirrup Capacity (V<sub>s,max</sub>): ${(results.shear_details.Vs_max/1000).toFixed(2)} kips</li>
-                </ul>
-            </div>
-        </div>`;
+    const shearRow = {
+        cells: ['Shear Capacity', `${(inputs.Vu / 1000).toFixed(2)} kips`, `${(results.phiVn / 1000).toFixed(2)} kips`, V_ratio.toFixed(3), `${(V_ratio * 100).toFixed(1)}%`, V_ratio <= 1.0 ? '<span class="pass">OK</span>' : '<span class="fail">FAIL</span>'],
+        details: generateAciBreakdownHtml({ type: 'shear', details: results.shear_details })
+    };
+    report.addTableSection('Shear Design Check', {
+        headers: ['Check', 'Demand', 'Capacity', 'Ratio', 'Utilization (%)', 'Status'],
+        rows: [shearRow]
+    }, 'aci-shear-check');
+
+    report.render('results-container');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const handleRunAciCheck = createCalculationHandler({
         inputIds: aciInputIds,
         storageKey: 'aci-concrete-inputs',
@@ -117,16 +120,19 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'
     });
-    injectHeader({ activePage: 'aci-concrete', pageTitle: 'ACI 318-19 Concrete Beam Checker', headerPlaceholderId: 'header-placeholder' });
-    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-    initializeSharedUI();
 
-    loadInputsFromLocalStorage('aci-concrete-inputs', aciInputIds);
-    
-    const handleSaveInputs = createSaveInputsHandler(aciInputIds, 'aci-concrete-inputs.txt');
-    const handleLoadInputs = createLoadInputsHandler(aciInputIds, handleRunAciCheck);
-    document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);
-    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
-    document.getElementById('file-input').addEventListener('change', handleLoadInputs);
-    document.getElementById('run-check-btn').addEventListener('click', handleRunAciCheck);
+    await initializeApp({
+        pageKey: 'aci-concrete', // A key for this page
+        pageTitle: 'ACI 318-19 Concrete Beam Checker',
+        inputIds: aciInputIds,
+        calculationHandler: handleRunAciCheck,
+        buttonId: 'run-check-btn',
+        onReady: () => {
+            attachReportEventListeners('results-container', {
+                reportId: 'aci-report-content',
+                filenamePrefix: 'ACI-318-Report',
+                toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos os Detalhes', hideAll: 'Esconder Todos os Detalhes' }
+            });
+        }
+    });
 });

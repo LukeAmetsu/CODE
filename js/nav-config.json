@@ -6,9 +6,14 @@
             "href": "index.html#us-codes-section",
             "text": "US Codes",
             "subNav": [
-                { "key": "asce", "href": "asce/project_definition.html", "text": "ASCE 7 Loads" },
-                { "key": "aisc", "href": "aisc/steel check.html", "text": "AISC Steel" },
-                { "key": "aci", "href": "aci/aci 318 concrete.html", "text": "ACI Concrete" },
+                { "key": "wind", "href": "asce/wind.html", "text": "Wind" },
+                { "key": "snow", "href": "asce/snow.html", "text": "Snow" },
+                { "key": "rain", "href": "asce/rain.html", "text": "Rain" },
+                { "key": "combos", "href": "asce/combos.html", "text": "Combinations" },
+                { "key": "steel-check", "href": "aisc/steel check.html", "text": "Steel Check" },
+                { "key": "base-plate", "href": "aisc/base plate.html", "text": "Base Plate" },
+                { "key": "splice", "href": "aisc/splice.html", "text": "Splice" },
+                { "key": "aci-concrete", "href": "aci/aci 318 concrete.html", "text": "ACI Concrete" },
                 { "key": "nds", "href": "nds/nds wood design.html", "text": "NDS Wood" }
             ]
         },
@@ -19,7 +24,7 @@
             "subNav": [
                 { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "text": "Combinações" },
                 { "key": "viga-concreto", "href": "nbr/nbr 6118 concreto.html", "text": "Viga de Concreto" },
-                { "key": "viga-protendida", "href": "nbr/viga_protendida.html", "text": "Viga Protendida" },
+                { "key": "viga-protendida", "href": "nbr/viga_protendida.html", "text": "Viga Protendida" },                
                 { "key": "nbr-aco", "href": "nbr/nbr 8080 estruturas de aço.html", "text": "Aço" },
                 { "key": "nbr-madeira", "href": "nbr/nbr 7190 madeira.html", "text": "Madeira" }
             ]

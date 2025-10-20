@@ -958,6 +958,271 @@ function clearLocalStorageAndResetUI(storageKey, inputIds, feedbackElId = 'feedb
     });
     showFeedback('Inputs have been cleared and reset.', false, feedbackElId);
 }
+
+/**
+ * A master initialization function for calculator pages.
+ * It handles header/footer injection, UI setup, and event listener attachment for a consistent user experience.
+ * @param {object} config - The configuration object for the page.
+ * @param {string} config.pageKey - A unique key for the page (e.g., 'wind', 'snow'). Used for navigation highlighting.
+ * @param {string} config.pageTitle - The title to display in the header.
+ * @param {string[]} config.inputIds - An array of all input IDs on the page for saving/loading.
+ * @param {function} config.calculationHandler - The function to call when the main "run" button is clicked.
+ * @param {string} config.buttonId - The ID of the main "run" button.
+ * @param {function} [config.onReady] - An optional callback to run after all initial setup is complete.
+ */
+async function initializeApp(config) {
+    const {
+        pageKey,
+        pageTitle,
+        inputIds,
+        calculationHandler,
+        buttonId,
+        onReady,
+        storageKey, // Allow overriding storage key
+        fileInputId = 'file-input' // Default file input ID
+    } = config;
+
+    const effectiveStorageKey = storageKey || `${pageKey}-inputs`;
+
+    // 1. Inject Header & Footer
+    await injectHeader({
+        activePage: pageKey,
+        pageTitle: pageTitle,
+        headerPlaceholderId: 'header-placeholder'
+    });
+    await injectFooter({
+        footerPlaceholderId: 'footer-placeholder'
+    });
+
+    // 2. Initialize Shared UI Components
+    initializeSharedUI();
+
+    // 3. Attach Core Event Listeners
+    const runButton = document.getElementById(buttonId);
+    if (runButton && typeof calculationHandler === 'function') {
+        runButton.addEventListener('click', calculationHandler);
+    }
+
+    const saveButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageKey}-inputs-btn`);
+    if (saveButton) {
+        saveButton.addEventListener('click', () => {
+            const inputs = gatherInputsFromIds(inputIds);
+            saveInputsToFile(inputs, `${pageKey}-inputs.json`);
+            showFeedback('Inputs saved to file.', false);
+        });
+    }
+
+    // --- Automatic Save to Local Storage ---
+    // This function runs automatically whenever an input changes.
+    const debouncedSave = debounce(() => {
+        const currentInputs = gatherInputsFromIds(inputIds);
+        saveInputsToLocalStorage(effectiveStorageKey, currentInputs);
+        // Do not show feedback on auto-save to avoid being intrusive.
+    }, 500); // Debounce to avoid excessive writes on rapid changes.
+
+    // --- Manual "Save to File" Button ---
+    // This is now correctly separated and only handles file downloads.
+    const saveToFileButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageKey}-inputs-btn`);
+    if (saveToFileButton) saveToFileButton.addEventListener('click', createSaveInputsHandler(inputIds, `${pageKey}-inputs.json`));
+
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', debouncedSave);
+    });
+
+    // 4. Load saved data from Local Storage
+    loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
+}
+
+/**
+ * A class to build and render structured calculation reports.
+ * It supports adding different types of sections (HTML, tables, charts)
+ * and handles the rendering process, including attaching event listeners.
+ */
+class ReportBuilder {
+    /**
+     * @param {object} options - Configuration for the report.
+     * @param {string} options.reportId - The ID for the main report container.
+     * @param {string} options.title - The main title of the report.
+     * @param {Array<object>} [options.actionButtons] - Optional array of custom action buttons.
+     */
+    constructor(options) {
+        this.reportId = options.reportId;
+        this.title = options.title;
+        this.actionButtons = options.actionButtons || [];
+        this.sections = [];
+    }
+
+    /**
+     * Adds a generic HTML content section to the report.
+     * @param {string|null} title - The title of the section. Can be null for sections without a header.
+     * @param {string} htmlContent - The HTML content to be rendered.
+     * @param {string} [sectionId] - An optional ID for the section container.
+     */
+    addSection(title, htmlContent, sectionId) {
+        this.sections.push({ type: 'html', title, htmlContent, sectionId });
+    }
+
+    /**
+     * Adds a section that will contain a table.
+     * @param {string} title - The title of the section.
+     * @param {object} tableConfig - Configuration for the table.
+     * @param {string[]} tableConfig.headers - Array of header strings.
+     * @param {Array<object>} tableConfig.rows - Array of row objects. Each object has a `cells` array and an optional `details` string.
+     * @param {string} [sectionId] - An optional ID for the section container.
+     */
+    addTableSection(title, tableConfig, sectionId) {
+        this.sections.push({ type: 'table', title, tableConfig, sectionId });
+    }
+
+    /**
+     * Adds a section that will contain a chart.
+     * @param {string} title - The title of the section.
+     * @param {string} canvasId - The ID for the canvas element where the chart will be drawn.
+     * @param {string} [sectionId] - An optional ID for the section container.
+     * @param {object} [style] - Optional style object for the canvas container.
+     */
+    addChartSection(title, canvasId, sectionId, style = { height: '300px' }) {
+        const styleString = Object.entries(style).map(([k, v]) => `${k}:${v}`).join(';');
+        const chartHtml = `<div style="${styleString}"><canvas id="${canvasId}"></canvas></div>`;
+        this.sections.push({ type: 'html', title, htmlContent: chartHtml, sectionId });
+    }
+
+    /**
+     * Renders the entire report into a specified container element.
+     * @param {string} containerId - The ID of the DOM element to render the report into.
+     */
+    render(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Report container with ID "${containerId}" not found.`);
+            return;
+        }
+
+        const actionButtonsHtml = this.actionButtons.map(btn =>
+            `<button id="${btn.id}" class="bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden ${btn.classes || ''}">${btn.text}</button>`
+        ).join('');
+
+        const sectionsHtml = this.sections.map((section, index) => {
+            const sectionId = section.sectionId || `${this.reportId}-section-${index}`;
+            const contentId = `${sectionId}-content`; // Unique ID for the content wrapper
+            let content;
+
+            if (section.type === 'table') {
+                const { headers, rows } = section.tableConfig;
+                const headerHtml = `<thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+                const bodyHtml = rows.map((row, rowIndex) => {
+                    if (row.type === 'subheader') {
+                        return `<tr class="bg-gray-100 dark:bg-gray-700 font-semibold"><td colspan="${headers.length}">${row.content}</td></tr>`;
+                    }
+                    const detailId = `${sectionId}-detail-${rowIndex}`;
+                    const cellsHtml = row.cells.map(cell => `<td>${cell}</td>`).join('');
+                    const detailsButton = row.details ? `<button data-toggle-id="${detailId}" class="toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs">[Show]</button>` : '';
+                    const detailsRow = row.details ? `<tr id="${detailId}" class="details-row hidden"><td colspan="${headers.length}" class="p-0"><div class="calc-breakdown">${row.details}</div></td></tr>` : '';
+                    
+                    // Inject the button into the first cell
+                    const firstCellContent = `<td>${row.cells[0]} ${detailsButton}</td>`;
+                    const otherCellsContent = row.cells.slice(1).map(cell => `<td>${cell}</td>`).join('');
+
+                    return `<tr class="border-t dark:border-gray-700">${firstCellContent}${otherCellsContent}</tr>${detailsRow}`;
+                }).join('');
+                content = `<table class="w-full mt-2 results-table">${headerHtml}<tbody>${bodyHtml}</tbody></table>`;
+            } else {
+                content = section.htmlContent;
+            }
+
+            const sectionTitleHtml = section.title ? `<div class="flex justify-between items-center mb-2">
+                <h3 class="report-header">${section.title}</h3>
+                <button data-copy-target-id="${contentId}" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+            </div>` : '';
+
+            return `<div id="${sectionId}" class="report-section-container mt-6">
+                        ${sectionTitleHtml}
+                        <div id="${contentId}" class="copy-content">${content}</div>
+                    </div>`;
+                }).join('');
+
+        const mainReportHtml = `
+            <div id="${this.reportId}" class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center border-b-2 border-gray-300 dark:border-gray-600 pb-4 mb-4">
+                    <h2 class="text-2xl font-bold">${this.title}</h2>
+                    <div class="flex items-center gap-2 print-hidden">
+                        <button id="toggle-all-details-btn" class="bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs" data-state="hidden">Show All Details</button>
+                        ${actionButtonsHtml}
+                        <button id="copy-report-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs">Copy Report</button>
+                        <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-xs">Download PDF</button>
+                    </div>
+                </div>
+                ${sectionsHtml}
+            </div>
+        `;
+
+        container.innerHTML = mainReportHtml;
+    }
+}
+
+/**
+ * Attaches all necessary event listeners to a rendered report container.
+ * This includes handling copy, download, and detail-toggling actions.
+ * @param {string} containerId - The ID of the main report container.
+ * @param {object} config - Configuration options for the event listeners.
+ * @param {string} config.reportId - The ID of the specific report content element to be targeted by actions.
+ * @param {string} config.filenamePrefix - The prefix for filenames when downloading (e.g., "Wind-Report").
+ * @param {function} [config.onSendToCombos] - Optional callback for a "Send to Combos" button.
+ * @param {object} [config.toggleTexts] - Optional custom texts for toggle buttons.
+ */
+function attachReportEventListeners(containerId, config) {
+    const { reportId, filenamePrefix, onSendToCombos, toggleTexts } = config;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Use event delegation to handle clicks on dynamically added elements.
+    container.addEventListener('click', (event) => {
+        const target = event.target;
+
+        // --- Toggle individual details ---
+        if (target.matches('.toggle-details-btn')) {
+            const detailId = target.dataset.toggleId;
+            const detailRow = document.getElementById(detailId);
+            if (detailRow) {
+                const isVisible = detailRow.classList.toggle('is-visible');
+                target.textContent = isVisible ? (toggleTexts?.hide || '[Hide]') : (toggleTexts?.show || '[Show]');
+            }
+        }
+
+        // --- Toggle all details ---
+        if (target.id === 'toggle-all-details-btn') {
+            const shouldShow = target.dataset.state === 'hidden';
+            container.querySelectorAll('.details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
+            container.querySelectorAll('.toggle-details-btn').forEach(button => button.textContent = shouldShow ? (toggleTexts?.hide || '[Hide]') : (toggleTexts?.show || '[Show]'));
+            target.dataset.state = shouldShow ? 'shown' : 'hidden';
+            target.textContent = shouldShow ? (toggleTexts?.hideAll || 'Hide All Details') : (toggleTexts?.showAll || 'Show All Details');
+        }
+
+        // --- Copy Report ---
+        if (target.id === 'copy-report-btn') {
+            handleCopyToClipboard(reportId);
+        }
+
+        // --- Copy Section ---
+        if (target.matches('.copy-section-btn')) {
+            const copyTargetId = target.dataset.copyTargetId;
+            if (copyTargetId) handleCopyToClipboard(copyTargetId);
+        }
+
+        // --- Download PDF ---
+        if (target.id === 'download-pdf-btn') {
+            handleDownloadPdf(reportId, `${filenamePrefix}.pdf`);
+        }
+
+        // --- Custom "Send to Combos" button ---
+        if (target.id === 'send-to-combos-btn' && typeof onSendToCombos === 'function') {
+            onSendToCombos();
+        }
+    });
+}
+
+
 /**
  * Creates a standardized calculation handler to reduce boilerplate code.
  * This function encapsulates the common pattern: gather, validate, calculate, render.

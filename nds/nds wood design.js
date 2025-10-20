@@ -1,65 +1,33 @@
-document.addEventListener('DOMContentLoaded', () => {
+let lastWoodRunResults = null; // To hold the results for report generation
+
+document.addEventListener('DOMContentLoaded', async () => {
     const inputIds = [
         'Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted',
         'b_width', 'd_depth', 'unbraced_length_L', 'effective_length_factor_K', 'bearing_length_Lb',
         'load_duration', 'wet_service', 'temperature', 'flat_use', 'incising', 'repetitive_member', 'deflection_span', 'deflection_limit',
         'axial_load_P', 'moment_load_M', 'shear_load_V'
     ];
-
-    const handleRunWoodCheck = createCalculationHandler({
+    
+    await initializeApp({
+        pageKey: 'nds',
+        pageTitle: 'NDS Wood Member Design Checker',
         inputIds: inputIds,
-        storageKey: 'wood-design-inputs',
-        validationRuleKey: 'wood',
-        calculatorFunction: woodChecker.run,
-        renderFunction: renderWoodResults,
-        resultsContainerId: 'wood-results-container',
-        buttonId: 'run-wood-check-btn'
-    });
-
-    injectHeader({ activePage: 'wood-design', pageTitle: 'NDS Wood Member Design Checker', headerPlaceholderId: 'header-placeholder' });
-    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-
-    document.getElementById('run-wood-check-btn').addEventListener('click', handleRunWoodCheck);
-    document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(inputIds, 'wood-inputs.txt'));
-    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
-    document.getElementById('file-input').addEventListener('change', createLoadInputsHandler(inputIds, handleRunWoodCheck));
-    initializeSharedUI(); // This was correct
-    loadInputsFromLocalStorage('wood-design-inputs', inputIds);
-
-    // --- Auto-save inputs to localStorage on any change ---
-    inputIds.forEach(id => {
-        const el = document.getElementById(id);
-        el?.addEventListener('change', () => saveInputsToLocalStorage('wood-design-inputs', gatherInputsFromIds(inputIds)));
-    });
-
-    document.getElementById('wood-results-container').addEventListener('click', (event) => {
-        if (event.target.id === 'copy-report-btn') handleCopyToClipboard('wood-report-content', 'feedback-message');
-        
-        if (event.target.id === 'download-pdf-btn') {
-            handleDownloadPdf('wood-report-content', 'Wood-Design-Report.pdf');
-        }
-        if (event.target.id === 'toggle-all-details-btn') {
-            const mainButton = event.target;
-            const shouldShow = mainButton.dataset.state === 'hidden';
-            document.querySelectorAll('#wood-results-container .details-row').forEach(row => {
-                row.classList.toggle('is-visible', shouldShow);
+        calculationHandler: createCalculationHandler({
+            inputIds: inputIds,
+            storageKey: 'wood-design-inputs',
+            validatorFunction: (inputs) => validateInputs(inputs, validationRules.wood),
+            calculatorFunction: woodChecker.run,
+            renderFunction: renderWoodResults,
+            resultsContainerId: 'wood-results-container',
+            buttonId: 'run-wood-check-btn'
+        }),
+        buttonId: 'run-wood-check-btn',
+        onReady: () => {
+            attachReportEventListeners('wood-results-container', {
+                reportId: 'wood-report-content',
+                filenamePrefix: 'Wood-Design-Report',
             });
-            document.querySelectorAll('#wood-results-container .toggle-details-btn').forEach(button => {
-                button.textContent = shouldShow ? '[Hide]' : '[Show]';
-            });
-            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
-            mainButton.textContent = shouldShow ? 'Hide All Details' : 'Show All Details';
-            mainButton.blur();
         }
-
-        const button = event.target.closest('.toggle-details-btn');
-        if (button) {
-            const detailId = button.dataset.toggleId;
-            const detailRow = document.getElementById(detailId);
-            detailRow?.classList.toggle('is-visible');
-            button.textContent = detailRow?.classList.contains('is-visible') ? '[Hide]' : '[Show]';
-        }
-
     });
 });
 
@@ -213,43 +181,22 @@ const woodChecker = (() => {
 })();
 
 function renderWoodResults(calculationOutput) {
-    const resultsContainer = document.getElementById('wood-results-container');
-    const wood_results = calculationOutput; // Use the passed-in results directly.
-
-    // Early exit if there are errors, preventing crashes.
-    if (wood_results.error) { // The handler wraps errors in a standard way
-        resultsContainer.innerHTML = `
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md my-4">
-                <p class="font-bold">Input Errors Found:</p>
-                <p class="mt-2">${wood_results.error}</p>
-                <p class="mt-2">Please correct the errors and run the check again.</p>
-            </div>`;
-        return;
-    }
-
-    let html = `<div id="wood-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">`;
-    html += `<div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2">
-                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm print-hidden" data-state="hidden">Show All Details</button>
-                <button id="copy-summary-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm print-hidden">Copy Summary</button>
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
-             </div>`;
-    html += `<h2 class="report-header text-center">NDS Wood Member Check Summary</h2>`;
-    
+    lastWoodRunResults = calculationOutput;
+    const wood_results = calculationOutput;
     const adj = wood_results.adjusted;
     const actual = wood_results.actuals;
     const ratios = wood_results.ratios;
     const deflection = wood_results.deflection;
     const inputs = wood_results.inputs; // Use processed inputs
 
-    const summary_data = [
-        {
+    const checks = [
+        { // Flexure
             name: 'Flexure (Bending)',
             actual: `${actual.fb.toFixed(2)} psi`,
             allowable: `${adj.Fb_prime.toFixed(2)} psi`,
             ratio: ratios.fb.toFixed(3),
             status: ratios.fb <= 1.0 ? 'Pass' : 'Fail',
-            breakdown: `<h4>Flexure Breakdown</h4>
+            breakdown: `
                 <ul>
                     <li>Actual Bending Stress (f<sub>b</sub>) = M / S<sub>x</sub> = ${inputs.M.toFixed(0)} lb-in / ${actual.Sx.toFixed(3)} in³ = <b>${actual.fb.toFixed(2)} psi</b></li>
                     <li>Allowable Bending Stress (F'<sub>b</sub>) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>r</sub></li>
@@ -257,51 +204,51 @@ function renderWoodResults(calculationOutput) {
                     <li>Beam Stability Factor (C<sub>L</sub>) = <b>${wood_results.factors.CL.toFixed(3)}</b> (from R<sub>B</sub> = ${wood_results.Rb.toFixed(2)})</li>
                 </ul>`
         },
-        {
+        { // Shear
             name: 'Shear',
             actual: `${actual.fv.toFixed(2)} psi`,
             allowable: `${adj.Fv_prime.toFixed(2)} psi`,
             ratio: ratios.fv.toFixed(3),
             status: ratios.fv <= 1.0 ? 'Pass' : 'Fail',
-            breakdown: `<h4>Shear Breakdown</h4>
+            breakdown: `
                 <ul>
                     <li>Actual Shear Stress (f<sub>v</sub>) = 1.5 * V / A = 1.5 * ${inputs.V.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fv.toFixed(2)} psi</b></li>
                     <li>Allowable Shear Stress (F'<sub>v</sub>) = F<sub>v</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub></li>
                     <li>F'<sub>v</sub> = ${inputs.Fv.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fv.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci.toFixed(2)} = <b>${adj.Fv_prime.toFixed(2)} psi</b></li>
                 </ul>`
         },
-        {
+        { // Compression
             name: 'Compression',
             actual: `${actual.fc.toFixed(2)} psi`,
             allowable: `${adj.Fc_prime.toFixed(2)} psi`,
             ratio: ratios.fc.toFixed(3),
             status: ratios.fc <= 1.0 ? 'Pass' : 'Fail',
-            breakdown: `<h4>Compression Breakdown</h4>
+            breakdown: `
                 <ul>
                     <li>Actual Compression Stress (f<sub>c</sub>) = P / A = ${inputs.P.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fc.toFixed(2)} psi</b></li>
                     <li>Allowable Compression Stress (F'<sub>c</sub>) = F<sub>c</sub>* * C<sub>P</sub> = ${wood_results.Fc_star.toFixed(2)} psi * ${wood_results.factors.Cp.toFixed(3)} = <b>${adj.Fc_prime.toFixed(2)} psi</b></li>
                     <li>Column Stability Factor (C<sub>P</sub>) = <b>${wood_results.factors.Cp.toFixed(3)}</b> (from L<sub>e</sub>/d = ${wood_results.Le_d.toFixed(2)})</li>
                 </ul>`
         },
-        {
+        { // Deflection
             name: 'Deflection',
             actual: `${deflection.actual.toFixed(3)} in`,
             allowable: `${deflection.allowable.toFixed(3)} in (L/${inputs.deflection_limit_divisor.toFixed(0)})`,
             ratio: deflection.ratio.toFixed(3),
             status: deflection.ratio <= 1.0 ? 'Pass' : 'Fail',
-            breakdown: `<h4>Deflection Breakdown</h4>
+            breakdown: `
                 <ul>
                     <li>Allowable Deflection = Span / ${inputs.deflection_limit_divisor.toFixed(0)} = ${inputs.deflection_span.toFixed(2)} in / ${inputs.deflection_limit_divisor.toFixed(0)} = <b>${deflection.allowable.toFixed(3)} in</b></li>
                     <li>Actual Deflection (δ) = 5*M*L² / (48*E'*I) = (5 * ${inputs.M.toFixed(0)} * ${inputs.deflection_span.toFixed(2)}²) / (48 * ${deflection.E_adj.toExponential(2)} * ${(actual.Sx * inputs.d / 2).toFixed(2)}) = <b>${deflection.actual.toFixed(3)} in</b></li>
                 </ul>`
         },
-        {
+        { // Interaction
             name: 'Combined Bending + Axial',
             actual: `Eq. 3.9-3`,
             allowable: "1.00",
             ratio: wood_results.interaction.toFixed(3),
             status: wood_results.interaction <= 1.0 ? 'Pass' : 'Fail',
-            breakdown: `<h4>Combined Stress Interaction Breakdown</h4>
+            breakdown: `
                 <ul>
                     <li>Equation: (f<sub>c</sub> / F'<sub>c</sub>)² + f<sub>b</sub> / (F'<sub>b</sub> * (1 - f<sub>c</sub>/F<sub>cE</sub>))</li>
                     <li>Interaction = (${actual.fc.toFixed(2)} / ${adj.Fc_prime.toFixed(2)})² + ${actual.fb.toFixed(2)} / (${adj.Fb_prime.toFixed(2)} * (1 - ${actual.fc.toFixed(2)}/${wood_results.Fce.toFixed(2)})) = <b>${wood_results.interaction.toFixed(3)}</b></li>
@@ -309,46 +256,41 @@ function renderWoodResults(calculationOutput) {
         }
     ];
 
-    const f = wood_results.factors;
-    const factor_data = [
-        ['Load Duration (C<sub>D</sub>)', f.CD.toFixed(2), 'NDS 2.3.2'],
-        ['Wet Service (C<sub>M</sub>)', `${f.CM_Fb.toFixed(2)} (Fb), ${f.CM_Fv.toFixed(2)} (Fv), ${f.CM_Fc.toFixed(2)} (Fc)`, 'NDS Table 4.3.1'],
-        ['Temperature (C<sub>t</sub>)', f.Ct.toFixed(2), 'NDS 2.3.3'],
-        ['Size Factor (C<sub>F</sub>)', f.CF.toFixed(3), 'NDS 4.3.6'],
-        ['Incising (C<sub>i</sub>)', f.Ci.toFixed(2), 'NDS 4.3.8'],
-        ['Repetitive Member (C<sub>r</sub>)', f.Cr.toFixed(2), 'NDS 4.3.9'],
-        ['Bearing Area (C<sub>b</sub>)', f.Cb.toFixed(3), 'NDS 3.10.4'],
-        ['Beam Stability (C<sub>L</sub>)', f.CL.toFixed(3), 'NDS 3.3.3'],
-        ['Column Stability (C<sub>P</sub>)', f.Cp.toFixed(3), 'NDS 3.7.1'],
-    ];
-
-    html += `<table class="results-container mt-6 report-section-copyable">
-                <caption>--- NDS Adjustment Factors ---</caption>
-                <thead>
-                    <tr><th>Factor</th><th>Value</th><th>Reference</th></tr>
-                </thead>
-                <tbody>`;
-    factor_data.forEach(row => {
-        html += `<tr><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`;
+    const report = new ReportBuilder({
+        reportId: 'wood-report-content',
+        title: 'NDS Wood Member Check Summary (ASD)'
     });
-    html += `</tbody></table>`;
 
-    html += `<table class="results-container report-section-copyable">
-                <caption>--- Strength Checks (ASD) ---</caption>
-                <thead>
-                    <tr><th>Check</th><th>Actual</th><th>Allowable</th><th>Ratio</th><th>Status</th></tr>
-                </thead>
-                <tbody>`;
-    summary_data.forEach((row, index) => {
-        const statusHtml = row.status === 'Pass' ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
-        const detailId = `wood-detail-${index}`;
-        html += `<tr>
-                    <td>${row.name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                    <td>${row.actual}</td><td>${row.allowable}</td><td>${row.ratio}</td><td>${statusHtml}</td>
-                 </tr>
-                 <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${row.breakdown}</div></td></tr>`;
+    const factorRows = Object.entries(wood_results.factors).map(([key, value]) => {
+        const factorMap = {
+            CD: { name: 'Load Duration (C<sub>D</sub>)', ref: 'NDS 2.3.2' },
+            CM_Fb: { name: 'Wet Service (C<sub>M,Fb</sub>)', ref: 'NDS Table 4.3.1' },
+            Ct: { name: 'Temperature (C<sub>t</sub>)', ref: 'NDS 2.3.3' },
+            CF: { name: 'Size Factor (C<sub>F</sub>)', ref: 'NDS 4.3.6' },
+            Ci: { name: 'Incising (C<sub>i</sub>)', ref: 'NDS 4.3.8' },
+            Cr: { name: 'Repetitive Member (C<sub>r</sub>)', ref: 'NDS 4.3.9' },
+            Cb: { name: 'Bearing Area (C<sub>b</sub>)', ref: 'NDS 3.10.4' },
+            CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
+            Cp: { name: 'Column Stability (C<sub>P</sub>)', ref: 'NDS 3.7.1' },
+        };
+        const info = factorMap[key];
+        if (info) {
+            return { cells: [info.name, value.toFixed(3), info.ref] };
+        }
+        return null;
+    }).filter(Boolean);
+
+    report.addTableSection('NDS Adjustment Factors', { headers: ['Factor', 'Value', 'Reference'], rows: factorRows }, 'wood-factors-section');
+
+    const checkRows = checks.map(check => ({
+        cells: [check.name, check.actual, check.allowable, check.ratio, check.status],
+        details: check.breakdown
+    }));
+
+    report.addTableSection('Strength & Serviceability Checks', {
+        headers: ['Check', 'Actual', 'Allowable', 'Ratio', 'Status'],
+        rows: checkRows
     });
-    html += `</tbody></table></div>`;
 
-    resultsContainer.innerHTML = html;
+    report.render('wood-results-container');
 }

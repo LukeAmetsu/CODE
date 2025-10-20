@@ -1267,8 +1267,8 @@ function renderBasePlateStrengthChecks(results) {
             let ratio, demand_val, capacity_val;
             if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
                 // For thickness, demand is provided, capacity is required. Ratio is req/prov.
-                demand_val = demand; // provided tp
-                capacity_val = design_capacity; // required t_req (Rn)
+                demand_val = design_capacity; // required t_req (Rn)
+                capacity_val = demand; // provided tp
                 ratio = demand_val > 0 ? capacity_val / demand_val : (capacity_val > 0 ? Infinity : 0);
             } else {
                 demand_val = is_anchor_check && design_method === 'ASD' ? demand * 1.6 : demand; // Apply load factor for ASD anchor checks
@@ -1280,7 +1280,7 @@ function renderBasePlateStrengthChecks(results) {
 
             return `
                 <tr class="border-t dark:border-gray-700">
-                    <td>${name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
+                    <td>${name} <button data-toggle-id="${detailId}" class="toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs">[Show]</button></td>
                     <td>${demand_val.toFixed(2)}${is_anchor_check && design_method === 'ASD' ? ' *' : ''}</td>
                     <td>${capacity_val.toFixed(2)}</td>
                     <td>${ratio.toFixed(3)}</td>
@@ -1295,12 +1295,8 @@ function renderBasePlateStrengthChecks(results) {
     </p>` : '';
 
     const html = `
-        <div id="strength-checks-section" class="report-section-copyable mt-6">
-            <div class="flex justify-between items-center mb-2">                <h3 class="report-header">Strength Checks (${design_method})</h3>
-                <button data-copy-target-id="strength-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
-            <div class="copy-content">
-                <table class="w-full mt-2 results-table">
+        <div class="copy-content">
+            <table class="w-full mt-2 results-table">
                     <caption class="report-caption">Strength Checks (${design_method})</caption>
                     <thead>
                         <tr>
@@ -1316,7 +1312,6 @@ function renderBasePlateStrengthChecks(results) {
                     </tbody>
                 </table>
                 ${asd_note}
-            </div>
         </div>
     `;
     return html;
@@ -1331,12 +1326,7 @@ function renderBasePlateInputSummary(inputs) {
     } = inputs;
 
     return `
-    <div id="input-summary-section" class="report-section-copyable">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Input Summary</h3>
-            <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
+    <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                 <caption class="report-caption">General & Material Properties</caption>
                 <tbody>
@@ -1356,7 +1346,7 @@ function renderBasePlateInputSummary(inputs) {
                     <tr><td>Anchor Spacing (N &times; B)</td><td>${bolt_spacing_N}" &times; ${bolt_spacing_B}"</td></tr>
                     <tr><td>Anchor Type / Weld Size</td><td>${bolt_type} / ${weld_size}"</td></tr>
                 </tbody>
-            </table>
+            </table>    
         </div>
     </div>`;
 }
@@ -1370,12 +1360,7 @@ function renderCalculatedGeometry(inputs) {
     ];
 
     return `
-    <div id="calculated-geometry-section" class="report-section-copyable mt-6">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Calculated Geometry</h3>
-            <button data-copy-target-id="calculated-geometry-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
+    <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                 <thead><tr><th>Parameter</th><th>Value</th><th>Formula</th></tr></thead>
                 <tbody>${rows.join('')}</tbody>
@@ -1393,12 +1378,7 @@ function renderBasePlateGeometryChecks(geomChecks) {
     }).join('');
 
     return `
-    <div id="geometry-checks-section" class="report-section-copyable mt-6">
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="report-header">Geometry & Spacing Checks (ACI 318-19)</h3>
-            <button data-copy-target-id="geometry-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
+    <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                     <caption class="report-caption">A. Anchor Geometry Checks</caption>
                 <thead><tr><th>Item</th><th>Actual (in)</th><th>Required Min (in)</th><th>Status</th></tr></thead>
@@ -1491,17 +1471,12 @@ function renderBasePlateLoadSummary(inputs, checks) {
 
     // --- Return the final HTML ---
     return `
-    <div id="load-summary-section" class="report-section-copyable mt-6 mb-2">
-        <div class="flex justify-between items-center">            <h3 class="report-header">B. Load Summary & Demands</h3>
-            <button data-copy-target-id="load-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
+    <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                 <caption class="report-caption">Applied Loads & Calculated Demands</caption>
                 <thead><tr><th>Load / Demand Type</th><th>Calculation / Breakdown</th><th>Value</th></tr></thead>
                 <tbody>${rows.join('')}</tbody>
-            </table>
-        </div>
+            </table>    
     </div>`;
 }
 
@@ -1809,38 +1784,36 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
             break;
         default: return 'Breakdown not available.';
     }
-    return `<h4 class="font-semibold">${name}</h4>${content}`;
+    return content;
 }
 
 function renderResults(results) {
-    const { checks, geomChecks, inputs } = results;
+    const { checks, geomChecks, inputs, warnings } = results;
+
+    const report = new ReportBuilder({
+        reportId: 'baseplate-report-content',
+        title: 'Base Plate & Anchorage Check Results'
+    });
+
+    if (warnings && warnings.length > 0) {
+        report.addSection('Warnings', renderValidationResults({ warnings, errors: [] }));
+    }
+
+    report.addSection('Input Summary', renderBasePlateInputSummary(inputs), 'input-summary-section');
+    report.addSection('Calculated Geometry', renderCalculatedGeometry(inputs), 'calculated-geometry-section');
     
-    const inputSummaryHtml = renderBasePlateInputSummary(inputs);
-    const calculatedGeometryHtml = renderCalculatedGeometry(inputs);
     const geometryChecksHtml = renderBasePlateGeometryChecks(geomChecks);
-    const loadSummaryHtml = renderBasePlateLoadSummary(inputs, checks);
-    const strengthChecksHtml = renderBasePlateStrengthChecks(results); // Pass the whole results object
+    if (geometryChecksHtml) {
+        report.addSection('Anchor Geometry Checks (ACI 318-19)', geometryChecksHtml, 'geometry-checks-section');
+    }
 
+    report.addSection('Load Summary & Demands', renderBasePlateLoadSummary(inputs, checks), 'load-summary-section');
+    report.addSection(`Strength Checks (${design_method})`, renderBasePlateStrengthChecks(results), 'strength-checks-section');
 
-    const finalHtml = `
-        <div id="baseplate-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
-            <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
-                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Show All Details</button>
-                <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>
-            </div>
-            <h2 class="report-title text-center">Base Plate & Anchorage Check Results</h2>
-            ${inputSummaryHtml}
-            ${calculatedGeometryHtml}
-            ${geometryChecksHtml}
-            ${loadSummaryHtml}
-            ${strengthChecksHtml}
-        </div>`;
-
-    document.getElementById('steel-results-container').innerHTML = finalHtml;
+    report.render('steel-results-container');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     function populateMaterialDropdowns() {
         const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
@@ -2013,101 +1986,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // Attach listener for column type change
     document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
 
-    const handleRunBasePlateCheck = createCalculationHandler({
-        inputIds: basePlateInputIds,
-        storageKey: 'baseplate-inputs',
-        validatorFunction: basePlateCalculator.validateBasePlateInputs, // Use custom validator
-        calculatorFunction: basePlateCalculator.run,
-        renderFunction: renderResults,
-        resultsContainerId: 'steel-results-container',
-        buttonId: 'run-steel-check-btn'
-    });
-    injectHeader({
-        activePage: 'base-plate',
+    await initializeApp({
+        pageKey: 'base-plate',
         pageTitle: 'AISC Base Plate & Anchorage Checker',
-        headerPlaceholderId: 'header-placeholder'
-    });
-    injectFooter({
-        footerPlaceholderId: 'footer-placeholder'
-    });
+        inputIds: basePlateInputIds,
+        calculationHandler: createCalculationHandler({
+            inputIds: basePlateInputIds,
+            storageKey: 'baseplate-inputs',
+            validatorFunction: basePlateCalculator.validateBasePlateInputs,
+            calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
+            renderFunction: renderResults,
+            resultsContainerId: 'steel-results-container',
+            buttonId: 'run-steel-check-btn'
+        }),
+        onReady: () => {
+            populateMaterialDropdowns();
+            document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+            updateColumnInputsUI();
 
-    initializeSharedUI();
-    // Populate dropdowns first to ensure event listeners are attached before local storage is loaded.
-    populateMaterialDropdowns();
-    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-    updateColumnInputsUI(); // Set initial state
- 
-    // --- Auto-save inputs to localStorage on any input change, with debouncing ---
-    const debouncedSave = debounce(() => {
-        const inputs = gatherInputsFromIds(basePlateInputIds);
-        saveInputsToLocalStorage('baseplate-inputs', inputs);
-    }, 300); // Wait 300ms after the user stops typing to save.
-
-    basePlateInputIds.forEach(id => {
-        const el = document.getElementById(id);
-        el?.addEventListener('input', debouncedSave);
-    });
-
-    loadInputsFromLocalStorage('baseplate-inputs', basePlateInputIds);
-
-    document.getElementById('run-steel-check-btn').addEventListener('click', handleRunBasePlateCheck);
-    
-    const handleSaveInputs = createSaveInputsHandler(basePlateInputIds, 'baseplate-inputs.txt');
-    const handleLoadInputs = createLoadInputsHandler(basePlateInputIds, handleRunBasePlateCheck);
-    document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);
-    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
-    document.getElementById('file-input').addEventListener('change', handleLoadInputs);
-    
-    // Diagram copy buttons
-    document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('baseplate-diagram'));
-    document.getElementById('copy-3d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('3d-diagram-container'));
-
-    // Initial drawing of the diagram on page load
-    drawBasePlateDiagram();
-    draw3dBasePlateDiagram();
-
-    document.getElementById('steel-results-container').addEventListener('click', (event) => {
-        const toggleBtn = event.target.closest('.toggle-details-btn');
-        if (toggleBtn) {
-            const detailId = toggleBtn.dataset.toggleId;
-            const row = document.getElementById(detailId);
-            if (row) {
-                row.classList.toggle('is-visible');
-                toggleBtn.textContent = row.classList.contains('is-visible') ? '[Hide]' : '[Show]';
-            }
-        }
-        if (event.target.id === 'toggle-all-details-btn') {
-            const mainButton = event.target;
-            const shouldShow = mainButton.dataset.state === 'hidden';
-            document.querySelectorAll('#steel-results-container .details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
-            document.querySelectorAll('#steel-results-container .toggle-details-btn').forEach(button => {
-                button.textContent = shouldShow ? '[Hide]' : '[Show]';
+            const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
+            basePlateInputIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
+                    el.addEventListener('input', redraw);
+                    el.addEventListener('change', redraw);
+                }
             });
-            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
-            mainButton.textContent = shouldShow ? 'Hide All Details' : 'Show All Details';
-        }
 
+            // Initial drawing of the diagram on page load
+            drawBasePlateDiagram();
+            draw3dBasePlateDiagram();
 
-        if (event.target.id === 'copy-report-btn') {
-            handleCopyToClipboard('baseplate-report-content', 'feedback-message');
-        }
-        if (event.target.id === 'print-report-btn') {
-            window.print();
-        }
-        if (event.target.id === 'download-pdf-btn') {
-            handleDownloadPdf('baseplate-report-content', 'Base-Plate-Report.pdf');
-        }
-        if (event.target.id === 'download-word-btn') {
-            handleDownloadWord('baseplate-report-content', 'Base-Plate-Report.doc');
-        }
+            // Diagram copy buttons
+            document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('baseplate-diagram', {}));
+            document.getElementById('copy-3d-diagram-btn').addEventListener('click', () => {
+                // Pass the Babylon.js engine and scene to the copy handler
+                // so it can correctly render the canvas for copying.
+                handleCopyDiagramToClipboard('3d-diagram-container', { engine: bjsEngine, scene: bjsScene });
+            });
 
-        // Handle individual section copy buttons
-        const copyBtn = event.target.closest('.copy-section-btn');
-        if (copyBtn) {
-            const targetId = copyBtn.dataset.copyTargetId;
-            if (targetId) {
-                handleCopyToClipboard(targetId, 'feedback-message');
-            }
+            attachReportEventListeners('steel-results-container', {
+                reportId: 'baseplate-report-content',
+                filenamePrefix: 'Base-Plate-Report',
+                toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+            });
         }
     });
 });

@@ -75,45 +75,35 @@ const rainLoadCalculator = (() => {
     return { run };
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
-    const handleRunRainCalculation = createCalculationHandler({
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeApp({
+        pageKey: 'rain',
+        pageTitle: 'ASCE Rain Load Calculator',
         inputIds: rainInputIds,
-        storageKey: 'rain-calculator-inputs',
-        validationRuleKey: 'rain',
-    calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
-        renderFunction: renderRainResults,
-        resultsContainerId: 'rain-results-container',
-        buttonId: 'run-rain-calculation-btn'
-    });
-
-    // --- Attach all event listeners ---
-    initializeSharedUI();
-
-    // Main calculation and file handling
-    document.getElementById('run-rain-calculation-btn').addEventListener('click', handleRunRainCalculation);
-    document.getElementById('save-rain-inputs-btn').addEventListener('click', createSaveInputsHandler(rainInputIds, 'rain-inputs.txt'));
-    document.getElementById('load-rain-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('rain-file-input'));
-    document.getElementById('rain-file-input').addEventListener('change', createLoadInputsHandler(rainInputIds, handleRunRainCalculation));
-
-    // UI interaction for city selector
-    document.getElementById('rain_city_selector').addEventListener('change', (event) => {
-        const intensity = event.target.value;
-        if (intensity) {
-            document.getElementById('rain_intensity').value = intensity;
+        calculationHandler: createCalculationHandler({
+            inputIds: rainInputIds,
+            storageKey: 'rain-calculator-inputs',
+            validationRuleKey: 'rain',
+            calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
+            renderFunction: renderRainResults,
+            resultsContainerId: 'rain-results-container',
+            buttonId: 'run-rain-calculation-btn'
+        }),
+        buttonId: 'run-rain-calculation-btn',
+        onReady: () => {
+            document.getElementById('rain_city_selector').addEventListener('change', (event) => {
+                const intensity = event.target.value;
+                if (intensity) document.getElementById('rain_intensity').value = intensity;
+            });
         }
     });
 
-    // --- Auto-save inputs to localStorage on any change ---
-    rainInputIds.forEach(id => {
-        const el = document.getElementById(id);
-        el?.addEventListener('change', () => saveInputsToLocalStorage('rain-calculator-inputs', gatherInputsFromIds(rainInputIds)));
+    attachReportEventListeners('rain-results-container', {
+        reportId: 'rain-report-content',
+        filenamePrefix: 'Rain-Load',
+        onSendToCombos: () => sendToCombos({ combo_rain_load_r: lastRainRunResults?.results?.R_nominal || 0 }, 'Rain Calculator', 'Rain'),
+        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
     });
-
-    // Initial state setup
-    // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
-    setTimeout(() => {
-        loadInputsFromLocalStorage('rain-calculator-inputs', rainInputIds);
-    }, 100);
 });
 
 function generateRainSummary(inputs, results, p_unit, dh_calc_note) {
@@ -133,111 +123,45 @@ function generateRainSummary(inputs, results, p_unit, dh_calc_note) {
 function renderRainResults(results) {
     if (!results || !results.success) return;
     lastRainRunResults = results;
-    const resultsContainer = document.getElementById('rain-results-container');
     const { inputs, jurisdiction_note, dh_calc_note, warnings } = results;
     const { R_nominal, R_strength, R_asd, dh_final } = results.results;
     const p_unit = inputs.rain_unit_system === 'imperial' ? 'psf' : 'kPa';
     const d_unit = inputs.unit_system === 'imperial' ? 'in' : 'mm';
     const i_unit = inputs.unit_system === 'imperial' ? 'in/hr' : 'mm/hr';
     const a_unit = inputs.unit_system === 'imperial' ? 'ft²' : 'm²';
-    const factor = inputs.unit_system === 'imperial' ? '5.2' : '0.0098';
 
-    let html = `<div id="rain-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">`;
-    html += `<div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-                    <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-                    <button id="send-to-combos-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm print-hidden">Send to Combos</button>
-                    <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                    <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
-               </div>`;
-
-    html += `
-        <div class="text-center border-b pb-4">
-            <h2 class="text-2xl font-bold">RAIN LOAD CALCULATION REPORT (${inputs.rain_asce_standard})</h2>
-        </div>`;
-
-    if (jurisdiction_note) {
-        html += `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md"><p><strong>Jurisdiction Note:</strong> ${jurisdiction_note}</p></div>`;
-    }
-    if (warnings && warnings.length > 0) {
-        html += renderValidationResults({ warnings, errors: [] });
-    }
-    
-    const finalLoad = (inputs.rain_design_method === 'ASD') ? R_asd : R_strength;
-
-    // --- Design Parameters Summary ---
-    html += `<div id="rain-params-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="report-header">1. Design Parameters</h3>
-                    <button data-copy-target-id="rain-params-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
-                </div>
-                <div class="copy-content">
-                    <ul class="summary-list">
-                        <li><strong>Tributary Area (A):</strong> ${(inputs.rain_tributary_area || 0).toFixed(0)} ${a_unit} <span class="ref">[ASCE 7, Sec. 8.2]</span></li>
-                        <li><strong>Rainfall Intensity (i):</strong> ${(inputs.rain_intensity || 0).toFixed(2)} ${i_unit} <span class="ref">[Plumbing Code / ASCE 7, C8.3]</span></li>
-                        <li><strong>Static Head (d<sub>s</sub>):</strong> ${(inputs.rain_static_head || 0).toFixed(2)} ${d_unit} <span class="ref">[ASCE 7, Sec. 8.2]</span></li>
-                        <li><strong>Hydraulic Head (d<sub>h</sub>):</strong> ${dh_final.toFixed(2)} ${d_unit} <span class="ref">[ASCE 7, Sec. 8.2]</span></li>
-                        ${inputs.dh_auto_calc_toggle ? `<li><span class="pl-4 text-sm text-gray-500 dark:text-gray-400">&hookrightarrow; ${dh_calc_note}</span></li>` : ''}
-                        <li><strong>Nominal Rain Load (R):</strong> ${R_nominal.toFixed(2)} ${p_unit} <span class="ref">[ASCE 7, Eq. 8.3-1]</span></li>
-                    </ul>
-                </div>
-             </div>`;
-
-    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-             <div id="rain-summary-section" class="report-section-copyable">
-                <div class="flex justify-between items-center mb-4" data-copy-ignore>
-                    <h3 class="report-header flex-grow">2. Governing Load Summary</h3>
-                    <button data-copy-target-id="rain-summary-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden" data-copy-ignore>Copy Summary</button>
-                </div>
-                <div class="copy-content">
-                ${generateRainSummary({ design_method: inputs.rain_design_method }, results.results, p_unit, dh_calc_note)}
-                </div>
-             </div>
-             <div id="rain-breakdown-section" class="border rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 space-y-4 report-section-copyable">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="report-header">3. Calculation Breakdown</h3>
-                <button data-copy-target-id="rain-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
-            </div>
-            <ul class="space-y-2">
-                <li><strong>Formula (ASCE 7 Eq 8.3-1):</strong> R = ${factor} * (d<sub>s</sub> + d<sub>h</sub>)</li>
-                <li><strong>Static Head (d<sub>s</sub>):</strong> ${(inputs.rain_static_head || 0).toFixed(2)} ${d_unit}</li>
-                ${inputs.dh_auto_calc_toggle ? `
-                    <li><strong>Hydraulic Head (d<sub>h</sub>) Calculation:</strong>
-                        <ul class="list-disc list-inside pl-4 text-sm">
-                            <li>Rainfall Intensity (i): ${(inputs.rain_intensity || 0).toFixed(2)} ${i_unit}</li>
-                            <li>Tributary Area (A): ${sanitizeHTML((inputs.rain_tributary_area || 0).toFixed(0))} ${a_unit}</li>
-                            ${dh_calc_note ? `<li>${dh_calc_note}</li>` : ''}
-                            <li>Calculated d<sub>h</sub> = <b>${dh_final.toFixed(2)} ${d_unit}</b></li>
-                        </ul>
-                    </li>
-                ` : `<li><strong>Hydraulic Head (d<sub>h</sub>):</strong> ${dh_final.toFixed(2)} ${d_unit}</li>`}
-                <li><strong>Nominal Load (R):</strong> R = ${factor} * (${(inputs.rain_static_head || 0).toFixed(2)} + ${dh_final.toFixed(2)}) = <b>${R_nominal.toFixed(2)} ${p_unit}</b></li>
-            </ul>
-            <hr class="dark:border-gray-600 my-4">
-             <p><strong>Strength Design Load (LRFD):</strong> 1.6 * ${R_nominal.toFixed(2)} = <strong>${R_strength.toFixed(2)} ${p_unit}</strong></p>
-             <p><strong>Allowable Stress Design Load (ASD):</strong> 1.0 * ${R_nominal.toFixed(2)} = <strong>${R_asd.toFixed(2)} ${p_unit}</strong></p>
-        </div></div>
-        </div>
-     </div>`;
-
-    resultsContainer.innerHTML = html;
-
-    // Attach event listeners to the newly created report buttons
-    resultsContainer.addEventListener('click', async (event) => {
-        if (event.target.id === 'copy-report-btn') {
-            await handleCopyToClipboard('rain-report-content', 'feedback-message');
-        }
-        if (event.target.id === 'print-report-btn') {
-            window.print();
-        }
-        if (event.target.id === 'download-pdf-btn') {
-            handleDownloadPdf('rain-report-content', 'Rain-Load-Report.pdf');
-        }
-        if (event.target.id === 'download-word-btn') {
-            handleDownloadWord('rain-report-content', 'Rain-Load-Report.doc');
-        }
-        if (event.target.id === 'send-to-combos-btn' && lastRainRunResults) {
-            const loads = { combo_rain_load_r: lastRainRunResults.results.R_nominal || 0 };
-            sendToCombos(loads, 'Rain Calculator', 'Rain');
-        }
+    const report = new ReportBuilder({
+        reportId: 'rain-report-content',
+        title: `RAIN LOAD CALCULATION REPORT (${inputs.rain_asce_standard})`,
+        actionButtons: [
+            { id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-purple-600 hover:bg-purple-700' }
+        ]
     });
+
+    const factor = inputs.rain_unit_system === 'imperial' ? '5.2' : '0.0098';
+    const paramsHtml = `<ul class="summary-list">
+        <li><strong>Tributary Area (A):</strong> ${(inputs.rain_tributary_area || 0).toFixed(0)} ${a_unit} <span class="ref">[ASCE 7, Sec. 8.2]</span></li>
+        <li><strong>Rainfall Intensity (i):</strong> ${(inputs.rain_intensity || 0).toFixed(2)} ${i_unit} <span class="ref">[Plumbing Code / ASCE 7, C8.3]</span></li>
+        <li><strong>Static Head (d<sub>s</sub>):</strong> ${(inputs.rain_static_head || 0).toFixed(2)} ${d_unit} <span class="ref">[ASCE 7, Sec. 8.2]</span></li>
+        <li><strong>Hydraulic Head (d<sub>h</sub>):</strong> ${dh_final.toFixed(2)} ${d_unit} <span class="ref">[ASCE 7, Sec. 8.2]</span></li>
+        ${inputs.dh_auto_calc_toggle ? `<li><span class="pl-4 text-sm text-gray-500 dark:text-gray-400">&hookrightarrow; ${dh_calc_note}</span></li>` : ''}
+        <li><strong>Nominal Rain Load (R):</strong> ${R_nominal.toFixed(2)} ${p_unit} <span class="ref">[ASCE 7, Eq. 8.3-1]</span></li>
+    </ul>`;
+    report.addSection('Design Parameters', paramsHtml, 'rain-params-section');
+
+    const summaryHtml = generateRainSummary({ design_method: inputs.rain_design_method }, results.results, p_unit, dh_calc_note);
+    report.addSection('Governing Load Summary', summaryHtml, 'rain-summary-section');
+
+    const breakdownHtml = `<ul class="space-y-2">
+        <li><strong>Formula (ASCE 7 Eq 8.3-1):</strong> R = ${factor} * (d<sub>s</sub> + d<sub>h</sub>)</li>
+        <li><strong>Static Head (d<sub>s</sub>):</strong> ${(inputs.rain_static_head || 0).toFixed(2)} ${d_unit}</li>
+        ${inputs.dh_auto_calc_toggle ? `<li><strong>Hydraulic Head (d<sub>h</sub>) Calculation:</strong><ul class="list-disc list-inside pl-4 text-sm"><li>${dh_calc_note}</li><li>Calculated d<sub>h</sub> = <b>${dh_final.toFixed(2)} ${d_unit}</b></li></ul></li>` : `<li><strong>Hydraulic Head (d<sub>h</sub>):</strong> ${dh_final.toFixed(2)} ${d_unit}</li>`}
+        <li><strong>Nominal Load (R):</strong> R = ${factor} * (${(inputs.rain_static_head || 0).toFixed(2)} + ${dh_final.toFixed(2)}) = <b>${R_nominal.toFixed(2)} ${p_unit}</b></li>
+        <hr class="dark:border-gray-600 my-4">
+        <p><strong>Strength Design Load (LRFD):</strong> 1.6 * ${R_nominal.toFixed(2)} = <strong>${R_strength.toFixed(2)} ${p_unit}</strong></p>
+        <p><strong>Allowable Stress Design Load (ASD):</strong> 1.0 * ${R_nominal.toFixed(2)} = <strong>${R_asd.toFixed(2)} ${p_unit}</strong></p>
+    </ul>`;
+    report.addSection('Calculation Breakdown', breakdownHtml, 'rain-breakdown-section');
+
+    report.render('rain-results-container');
 }

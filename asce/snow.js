@@ -290,20 +290,12 @@ function run(inputs, validation) {
     return { run };
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject templates first
-    injectHeader({
-        activePage: 'snow',
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeApp({
+        pageKey: 'snow',
         pageTitle: 'ASCE Snow Load Calculator',
-        headerPlaceholderId: 'header-placeholder'
-    });
-    injectFooter({
-        footerPlaceholderId: 'footer-placeholder'
-    });
-
-    // Wait for templates to be injected, then initialize the rest of the UI and calculator
-    setTimeout(() => {
-        const handleRunSnowCalculation = createCalculationHandler({
+        inputIds: snowInputIds,
+        calculationHandler: createCalculationHandler({
             inputIds: snowInputIds,
             storageKey: 'snow-calculator-inputs',
             validationRuleKey: 'snow',
@@ -311,75 +303,20 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFunction: renderSnowResults,
             resultsContainerId: 'snow-results-container',
             buttonId: 'run-snow-calculation-btn',
-        });
-
-        // Attach all event listeners
-        initializeSharedUI();
-        document.getElementById('run-snow-calculation-btn').addEventListener('click', handleRunSnowCalculation);
-        document.getElementById('save-snow-inputs-btn').addEventListener('click', createSaveInputsHandler(snowInputIds, 'snow-inputs.txt'));
-        document.getElementById('load-snow-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('snow-file-input'));
-        document.getElementById('snow-file-input').addEventListener('change', createLoadInputsHandler(snowInputIds, handleRunSnowCalculation));
-
-        // --- Auto-save inputs to localStorage on any change ---
-        snowInputIds.forEach(id => {
-            const el = document.getElementById(id);
-            el?.addEventListener('change', () => saveInputsToLocalStorage('snow-calculator-inputs', gatherInputsFromIds(snowInputIds)));
-        });
-
-        loadInputsFromLocalStorage('snow-calculator-inputs', snowInputIds, handleRunSnowCalculation);
-    }, 50); // A small delay to ensure DOM is ready after injection
-});
-
-function attachSnowReportEventListeners() {
-    const resultsContainer = document.getElementById('snow-results-container');
-    resultsContainer.addEventListener('click', async (event) => {
-        if (event.target.id === 'copy-report-btn' || event.target.closest('.copy-section-btn')) {
-            const targetId = event.target.dataset.copyTargetId || 'snow-report-content';
-            await handleCopyToClipboard(targetId, 'feedback-message');
-        }
-        if (event.target.id === 'print-report-btn') {
-            window.print();
-        }
-        if (event.target.id === 'download-pdf-btn') {
-            handleDownloadPdf('snow-report-content', 'Snow-Load-Report.pdf');
-        }
-        if (event.target.id === 'download-word-btn') {
-            handleDownloadWord('snow-report-content', 'Snow-Load-Report.doc');
-        }
-        if (event.target.id === 'send-to-combos-btn' && lastSnowRunResults) {
-            const loads = {
-                combo_balanced_snow_load_sb: lastSnowRunResults.results.ps_balanced_nominal || 0,
-            };
-            if (lastSnowRunResults.unbalanced && lastSnowRunResults.unbalanced.applicable) {
-                loads.combo_unbalanced_windward_snow_load_suw = lastSnowRunResults.unbalanced.windward_nominal || 0;
-                loads.combo_unbalanced_leeward_snow_load_sul = (lastSnowRunResults.unbalanced.leeward_nominal || 0) + (lastSnowRunResults.unbalanced.surcharge_magnitude || 0);
-            }
-            if (lastSnowRunResults.drift && lastSnowRunResults.drift.applicable) {
-                loads.combo_drift_surcharge_sd = lastSnowRunResults.drift.pd_nominal || 0;
-            }
-            sendToCombos(loads, 'Snow Calculator', 'Snow');
-        }
-        const button = event.target.closest('.toggle-details-btn');
-        if (button) {
-            const detailId = button.dataset.toggleId;
-            const detailRow = document.getElementById(detailId);
-            detailRow?.classList.toggle('is-visible');
-            button.textContent = detailRow?.classList.contains('is-visible') ? '[Hide]' : '[Show]';
+        }),
+        buttonId: 'run-snow-calculation-btn',
+        onReady: () => {
+            // Page-specific initializations can go here if needed in the future.
         }
     });
-}
 
-function renderSnowReportHeader(inputs) {
-    return `
-        <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-            <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-            <button id="send-to-combos-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm print-hidden">Send to Combos</button>
-            <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>            <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Full Report</button>
-        </div>
-        <div class="text-center border-b pb-4">
-            <h2 class="text-2xl font-bold">SNOW LOAD CALCULATION REPORT (${inputs.asce_standard})</h2>
-        </div>`;
-}
+    attachReportEventListeners('snow-results-container', {
+        reportId: 'snow-report-content',
+        filenamePrefix: 'Snow-Load',
+        onSendToCombos: () => sendSnowToCombos(lastSnowRunResults),
+        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
+    });
+});
 
 function renderSnowNotesAndWarnings(inputs, is_nycbc_min_governed, warnings) {
     let html = '';
@@ -401,15 +338,7 @@ function renderSnowDesignParameters(inputs, intermediate, units) {
     const safeCe = intermediate.Ce || 0;
     const safeCt = intermediate.Ct || 0;
     
-    return `
-        <div id="snow-design-parameters-section" class="mt-6 report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">A. Design Parameters</h3>
-                <button data-copy-target-id="snow-design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
-            <div class="copy-content">
-                <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <ul class="list-disc list-inside space-y-1">
+    return `<ul class="list-disc list-inside space-y-1">
                     <li><strong>Risk Category:</strong> ${sanitizeHTML(inputs.risk_category)} <span class="ref">[ASCE 7, Table 1.5-1]</span></li>
                     <li><strong>Ground Snow Load (p<sub>g</sub>):</strong> ${(inputs.ground_snow_load || 0).toFixed(2)} ${p_unit} <span class="ref">[User Input / ASCE 7 Fig. 7.2-1]</span></li>
                     ${inputs.jurisdiction === "NYCBC 2022" ? `<li><strong>NYCBC Minimum Roof Snow Load (p<sub>s,min,nycbc</sub>):</strong> ${(inputs.nycbc_minimum_roof_snow_load || 0).toFixed(2)} ${p_unit} <span class="ref">[NYCBC, SEC. 1608.1]</span></li>` : ''}
@@ -427,8 +356,7 @@ function renderSnowDesignParameters(inputs, intermediate, units) {
                     <li><strong>Exposure Factor (C<sub>e</sub>):</strong> ${safeCe.toFixed(2)} <span class="ref">[ASCE 7, Sec. 7.3]</span></li>
                     <li><strong>Thermal Factor (C<sub>t</sub>):</strong> ${safeCt.toFixed(2)} <span class="ref">[ASCE 7, Sec. 7.3]</span></li>
                 </ul>
-            </div>
-        </div>`;
+        `;
 }
 
 function renderSnowCalculationBreakdown(inputs, intermediate, is_nycbc_min_governed, units) {
@@ -444,15 +372,7 @@ function renderSnowCalculationBreakdown(inputs, intermediate, is_nycbc_min_gover
     const safePsMinAsce7 = intermediate.ps_min_asce7 || 0;
     const safeGroundSnowLoad = inputs.ground_snow_load || 0;
     
-    return `
-        <div id="snow-calc-breakdown-section" class="mt-6 report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">B. Detailed Calculation Breakdown</h3>
-                <button data-copy-target-id="snow-calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
-            <div class="copy-content">
-                <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <div class="calc-breakdown mt-0">
+    return `<div class="calc-breakdown mt-0">
                     <h4 class="font-semibold uppercase text-base">a) Balanced Snow Load Calculation</h4>
                     <ul class="list-disc list-inside space-y-2 mt-2">
                         <li><strong>Factors:</strong> I<sub>s</sub> = ${safeIs.toFixed(2)}, C<sub>e</sub> = ${safeCe.toFixed(2)}, C<sub>t</sub> = ${safeCt.toFixed(2)}, C<sub>s</sub> = ${safeCs.toFixed(3)}</li>
@@ -469,19 +389,12 @@ function renderSnowCalculationBreakdown(inputs, intermediate, is_nycbc_min_gover
                             </div></li>` : ''}
                         ${is_nycbc_min_governed ? `<li><strong>Jurisdictional Minimum:</strong> <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">NYCBC minimum of <b>${(inputs.nycbc_minimum_roof_snow_load || 0).toFixed(2)} ${p_unit}</b> governs. <span class="ref">[NYCBC, SEC. 1608.4]</span></div></li>` : ''}
                     </ul>
-                </div>
-            </div>
-        </div>`;
+                </div>`;
 }
 
 function renderSnowDiagrams(inputs, unbalanced, drift, units) {
     const { l_unit } = units;
     return `
-        <div id="snow-diagrams-section" class="mt-6 report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">C. Load Case Diagrams</h3>
-                <button data-copy-target-id="snow-diagrams-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
             <div class="copy-content">
                 <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -494,8 +407,7 @@ function renderSnowDiagrams(inputs, unbalanced, drift, units) {
                     }
                     ${inputs.calculate_drift && drift.applicable ? generateDriftSnowDiagram(drift.hd, drift.w, l_unit) : ''}
                 </div>
-            </div>
-        </div>`;
+            </div>`;
 }
 
 function renderSnowLoadSummary(inputs, results, unbalanced, drift, sliding, units) {
@@ -567,36 +479,24 @@ function renderSnowLoadSummary(inputs, results, unbalanced, drift, sliding, unit
     }
 
     return `
-        <div id="snow-summary-section" class="mt-6 report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">D. Governing Load Summary (${inputs.design_method || 'ASD'})</h3>
-                <button data-copy-target-id="snow-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
             <div class="copy-content">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                     ${summaryCards}
                 </div>
-            </div>
-        </div>`;
+            </div>`;
 }
 
 function renderSnowPartialLoading(partial, units) {
     if (!partial || !partial.applicable) return '';
     const { p_unit } = units;
     return `
-        <div id="snow-partial-section" class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 mt-6 report-section-copyable">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="report-header flex-grow">E. Partial Loading (Continuous Beams)</h3>
-                <button data-copy-target-id="snow-partial-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-            </div>
             <div class="copy-content">
                 <div class="text-center">
                     <p>Load on Adjacent Span</p>
                     <p class="font-bold text-2xl">${partial.load_on_adjacent_span.toFixed(2)} ${p_unit}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">${partial.note}</p>
                 </div>
-            </div>
-        </div>`;
+            </div>`;
 }
 
 function renderSnowResults(results) {
@@ -620,21 +520,23 @@ function renderSnowResults(results) {
         l_unit: safeInputs.unit_system === 'imperial' ? 'ft' : 'm',
     };
 
-    let html = `<div id="snow-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">`;
-    html += renderSnowReportHeader(safeInputs);
-    html += renderSnowNotesAndWarnings(safeInputs, is_nycbc_min_governed, warnings);
-    html += renderSnowDesignParameters(safeInputs, safeIntermediate, units);
-    html += renderSnowCalculationBreakdown(safeInputs, safeIntermediate, is_nycbc_min_governed, units);
-    html += renderSnowDiagrams(safeInputs, safeUnbalanced, safeDrift, units);
-    html += renderSnowLoadSummary(safeInputs, safeFinalResults, safeUnbalanced, safeDrift, safeSliding, units);
-    html += renderSnowPartialLoading(safePartial, units);
-    html += `</div>`;
+    const report = new ReportBuilder({
+        reportId: 'snow-report-content',
+        title: `SNOW LOAD CALCULATION REPORT (${safeInputs.snow_asce_standard})`,
+        actionButtons: [
+            { id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-purple-600 hover:bg-purple-700' }
+        ]
+    });
 
-    const resultsContainer = document.getElementById('snow-results-container');
-    if (resultsContainer) {
-        resultsContainer.innerHTML = html;
-        attachSnowReportEventListeners();
-    }
+    report.addSection('Design Parameters', renderSnowDesignParameters(safeInputs, safeIntermediate, units), 'snow-design-parameters-section');
+    report.addSection('Detailed Calculation Breakdown', renderSnowCalculationBreakdown(safeInputs, safeIntermediate, is_nycbc_min_governed, units), 'snow-calc-breakdown-section');
+    report.addSection('Load Case Diagrams', renderSnowDiagrams(safeInputs, safeUnbalanced, safeDrift, units), 'snow-diagrams-section');
+    report.addSection(`Governing Load Summary (${safeInputs.design_method || 'ASD'})`, renderSnowLoadSummary(safeInputs, safeFinalResults, safeUnbalanced, safeDrift, safeSliding, units), 'snow-summary-section');
+    
+    const partialLoadingHtml = renderSnowPartialLoading(safePartial, units);
+    if (partialLoadingHtml) report.addSection('Partial Loading (Continuous Beams)', partialLoadingHtml, 'snow-partial-section');
+
+    report.render('snow-results-container');
 }
 
 function sendSnowToCombos(results) {

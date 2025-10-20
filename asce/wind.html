@@ -111,7 +111,7 @@
                 </div>
                 <div class="col-span-2">
                     <label for="has_rooftop_equipment" class="flex items-center space-x-2 text-sm font-medium">
-                        <input type="checkbox" id="has_rooftop_equipment" data-ui-toggle-controller data-ui-toggle-target="#rooftop-structure-options" data-ui-toggle-condition-checked="true">
+                        <input type="checkbox" id="has_rooftop_equipment" data-ui-toggle-controller data-ui-toggle-target="#rooftop-structure-options" data-ui-toggle-condition-checked="true" data-ui-toggle-type="visibility">
                         <span>Calculate Rooftop Equipment?</span>
                     </label>
                 </div>
@@ -445,17 +445,10 @@
         
         <div id="footer-placeholder"></div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            await injectHeader({
-                activePage: 'wind',
-                pageTitle: 'ASCE Wind Load Calculator',
-                headerPlaceholderId: 'header-placeholder'
-            });
-            await injectFooter({
-                footerPlaceholderId: 'footer-placeholder'
-            });
-        });
-    </script>
 </body>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        initWindCalculator();
+    });
+</script>
 </html>

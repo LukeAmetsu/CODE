@@ -18,66 +18,65 @@ const comboInputIds = [
  * Initializes the application by attaching event listeners and loading stored data.
  * This function is called from combos.html after the DOM and templates are loaded.
  */
-function initializeApp() {
-    function attachEventListeners() {
-        function attachDebouncedListeners(ids, handler) {
-            const debouncedHandler = debounce(handler, 300);
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('input', debouncedHandler);
-                    el.addEventListener('change', debouncedHandler);
+document.addEventListener('DOMContentLoaded', async () => {
+    initializeApp({
+        pageKey: 'combos',
+        pageTitle: 'ASCE Load Combination Calculator',
+        inputIds: comboInputIds,
+        calculationHandler: createCalculationHandler({
+            inputIds: comboInputIds,
+            storageKey: 'combo-calculator-inputs',
+            validationRuleKey: 'combo',
+            calculatorFunction: (inputs) => {
+            const validation = validateInputs(inputs, validationRules.combo);
+            const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
+            const scenarios = buildScenarios(inputs);
+
+            const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
+            const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            
+            const scenarios_data = {};
+            for (const key in scenarios) {
+                const isWallScenario = key.includes('wall');
+                
+                // Start with all loads from the form.
+                const scenario_loads = {
+                    D: inputs.combo_dead_load_d, 
+                    L: inputs.combo_live_load_l, 
+                    Lr: inputs.combo_roof_live_load_lr, 
+                    R: inputs.combo_rain_load_r, 
+                    S: scenarios[key].S, // Use scenario-specific snow
+                    E: inputs.combo_seismic_load_e, 
+                    unit_system: inputs.combo_unit_system 
+                };
+
+                // **CORRECTED LOGIC**: For wall analysis, zero out ALL roof-specific gravity loads.
+                if (isWallScenario) {
+                    scenario_loads.Lr = 0;
+                    scenario_loads.R = 0;
+                    scenario_loads.S = 0; // Walls don't have direct snow load.
                 }
+                
+                scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+                scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            }
+            return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
+            },
+            renderFunction: renderComboResults,
+            resultsContainerId: 'combo-results-container',
+            buttonId: 'run-combo-calculation-btn'
+        }),
+        buttonId: 'run-combo-calculation-btn',
+        onReady: () => {
+            loadDataFromStorage(); // This is specific to the combo calculator
+            attachReportEventListeners('combo-results-container', {
+                reportId: 'combo-report-content',
+                filenamePrefix: 'Load-Combinations',
+                toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
             });
         }
-
-        initializeSharedUI();
-        const handleSaveComboInputs = createSaveInputsHandler(comboInputIds, 'combo-inputs.txt');
-        const handleLoadComboInputs = createLoadInputsHandler(comboInputIds, handleRunComboCalculation);
-
-        document.getElementById('run-combo-calculation-btn').addEventListener('click', handleRunComboCalculation);
-        document.getElementById('save-combo-inputs-btn').addEventListener('click', handleSaveComboInputs);
-        document.getElementById('load-combo-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('combo-file-input')); // initiateLoad is already generic
-        document.getElementById('combo-file-input').addEventListener('change', handleLoadComboInputs);
-
-        // --- Auto-save inputs to localStorage on any change ---
-        // This replaces the debounced calculation on every input change.
-        // The user will now explicitly click "Run" to perform calculations.
-        comboInputIds.forEach(id => {
-            const el = document.getElementById(id);
-            el?.addEventListener('change', () => saveInputsToLocalStorage('combo-calculator-inputs', gatherInputsFromIds(comboInputIds)));
-        });
-
-        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-
-        document.body.addEventListener('click', async (event) => {
-            const copyBtn = event.target.closest('.copy-section-btn');
-            if (copyBtn) {
-                const targetId = copyBtn.dataset.copyTargetId || 'combo-report-content';
-                if (targetId) {
-                    await handleCopyToClipboard(targetId, 'feedback-message');
-                }
-            }
-            if (event.target.id === 'print-report-btn') {
-                window.print();
-            }
-            if (event.target.id === 'download-pdf-btn') {
-                handleDownloadPdf('combo-report-content', 'Load-Combinations-Report.pdf');
-            }
-            if (event.target.id === 'download-word-btn') {
-                handleDownloadWord('combo-report-content', 'Load-Combinations-Report.doc');
-            }
-        });
-    }
-
-    attachEventListeners();
-    loadDataFromStorage();
-    loadInputsFromLocalStorage('combo-calculator-inputs', comboInputIds);
-}
-
-/**
- * Checks localStorage for any pending data from other calculators and imports it.
- */
+    });
+});
 function loadDataFromStorage() {
     const storedLoads = localStorage.getItem('loadsForCombinator');
     if (!storedLoads) return;
@@ -353,49 +352,7 @@ const comboLoadCalculator = (() => {
     return { calculate: calculateCombinations };
 })();
 
-const handleRunComboCalculation = createCalculationHandler({
-    inputIds: comboInputIds,
-    storageKey: 'combo-calculator-inputs',
-    validationRuleKey: 'combo', // This will now correctly use the rules from validation-rules.js
-    calculatorFunction: (inputs) => {
-        const validation = validateInputs(inputs, validationRules.combo);
-        const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
-        const scenarios = buildScenarios(inputs);
 
-        const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
-        const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-        
-        const scenarios_data = {};
-        for (const key in scenarios) {
-            const isWallScenario = key.includes('wall');
-            
-            // Start with all loads from the form.
-            const scenario_loads = {
-                D: inputs.combo_dead_load_d, 
-                L: inputs.combo_live_load_l, 
-                Lr: inputs.combo_roof_live_load_lr, 
-                R: inputs.combo_rain_load_r, 
-                S: scenarios[key].S, // Use scenario-specific snow
-                E: inputs.combo_seismic_load_e, 
-                unit_system: inputs.combo_unit_system 
-            };
-
-            // **CORRECTED LOGIC**: For wall analysis, zero out ALL roof-specific gravity loads.
-            if (isWallScenario) {
-                scenario_loads.Lr = 0;
-                scenario_loads.R = 0;
-                scenario_loads.S = 0; // Walls don't have direct snow load.
-            }
-            
-            scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-            scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-        }
-        return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
-    },
-    renderFunction: renderComboResults,
-    resultsContainerId: 'combo-results-container',
-    buttonId: 'run-combo-calculation-btn'
-});
 /**
  * Configuration for all possible calculation scenarios.
  * This is the single source of truth for scenario keys and titles.
@@ -438,80 +395,6 @@ function buildScenarios(inputs) {
     return scenarios;
 }
 
-function generateComboSummary(all_gov_data, design_method, p_unit) {
-    const scenarios = {};
-    all_gov_data.forEach(d => {
-        if (!scenarios[d.title]) {
-            scenarios[d.title] = { max: { value: -Infinity }, min: { value: Infinity } };
-        }
-        // Ensure we don't overwrite with a non-existent value
-        if (d.value !== undefined && d.value > scenarios[d.title].max.value) scenarios[d.title].max = d;
-        if (d.value !== undefined && d.value < scenarios[d.title].min.value) scenarios[d.title].min = d;
-    });
-
-    let summaryHtml = `<div class="mt-8 report-section-copyable">
-        <h3 class="report-header">B. Governing Load Combinations Summary</h3>`;
-
-    summaryHtml += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">`;
-
-    // Define a master order for all possible scenarios to maintain a consistent layout.
-    const masterScenarioOrder = [
-        'Balanced Snow Analysis', 'Drift Surcharge Load Analysis',
-        'Windward Wall Analysis', 'Leeward Wall Analysis', 'Windward Roof Analysis', 'Leeward Roof Analysis',
-        'Components & Cladding (C&C) Roof Analysis', 'Components & Cladding (C&C) Wall Analysis'
-    ];
-
-    // Filter the master list to only include scenarios that have results in the current calculation.
-    const availableScenarios = masterScenarioOrder.filter(title => scenarios[title]);
-
-    availableScenarios.forEach(title => {
-        const data = scenarios[title]; // We know data exists because of the filter above.
-
-        const shortTitle = title.replace(' Analysis', '').replace(' Combinations', '');
-        summaryHtml += `
-            <div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col">
-                <h4 class="font-semibold text-center text-base mb-2">${shortTitle}</h4>
-                <div class="flex-grow space-y-2">
-                    <div class="text-center">
-                        <p class="text-sm">Max Pressure</p>
-                        <p class="font-bold text-xl">${data.max.value.toFixed(2)} ${p_unit}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate" title="${data.max.combo}">From: ${data.max.combo}</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-sm">Max Uplift/Suction</p>
-                        <p class="font-bold text-xl">${data.min.value.toFixed(2)} ${p_unit}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate" title="${data.min.combo}">From: ${data.min.combo}</p>
-                    </div>
-                </div>
-            </div>`;
-    });
-
-    summaryHtml += `</div>`; // Close grid
-
-    const overallMax = all_gov_data.reduce((max, d) => (d.value > max.value ? d : max), { value: -Infinity });
-    const overallMin = all_gov_data.reduce((min, d) => (d.value < min.value ? d : min), { value: Infinity });
-
-    summaryHtml += `</div>`; // Close grid
-
-    summaryHtml += `<div id="combo-overall-summary" class="mt-8 report-section-copyable">
-            <div class="flex justify-between items-center">
-                <h3 class="report-header flex-grow">C. Overall Governing ${design_method} Loads</h3>
-                <button data-copy-target-id="combo-overall-summary" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden" data-copy-ignore>Copy Summary</button>
-            </div>
-            <h4 class="font-semibold mt-4">1. FINAL GOVERNING ${design_method} LOADS</h4>
-            <ul class="list-disc list-inside ml-4 space-y-1">
-                <li><strong>Overall Max Pressure:</strong> ${overallMax.value.toFixed(2)} ${p_unit}
-                    <div class="pl-6 text-sm text-gray-500 dark:text-gray-400">From: ${overallMax.title.replace(' Analysis', '')}: ${overallMax.combo}</div>
-                </li>
-                <li><strong>Overall Max Uplift/Suction:</strong> ${overallMin.value.toFixed(2)} ${p_unit}
-                    <div class="pl-6 text-sm text-gray-500 dark:text-gray-400">From: ${overallMin.title.replace(' Analysis', '')}: ${overallMin.combo}</div>
-                </li>
-            </ul>
-        </div>`;
-
-    return summaryHtml;
-}
-
 /**
  * Defines the configuration for displaying input loads in the report.
  * Each object can have a 'label', 'id' (for simple value lookup), or a 'value' function for complex calculations.
@@ -546,7 +429,7 @@ const inputLoadConfig = [
  * @param {string} p_unit - The pressure unit string (e.g., 'psf').
  * @returns {string} The HTML string for the list of input loads.
  */
-function generateInputLoadSummary(inputs, p_unit) {
+function generateInputLoadRows(inputs, p_unit) {
     return inputLoadConfig.map(load => {
         const value = load.id ? inputs[load.id] : load.value(inputs);
         if (typeof value === 'number') {
@@ -560,144 +443,122 @@ function renderComboResults(fullResults) {
     if (!fullResults || !fullResults.success) return;
     lastComboRunResults = fullResults;
     
-    const resultsContainer = document.getElementById('combo-results-container');
-    let html = `<div id="combo-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-8">`;
-    html += `<div class="flex justify-end gap-2 print-hidden">
-                    <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-                    <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                    <button data-copy-target-id="combo-report-content" class="copy-section-btn bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>
-              </div>`;
-
-    html += `
-                 <div class="text-center border-b pb-4">
-                    <h2 class="text-2xl font-bold">LOAD COMBINATION REPORT (${fullResults.inputs.combo_asce_standard})</h2>
-                 </div>`;
+    const report = new ReportBuilder({
+        reportId: 'combo-report-content',
+        title: `Load Combination Report (${fullResults.inputs.combo_asce_standard})`
+    });
     
     // Display adjustment notes if they exist
     const adjustment_notes = fullResults.scenarios_data[Object.keys(fullResults.scenarios_data)[0]]?.adjustment_notes;
     if (adjustment_notes && Object.keys(adjustment_notes).length > 0) {
-        html += `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md">
-                    <p class="font-bold">Input Load Adjustments:</p>
-                    <ul class="list-disc list-inside mt-2 text-sm">`;
-        for(const key in adjustment_notes){
-            html += `<li>${adjustment_notes[key]}</li>`;
-        }
-        html += `</ul></div>`;
+        const notesHtml = `<ul class="list-disc list-inside mt-2 text-sm">${Object.values(adjustment_notes).map(note => `<li>${note}</li>`).join('')}</ul>`;
+        report.addSection('Input Load Adjustments', `<div class="validation-message warning">${notesHtml}</div>`);
     }
 
     if (fullResults.warnings && fullResults.warnings.length > 0) {
-        html += renderValidationResults({ warnings: fullResults.warnings, errors: [] });
+        report.addSection('Warnings', renderValidationResults({ warnings: fullResults.warnings, errors: [] }));
     }
 
-    // --- 1. INPUT LOADS ---
     const { inputs } = fullResults;
     const p_unit = inputs.combo_unit_system === 'imperial' ? 'psf' : 'kPa';
 
-    html += `<div id="combo-inputs-section" class="report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header">A. Input Loads</h3>
-                    <button data-copy-target-id="combo-inputs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
-                </div>
-                <ul class="list-disc list-inside space-y-1">${generateInputLoadSummary(inputs, p_unit)}</ul>
-             </div>`;
-
-    // --- Base Load Combinations (No Wind/Snow) ---
-    html += `<div id="combo-base-section" class="report-section-copyable mt-6">
-             <div class="flex justify-between items-center">
-                <h3 class="report-header flex-grow">B. Base Load Combinations</h3>
-                <button data-copy-target-id="combo-base-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
-             </div>
-             <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">These combinations are constant across all scenarios.</p>
-             <table class="results-container w-full mt-2 border-collapse">
-                <thead><tr><th>Combination</th><th>Calculation & Result</th></tr></thead>
-                <tbody>`;
+    // --- 1. Input Loads Section ---
+    const inputRows = generateInputLoadRows(inputs, p_unit).map(rowHtml => { // This function is not in the provided context, but the logic seems correct.
+        const [label, value] = rowHtml.replace(/<\/?li>|<\/?strong>/g, '').split(':');
+        return { cells: [label, value] };
+    });
+    report.addTableSection('A. Input Loads', { headers: ['Load', 'Value'], rows: inputRows }, 'combo-inputs-section');
+    
+    // --- 2. Base Load Combinations (No Wind/Snow) ---
+    const baseComboRows = [];
     for (const combo in fullResults.base_combos.results) {
         if (combo.includes('W') || combo.includes('S') || combo.includes('E')) continue;
         const value = fullResults.base_combos.results[combo];
         const calc_string = fullResults.base_combos.calc_strings[combo];
-        html += `<tr><td>${combo}</td><td>${calc_string} = <b>${value.toFixed(2)}</b></td></tr>`;
+        baseComboRows.push({ cells: [combo, `<code class="text-sm">${calc_string}</code>`, `<b>${value.toFixed(2)}</b>`] });
     }
-    html += `</tbody></table></div>`;
+    report.addTableSection('B. Base Load Combinations', { headers: ['Combination', 'Calculation', 'Result'], rows: baseComboRows }, 'combo-base-section');
 
-
-    // --- Scenario-Specific Combinations ---
-    html += `<div id="combo-scenario-section" class="report-section-copyable mt-6">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header flex-grow">C. Scenario-Specific Combinations</h3>
-                    <button data-copy-target-id="combo-scenario-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden" data-copy-ignore>Copy Section</button>
-                </div>`;
-
+    // --- 3. Scenario-Specific Combinations ---
     let all_gov_data = [];
     for (const key in fullResults.scenarios_data) {
         if (key.endsWith('_wmin')) continue; // Process pairs together
+
         const scenario_key = key.replace('_wmax', '');
-        // Dynamically generate the title map from the single source of truth
         const title_map = getScenarioTitleMap();
         const title = title_map[scenario_key] || scenario_key;
 
-         const res_wmax = fullResults.scenarios_data[`${scenario_key}_wmax`];
-         const res_wmin = fullResults.scenarios_data[`${scenario_key}_wmin`];
-         const pattern_load_required = res_wmax.pattern_load_required;
-         
-         if (!res_wmax) continue;
+        const res_wmax = fullResults.scenarios_data[`${scenario_key}_wmax`];
+        const res_wmin = fullResults.scenarios_data[`${scenario_key}_wmin`];
+        if (!res_wmax) continue;
 
-         html += `<div class="mt-6">
-                    <h4 class="text-lg font-semibold text-center">${title}</h4>
-                 </div>
-                 `;
-         html += `<table class="results-container w-full mt-2 border-collapse">
-                    <thead><tr><th>Combination</th><th>Calculation (Max Wind)</th><th>Calculation (Min Wind)</th></tr></thead>
-                    <tbody>`;
-        
+        const scenarioRows = [];
         for (const combo in res_wmax.results) {
-             if (!combo.includes('W') && !combo.includes('S') && !combo.includes('E')) continue; // Skip base combos
-             const calc_string_wmax = res_wmax.calc_strings[combo];
-             const calc_string_wmin = res_wmin.calc_strings[combo];
-             const val_wmax = res_wmax.results[combo];
-             const val_wmin = res_wmin.results[combo];
+            if (!combo.includes('W') && !combo.includes('S') && !combo.includes('E')) continue;
 
-             const rowId = `row-${scenario_key}-${combo.replace(/\s/g, '-')}`;
-             all_gov_data.push({ value: val_wmax, combo, title });
-             all_gov_data.push({ value: val_wmin, combo, title });
+            const val_wmax = res_wmax.results[combo];
+            const val_wmin = res_wmin.results[combo];
+            all_gov_data.push({ value: val_wmax, combo, title });
+            all_gov_data.push({ value: val_wmin, combo, title });
 
-             html += `<tr id="${rowId}">
-                        <td>${combo}</td>
-                        <td class="text-sm">${calc_string_wmax} = <b>${val_wmax.toFixed(2)}</b></td>
-                        <td class="text-sm">${calc_string_wmin} = <b>${val_wmin.toFixed(2)}</b></td>
-                      </tr>`;
+            scenarioRows.push({
+                cells: [combo, `<b>${val_wmax.toFixed(2)}</b>`, `<b>${val_wmin.toFixed(2)}</b>`],
+                details: `<ul class="list-disc list-inside"><li><b>Max Wind:</b> <code class="text-sm">${res_wmax.calc_strings[combo]}</code></li><li><b>Min Wind:</b> <code class="text-sm">${res_wmin.calc_strings[combo]}</code></li></ul>`
+            });
         }
-         html += `</tbody></table>`;
+        report.addTableSection(title, { headers: ['Combination', `Result (Max Wind)`, `Result (Min Wind)`], rows: scenarioRows });
 
-        if (pattern_load_required) {
-            html += `<h4 class="text-lg font-semibold text-center mt-4">Pattern Live Load Combinations (0.75L)</h4>`;
-            html += `<p class="text-xs text-center text-gray-500 dark:text-gray-400 mb-2">Required because Live Load > ${fullResults.inputs.combo_unit_system === 'imperial' ? '100 psf' : '4.79 kPa'} (ASCE 7-16/22 Sec. 4.3.5)</p>`;
-            html += `<table class="results-container w-full mt-2 border-collapse">
-                    <thead><tr><th>Combination</th><th>Calculation (Max Wind)</th><th>Calculation (Min Wind)</th></tr></thead>
-                    <tbody>`;
+        if (res_wmax.pattern_load_required) {
+            const patternRows = [];
             for (const combo in res_wmax.pattern_results) {
                 if (!combo.includes('W') && !combo.includes('S') && !combo.includes('E')) continue;
-                const calc_string_wmax = res_wmax.pattern_calc_strings[combo];
-                const calc_string_wmin = res_wmin.pattern_calc_strings[combo];
+
                 const val_wmax = res_wmax.pattern_results[combo];
                 const val_wmin = res_wmin.pattern_results[combo];
-
-                const rowId = `row-pattern-${scenario_key}-${combo.replace(/\s/g, '-')}`;
                 all_gov_data.push({ value: val_wmax, combo, title, pattern: true });
                 all_gov_data.push({ value: val_wmin, combo, title, pattern: true });
-                html += `<tr id="${rowId}">
-                            <td>${combo}</td>
-                            <td class="text-sm">${calc_string_wmax} = <b>${val_wmax.toFixed(2)}</b></td>
-                            <td class="text-sm">${calc_string_wmin} = <b>${val_wmin.toFixed(2)}</b></td>
-                         </tr>`;
+
+                patternRows.push({
+                    cells: [combo, `<b>${val_wmax.toFixed(2)}</b>`, `<b>${val_wmin.toFixed(2)}</b>`],
+                    details: `<ul class="list-disc list-inside"><li><b>Max Wind:</b> <code class="text-sm">${res_wmax.pattern_calc_strings[combo]}</code></li><li><b>Min Wind:</b> <code class="text-sm">${res_wmin.pattern_calc_strings[combo]}</code></li></ul>`
+                });
             }
-            html += `</tbody></table>`;
+            const patternTitle = `${title} (Pattern Live Load)`;
+            report.addTableSection(patternTitle, { headers: ['Combination', 'Result (Max Wind)', 'Result (Min Wind)'], rows: patternRows });
         }
     }
 
-    html += `</div>`; // Close main scenario section
+    // --- 4. Governing Load Summary ---
+    const scenarios = {};
+    all_gov_data.forEach(d => {
+        if (!scenarios[d.title]) scenarios[d.title] = { max: { value: -Infinity }, min: { value: Infinity } };
+        if (d.value > scenarios[d.title].max.value) scenarios[d.title].max = d;
+        if (d.value < scenarios[d.title].min.value) scenarios[d.title].min = d;
+    });
 
-    html += generateComboSummary(all_gov_data, fullResults.inputs.combo_design_method, p_unit);
+    const masterScenarioOrder = Object.keys(getScenarioTitleMap());
+    const availableScenarios = masterScenarioOrder.filter(title => scenarios[title]);
 
-    html += `</div>`;
-    resultsContainer.innerHTML = html;
+    const summaryCardsHtml = availableScenarios.map(title => {
+        const data = scenarios[title];
+        const shortTitle = title.replace(' Analysis', '');
+        return `<div class="border dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 flex flex-col">
+                    <h4 class="font-semibold text-center text-base mb-2">${shortTitle}</h4>
+                    <div class="flex-grow space-y-2">
+                        <div class="text-center"><p class="text-sm">Max Pressure</p><p class="font-bold text-xl">${data.max.value.toFixed(2)} ${p_unit}</p><p class="text-xs text-gray-500 dark:text-gray-400 truncate" title="${data.max.combo}">From: ${data.max.combo}</p></div>
+                        <div class="text-center"><p class="text-sm">Max Uplift/Suction</p><p class="font-bold text-xl">${data.min.value.toFixed(2)} ${p_unit}</p><p class="text-xs text-gray-500 dark:text-gray-400 truncate" title="${data.min.combo}">From: ${data.min.combo}</p></div>
+                    </div>    
+                </div>`;
+    }).join('');
+    report.addSection('C. Governing Load Summary', `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">${summaryCardsHtml}</div>`, 'combo-summary-section');
+
+    const overallMax = all_gov_data.reduce((max, d) => (d.value > max.value ? d : max), { value: -Infinity });
+    const overallMin = all_gov_data.reduce((min, d) => (d.value < min.value ? d : min), { value: Infinity });
+    const overallSummaryHtml = `<ul class="list-disc list-inside ml-4 space-y-1">
+            <li><strong>Overall Max Pressure:</strong> ${overallMax.value.toFixed(2)} ${p_unit} <span class="text-sm text-gray-500 dark:text-gray-400">(From: ${overallMax.title.replace(' Analysis', '')}: ${overallMax.combo})</span></li>
+            <li><strong>Overall Max Uplift/Suction:</strong> ${overallMin.value.toFixed(2)} ${p_unit} <span class="text-sm text-gray-500 dark:text-gray-400">(From: ${overallMin.title.replace(' Analysis', '')}: ${overallMin.combo})</span></li>
+        </ul>`;
+    report.addSection(`Final Governing ${inputs.combo_design_method} Loads`, overallSummaryHtml, 'combo-final-summary-section');
+
+    report.render('combo-results-container');
 }

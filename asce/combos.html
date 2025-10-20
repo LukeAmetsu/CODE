@@ -189,7 +189,7 @@
     </div>
     </div>
     <div class="lg:col-span-3 mt-8 flex justify-center">
-        <button id="load-combo-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Load Inputs</button>
+        <button id="load-combo-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Carregar Entradas</button>
         <button id="save-combo-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 mr-4">Save Inputs</button>
         <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
         <button id="run-combo-calculation-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run Load Combinations</button>
@@ -201,22 +201,6 @@
         <div id="combo-results-container" class="mt-10 results-container"></div>
 
         <div id="footer-placeholder"></div>
-
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            await injectHeader({
-                activePage: 'combos',
-                pageTitle: 'ASCE Load Combination Calculator',
-                headerPlaceholderId: 'header-placeholder'
-            });
-            await injectFooter({
-                footerPlaceholderId: 'footer-placeholder'
-            });
-
-            // Initialize the app's event listeners after the templates are injected.
-            initializeApp();
-        });
-    </script>
 </body>
 </html>

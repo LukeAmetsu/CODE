@@ -41,101 +41,71 @@ const nbr7190Calculator = (() => {
     return { calculate };
 })();
 
-function renderNbr7190Results(calc_results) {
-    const { inputs, results } = calc_results;
-    const summaryContainer = document.getElementById('summary-results-wood');
-    const resultsContainer = document.getElementById('results-container-wood');
+function generateWoodBreakdownHtml(check) {
+    const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
 
-    const getStatus = (ratio) => ratio <= 1.0 ? `<span class="pass">OK</span>` : `<span class="fail">FALHA</span>`;
-
-    summaryContainer.innerHTML = `
-        <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Flexão (σ<sub>md</sub> / f<sub>cd</sub>):</span> <strong class="${results.flexao_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${results.flexao_ratio.toFixed(3)}</strong></p>
-        </div>
-        <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Cisalhamento (τ<sub>vd</sub> / f<sub>vd</sub>):</span> <strong class="${results.cisalhamento_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${results.cisalhamento_ratio.toFixed(3)}</strong></p>
-        </div>
-         <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-            <p class="flex justify-between"><span>Deformação (δ / δ<sub>lim</sub>):</span> <strong class="${results.deformacao_ratio <= 1.0 ? 'text-green-600' : 'text-red-600'}">${results.deformacao_ratio.toFixed(3)}</strong></p>
-        </div>
-    `;
-
-    const checks = [
-        {
-            name: 'Flexão',
-            demand: results.sigma_md,
-            capacity: results.fcd / 10,
-            ratio: results.flexao_ratio,
-            unit: 'kN/cm²',
-            breakdown: `
-                <h4>Cálculo da Tensão de Flexão</h4>
-                <ul>
-                    <li>Tensão Solicitante (σ<sub>md</sub>) = (6 * M<sub>sd</sub>) / (b * h²) = (6 * ${inputs.Msd.toFixed(2)}) / (${inputs.b} * ${inputs.h}²) = <b>${results.sigma_md.toFixed(2)} kN/cm²</b></li>
-                    <li>Resistência de Cálculo (f<sub>cd</sub>) = (k<sub>mod</sub> * f<sub>c0,k</sub>) / γ<sub>wc</sub> = (${(inputs.kmod1 * inputs.kmod2).toFixed(2)} * ${inputs.fc0k}) / 1.4 = <b>${(results.fcd / 10).toFixed(2)} kN/cm²</b></li>
-                </ul>`
-        },
-        {
-            name: 'Cisalhamento',
-            demand: results.tau_vd,
-            capacity: results.fvd / 10,
-            ratio: results.cisalhamento_ratio,
-            unit: 'kN/cm²',
-            breakdown: `
-                <h4>Cálculo da Tensão de Cisalhamento</h4>
-                <ul>
-                    <li>Tensão Solicitante (τ<sub>vd</sub>) = (1.5 * V<sub>sd</sub>) / (b * h) = (1.5 * ${inputs.Vsd}) / (${inputs.b} * ${inputs.h}) = <b>${results.tau_vd.toFixed(2)} kN/cm²</b></li>
-                    <li>Resistência de Cálculo (f<sub>vd</sub>) = (k<sub>mod</sub> * f<sub>v,k</sub>) / γ<sub>wv</sub> = (${(inputs.kmod1 * inputs.kmod2).toFixed(2)} * ${inputs.fvk}) / 1.8 = <b>${(results.fvd / 10).toFixed(2)} kN/cm²</b></li>
-                </ul>`
-        },
-        {
-            name: 'Deformação (Flecha)',
-            demand: results.deformacao_imediata,
-            capacity: results.limite_deformacao,
-            ratio: results.deformacao_ratio,
-            unit: 'cm',
-            breakdown: `
-                <h4>Cálculo da Deformação (ELS)</h4>
-                <ul>
-                    <li>Flecha Limite (δ<sub>lim</sub>) = L / 350 = ${(inputs.L * 100).toFixed(0)} cm / 350 = <b>${results.limite_deformacao.toFixed(2)} cm</b></li>
-                    <li>Flecha Imediata (δ) = (5 * w * L⁴) / (384 * E * I) = <b>${results.deformacao_imediata.toFixed(2)} cm</b></li>
-                    <li><small>(Assumindo carga uniforme que gera o momento M<sub>sd</sub>)</small></li>
-                </ul>`
-        }
-    ];
-
-    const checkRows = checks.map((check, index) => {
-        const detailId = `wood-detail-${index}`;
-        return `
-            <tr class="border-t dark:border-gray-700">
-                <td>${check.name} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                <td>${check.demand.toFixed(2)} ${check.unit}</td>
-                <td>${check.capacity.toFixed(2)} ${check.unit}</td>
-                <td>${check.ratio.toFixed(3)}</td>
-                <td>${getStatus(check.ratio)}</td>
-            </tr>
-            <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${check.breakdown}</div></td></tr>
-        `;
-    }).join('');
-
-    resultsContainer.innerHTML = `
-        <div id="wood-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-            <div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Mostrar Detalhes</button>
-                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Baixar PDF</button>
-                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copiar Relatório</button>
-            </div>
-            <h2 class="text-2xl font-bold text-center border-b pb-2">Relatório de Verificação Detalhado</h2>
-            <table class="w-full mt-4 results-table">
-                <caption>Verificações (ELU e ELS)</caption>
-                <thead><tr><th>Verificação</th><th>Solicitante (Sd)</th><th>Resistente (Rd)</th><th>Ratio</th><th>Status</th></tr></thead>
-                <tbody>
-                    ${checkRows}
-                </tbody>
-            </table>
-        </div>`;
+    switch (check.name) {
+        case 'Flexão':
+            return format_list([
+                `<b>Tensão Solicitante (σ<sub>md</sub>):</b> (6 * M<sub>sd</sub>) / (b * h²) = <b>${check.demand.toFixed(2)} kN/cm²</b>`,
+                `<b>Resistência de Cálculo (f<sub>cd</sub>):</b> (k<sub>mod</sub> * f<sub>c0,k</sub>) / γ<sub>wc</sub> = <b>${check.capacity.toFixed(2)} kN/cm²</b>`
+            ]);
+        case 'Cisalhamento':
+            return format_list([
+                `<b>Tensão Solicitante (τ<sub>vd</sub>):</b> (1.5 * V<sub>sd</sub>) / (b * h) = <b>${check.demand.toFixed(2)} kN/cm²</b>`,
+                `<b>Resistência de Cálculo (f<sub>vd</sub>):</b> (k<sub>mod</sub> * f<sub>v,k</sub>) / γ<sub>wv</sub> = <b>${check.capacity.toFixed(2)} kN/cm²</b>`
+            ]);
+        case 'Deformação (Flecha)':
+            return format_list([
+                `<b>Flecha Limite (δ<sub>lim</sub>):</b> L / 350 = <b>${check.capacity.toFixed(2)} cm</b>`,
+                `<b>Flecha Imediata (δ):</b> (5 * w * L⁴) / (384 * E * I) = <b>${check.demand.toFixed(2)} cm</b>`,
+                `<small>(Assumindo carga uniforme que gera o momento M<sub>sd</sub>)</small>`
+            ]);
+        default: return 'Detalhes não disponíveis.';
+    }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function renderNbr7190Results(calc_results) {
+    const { inputs, results } = calc_results;
+
+    const report = new ReportBuilder({
+        reportId: 'wood-report-content',
+        title: 'Relatório de Verificação Detalhado (NBR 7190)',
+    });
+
+    const inputRows = [
+        { cells: ['Resist. à Compressão (f<sub>c0,k</sub>)', `${inputs.fc0k} MPa`] },
+        { cells: ['Resist. ao Cisalhamento (f<sub>v,k</sub>)', `${inputs.fvk} MPa`] },
+        { cells: ['Módulo de Elasticidade (E<sub>c0,ef</sub>)', `${inputs.Ec0_ef} MPa`] },
+        { cells: ['Largura (b)', `${inputs.b} cm`] },
+        { cells: ['Altura (h)', `${inputs.h} cm`] },
+        { cells: ['Vão (L)', `${inputs.L} m`] },
+        { cells: ['k<sub>mod,1</sub> (Classe de Carregamento)', `${inputs.kmod1}`] },
+        { cells: ['k<sub>mod,2</sub> (Classe de Umidade)', `${inputs.kmod2}`] },
+        { cells: ['Momento Solicitante (M<sub>Sd</sub>)', `${inputs.Msd / 100} kN·m`] },
+        { cells: ['Força Cortante (V<sub>Sd</sub>)', `${inputs.Vsd} kN`] }
+    ];
+    report.addTableSection('Resumo dos Dados de Entrada', { headers: ['Parâmetro', 'Valor'], rows: inputRows }, 'input-summary-section');
+    
+    const tableRows = [
+        { name: 'Flexão', demand: results.sigma_md, capacity: results.fcd / 10, ratio: results.flexao_ratio, unit: 'kN/cm²' },
+        { name: 'Cisalhamento', demand: results.tau_vd, capacity: results.fvd / 10, ratio: results.cisalhamento_ratio, unit: 'kN/cm²' },
+        { name: 'Deformação (Flecha)', demand: results.deformacao_imediata, capacity: results.limite_deformacao, ratio: results.deformacao_ratio, unit: 'cm' }
+    ].map(check => ({
+        type: 'data',
+        cells: [check.name, `${check.demand.toFixed(2)} ${check.unit}`, `${check.capacity.toFixed(2)} ${check.unit}`, check.ratio.toFixed(3), check.ratio <= 1.0 ? '<span class="pass">OK</span>' : '<span class="fail">FALHA</span>'],
+        details: generateWoodBreakdownHtml(check)
+    }));
+
+    report.addTableSection('Verificações (ELU e ELS)', {
+        headers: ['Verificação', 'Solicitante', 'Resistente', 'Razão', 'Status'],
+        rows: tableRows
+    });
+
+    report.render('results-container-wood');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
     const handleRunNbr7190Check = createCalculationHandler({
         inputIds: nbr7190InputIds,
         storageKey: 'nbr7190-inputs',
@@ -144,39 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderFunction: renderNbr7190Results,
         resultsContainerId: 'results-container-wood',
         buttonId: 'run-wood-check-btn'
+    }); 
+    await initializeApp({
+        pageKey: 'nbr-madeira',
+        pageTitle: 'Verificador de Peças de Madeira (NBR 7190:1997)',
+        inputIds: nbr7190InputIds,
+        calculationHandler: handleRunNbr7190Check,
+        buttonId: 'run-wood-check-btn'
     });
-    injectHeader({ activePage: 'wood-design', pageTitle: 'Verificador de Peças de Madeira (NBR 7190:1997)', headerPlaceholderId: 'header-placeholder' });
-    injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-    initializeSharedUI();
-
-    loadInputsFromLocalStorage('nbr7190-inputs', nbr7190InputIds);
-
-    const handleSaveInputs = createSaveInputsHandler(nbr7190InputIds, 'nbr7190-inputs.txt');
-    const handleLoadInputs = createLoadInputsHandler(nbr7190InputIds, handleRunNbr7190Check);
-    document.getElementById('save-inputs-btn').addEventListener('click', handleSaveInputs);
-    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
-    document.getElementById('file-input').addEventListener('change', handleLoadInputs);
-    document.getElementById('run-wood-check-btn').addEventListener('click', handleRunNbr7190Check);
-
-    document.getElementById('results-container-wood').addEventListener('click', (event) => {
-        const button = event.target.closest('.toggle-details-btn');
-        if (button) {
-            const detailId = button.dataset.toggleId;
-            const row = document.getElementById(detailId);
-            if (row) {
-                row.classList.toggle('is-visible');
-                button.textContent = row.classList.contains('is-visible') ? '[Esconder]' : '[Mostrar]';
-            }
-        }
-        if (event.target.id === 'toggle-all-details-btn') {
-            const mainButton = event.target;
-            const shouldShow = mainButton.dataset.state === 'hidden';
-            document.querySelectorAll('#results-container-wood .details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
-            document.querySelectorAll('#results-container-wood .toggle-details-btn').forEach(button => button.textContent = shouldShow ? '[Esconder]' : '[Mostrar]');
-            mainButton.dataset.state = shouldShow ? 'shown' : 'hidden';
-            mainButton.textContent = shouldShow ? 'Esconder Detalhes' : 'Mostrar Detalhes';
-        }
-        if (event.target.id === 'copy-report-btn') handleCopyToClipboard('wood-report-content', 'feedback-message');
-        if (event.target.id === 'download-pdf-btn') handleDownloadPdf('wood-report-content', 'NBR7190-Relatorio.pdf');
+    attachReportEventListeners('results-container-wood', {
+        reportId: 'wood-report-content',
+        filenamePrefix: 'NBR7190-Relatorio',
+        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
     });
 });

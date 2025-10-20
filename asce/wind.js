@@ -46,96 +46,40 @@ const windInputIds = [
 // =================================================================================
 //  UI INJECTION & INITIALIZATION
 // =================================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Define the main app initialization function.
-    function initializeApp() {
-        // 2. Create the main calculation handler first, so it's available to other functions.
-        const handleRunWindCalculation = createCalculationHandler({
-            inputIds: windInputIds,
-            storageKey: 'wind-calculator-inputs',
-            validatorFunction: validateWindInputs,
-            calculatorFunction: windLoadCalculator.run,
-            renderFunction: renderWindResults,
-            resultsContainerId: 'results-container',
-            feedbackElId: 'feedback-message',
-            buttonId: 'run-calculation-btn'
-        });
+async function initWindCalculator() {
+    await initializeApp({
+        pageKey: 'wind',
+        pageTitle: 'ASCE Wind Load Calculator',
+        inputIds: windInputIds,
+        calculationHandler: createCalculationHandler({ // This part is correct
+            inputIds: windInputIds, storageKey: 'wind-calculator-inputs',
+            validatorFunction: validateWindInputs, calculatorFunction: windLoadCalculator.run,
+            renderFunction: renderWindResults, resultsContainerId: 'results-container',
+            feedbackElId: 'feedback-message', buttonId: 'run-calculation-btn'
+        }),
+        buttonId: 'run-calculation-btn', // Pass the button ID to initializeApp
+        onReady: () => {
+            // The calculation handler is now attached directly by initializeApp,
+            // so the explicit click listener is no longer needed here.
+            // document.getElementById('run-calculation-btn').addEventListener('click', handleRunWindCalculation);
+            document.getElementById('mean_roof_height').addEventListener('input', (event) => {
+                const h = parseFloat(event.target.value) || 0;
+                const is_imp = document.getElementById('unit_system').value === 'imperial';
+                const limit = is_imp ? 60 : 18.3;
+                document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
+                document.getElementById('mwfrs-method-container')?.classList.toggle('hidden', h > limit);
+            });
+            // Attach report event listeners here, after the app is ready
+            attachReportEventListeners('results-container', {
+                reportId: 'wind-report-content',
+                filenamePrefix: 'Wind-Load-Report',
+                onSendToCombos: () => sendWindToCombos(lastWindRunResults),
+                toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+            });
+        }
+    });
 
-        // 3. Attach all event listeners.
-        attachEventListeners(handleRunWindCalculation);
-
-        // 4. Initialize shared UI components and load saved data.
-        initializeSharedUI();
-        addRangeIndicators();
-        // Use a small timeout to ensure all elements are ready before triggering a calculation from localStorage
-        setTimeout(() => {
-            loadInputsFromLocalStorage('wind-calculator-inputs', windInputIds);
-        }, 100);
-    }
-
-    // --- EVENT HANDLERS ---
-    function attachEventListeners(handleRunWindCalculation) {
-        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
-            const h = parseFloat(event.target.value) || 0;
-            const is_imp = document.getElementById('unit_system').value === 'imperial';
-            const limit = is_imp ? 60 : 18.3;
-            document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
-            // Also control the visibility of the MWFRS method selector
-            const mwfrsContainer = document.getElementById('mwfrs-method-container');
-            if (mwfrsContainer) {
-                mwfrsContainer.classList.toggle('hidden', h > limit);
-            }
-        });
-
-        // Create file-based handlers
-        const handleSaveWindInputs = createSaveInputsHandler(windInputIds, 'wind-inputs.txt');
-        const handleLoadWindInputs = createLoadInputsHandler(windInputIds, handleRunWindCalculation);
-
-        // Attach handlers to buttons
-        document.getElementById('run-calculation-btn').addEventListener('click', handleRunWindCalculation);
-        document.getElementById('save-inputs-btn').addEventListener('click', handleSaveWindInputs);
-        document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('wind-file-input'));
-        document.getElementById('wind-file-input').addEventListener('change', (e) => handleLoadWindInputs(e));
-
-        // Delegated event listener for report buttons
-        document.getElementById('results-container').addEventListener('click', async (event) => {
-            if (event.target.id === 'copy-report-btn') {
-                await handleCopyToClipboard('wind-report-content', 'feedback-message');
-            }
-            if (event.target.id === 'send-to-combos-btn' && lastWindRunResults) {
-                sendWindToCombos(lastWindRunResults);
-            }
-            if (event.target.id === 'print-report-btn') {
-                window.print();
-            }
-            if (event.target.id === 'download-pdf-btn') {
-                handleDownloadPdf('wind-report-content', 'Wind-Load-Report.pdf');
-            }
-            if (event.target.id === 'download-word-btn') {
-                handleDownloadWord('wind-report-content', 'Wind-Load-Report.doc');
-            }
-            const copyBtn = event.target.closest('.copy-section-btn');
-            if (copyBtn) {
-                const targetId = copyBtn.dataset.copyTargetId;
-                if (targetId) {
-                    await handleCopyToClipboard(targetId, 'feedback-message');
-                }
-            }
-            const button = event.target.closest('.toggle-details-btn');
-            if (button) {
-                const detailId = button.dataset.toggleId;
-                const detailRow = document.getElementById(detailId);
-                if (detailRow) {
-                    detailRow.classList.toggle('is-visible');
-                    button.textContent = detailRow.classList.contains('is-visible') ? '[Hide Details]' : '[Show Details]';
-                }
-            }
-        });
-    }
-
-    // 4. Run the app.
-    initializeApp();    
-}); // END DOMContentLoaded
+}
 
 // =================================================================================
 //  WIND LOAD CALCULATOR LOGIC
@@ -617,11 +561,11 @@ const windLoadCalculator = (() => {
     // Elevation factor Ke (ASCE 7-16 Table 26.9-1; ASCE 7-22 Sec 26.9)
     function calculateKe(elevation, units, standard) {
         if (standard === "ASCE 7-22") return [1.0, "ASCE 7-22 Section 26.9 (Ke = 1.0)"];
-        const elev_ft = [-500, 0, 500, 1000, 2000, 3000, 4000, 5000, 6000];
-        const ke_vals = [1.05, 1.00, 0.95, 0.90, 0.82, 0.74, 0.67, 0.61, 0.55];
+        const elev_ft = [-500, 0, 100, 500, 1000, 2000, 3000, 4000, 5000, 6000];
+        const ke_vals = [1.05, 1.00, 0.99, 0.95, 0.90, 0.82, 0.74, 0.67, 0.61, 0.55];
         const elev_calc = units === 'metric' ? elevation * 3.28084 : elevation;
         const ke_val = interpolate(elev_calc, elev_ft, ke_vals);
-        return [ke_val, `ASCE 7-16 Table 26.9-1 (Elevation: ${safeToFixed(elev_calc, 0)} ft)`];
+        return [ke_val, `ASCE 7-16 Table 26.9-1 (Ground Elevation above Sea Level: ${safeToFixed(elevation, 0)} ${units === 'imperial' ? 'ft' : 'm'})`];
     }
 
     // Wind velocity pressure qz (ASCE 7-16/22 Eq. 26.10-1)
@@ -1393,13 +1337,13 @@ const windLoadCalculator = (() => {
         const zg_val = kzResult.zg || 0;
         const kz_ref_val = kzResult.ref_note || "Error: Kz calculation failed";
         
-        const intermediate_for_G = { alpha, zg, Kz, Iw };
+        const intermediate_for_G = { alpha: alpha_val, zg: zg_val, Kz: Kz_val, Iw };
         const { G, ref: g_ref } = calculateGustEffectFactor({ ...inputs, V_in: v_input }, intermediate_for_G);
 
         const windResults = {
             inputs: { ...inputs, V_in: v_input, V_unreduced: v_unreduced, GCpi_abs: abs_gcpi, effective_standard: effective_standard },
             intermediate: { Kz, Kz_ref: kz_ref, Ke, ke_ref, qz, qz_ref, Kd, Kd_ref: kd_ref, GCpi_ref: gcpi_ref, alpha, zg, Iw, iw_ref, G, g_ref },
-            jurisdiction_note, temporary_structure_note,
+            jurisdiction_note, temporary_structure_note, directional_results: null,
             warnings: validation.warnings, errors: validation.errors
         };
 
@@ -1478,16 +1422,18 @@ function gatherWindInputs() {
  * @returns {object} An object containing arrays of errors and warnings.
  */
 function validateWindInputs(inputs) {
-    const { errors, warnings } = validateInputs(inputs, validationRules.wind, 'wind.js');
+    // Use a default empty object for inputs if it's not provided to prevent errors on initial load.
+    const currentInputs = inputs || {};
+    const { errors, warnings } = validateInputs(currentInputs, validationRules.wind, 'wind.js');
 
     // Add specific, inter-dependent validation logic here
-    if (['gable', 'hip'].includes(inputs.roof_type) && inputs.roof_slope_deg > 45) {
+    if (['gable', 'hip'].includes(currentInputs.roof_type) && currentInputs.roof_slope_deg > 45) {
         errors.push("Gable/hip roof slope must be <= 45° for this calculator's implementation of ASCE 7 Fig 27.3-2.");
     }
-    const isImperial = inputs.unit_system === 'imperial';
-    const vRange = isImperial ? [85, 200] : [38, 90];
-    if (inputs.basic_wind_speed < vRange[0] || inputs.basic_wind_speed > vRange[1]) {
-        warnings.push(`Wind speed ${inputs.basic_wind_speed} ${isImperial ? 'mph' : 'm/s'} is outside the typical ASCE 7 range (${vRange[0]}-${vRange[1]}).`);
+    const isImperial = currentInputs.unit_system === 'imperial';
+    const vRange = isImperial ? [85, 200] : [38, 90]; // Typical ranges for mph and m/s
+    if (currentInputs.basic_wind_speed < vRange[0] || currentInputs.basic_wind_speed > vRange[1]) {
+        warnings.push(`Wind speed ${currentInputs.basic_wind_speed} ${isImperial ? 'mph' : 'm/s'} is outside the typical ASCE 7 range (${vRange[0]}-${vRange[1]}).`);
     }
 
     return { errors, warnings };
@@ -1677,11 +1623,9 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
     let gov_candc_pos = { value: null, zone: 'N/A' };
     let gov_candc_neg = { value: null, zone: 'N/A' };
 
-    // --- MWFRS Summary Logic ---
     if (directional_results) {
         const all_mwfrs_pressures = [];
         Object.values(directional_results).forEach(resultSet => {
-            if (!Array.isArray(resultSet)) return;
             resultSet.forEach(r => {
                 const val_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
                 const val_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
@@ -1689,15 +1633,11 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
                 if (isFinite(val_neg)) all_mwfrs_pressures.push({ value: val_neg, surface: r.surface });
             });
         });
-
-        // FIX: Use reduce on the collected array to safely find max/min.
         if (all_mwfrs_pressures.length > 0) {
             gov_mwfrs_pos = all_mwfrs_pressures.reduce((max, p) => p.value > max.value ? p : max, { value: -Infinity });
             gov_mwfrs_neg = all_mwfrs_pressures.reduce((min, p) => p.value < min.value ? p : min, { value: Infinity });
         }
     }
-
-    // --- C&C Summary Logic ---
     if (candc && candc.applicable && candc.pressures) {
         const all_candc_pressures = [];
         for (const zone in candc.pressures) {
@@ -1708,23 +1648,16 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
             if (isFinite(p_neg)) all_candc_pressures.push({ value: p_neg, zone });
         }
 
-        // FIX: Use reduce on the collected array to safely find max/min.
         if (all_candc_pressures.length > 0) {
             gov_candc_pos = all_candc_pressures.reduce((max, p) => p.value > max.value ? p : max, { value: -Infinity });
             gov_candc_neg = all_candc_pressures.reduce((min, p) => p.value < min.value ? p : min, { value: Infinity });
         }
     }
 
-    return `<div id="wind-summary-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header flex-grow">Governing Load Summary (${inputs.design_method})</h3>
-                    <button data-copy-target-id="wind-summary-section" class="copy-section-btn bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs print-hidden">Copy Summary</button>
-                </div>
-                <div class="copy-content grid grid-cols-1 md:grid-cols-2 gap-6 text-center mt-4">
+    return `<div class="copy-content grid grid-cols-1 md:grid-cols-2 gap-6 text-center mt-4">
                     <div><h4 class="font-semibold text-lg mb-2">MWFRS</h4><p>Max Pressure: <strong class="text-xl">${safeToFixed(gov_mwfrs_pos.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_mwfrs_pos.surface})</span></p><p>Max Suction: <strong class="text-xl">${safeToFixed(gov_mwfrs_neg.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_mwfrs_neg.surface})</span></p></div>
                     <div><h4 class="font-semibold text-lg mb-2">C&C</h4><p>Max Pressure: <strong class="text-xl">${safeToFixed(gov_candc_pos.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_candc_pos.zone})</span></p><p>Max Suction: <strong class="text-xl">${safeToFixed(gov_candc_neg.value, 2)} ${p_unit}</strong> <span class="text-xs">(${gov_candc_neg.zone})</span></p></div>
-                </div>
-             </div>`;
+    </div>`;
 }
 
 /**
@@ -1732,14 +1665,8 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) { // Th
  */
 function renderDesignParameters(inputs, intermediate, units) {
     const { v_unit, h_unit, p_unit } = units;
-    
-    let html = `<div id="design-parameters-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header">1. Design Parameters</h3>
-                    <button data-copy-target-id="design-parameters-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                </div> 
-                <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <div class="copy-content">
+    // Let the ReportBuilder handle the title and wrapper. This function now only returns the inner content.
+    let html = `
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>Risk Category:</strong> ${sanitizeHTML(inputs.risk_category)} <span class="ref">[ASCE 7, Table 1.5-1]</span></li>
                         <li><strong>Basic Design Wind Speed (V):</strong> ${safeToFixed(inputs.V_unreduced, 1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
@@ -1781,9 +1708,7 @@ function renderDesignParameters(inputs, intermediate, units) {
                         <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${safeToFixed(intermediate.Kz, 2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
                         <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${safeToFixed(inputs.GCpi_abs, 2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
                         ${inputs.temporary_construction === 'Yes' ? `<li><strong>Reduction Factor for Temporary Construction:</strong> 0.8 <span class="ref">[NYC BC, SEC. 1619.3.3]</span></li>` : ''}
-                    </ul>
-                </div>
-             </div>`;
+                    </ul>`;
     return html;
 }
 
@@ -1792,14 +1717,7 @@ function renderDesignParameters(inputs, intermediate, units) {
  */
 function renderCalculationBreakdown(results, units) {
     const { inputs, intermediate, open_sign_results, solid_sign_results, chimney_results, truss_tower_results } = results;
-    const { h_unit, p_unit } = units;
-
-    let breakdownContent = '';
-
-    if (open_sign_results) {
-        const { Cf, ref, pressure } = open_sign_results;
-        breakdownContent = `
-            <h4 class="font-semibold uppercase text-base">a) Open Sign Calculation (ASCE 7-16 Eq. 29.5-1)</h4>
+    const { h_unit, p_unit } = units;let breakdownContent = '';if (open_sign_results) {const { Cf, ref, pressure } = open_sign_results;breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2"> 
                 <li><strong>Velocity Pressure (q<sub>z</sub>):</strong> ${safeToFixed(intermediate.qz, 2)} ${p_unit} (Calculated at height h=${inputs.mean_roof_height} ${h_unit})</li>
                 <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)}</li>
@@ -1809,10 +1727,7 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of the sign face (A<sub>s</sub>).</div>
                 </li>
             </ul>`;
-    } else if (solid_sign_results) {
-        const { CN, ref, pressure, Kz_sign, qz_sign } = solid_sign_results;
-        breakdownContent = `
-            <h4 class="font-semibold uppercase text-base">b) Solid Sign Calculation (ASCE 7-16 Eq. 29.3-1)</h4>
+    } else if (solid_sign_results) {const { CN, ref, pressure, Kz_sign, qz_sign } = solid_sign_results;breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2">
                 <li><strong>Height to Sign Centroid (z):</strong> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</li> 
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_sign, 3)}</li>
@@ -1823,10 +1738,7 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(CN, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
                 </li>
             </ul>`;
-    } else if (chimney_results) {
-        const { Cf, ref, pressure, Kz_struct, qz_struct } = chimney_results;
-        breakdownContent = `
-            <h4 class="font-semibold uppercase text-base">c) Chimney/Tank Calculation (ASCE 7-16 Eq. 29.4-1)</h4>
+    } else if (chimney_results) {const { Cf, ref, pressure, Kz_struct, qz_struct } = chimney_results;breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2">
                 <li><strong>Height to Top of Structure (h):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li> 
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at h:</strong> ${safeToFixed(Kz_struct, 3)}</li>
@@ -1837,10 +1749,7 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
                 </li>
             </ul>`;
-    } else if (truss_tower_results) {
-        const { Cf, ref, pressure, Kz_tower, qz_tower } = truss_tower_results;
-        breakdownContent = `
-            <h4 class="font-semibold uppercase text-base">d) Trussed Tower Calculation (ASCE 7-16 Eq. 29.6-1)</h4>
+    } else if (truss_tower_results) {const { Cf, ref, pressure, Kz_tower, qz_tower } = truss_tower_results;breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2">
                 <li><strong>Height to Tower Centroid (z):</strong> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</li> 
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_tower, 3)}</li>
@@ -1852,15 +1761,13 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of one face (A<sub>f</sub>).</div>
                 </li>
             </ul>`;
-    } else {
-        // Default breakdown for buildings
-        breakdownContent = `
-            <h4 class="font-semibold uppercase text-base">a) Intermediate Calculations</h4>
+    } else {// Default breakdown for buildings
+    breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2"> 
                 <li><strong>Factors:</strong> I<sub>w</sub> = ${safeToFixed(intermediate.Iw, 2)}, K<sub>d</sub> = ${safeToFixed(intermediate.Kd, 2)}, K<sub>zt</sub> = ${safeToFixed(inputs.topographic_factor_Kzt, 2)}, G = ${safeToFixed(intermediate.G, 3)}, GC<sub>pi</sub> = &plusmn;${safeToFixed(inputs.GCpi_abs, 2)}</li>
-                <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${safeToFixed(intermediate.zg, 0)} ${h_unit}</li>
+                <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${safeToFixed(intermediate.zg, 0)} ${h_unit} <span class="ref">[${intermediate.Kz_ref}]</span></li>
                 <li><strong>Elevation Factor (K<sub>e</sub>):</strong>
-                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">Interpolated from ${intermediate.ke_ref} &rarr; K<sub>e</sub> = ${safeToFixed(intermediate.Ke, 3)}</div>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">Interpolated from ${intermediate.ke_ref.replace(/: \d+ (ft|m)/, `: ${safeToFixed(inputs.ground_elevation, 0)} ${units.h_unit}`)} &rarr; K<sub>e</sub> = ${safeToFixed(intermediate.Ke, 3)}</div>
                 </li>
                 <li><strong>Exposure Coefficient (K<sub>z</sub>):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${safeToFixed(inputs.mean_roof_height, 2)} / ${safeToFixed(intermediate.zg, 0)})<sup>(2 / ${intermediate.alpha})</sup> = ${safeToFixed(intermediate.Kz, 3)}</div>
@@ -1869,17 +1776,7 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">q<sub>h</sub> = 0.00256 &times; K<sub>z</sub> &times; K<sub>zt</sub> &times; K<sub>d</sub> &times; K<sub>e</sub> &times; V² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; I<sub>w</sub>` : ''} = ${safeToFixed(intermediate.qz, 2)} ${p_unit}</div>
                 </li>
             </ul>`;
-    }
-
-    let html = `<div id="calc-breakdown-section" class="mt-6 report-section-copyable">
-                <div class="flex justify-between items-center">
-                    <h3 class="report-header">2. Detailed Calculation Breakdown</h3>
-                    <button data-copy-target-id="calc-breakdown-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                </div>
-                <hr class="border-gray-400 dark:border-gray-600 mt-1 mb-3">
-                <div class="copy-content"><div class="calc-breakdown">${breakdownContent}</div></div>
-            </div>`;
-    return html;
+    }return `<div class="calc-breakdown">${breakdownContent}</div>`;
 }
 
 /**
@@ -2010,13 +1907,8 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
  */
 function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units) {
     const { h_unit } = units;
-    let html = `<div id="mwfrs-section" class="mt-6 report-section-copyable">
-        <div class="flex justify-between items-center">
-            <h3 class="report-header flex-grow">3. MWFRS DESIGN PRESSURES (${mwfrs_method})</h3>
-            <button data-copy-target-id="mwfrs-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-        </div>
-        <div class="copy-content">
-            <h4 class="text-lg font-semibold mt-6 mb-2 text-center">Wind Perpendicular to ${inputs.building_length_L} ${h_unit} Side (on ${inputs.building_width_B} ${h_unit} face)</h4>
+    // Let the ReportBuilder handle the title and wrapper. This function now only returns the inner content.
+    let html = `
             <div class="diagram my-4">
                 <div class="max-w-sm mx-auto">
                     <svg viewBox="0 0 400 250" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
@@ -2049,8 +1941,7 @@ function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_met
                 </div>
             </div>
             ${renderDirectionalResultsTable(directional_results.perp_to_B, `--- ${inputs.design_method} Pressures ---`, 'B', inputs, intermediate, units)}
-        </div>
-        </div>`;
+        `;
     return html;
 }
 
@@ -2061,13 +1952,7 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
     const { h_unit, p_unit } = units;
     if (!heightVaryingResults) return '';
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
-
-    let html = `<div id="height-varying-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">4. Height-Varying Windward Wall Pressures</h3>
-                        <button data-copy-target-id="height-varying-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                    </div>
-                    <div class="copy-content">
+    let html = `<div class="copy-content">
                     <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Leeward wall pressure is constant and based on q<sub>h</sub>.</p>
                     <table class="w-full mt-4 border-collapse">
                         <thead class="bg-gray-100 dark:bg-gray-700">
@@ -2092,8 +1977,7 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
                         <td colspan="3" class="text-right font-semibold pr-4">Constant Leeward Pressure (Perp. to L):</td>
                         <td>${safeToFixed(leeward_pressure * factor, 2)}</td>
                     </tr>
-                    </tbody></table></div>
-                </div>`;
+                    </tbody></table></div>`;
     return html;
 }
 
@@ -2166,6 +2050,51 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
 }
 
 /**
+ * Renders the height-varying pressure chart on a given canvas.
+ * @param {string} canvasId - The ID of the canvas element.
+ * @param {Array<object>} pressureData - The array of pressure data points.
+ * @param {string} design_method - The design method ('ASD' or 'LRFD').
+ * @param {object} units - The units object.
+ */
+function renderHeightVaryingChart(canvasId, pressureData, design_method, units) {
+    const factor = design_method === 'ASD' ? 0.6 : 1.0;
+    const labels = pressureData.map(p => safeToFixed(p.height, 1));
+    const data = pressureData.map(p => safeToFixed(p.p_pos * factor, 2));
+
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || typeof Chart === 'undefined') {
+        console.warn('Chart.js not available or canvas not found for height-varying chart.');
+        if (ctx) ctx.parentElement.innerHTML = `<div class="text-center text-red-500">Chart.js library not loaded.</div>`;
+        return;
+    }
+
+    try {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Windward Pressure (${units.p_unit})`,
+                    data: data,
+                    borderColor: '#ef4444', // red-500
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: `Height (${units.h_unit})` } },
+                    y: { title: { display: true, text: `Pressure (${units.p_unit})` }, beginAtZero: true }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Height-varying chart initialization failed:', error);
+    }
+}
+/**
  * Renders the Torsional Load Case section.
  */
 function renderTorsionalCase(torsional_case, inputs, units) {
@@ -2174,7 +2103,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
     const m_unit = is_imp ? 'lb-ft' : 'kN-m';
     const is_high_rise = (inputs.unit_system === 'imperial' && inputs.mean_roof_height > 60);
 
-    let contentHtml = '';
+    let contentHtml;
     if (is_high_rise) {
         contentHtml = `<table class="w-full mt-4 border-collapse">
                         <thead class="bg-gray-100 dark:bg-gray-700"><tr><th>Case</th><th>Torsional Moment (M<sub>t</sub>)</th></tr></thead>
@@ -2215,13 +2144,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
                         </div>`;
     }
 
-    return `<div id="torsional-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">5. Torsional Load Cases (ASCE 7-16 Fig. 27.3-8)</h3>
-                        <button data-copy-target-id="torsional-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                    </div>
-                    <div class="copy-content">${contentHtml}</div>
-                </div>`;
+    return `<div class="copy-content">${contentHtml}</div>`;
 }
 
 /**
@@ -2230,13 +2153,8 @@ function renderTorsionalCase(torsional_case, inputs, units) {
 function renderParapetSection(parapet_results, inputs, units) {
     if (!parapet_results || !parapet_results.applicable) return '';
     const { p_unit } = units;
-
-    let html = `<div id="parapet-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">7. Parapet Wind Loads</h3>
-                        <button data-copy-target-id="parapet-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                    </div>
-                    <div class="copy-content">
+    
+    let html = `<div class="copy-content">
                         <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Pressures are based on ${parapet_results.ref} and are applied to the vertical projection of the parapet.</p>
                         <table class="w-full mt-4 border-collapse">
                             <thead class="bg-gray-100 dark:bg-gray-700">
@@ -2251,7 +2169,7 @@ function renderParapetSection(parapet_results, inputs, units) {
         const pressure = inputs.design_method === 'ASD' ? data.pressure * 0.6 : data.pressure;
         html += `<tr><td>${face}</td><td>${safeToFixed(pressure, 2)}</td><td>${data.ref}</td></tr>`;
     }
-    html += `</tbody></table></div></div>`;
+    html += `</tbody></table></div>`;
     return html;
 }
 /**
@@ -2260,13 +2178,8 @@ function renderParapetSection(parapet_results, inputs, units) {
 function renderOverhangSection(overhang_results, inputs, units) {
     if (!overhang_results || !overhang_results.applicable) return '';
     const { p_unit } = units;
-
-    let html = `<div id="overhang-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">8. Roof Overhang Wind Loads</h3>
-                        <button data-copy-target-id="overhang-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                    </div>
-                    <div class="copy-content">
+    
+    let html = `<div class="copy-content">
                         <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Pressures are based on ${overhang_results.ref}. This is the net pressure on the overhang element.</p>
                         <table class="w-full mt-4 border-collapse">
                             <thead class="bg-gray-100 dark:bg-gray-700">
@@ -2280,7 +2193,7 @@ function renderOverhangSection(overhang_results, inputs, units) {
         const pressure = inputs.design_method === 'ASD' ? data.pressure * 0.6 : data.pressure;
         html += `<tr><td>${location}</td><td>${safeToFixed(pressure, 2)}</td></tr>`;
     }
-    html += `</tbody></table></div></div>`;
+    html += `</tbody></table></div>`;
     return html;
 }
 
@@ -2290,13 +2203,8 @@ function renderOverhangSection(overhang_results, inputs, units) {
 function renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, units) {
     if (!rooftop_results || !rooftop_results.applicable) return '';
     const { p_unit } = units;
-
-    let html = `<div id="rooftop-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">9. Rooftop Equipment Wind Loads</h3>
-                        <button data-copy-target-id="rooftop-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                    </div>
-                    <div class="copy-content">
+    
+    let html = `<div class="copy-content">
                         <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Pressures for ${rooftop_results.type} based on ${rooftop_results.ref}.</p>
                         <table class="w-full mt-4 border-collapse">
                             <thead class="bg-gray-100 dark:bg-gray-700">
@@ -2319,7 +2227,7 @@ function renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, un
                     <p><b>Calculation:</b> ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(GCr, 2)} = ${safeToFixed(intermediate.qz * GCr, 2)} ${p_unit}</p>
                  </div></td></tr>`;
     });
-    html += `</tbody></table></div></div>`;
+    html += `</tbody></table></div>`;
     return html;
 }
 
@@ -2329,12 +2237,7 @@ function renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, un
 function renderCandCSection(candc, inputs, intermediate, units) {
     if (!candc || !candc.applicable) return '';
     const { is_imp, p_unit } = units;
-    let html = `<div id="candc-section" class="mt-6 report-section-copyable">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="report-header flex-grow">6. Components & Cladding (C&C) Pressures</h3>
-                        <button data-copy-target-id="candc-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
-                    </div>
-                    <div class="copy-content">
+    let html = `<div class="copy-content">
                     <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">
                         Calculated for Effective Wind Area A = ${sanitizeHTML(inputs.effective_wind_area)} ${is_imp ? 'ft²' : 'm²'}. Reference: ${sanitizeHTML(candc.ref)}.
                     </p>
@@ -2396,7 +2299,7 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                          </div></td></tr>`;
             });
         }
-        html += `</tbody></table></div></div>`;
+        html += `</tbody></table></div>`;
     return html;
 }
 
@@ -2465,49 +2368,43 @@ document.addEventListener('click', async (event) => {
  * Main rendering orchestrator function.
  */
 function renderWindResults(results) {
-     if (!results || (!results.directional_results && !results.open_sign_results && !results.solid_sign_results && !results.chimney_results && !results.truss_tower_results)) {
-        // If there are no results to show, clear the container and exit.
-        const resultsContainer = document.getElementById('results-container');
-        if (resultsContainer) resultsContainer.innerHTML = '';
+    if (!results || (!results.directional_results && !results.open_sign_results && !results.solid_sign_results && !results.chimney_results && !results.truss_tower_results)) {
+        document.getElementById('results-container').innerHTML = '';
         return;
-     }
-     lastWindRunResults = results; // Cache the results
+    }
+    lastWindRunResults = results;
 
-     const resultsContainer = document.getElementById('results-container');
     const {
         inputs, intermediate, directional_results, jurisdiction_note, temporary_structure_note, warnings, torsional_case, open_building_ref, candc, mwfrs_method, heightVaryingResults_L, parapet_results, overhang_results, rooftop_results,
         open_sign_results, is_open_sign, solid_sign_results, is_solid_sign, chimney_results, is_chimney, truss_tower_results, is_truss_tower, arched_roof_results, is_arched_roof
     } = results;
+    
     const is_imp = inputs.unit_system === 'imperial';
     const [v_unit, h_unit, p_unit] = is_imp ? ['mph', 'ft', 'psf'] : ['m/s', 'm', 'Pa'];
     const units = { is_imp, v_unit, h_unit, p_unit };
-    
-    let html = `<div id="wind-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">`;
-    html += `<div class="flex justify-end gap-2 mb-4 -mt-2 -mr-2 print-hidden">
-                    <button id="send-to-combos-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm print-hidden">Send to Combos</button>
-                    <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
-                    <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm print-hidden">Download PDF</button>
-                    <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm print-hidden">Copy Report</button>
-                   </div>`;
 
-    html += `<div class="text-center border-b pb-4">
-                    <h2 class="text-2xl font-bold">WIND LOAD REPORT (${inputs.effective_standard})</h2>
-                </div>`;
+    const report = new ReportBuilder({
+        reportId: 'wind-report-content',
+        title: `WIND LOAD REPORT (${inputs.effective_standard})`,
+        actionButtons: [
+            { id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-purple-600 hover:bg-purple-700' }
+        ]
+    });
 
-    if (jurisdiction_note) html += `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md"><p><strong>Jurisdiction Note:</strong> ${jurisdiction_note}</p></div>`;
-    if (temporary_structure_note) html += `<div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-md"><p><strong>Project-Specific Allowance:</strong> ${temporary_structure_note}</p></div>`;
+    if (jurisdiction_note) report.addSection(null, `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md"><p><strong>Jurisdiction Note:</strong> ${jurisdiction_note}</p></div>`);
+    if (temporary_structure_note) report.addSection(null, `<div class="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300 p-4 rounded-md"><p><strong>Project-Specific Allowance:</strong> ${temporary_structure_note}</p></div>`);
     if (warnings && warnings.length > 0) {
-        html += renderValidationResults({ warnings, errors: [] });
+        report.addSection('Warnings', renderValidationResults({ warnings, errors: [] }));
     }
+
+    report.addSection('Design Parameters', renderDesignParameters(results.inputs, results.intermediate, units), 'design-parameters-section');
+    report.addSection('Detailed Calculation Breakdown', renderCalculationBreakdown(results, units), 'calc-breakdown-section');
 
     // --- Special rendering path for Arched Roofs ---
     if (is_arched_roof) {
         const { cnMap, ref, pressures } = arched_roof_results;
-        html += renderDesignParameters(results.inputs, results.intermediate, units);
-        html += renderCalculationBreakdown(results, units);
-        html += `<div id="arched-roof-section" class="mt-6 report-section-copyable">
-                    <h3 class="report-header">3. Arched Roof Net Pressures</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
+    let archedRoofHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
                     <table class="w-full mt-4 border-collapse">
                         <thead class="bg-gray-100 dark:bg-gray-700">
                             <tr>
@@ -2519,15 +2416,14 @@ function renderWindResults(results) {
                         <tbody class="dark:text-gray-300 text-center">`;
         for (const [zone, data] of Object.entries(pressures)) {
             const final_pressure = inputs.design_method === 'ASD' ? data.pressure_asd : data.pressure;
-            html += `<tr>
+            archedRoofHtml += `<tr>
                         <td>${zone}</td>
                         <td>${safeToFixed(data.CN, 3)}</td>
                         <td>${safeToFixed(final_pressure, 2)}</td>
                      </tr>`;
         }
-        html += `</tbody></table></div>`;
-        html += `</div>`; // Close main container
-        resultsContainer.innerHTML = html;
+        report.addSection('Arched Roof Net Pressures', archedRoofHtml, 'arched-roof-section');
+        report.render('results-container');
         return;
     }
 
@@ -2535,11 +2431,9 @@ function renderWindResults(results) {
     if (is_truss_tower) {
         const { Cf, ref, pressure, pressure_asd, Kz_tower, qz_tower } = truss_tower_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        html += renderDesignParameters(results.inputs, results.intermediate, units);
         // Custom breakdown for trussed towers
-        html += `<div id="truss-tower-breakdown" class="mt-6 report-section-copyable">
-                    <h3 class="report-header">2. Trussed Tower Calculation Breakdown</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the tower's centroid height (h/2).</p>
+    const trussHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the tower's centroid height (h/2).</p>
                     <div class="calc-breakdown">
                         <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_tower, 3)}</p>
@@ -2549,9 +2443,9 @@ function renderWindResults(results) {
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the solid area of one face (A<sub>f</sub> = ε &times; w &times; h).</p>
                     </div>
-                 </div>`;
-        html += `</div>`; // Close main container
-        resultsContainer.innerHTML = html;
+                 `;
+        report.addSection('Trussed Tower Calculation Breakdown', trussHtml, 'truss-tower-breakdown');
+        report.render('results-container');
         return;
     }
 
@@ -2559,11 +2453,9 @@ function renderWindResults(results) {
     if (is_chimney) {
         const { Cf, ref, pressure, pressure_asd, h_struct, Kz_struct, qz_struct } = chimney_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        html += renderDesignParameters(results.inputs, results.intermediate, units);
         // Custom breakdown for chimneys/tanks
-        html += `<div id="chimney-breakdown" class="mt-6 report-section-copyable">
-                    <h3 class="report-header">2. Chimney/Tank Calculation Breakdown</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
+    const chimneyHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
                     <div class="calc-breakdown">
                         <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at h:</b> ${safeToFixed(Kz_struct, 3)}</p>
@@ -2573,9 +2465,9 @@ function renderWindResults(results) {
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the projected area normal to the wind (A = D &times; h).</p>
                     </div>
-                 </div>`;
-        html += `</div>`; // Close main container
-        resultsContainer.innerHTML = html;
+                 `;
+        report.addSection('Chimney/Tank Calculation Breakdown', chimneyHtml, 'chimney-breakdown');
+        report.render('results-container');
         return;
     }
 
@@ -2583,11 +2475,9 @@ function renderWindResults(results) {
     if (is_solid_sign) {
         const { CN, ref, pressure, pressure_asd, h_sign, Kz_sign, qz_sign } = solid_sign_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        html += renderDesignParameters(results.inputs, results.intermediate, units);
         // Custom breakdown for solid signs
-        html += `<div id="solid-sign-breakdown" class="mt-6 report-section-copyable">
-                    <h3 class="report-header">2. Solid Sign Calculation Breakdown</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the sign's centroid height.</p>
+    const solidSignHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the sign's centroid height.</p>
                     <div class="calc-breakdown">
                         <p><b>Height to Sign Centroid (z):</b> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_sign, 3)}</p>
@@ -2596,103 +2486,73 @@ function renderWindResults(results) {
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(CN, 3)}</p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                     </div>
-                 </div>`;
-        html += `</div>`; // Close main container
-        resultsContainer.innerHTML = html;
+                 `;
+        report.addSection('Solid Sign Calculation Breakdown', solidSignHtml, 'solid-sign-breakdown');
+        report.render('results-container');
         return;
     }
     // --- Special rendering path for Open Signs ---
     if (is_open_sign) {
         const { Cf, ref, pressure, pressure_asd } = open_sign_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        html += renderDesignParameters(results.inputs, results.intermediate, units);
-        html += renderCalculationBreakdown(results, units);
-        html += `<div id="open-sign-section" class="mt-6 report-section-copyable">
-                    <h3 class="report-header">3. Open Sign Force Calculation</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">The design wind pressure below should be multiplied by the solid area of the sign (A<sub>s</sub>) to get the total design force (F).</p>
+    const openSignHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">The design wind pressure below should be multiplied by the solid area of the sign (A<sub>s</sub>) to get the total design force (F).</p>
                     <div class="calc-breakdown">
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub></p>
                         <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.solidity_ratio})</p>
                         <p><b>Design Wind Pressure (p):</b> ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                     </div>
-                 </div>`;
-        html += `</div>`; // Close main container
-        resultsContainer.innerHTML = html;
+                 `;
+        report.addSection('Open Sign Force Calculation', openSignHtml, 'open-sign-section');
+        report.render('results-container');
         return; // End rendering for open signs
     }
 
-    // --- Special rendering path for Envelope Procedure ---
-    if (results.envelope_results && results.envelope_results.applicable) {
-        html += renderDesignParameters(results.inputs, results.intermediate, units);
-        html += renderCalculationBreakdown(results, units);
-        const { pressures, ref } = results.envelope_results;
-        html += `<div id="envelope-section" class="mt-6 report-section-copyable">
-                    <h3 class="report-header">3. MWFRS Pressures (Envelope Procedure)</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}. Pressures are net pressures, p = qh * (GCpf - GCpi).</p>
-                    <table class="w-full mt-4 border-collapse">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
-                            <tr>
-                                <th>Zone</th>
-                                <th>(GCpf)</th>
-                                <th>Net Pressure (${inputs.design_method}) [${p_unit}]</th>
-                                <th>Net Uplift (${inputs.design_method}) [${p_unit}]</th>
-                            </tr>
-                        </thead>
-                        <tbody class="dark:text-gray-300 text-center">`;
-        for (const [zone, data] of Object.entries(pressures)) {
-            if (zone.includes('Uplift')) continue; // Skip uplift-only entries, they are combined
-            const uplift_data = pressures[`${zone} (Uplift)`] || {};
-            const p_net_final = inputs.design_method === 'ASD' ? data.p_net * 0.6 : data.p_net;
-            const p_net_uplift_final = inputs.design_method === 'ASD' ? uplift_data.p_net_uplift * 0.6 : uplift_data.p_net_uplift;
-            html += `<tr>
-                        <td>${zone}</td>
-                        <td>${safeToFixed(data.gcpf, 2)} / ${safeToFixed(uplift_data.gcpf, 2)}</td>
-                        <td>${safeToFixed(p_net_final, 2)}</td>
-                        <td>${safeToFixed(p_net_uplift_final, 2)}</td>
-                     </tr>`;
-        }
-        html += `</tbody></table></div>`;
-        html += `</div>`; // Close main container
-        resultsContainer.innerHTML = html;
-        return;
-    }
-
     // --- Assemble Report Sections for Buildings ---
-    html += renderDesignParameters(results.inputs, results.intermediate, units);
-    html += renderCalculationBreakdown(results, units);
-
-    // --- Handle Open Buildings as a special case ---
-    // Handle both low-rise (open_roof) and high-rise (rooftop_structure) open buildings
-    const openBuildingData = directional_results.open_roof 
-        ? directional_results.open_roof 
-        : (directional_results.rooftop_structure ? directional_results : null);
-    const openBuildingHtml = openBuildingData 
-        ? renderOpenBuildingResults(openBuildingData, open_building_ref, inputs, units) 
-        : '<p class="text-center text-red-500">Could not calculate open building pressures for the given roof type.</p>';
-    if (inputs.enclosure_classification === 'Open') {
-        html += `<div id="mwfrs-section" class="report-section-copyable">${openBuildingHtml}</div>`;
+    if (results.envelope_results && results.envelope_results.applicable) {
+        // For Envelope Procedure, we call the same render function but pass the envelope_results
+        report.addSection(`MWFRS Pressures (${mwfrs_method})`, renderMwfrsSection(results.envelope_results, inputs, intermediate, mwfrs_method, units), 'mwfrs-section');
+        // C&C is still relevant for Envelope procedure
+        report.addSection('Components & Cladding (C&C) Pressures', renderCandCSection(candc, inputs, intermediate, units), 'candc-section');
+    } else if (inputs.enclosure_classification === 'Open') {
+        // --- Handle Open Buildings as a special case ---
+        const openBuildingData = directional_results.open_roof || (directional_results.rooftop_structure ? directional_results : null);
+        const openBuildingHtml = openBuildingData ? renderOpenBuildingResults(openBuildingData, open_building_ref, inputs, units) : '<p class="text-center text-red-500">Could not calculate open building pressures for the given roof type.</p>';
+        report.addSection('MWFRS Design Pressures', openBuildingHtml, 'mwfrs-section');
     } else {
         // --- Standard Enclosed/Partially Enclosed Building Sections ---
         if (directional_results.perp_to_L && directional_results.perp_to_B) {
-            html += renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units);
-            const leeward_pressure_L = directional_results.perp_to_L.find(r => r.surface.includes("Leeward"))?.p_pos || 0;
-            html += renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure_L, inputs, units);
+            report.addSection(`MWFRS DESIGN PRESSURES (${mwfrs_method})`, renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units), 'mwfrs-section');
+            if (heightVaryingResults_L && heightVaryingResults_L.length > 0) {
+                const leeward_pressure_L = directional_results.perp_to_L.find(r => r.surface.includes("Leeward"))?.p_pos || 0;
+                report.addSection('Height-Varying Windward Wall Pressures', renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure_L, inputs, units), 'height-varying-section');
+                report.addChartSection('Windward Pressure vs. Height', 'height-varying-chart', 'height-varying-chart-section', { height: '300px' });
+            }
         }
-        html += renderTorsionalCase(torsional_case, inputs, units);
-        html += renderCandCSection(candc, inputs, intermediate, units);
-        html += renderParapetSection(parapet_results, inputs, units);
-        html += renderOverhangSection(overhang_results, inputs, units);
-        html += renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, units);
+        report.addSection('Torsional Load Cases', renderTorsionalCase(torsional_case, inputs, units), 'torsional-section');
+        report.addSection('Components & Cladding (C&C) Pressures', renderCandCSection(candc, inputs, intermediate, units), 'candc-section');
+        if (parapet_results && parapet_results.applicable) {
+            report.addSection('Parapet Wind Loads', renderParapetSection(parapet_results, inputs, units), 'parapet-section');
+        }
+        if (overhang_results && overhang_results.applicable) {
+            report.addSection('Roof Overhang Wind Loads', renderOverhangSection(overhang_results, inputs, units), 'overhang-section');
+        }
+        if (rooftop_results && rooftop_results.applicable) {
+            report.addSection('Rooftop Equipment Wind Loads', renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, units), 'rooftop-section');
+        }
     }
 
-    html += generateWindSummary(inputs, directional_results, candc, p_unit);
-    html += `</div>`; // Close main container
-    resultsContainer.innerHTML = html;
+    report.addSection('Governing Load Summary', generateWindSummary(inputs, directional_results, candc, p_unit), 'wind-summary-section');
+    report.render('results-container');
 
     // Render charts after the canvas elements are in the DOM
-    const { roofPressureDist_L, roofPressureDist_B } = results;
+    const { roofPressureDist_L, roofPressureDist_B, heightVaryingResults_L: heightVaryingData } = results;
     if (roofPressureDist_L && roofPressureDist_B && !results.heightVaryingResults_L) { // Only for low-rise
         renderRoofPressureChart('roofChartL', roofPressureDist_L, inputs.building_length_L, inputs.design_method, units);
         renderRoofPressureChart('roofChartB', roofPressureDist_B, inputs.building_width_B, inputs.design_method, units);
+    }
+    // Render the new height-varying chart
+    if (heightVaryingData && heightVaryingData.length > 0) {
+        renderHeightVaryingChart('height-varying-chart', heightVaryingData, inputs.design_method, units);
     }
 }

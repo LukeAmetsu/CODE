@@ -10,14 +10,14 @@
  */
 const validationRules = {
     wind: {
-        'mean_roof_height': { min: 0.001, max: 2000, required: true, label: 'Mean Roof Height' },
-        'basic_wind_speed': { min: 0.001, max: 300, required: true, label: 'Basic Wind Speed' },
-        'building_length_L': { min: 0.001, required: true, label: 'Building Length (L)' },
-        'building_width_B': { min: 0.001, required: true, label: 'Building Width (B)' },
+        'mean_roof_height': { min: 1, max: 2000, required: true, label: 'Mean Roof Height' },
+        'basic_wind_speed': { min: 70, max: 300, required: true, label: 'Basic Wind Speed' },
+        'building_length_L': { min: 1, required: true, label: 'Building Length (L)' },
+        'building_width_B': { min: 1, required: true, label: 'Building Width (B)' },
         'roof_slope_deg': { min: 0, max: 90, required: false, label: 'Roof Slope' }
     },
     snow: {
-        'snow_ground_snow_load': { min: 0.001, max: 300, required: true, label: 'Ground Snow Load (pg)' }
+        'snow_ground_snow_load': { min: 0, max: 300, required: true, label: 'Ground Snow Load (pg)' }
     },
     rain: {
         'rain_tributary_area': { min: 0.001, required: true, label: 'Tributary Area' },
@@ -25,7 +25,7 @@ const validationRules = {
         'rain_static_head': { min: 0, required: true, label: 'Static Head (ds)' }
     },
     combo: {
-        'combo_dead_load_d': { min: 0.001, required: true, label: 'Dead Load (D)' },
+        'combo_dead_load_d': { min: 0, required: true, label: 'Dead Load (D)' },
         'combo_live_load_l': { required: false, label: 'Live Load (L)' },
         'combo_roof_live_load_lr': { required: false, label: 'Roof Live Load (Lr)' },
         'combo_rain_load_r': { required: false, label: 'Rain Load (R)' },
@@ -34,15 +34,33 @@ const validationRules = {
         'combo_seismic_load_e': { required: false, label: 'Seismic Load (E)' }
     },
     baseplate: {
-        'base_plate_length_N': { min: 0.001, required: true, label: 'Plate Length (N)' },
-        'base_plate_width_B': { min: 0.001, required: true, label: 'Plate Width (B)' },
-        'provided_plate_thickness_tp': { min: 0.001, required: true, label: 'Plate Thickness' },
-        'column_depth_d': { min: 0.001, required: true, label: 'Column Depth' },
-        'column_flange_width_bf': { min: 0.001, required: true, label: 'Column Flange Width' },
-        'base_plate_Fy': { min: 0.001, required: true, label: 'Plate Fy' },
-        'concrete_fc': { min: 0.001, required: true, label: 'Concrete f\'c' },
-        'anchor_bolt_diameter': { min: 0.001, required: true, label: 'Bolt Diameter' },
-        'anchor_embedment_hef': { min: 0.001, required: true, label: 'Bolt Embedment (hef)' },
+        'base_plate_length_N': { min: 1, required: true, label: 'Plate Length (N)' },
+        'base_plate_width_B': { min: 1, required: true, label: 'Plate Width (B)' },
+        'provided_plate_thickness_tp': { min: 0.125, required: true, label: 'Plate Thickness' },
+        'column_flange_width_bf': { min: 1, required: false, label: 'Column Flange Width' },
+        'column_depth_d': { min: 1, required: true, label: 'Column Depth/Diameter' },
+        'base_plate_Fy': { min: 1, required: true, label: 'Plate Fy' },
+        'concrete_fc': { min: 1, required: true, label: 'Concrete f\'c' },
+        'anchor_bolt_diameter': { min: 0.25, required: true, label: 'Bolt Diameter' },
+        'anchor_embedment_hef': { min: 1, required: true, label: 'Bolt Embedment (hef)' },
+        crossField: [
+            {
+                condition: (inputs) => inputs.column_depth_d < inputs.base_plate_length_N,
+                message: "Column Depth/Diameter (d) must be less than the Plate Length (N)."
+            },
+            {
+                condition: (inputs) => !inputs.column_flange_width_bf || inputs.column_flange_width_bf < inputs.base_plate_width_B,
+                message: "Column Flange Width (bf) must be less than the Plate Width (B)."
+            },
+            {
+                condition: (inputs) => {
+                    if (!inputs.column_flange_width_bf) return true; // Not applicable for HSS
+                    return (inputs.base_plate_width_B - inputs.column_flange_width_bf) / 2.0 >= 1.0;
+                },
+                message: "Plate edge distance to column flange is less than 1 inch. This may be insufficient for welding or erection tolerance.",
+                level: 'warning'
+            }
+        ]
     },
     wood: {
         'Fb_unadjusted': { min: 0.001, required: true, label: 'Fb' },
@@ -56,14 +74,51 @@ const validationRules = {
         'effective_length_factor_K': { min: 0.001, required: true, label: 'K Factor' },
     },
     steel_check: {
-        'Fy': { min: 0.1, max: 150, required: true, label: 'Yield Strength (Fy)' },
-        'Fu': { min: 0.1, max: 200, required: true, label: 'Ultimate Strength (Fu)' },
-        'E': { min: 20000, max: 35000, required: true, label: 'Modulus of Elasticity (E)' },
-        'd': { min: 0.001, required: true, label: 'Depth/Height' },
-        'bf': { min: 0.001, required: true, label: 'Width/Flange Width' },
-        'tf': { min: 0.001, required: true, label: 'Thickness/Flange Thickness' },
+        'Fy': { min: 1, max: 100, required: true, label: 'Yield Strength (Fy)' },
+        'Fu': { min: 1, max: 200, required: true, label: 'Ultimate Strength (Fu)' },
+        'E': { min: 28000, max: 31000, required: true, label: 'Modulus of Elasticity (E)' },
+        'd': { min: 0.1, required: true, label: 'Depth/Height' },
+        'bf': { min: 0.1, required: true, label: 'Width/Flange Width' },
+        'tf': { min: 0.1, required: true, label: 'Thickness/Flange Thickness' },
+        'tw': { min: 0.1, required: true, label: 'Web Thickness' },
+        'K': { min: 0.1, required: true, label: 'Effective length factor (K)' },
         'Lb_input': { min: 0, required: true, label: 'Unbraced Length (Lb)' },
-        'actual_deflection_input': { min: 0, required: false, label: 'Actual Deflection' }
+        'actual_deflection_input': { min: 0, required: false, label: 'Actual Deflection' },
+        crossField: [
+            {
+                condition: (inputs) => inputs.Fu > inputs.Fy,
+                message: "Ultimate Strength (Fu) must be greater than Yield Strength (Fy)."
+            },
+            {
+                condition: (inputs) => {
+                    if (inputs.section_type !== 'I-Shape' && !inputs.section_type.endsWith('-Shape')) return true;
+                    return inputs.d >= 2 * inputs.tf;
+                },
+                message: "For I-shapes, Depth (d) must be at least twice the flange thickness (tf)."
+            },
+            {
+                condition: (inputs) => {
+                    if (inputs.section_type !== 'I-Shape' && !inputs.section_type.endsWith('-Shape')) return true;
+                    return inputs.bf >= inputs.tw;
+                },
+                message: "For I-shapes, Flange width (bf) must be greater than or equal to web thickness (tw)."
+            },
+            {
+                condition: (inputs) => inputs.Fy >= 36 && inputs.Fy <= 80,
+                message: "Unusual steel grade. Common structural steel has Fy between 36 and 80 ksi.",
+                level: 'warning'
+            },
+            {
+                condition: (inputs) => Math.abs(inputs.Pu_or_Pa) <= 10000,
+                message: "Very high axial load detected. Please verify that the units are in kips.",
+                level: 'warning'
+            },
+            {
+                condition: (inputs) => Math.abs(inputs.Mux_or_Max) <= 10000,
+                message: "Very high moment detected. Please verify that the units are in kip-ft.",
+                level: 'warning'
+            }
+        ]
     },
     splice: {
         'member_d': { min: 1, required: true, label: 'Member Depth' },
@@ -80,7 +135,7 @@ const validationRules = {
         'D_fp': { min: 0.1, required: true, label: 'Flange Bolt Diameter' },
         'D_wp': { min: 0.1, required: true, label: 'Web Bolt Diameter' },
     }
-    , nbr_concreto: {
+    ,nbr_concreto: {
         'fck': { min: 1, required: true, label: 'Resist. do Concreto (fck)' },
         'fyk': { min: 1, required: true, label: 'Resist. do Aço (fyk)' },
         'bw': { min: 0.01, required: true, label: 'Largura (bw)' },
@@ -125,18 +180,24 @@ const validationRules = {
         'Nsd': { required: true, label: 'Força Axial (Nsd)' },
         'Msdx': { required: true, label: 'Momento Fletor (Msdx)' }
     },
-    'prestressed-beam-inputs-v2': {
-        'fck': { min: 1, required: true, label: 'Concrete fck' },
-        'age_at_prestress': { min: 1, required: true, label: 'Age at Prestress' },
-        'Ap': { min: 0.1, required: true, label: 'Tendon Area (Ap)' },
-        'load_pp': { min: 0, required: true, label: 'Self-Weight' },
-        'load_perm': { min: 0, required: true, label: 'Permanent Load' },
-        'load_var': { min: 0, required: true, label: 'Variable Load' },
-        'beam_length': { min: 0.1, required: true, label: 'Beam Length' },
-        'beam_coords': { required: true, label: 'Cross-Section Vertices' },
-        'fptk': { min: 1000, required: true, label: 'fptk' },
-        'mu': { min: 0, required: true, label: 'Friction Coeff. (mu)' },
-        'k': { min: 0, required: true, label: 'Wobble Coeff. (k)' },
-        'anchorage_slip': { min: 0, required: true, label: 'Anchorage Slip' }
+    'prestressed-beam-inputs-v2': { // NBR 6118 Viga Protendida
+        'fck': { min: 20, max: 90, required: true, label: 'Resist. do Concreto (fck)' },
+        'age_at_prestress': { min: 1, max: 365, required: true, label: 'Idade na Protensão' },
+        'Ap': { min: 0.1, required: true, label: 'Área da Cordoalha (Ap)' },
+        'Kperdas': { min: 0.5, max: 1.0, required: true, label: 'Fator de Perdas (Kperdas)' },
+        'num_cables': { min: 1, required: true, label: 'Número de Cabos' },
+        'num_strands_per_cable': { min: 1, required: true, label: 'Cordoalhas por Cabo' },
+        'load_pp': { min: 0, required: true, label: 'Peso Próprio' },
+        'load_perm': { min: 0, required: true, label: 'Carga Permanente' },
+        'load_var': { min: 0, required: true, label: 'Carga Variável' },
+        'beam_length': { min: 1, required: true, label: 'Comprimento da Viga' },
+        'beam_coords': { required: true, label: 'Vértices da Seção' },
+        'Ep': { min: 150000, max: 250000, required: true, label: 'Módulo do Aço (Ep)' },
+        'humidity': { min: 20, max: 100, required: true, label: 'Umidade Ambiente' },
+        'fptk': { min: 1000, max: 2200, required: true, label: 'Resist. do Aço (fptk)' },
+        'mu': { min: 0, max: 1, required: true, label: 'Coef. de Atrito (μ)' },
+        'k': { min: 0, max: 0.1, required: true, label: 'Coef. de Ondulação (k)' },
+        'anchorage_slip': { min: 0, max: 20, required: true, label: 'Acomodação da Ancoragem' },
+        'exposed_perimeter': { min: 0.1, required: true, label: 'Perímetro Exposto' }
     }
 };

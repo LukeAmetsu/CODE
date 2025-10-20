@@ -101,7 +101,10 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
 .toggle-active { background-color: #3b82f6; color: #fff; }
 .toggle-inactive { background-color: transparent; color: #4b5563; }
 .dark .toggle-inactive { color: #d1d5db; }
-.details-row { display: none; }
+.details-row {
+    display: none;
+    background-color: #f9fafb; /* Light gray background for visibility */
+}
 .details-row.is-visible { display: table-row; }
 .toggle-details-btn {
     color: #3b82f6;
@@ -125,13 +128,25 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     border-radius: .5rem;
     padding: 1rem;
     margin-top: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1rem; /* This was a duplicate, removed for cleanliness */
 }
-.validation-message.error { background-color: #fef2f2; color: #991b1b; }
-.dark .validation-message.error { background-color: #7f1d1d4d; color: #fca5a5; }
-.validation-message.warning { background-color: #fffbeb; color: #92400e; }
-.dark .validation-message.warning { background-color: #78350f4d; color: #fcd34d; }
-.validation-message svg { color: currentColor; }
+.validation-message.error {
+    background-color: #fef2f2; /* red-50 */
+    color: #991b1b; /* red-900 */
+}
+.dark .validation-message.error {
+    background-color: rgba(127, 29, 29, 0.3); /* red-900 with opacity */
+    color: #fca5a5; /* red-400 */
+}
+.validation-message.warning {
+    background-color: #fffbeb; /* amber-50 */
+    color: #92400e; /* amber-900 */
+}
+.dark .validation-message.warning {
+    background-color: rgba(120, 53, 15, 0.3); /* amber-900 with opacity */
+    color: #fcd34d; /* amber-300 */
+}
+.validation-message svg { color: currentColor; } /* This applies the text color to the SVG icon */
 
 /* === DIAGRAMS & BREAKDOWNS === */
 .diagram {
