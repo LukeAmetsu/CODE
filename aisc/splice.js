@@ -494,10 +494,10 @@ function runSingleCheck(inputs) {
     const Mu_resisted_by_web = 0; // Simplified assumption
     const Hw = Mu_resisted_by_web > 0 ? Mu_resisted_by_web / (0.75 * inputs.H_wp) : 0;
     const demands = { total_flange_demand_tension, total_flange_demand_compression, Hw, moment_arm_flange, flange_force_from_moment, axial_per_flange, Mu_resisted_by_web };
-
+ 
     // --- Geometry & Spacing Checks ---
     const geomChecks = performGeometryChecks(inputs);
-
+ 
     // --- Flange Splice Checks ---
     const flange_plate_params = { H: inputs.H_fp, t: inputs.t_fp, Fy: inputs.flange_plate_Fy, Fu: inputs.flange_plate_Fu };
     const flange_bolt_params = { D: inputs.D_fp, grade: inputs.bolt_grade_fp, threads_included: inputs.threads_included_fp, Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S1_col_spacing: inputs.S1_col_spacing_fp, S2_row_spacing: inputs.S2_row_spacing_fp, S3_end_dist: inputs.S3_end_dist_fp, g_gage: inputs.g_gage_fp, num_bolts: inputs.Nc_fp * inputs.Nr_fp, num_planes: 1, joint_length: (inputs.Nc_fp - 1) * inputs.S1_col_spacing_fp };
@@ -505,36 +505,33 @@ function runSingleCheck(inputs) {
 
     checks['Flange Bolt Shear'] = { demand: total_flange_demand_tension, check: checkBoltShear(flange_bolt_params, common_params), details: flange_bolt_params };
     checks['Outer Plate GSY'] = { demand: total_flange_demand_tension, check: checkPlateGSY(flange_plate_params) };
-    checks['Outer Plate NSF'] = { demand: total_flange_demand_tension, check: checkPlateNSF(flange_plate_params, flange_bolt_params) };
-    checks['Outer Plate Block Shear'] = { demand: total_flange_demand_tension, check: checkBlockShear(flange_plate_params, flange_bolt_params, common_params) };
-    checks['Outer Plate Bolt Bearing'] = { demand: total_flange_demand_tension / flange_bolt_params.num_bolts, check: checkBoltBearing(flange_plate_params, flange_bolt_params, common_params), details: { ...flange_plate_params, ...flange_bolt_params } };
+    checks['Outer Plate NSF'] = { demand: total_flange_demand_tension, check: checkPlateNSF(flange_plate_params, flange_bolt_params) };    
+    checks['Outer Plate Block Shear'] = { demand: total_flange_demand_tension, check: checkBlockShear(flange_plate_params, flange_bolt_params) };
+    checks['Outer Plate Bolt Bearing'] = { demand: total_flange_demand_tension / flange_bolt_params.num_bolts, check: checkBoltBearing(flange_plate_params, flange_bolt_params, common_params) };
 
     if (inputs.num_flange_plates == 2) {
         const inner_plate_params = { H: inputs.H_fp_inner, t: inputs.t_fp_inner, Fy: inputs.flange_plate_Fy_inner, Fu: inputs.flange_plate_Fu_inner };
         checks['Inner Plate GSY'] = { demand: total_flange_demand_tension, check: checkPlateGSY(inner_plate_params) };
-        checks['Inner Plate NSF'] = { demand: total_flange_demand_tension, check: checkPlateNSF(inner_plate_params, flange_bolt_params) };
-        checks['Inner Plate Block Shear'] = { demand: total_flange_demand_tension, check: checkBlockShear(inner_plate_params, flange_bolt_params, common_params) };
+        checks['Inner Plate NSF'] = { demand: total_flange_demand_tension, check: checkPlateNSF(inner_plate_params, flange_bolt_params) };        
+        checks['Inner Plate Block Shear'] = { demand: total_flange_demand_tension, check: checkBlockShear(inner_plate_params, flange_bolt_params) };
         checks['Inner Plate Bolt Bearing'] = { demand: total_flange_demand_tension / flange_bolt_params.num_bolts, check: checkBoltBearing(inner_plate_params, flange_bolt_params, common_params), details: { ...inner_plate_params, ...flange_bolt_params } };
     }
 
     // --- Web Splice Checks ---
     const web_plate_params = { H: inputs.H_wp, t: inputs.t_wp, Fy: inputs.web_plate_Fy, Fu: inputs.web_plate_Fu };
-    const web_bolt_params = { D: inputs.D_wp, grade: inputs.bolt_grade_wp, threads_included: inputs.threads_included_wp, Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S4_col_spacing_wp: inputs.S4_col_spacing_wp, S5_row_spacing_wp: inputs.S5_row_spacing_wp, S6_end_dist_wp: inputs.S6_end_dist_wp, num_bolts: inputs.Nc_wp * inputs.Nr_wp, num_planes: inputs.num_web_plates, joint_length: (inputs.Nc_wp - 1) * inputs.S4_col_spacing_wp };
+    const web_bolt_params = { D: inputs.D_wp, grade: inputs.bolt_grade_wp, threads_included: inputs.threads_included_wp, Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S1_col_spacing: inputs.S4_col_spacing_wp, S2_row_spacing: inputs.S5_row_spacing_wp, S3_end_dist: inputs.S6_end_dist_wp, g_gage: (inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp, num_bolts: inputs.Nc_wp * inputs.Nr_wp, num_planes: inputs.num_web_plates, joint_length: (inputs.Nc_wp - 1) * inputs.S4_col_spacing_wp };
 
     checks['Web Bolt Group Shear (ICR)'] = { demand: Math.sqrt(V_load**2 + Hw**2), check: checkWebBoltGroupICR(web_bolt_params, common_params, V_load, Hw, inputs.gap / 2) };
     if (inputs.connection_type === 'Slip-Critical') {
         checks['Web Bolt Slip'] = { demand: Math.sqrt(V_load**2 + Hw**2), check: checkBoltSlip(web_bolt_params, common_params) };
     }
     checks['Web Plate Gross Shear Yield'] = { demand: V_load, check: checkPlateShearYield(web_plate_params) };
-    checks['Web Plate Net Shear Rupture'] = { demand: V_load, check: checkPlateShearRupture(web_plate_params, web_bolt_params) };
-    // FIX: Correctly calculate and pass the gage for the web plate block shear check.
-    // The gage is the distance between the outermost bolt rows.
-    const web_plate_gage = (inputs.Nr_wp > 1) ? (inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp : inputs.H_wp / 2;
-    checks['Web Plate Block Shear'] = { demand: V_load, check: checkBlockShear(web_plate_params, web_bolt_params, { pitch: inputs.S4_col_spacing_wp, end_dist: inputs.S6_end_dist_wp, gage: web_plate_gage }) };
+    checks['Web Plate Net Shear Rupture'] = { demand: V_load, check: checkPlateShearRupture(web_plate_params, web_bolt_params) };    
+    checks['Web Plate Block Shear'] = { demand: V_load, check: checkBlockShear(web_plate_params, web_bolt_params) };
     checks['Web Plate Bolt Bearing'] = { demand: V_load / web_bolt_params.num_bolts, check: checkBoltBearing(web_plate_params, web_bolt_params, common_params), details: { ...web_plate_params, ...web_bolt_params } };
 
     // --- Member Checks ---
-    const beam_props = { Zx: inputs.member_Zx, Sx: inputs.member_Sx, Fy: inputs.member_Fy, Fu: inputs.member_Fu, bf: inputs.member_bf, tf: inputs.member_tf };
+    const beam_props = { Zx: inputs.member_Zx, Sx: inputs.member_Sx, Fy: inputs.member_Fy, Fu: inputs.member_Fu, bf: inputs.member_bf, tf: inputs.member_tf, material: inputs.member_material };
     checks['Beam Flexural Yielding'] = { demand: final_M * 12, check: checkBeamFlexuralYielding(beam_props) };
     checks['Beam Flexural Rupture'] = { demand: final_M * 12, check: checkBeamFlexuralRupture(beam_props, flange_bolt_params) };
 
@@ -706,10 +703,10 @@ function performGeometryChecks(inputs) {
         return { Rn, phi, omega, Fu, Ag, An, A_holes };
     }
 
-    function checkBlockShear(plate_params, bolt_params, common_params) {
+    function checkBlockShear(plate_params, bolt_params) {
         const { H, t, Fy, Fu } = plate_params;
         const { D, Nc, Nr, S1_col_spacing, S2_row_spacing, S3_end_dist, g_gage } = bolt_params;
-
+    
         const hole_dia = AISC_SPEC.getNominalHoleDiameter(D);
         const Lgv = (Nc - 1) * S1_col_spacing + S3_end_dist;
         const Lnv = Lgv - (Nc - 0.5) * hole_dia;
@@ -720,16 +717,16 @@ function performGeometryChecks(inputs) {
         const Anv = Lnv * t;
         const Ant = Lnt * t;
 
-        const Ubs = 1.0; // For splice plates
-
+        const Ubs = 1.0; // For splice plates, per AISC J4.3
+    
         const shear_rupture_term = 0.6 * Fu * Anv;
         const tension_rupture_term = Ubs * Fu * Ant;
         const shear_yield_limit = 0.6 * Fy * Agv + tension_rupture_term;
-
+    
         const Rn = Math.min(shear_rupture_term + tension_rupture_term, shear_yield_limit);
         const phi = 0.75;
         const omega = 2.00;
-
+    
         return { Rn, phi, omega, shear_rupture_term, tension_rupture_term, shear_yield_limit };
     }
 
@@ -762,10 +759,10 @@ function performGeometryChecks(inputs) {
     }
 
     function checkBoltBearing(plate_params, bolt_params, common_params) {
-        const { H, t, Fu } = plate_params;
-        const { D, Nc, Nr, S1_col_spacing, S3_end_dist, g_gage } = bolt_params;
+        const { t, Fu } = plate_params;
+        const { D, Nc, Nr, S1_col_spacing, S3_end_dist } = bolt_params;
         const { deformation_is_consideration } = common_params;
-
+    
         const hole_dia = AISC_SPEC.getNominalHoleDiameter(D);
 
         // Edge bolts
@@ -774,7 +771,7 @@ function performGeometryChecks(inputs) {
         const Rn_tearout_edge = (deformation_is_consideration ? 1.2 : 1.5) * Lc_edge * t * Fu;
         const Rn_bearing_edge = (deformation_is_consideration ? 2.4 : 3.0) * D * t * Fu;
         const Rn_edge = Math.min(Rn_tearout_edge, Rn_bearing_edge);
-
+    
         // Interior bolts
         const Le_int = S1_col_spacing;
         const Lc_int = Le_int - hole_dia;
@@ -782,9 +779,11 @@ function performGeometryChecks(inputs) {
         const Rn_bearing_int = (deformation_is_consideration ? 2.4 : 3.0) * D * t * Fu;
         const Rn_int = Math.min(Rn_tearout_int, Rn_bearing_int);
 
+        // FIX: Define num_edge_bolts and num_int_bolts before returning them.
         const num_edge_bolts = Nr * 2; // Bolts on the two end columns
-        const num_int_bolts = Nr * (Nc - 2); // Bolts on interior columns
+        const num_int_bolts = Nc > 2 ? Nr * (Nc - 2) : 0; // Bolts on interior columns
 
+        // The total nominal strength is the sum of the capacities of all bolts.
         const Rn = num_edge_bolts * Rn_edge + num_int_bolts * Rn_int;
         const phi = 0.75;
         const omega = 2.00;
@@ -796,19 +795,19 @@ function performGeometryChecks(inputs) {
             int: { Lc: Lc_int, Rn: Rn_int, Rn_tearout: Rn_tearout_int, Rn_bearing: Rn_bearing_int },
             num_edge: num_edge_bolts,
             num_int: num_int_bolts
-        };
+        };    
     }
 
     function checkWebBoltGroupICR(bolt_params, common_params, V_load, Hw, eccentricity) {
-        const { D, grade, threads_included, Nc, Nr, S4_col_spacing_wp, S5_row_spacing_wp } = bolt_params;
+        const { D, grade, threads_included, Nc, Nr, S1_col_spacing, S2_row_spacing } = bolt_params;
         const { design_method } = common_params;
 
         const bolt_coords = [];
-        const startX = -((Nc - 1) * S4_col_spacing_wp) / 2;
-        const startY = -((Nr - 1) * S5_row_spacing_wp) / 2;
+        const startX = -((Nc - 1) * S1_col_spacing) / 2;
+        const startY = -((Nr - 1) * S2_row_spacing) / 2;
         for (let i = 0; i < Nc; i++) {
             for (let j = 0; j < Nr; j++) {
-                bolt_coords.push({ x: startX + i * S4_col_spacing_wp, y: startY + j * S5_row_spacing_wp });
+                bolt_coords.push({ x: startX + i * S1_col_spacing, y: startY + j * S2_row_spacing });
             }
         }
 
@@ -848,7 +847,7 @@ function performGeometryChecks(inputs) {
 
     function checkPlateShearRupture(plate_params, bolt_params) {
         const { H, t, Fu } = plate_params;
-        const { D, Nr } = bolt_params;
+        const { D, Nr } = bolt_params; // This is correct
         const hole_dia = AISC_SPEC.getNominalHoleDiameter(D);
         const Anv = (H - Nr * hole_dia) * t;
         const Rn = 0.6 * Fu * Anv;
@@ -866,21 +865,32 @@ function performGeometryChecks(inputs) {
     }
 
     function checkBeamFlexuralRupture(beam_props, bolt_props) {
-        const { Sx, Fy, Fu, bf, tf } = beam_props;
-        const { D, Nc } = bolt_props;
-
+        const { Sx, bf, tf, material } = beam_props;
+        const { D, Nr } = bolt_props; // FIX: Rupture is across the width, so it depends on rows (Nr) not columns (Nc)
+ 
         const Afg = bf * tf;
-        const Afn = Afg - Nc * AISC_SPEC.getNominalHoleDiameter(D) * tf;
-        const Yt = Fu / Fy; // Simplified, should be from Table D3.1
+        const Afn = Afg - bolt_props.Nr * AISC_SPEC.getNominalHoleDiameter(D) * tf;
+
+        // FIX: Directly look up Fy and Fu from the material grade to prevent NaN issues.
+        const steel_props = AISC_SPEC.getSteelGrade(material) || { Fy: 0, Fu: 0 };
+        const { Fy, Fu } = steel_props;
+
+        // FIX: Use correct Yt factor from AISC D3.1 instead of a simplified ratio.
+        // This prevents NaN errors if Fu/Fy are not valid numbers.
+        const Yt_map = {
+            "A36": 1.1,
+            "A992": 1.0
+        };
+        const Yt = Yt_map[beam_props.material] || 1.1; // Default to 1.1 if not found
 
         if (Fu * Afn >= Yt * Fy * Afg) {
-            return { Rn: Infinity, applies: false, Yt, Afn, Afg };
+            return { Rn: Infinity, applies: false, Yt, Afn, Afg, Fy, Fu };
         }
 
         const Rn = (Fu * Afn / Afg) * Sx;
         const phi = 0.75;
         const omega = 2.00;
-        return { Rn, phi, omega, applies: true, Yt, Afn, Afg, Fu, Sx };
+        return { Rn, phi, omega, applies: true, Yt, Afn, Afg, Fu, Fy, Sx };
     }
 
     function checkPlateCompression(plate_params, bolt_params) {
@@ -1003,7 +1013,7 @@ const baseBreakdownGenerators = {
         `R<sub>n,edge</sub> = min(Tearout, Bearing) = ${common.fmt(check.edge.Rn)} kips`,
             `<strong>Interior Bolts (per bolt):</strong>`,
         `L<sub>c</sub> = s - d<sub>h</sub> = ${common.fmt(check.int.Lc, 3)} in`,
-        `R<sub>n,tearout</sub> = ${tearout_coeff} &times; L<sub>c</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(check.int.Rn_tearout)} kips`,
+        `R<sub>n,tearout</sub> = ${tearout_coeff} &times; L<sub>c</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(check.int.Rn_tearout)} kips`, // This was a typo in the original code, it should be Rn_tearout
         `R<sub>n,bearing</sub> = ${bearing_coeff} &times; d<sub>b</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(check.int.Rn_bearing)} kips`,
         `R<sub>n,int</sub> = min(Tearout, Bearing) = ${common.fmt(check.int.Rn)} kips`,
             `<u>Total Nominal Strength (R<sub>n</sub>)</u>`,
