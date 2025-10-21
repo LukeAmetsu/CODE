@@ -166,26 +166,20 @@ function renderNbr8800Results(calc_results) {
     report.render('results-container'); // Render into the main container
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await initializeApp({
-        pageKey: 'nbr-aco',
-        pageTitle: 'Verificador de Perfis de Aço (NBR 8800:2008)',
+initializeApp({
+    calculationHandler: createCalculationHandler({
         inputIds: nbr8800InputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: nbr8800InputIds,
-            storageKey: 'nbr8800-inputs',
-            validationRuleKey: 'nbr_aco',
-            calculatorFunction: nbr8800Calculator.calculate,
-            renderFunction: renderNbr8800Results,
-            resultsContainerId: 'results-container',
-            buttonId: 'run-check-btn'
-        }),
-        buttonId: 'run-check-btn',
-        onReady: () => { /* Page-specific initializations can go here */ }
-    });
-    attachReportEventListeners('results-container', {
-        reportId: 'steel-report-content',
-        filenamePrefix: 'NBR8800-Relatorio',
-        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
-    });
+        storageKey: 'nbr8800-inputs',
+        validationRuleKey: 'nbr_aco',
+        calculatorFunction: nbr8800Calculator.calculate,
+        renderFunction: renderNbr8800Results,
+        resultsContainerId: 'results-container',
+        buttonId: 'run-check-btn'
+    }),
+    onReady: () => {
+        attachReportEventListeners('results-container', {
+            reportId: 'steel-report-content',
+            filenamePrefix: 'NBR8800-Aco-Relatorio'
+        });
+    }
 });

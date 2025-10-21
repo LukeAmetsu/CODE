@@ -1,13 +1,13 @@
 /**
  * Updates the theme toggle icons based on the current theme.
- * @param {boolean} isDark - Whether the dark theme is active.
+ * @param {string} newTheme - The theme being set ('light' or 'dark').
  */
-function updateThemeIcons(isDark) {
+function updateThemeIcons(newTheme) {
     const darkIcon = document.getElementById('theme-toggle-dark-icon');
     const lightIcon = document.getElementById('theme-toggle-light-icon');
     if (darkIcon && lightIcon) {
-        darkIcon.classList.toggle('hidden', !isDark);
-        lightIcon.classList.toggle('hidden', isDark);
+        darkIcon.classList.toggle('hidden', newTheme !== 'dark');
+        lightIcon.classList.toggle('hidden', newTheme === 'dark');
     }
 }
 
@@ -16,8 +16,9 @@ function updateThemeIcons(isDark) {
  */
 function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
-    updateThemeIcons(isDark);
+    const newTheme = isDark ? 'dark' : 'light';
+    localStorage.setItem('color-theme', newTheme);
+    updateThemeIcons(newTheme);
 }
 
 /**
@@ -25,13 +26,20 @@ function toggleTheme() {
  */
 function initializeThemeToggle() {
     const themeToggleButton = document.getElementById('theme-toggle');
-    const isDark = document.documentElement.classList.contains('dark');
-    updateThemeIcons(isDark);
     if (themeToggleButton) {
         themeToggleButton.addEventListener('click', toggleTheme);
+        // Initial icon state
+        updateThemeIcons(localStorage.getItem('color-theme') || 'light');
     }
 }
 
+/**
+ * Checks the local storage for a theme and applies it.
+ */
+function applyThemeFromLocalStorage() {
+    const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', isDark);
+}
 /**
  * Adds a visual indicator (e.g., a red asterisk) to the labels of required input fields.
  * It reads the validation rules and applies a specific CSS class to the corresponding labels.
@@ -56,6 +64,7 @@ function highlightRequiredFields(validationRuleKey) {
  * A single initialization function for all shared UI components.
  */
 function initializeSharedUI() {
+    applyThemeFromLocalStorage();
     initializeThemeToggle();
     initializeBackToTopButton();
     initializeUiToggles();
@@ -250,13 +259,21 @@ function setLoadingState(isLoading, buttonId) {
  * @returns {number} The interpolated y-value.
  */
 function interpolate(x, xp, fp) {
+    // Ensure inputs are valid arrays
+    if (!Array.isArray(xp) || !Array.isArray(fp) || xp.length !== fp.length || xp.length === 0) {
+        console.error("Invalid input for interpolate function.");
+        return 0;
+    }
     if (x <= xp[0]) return fp[0];
     if (x >= xp[xp.length - 1]) return fp[fp.length - 1];
     let i = 0;
     while (x > xp[i + 1]) i++;
     const x1 = xp[i], y1 = fp[i];
     const x2 = xp[i + 1], y2 = fp[i + 1];
-    return y1 + ((x - x1) * (y2 - y1)) / (x2 - x1);
+    // Avoid division by zero if x-points are identical
+    const dx = x2 - x1;
+    if (Math.abs(dx) < 1e-9) return y1;
+    return y1 + ((x - x1) * (y2 - y1)) / dx;
 }
 
 /**
@@ -455,41 +472,6 @@ async function convertSvgToPng(svg) {
  * @param {string} title - The title for the report header.
  * @returns {string} A full HTML document string formatted for MS Word.
  */
-function createWordCompatibleHTML(content, title, cssStyles) {
-    return `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-            <meta charset='utf-8'>
-            <title>${title}</title>
-            <style>
-                /* Basic styles for Word compatibility */
-                body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
-                table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-                th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
-                th { background-color: #f0f0f0; font-weight: bold; }
-                caption { font-weight: bold; text-align: center; margin-bottom: 0.5em; }
-                h1, h2, h3, h4 { font-family: 'Arial', sans-serif; }
-                h1 { font-size: 16pt; text-align: center; }
-                h2 { font-size: 14pt; border-bottom: 1px solid #000; margin-top: 1.5em; }
-                h3 { font-size: 13pt; }
-                .pass { color: #008000; font-weight: bold; }
-                .fail { color: #ff0000; font-weight: bold; }
-                /* Embed all page styles for better fidelity */
-                ${cssStyles}
-            </style>
-        </head>
-        <body>
-            ${content}
-        </body>
-        </html>`;
-}
-
-/**
- * Creates Word-compatible HTML structure with a header and basic styling.
- * @param {string} content - The main HTML content of the report.
- * @param {string} title - The title for the report header.
- * @returns {string} A full HTML document string formatted for MS Word.
- */
 function createWordCompatibleHTML(content, title) {
     const cssStyles = `
         body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
@@ -552,16 +534,17 @@ function convertElementToPlainText(element) {
  * @param {string} containerId - The ID of the container with the report content.
  * @param {string} feedbackElId - The ID of the feedback element.
  */
-async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-message') {
+async function handleCopy(targetId, options = {}) {
+    const { feedbackElId = 'feedback-message', engine, scene } = options;
     try {
-        const container = document.getElementById(containerId);
-        if (!container) {
+        const elementToCopy = document.getElementById(targetId);
+        if (!elementToCopy) {
             showFeedback('Report container not found.', true, feedbackElId);
             return;
         }
 
         showFeedback('Preparing report for copying...', false, feedbackElId);
-        const clone = container.cloneNode(true);
+        const clone = elementToCopy.cloneNode(true);
 
         // Prepare the clone for copying: remove interactive elements, expand details, and remove empty rows.
         clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
@@ -569,16 +552,22 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
 
         // Convert SVGs to PNGs
         let conversionFailures = 0;
-        const svgElements = Array.from(clone.querySelectorAll('svg'));
-        if (svgElements.length > 0) {
-            showFeedback(`Convertendo ${svgElements.length} diagrama(s) para imagens...`, false, feedbackElId);
+        const diagramElements = Array.from(clone.querySelectorAll('svg, canvas'));
+        if (diagramElements.length > 0) {
+            showFeedback(`Converting ${diagramElements.length} diagram(s) to images...`, false, feedbackElId);
             // Use Promise.all to run conversions in parallel for better performance.
-            await Promise.all(svgElements.map(async (svg) => {
+            await Promise.all(diagramElements.map(async (diagram) => {
                 try {
-                    const pngImage = await convertSvgToPng(svg);
-                    if (pngImage && svg.parentNode) {
-                        svg.parentNode.replaceChild(pngImage, svg);
-                    } else if (svg.parentNode) { svg.parentNode.remove(); }
+                    let pngImage;
+                    if (diagram.tagName.toLowerCase() === 'svg') {
+                        pngImage = await convertSvgToPng(diagram);
+                    } else if (diagram.tagName.toLowerCase() === 'canvas' && engine && scene) {
+                        // Handle BabylonJS canvas
+                        pngImage = await new Promise(res => BABYLON.Tools.CreateScreenshot(engine, scene.activeCamera, { finalWidth: diagram.width, finalHeight: diagram.height }, data => res(data)));
+                    }
+                    if (pngImage && diagram.parentNode) {
+                        diagram.parentNode.replaceChild(pngImage, diagram);
+                    } else if (diagram.parentNode) { diagram.parentNode.remove(); }
                 } catch (error) {
                     console.warn("SVG to PNG conversion failed:", error);
                     conversionFailures++;
@@ -595,7 +584,7 @@ async function handleCopyToClipboard(containerId, feedbackElId = 'feedback-messa
         });
 
         showFeedback('Copiando para a área de transferência...', false, feedbackElId);
-
+        
         // Generate final HTML and Text content, consistent with handleDownloadWord
         const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
         const htmlContent = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Use the simpler HTML structure
@@ -728,60 +717,54 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
 }
 
 /**
- * Downloads the content of a given container as a Microsoft Word (.doc) file.
- * It converts SVGs to PNGs and formats the HTML for Word compatibility.
- * @param {string} containerId - The ID of the container with the report content.
- * @param {string} filename - The desired filename for the downloaded Word file.
- * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
+ * Converts the table data from a report into a CSV formatted string.
+ * @param {string} reportId - The ID of the report container element.
+ * @returns {string} A string in CSV format.
  */
-async function handleDownloadWord(containerId, filename, feedbackElId = 'feedback-message') {
-    const reportContainer = document.getElementById(containerId);
-    if (!reportContainer) {
-        showFeedback('Report container not found for Word export.', true, feedbackElId);
-        return;
-    }
+function convertReportToCsv(reportId) {
+    const reportContainer = document.getElementById(reportId);
+    if (!reportContainer) return '';
 
-    showFeedback('Generating Word document...', false, feedbackElId);
+    let csvContent = '';
+    const sections = reportContainer.querySelectorAll('.report-section-copyable');
 
-    const clone = reportContainer.cloneNode(true);
-    clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
-    clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
-    
-    // Remove empty table rows that might be left after removing buttons
-    clone.querySelectorAll('tr').forEach(tr => {
-        if (tr.innerText.trim() === '') {
-            tr.remove();
+    sections.forEach(section => {
+        const titleEl = section.querySelector('h3');
+        const tableEl = section.querySelector('table');
+
+        if (titleEl && tableEl) {
+            // Add a title for the section in the CSV
+            csvContent += `"${titleEl.innerText.trim()}"\n`;
+
+            // Process table headers
+            const headers = Array.from(tableEl.querySelectorAll('thead th')).map(th => `"${th.innerText.trim()}"`);
+            csvContent += headers.join(',') + '\n';
+
+            // Process table rows
+            const rows = tableEl.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                // Skip subheader rows or detail rows
+                if (row.classList.contains('details-row') || row.querySelector('td[colspan]')) {
+                    return;
+                }
+
+                const cells = Array.from(row.querySelectorAll('td')).map(td => {
+                    // Clone the cell to manipulate it without affecting the DOM
+                    const cellClone = td.cloneNode(true);
+                    // Remove the "[Show]" button from the cell content
+                    const button = cellClone.querySelector('.toggle-details-btn');
+                    if (button) button.remove();
+                    // Get the cleaned text and escape quotes
+                    const text = (cellClone.innerText || '').trim().replace(/"/g, '""');
+                    return `"${text}"`;
+                });
+                csvContent += cells.join(',') + '\n';
+            });
+            csvContent += '\n'; // Add a blank line between sections
         }
     });
-    // Convert SVGs to PNGs
-    const svgElements = Array.from(clone.querySelectorAll('svg'));
-    if (svgElements.length > 0) {
-        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
-        await Promise.all(svgElements.map(async (svg) => {
-            try {
-                const pngImage = await convertSvgToPng(svg);
-                if (pngImage && svg.parentNode) {
-                    svg.parentNode.replaceChild(pngImage, svg);
-                }
-            } catch (error) {
-                console.warn("SVG to PNG conversion failed for Word export:", error);
-            }
-        }));
-    }
 
-    const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
-
-    const blob = new Blob([finalHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showFeedback('Word document download started.', false, feedbackElId);
+    return csvContent;
 }
 
 /**
@@ -842,58 +825,26 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
 }
 
 /**
- * Copies a diagram (SVG or Canvas) to the clipboard as a PNG image.
- * @param {string} containerId - The ID of the container holding the diagram.
+ * Downloads the report data as a CSV file.
+ * @param {string} reportId - The ID of the report content element.
+ * @param {string} filename - The desired filename for the downloaded CSV.
  * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
  */
-async function handleCopyDiagramToClipboard(containerId, feedbackElId = 'feedback-message') {
-    const container = document.getElementById(containerId);
-    if (!container) {
-        showFeedback('Diagram container not found.', true, feedbackElId);
+function handleDownloadCsv(reportId, filename, feedbackElId = 'feedback-message') {
+    const reportContainer = document.getElementById(reportId);
+    if (!reportContainer) {
+        showFeedback('Report container not found for CSV export.', true, feedbackElId);
         return;
     }
 
-    const svg = container.querySelector('svg');
-    const canvas = container.querySelector('canvas');
-
-    if (!svg && !canvas) {
-        showFeedback('No SVG or Canvas found in the container to copy.', true, feedbackElId);
-        return;
-    }
-
-    showFeedback('Generating image for clipboard...', false, feedbackElId);
-
-    try {
-        let blob;
-        if (svg) {
-            // Convert SVG to a PNG blob
-            const pngImage = await convertSvgToPng(svg);
-            const canvasForSvg = document.createElement('canvas');
-            canvasForSvg.width = pngImage.width;
-            canvasForSvg.height = pngImage.height;
-            const ctx = canvasForSvg.getContext('2d');
-            ctx.drawImage(pngImage, 0, 0);
-            blob = await new Promise(resolve => canvasForSvg.toBlob(resolve, 'image/png'));
-        } else { // It's a canvas
-            // For the 3D canvas, we need to re-render to ensure it's not blank
-            if (container.renderer && container.camera && container.scene) {
-                container.renderer.render(container.scene, container.camera);
-            }
-            blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        }
-
-        if (!blob) {
-            throw new Error('Failed to create image blob.');
-        }
-
-        await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-        ]);
-        showFeedback('Diagram copied to clipboard as an image.', false, feedbackElId);
-    } catch (err) {
-        console.error('Failed to copy diagram:', err);
-        showFeedback('Failed to copy diagram. Your browser may not support this feature.', true, feedbackElId);
-    }
+    showFeedback('Generating CSV...', false, feedbackElId);
+    const csvContent = convertReportToCsv(reportId);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.click();
 }
 /**
  * Gathers values from a list of input IDs.
@@ -1138,47 +1089,69 @@ function clearLocalStorageAndResetUI(storageKey, inputIds, feedbackElId = 'feedb
  * @param {string} config.pageTitle - The title to display in the header.
  * @param {string[]} config.inputIds - An array of all input IDs on the page for saving/loading.
  * @param {function} config.calculationHandler - The function to call when the main "run" button is clicked.
- * @param {string} config.buttonId - The ID of the main "run" button.
  * @param {function} [config.onReady] - An optional callback to run after all initial setup is complete.
  */
-async function initializeApp(config) {
+async function initializeApp(config) { // This function is already async
     const {
-        pageKey,
-        pageTitle,
-        inputIds,
+        inputIds = [],
         calculationHandler,
-        buttonId,
         onReady,
-        storageKey, // Allow overriding storage key
+        storageKey,
         fileInputId = 'file-input' // Default file input ID
     } = config;
 
-    const effectiveStorageKey = storageKey || `${pageKey}-inputs`;
+    // --- 0. Initialize Internationalization (i18n) First ---
+    await i18n.initialize();
 
-    // 1. Inject Header & Footer
-    await injectHeader({
-        activePage: pageKey,
-        pageTitle: pageTitle,
-        headerPlaceholderId: 'header-placeholder'
-    });
-    await injectFooter({
-        footerPlaceholderId: 'footer-placeholder'
-    });
+    // --- 1. Discover Page and Inject Header/Footer ---
+    const path = window.location.pathname;
+    // Decode the page name to handle spaces and other special characters (e.g., "steel%20check.html" -> "steel check.html")
+    const pageName = decodeURIComponent(path.substring(path.lastIndexOf('/') + 1));
+    const isRoot = path.endsWith('/') || path.endsWith('/index.html');
+    const pathPrefix = isRoot ? './' : '../';
+
+    let navConfig;
+    try {
+        const response = await fetch(`${pathPrefix}js/nav-config.json`);
+        navConfig = await response.json();
+        window.NAV_CONFIG = navConfig; // Make it globally available
+    } catch (error) {
+        console.error("Failed to load nav-config.json for initialization:", error);
+        return; // Stop initialization if nav config fails
+    }
+
+    const pageConfig = navConfig.mainNav.flatMap(item => item.subNav.length > 0 ? item.subNav : [item]).find(link => link.href.endsWith(pageName))
+        || (isRoot ? navConfig.mainNav.find(link => link.key === 'home') : null);
+
+    const pageKey = pageConfig?.key;
+    const pageTitle = pageConfig?.textKey;
+
+    if (!pageConfig) {
+        console.error(`Could not find page configuration for "${pageName}" in nav-config.json.`);
+        // Fallback to a generic header if config is not found but we need to continue
+        await injectHeader({ activePage: '', pageTitle: 'engineering_hub', headerPlaceholderId: 'header-placeholder' });
+    } else {
+        await injectHeader({ activePage: pageKey, pageTitle: pageTitle, headerPlaceholderId: 'header-placeholder' });
+    }
+    await injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+
+    const effectiveStorageKey = storageKey || `${pageConfig?.key || 'default'}-inputs`;
 
     // 2. Initialize Shared UI Components
     initializeSharedUI();
 
+    const buttonId = config.buttonId || 'run-check-btn'; // Default button ID
     // 3. Attach Core Event Listeners
     const runButton = document.getElementById(buttonId);
-    if (runButton && typeof calculationHandler === 'function') {
+    if (runButton && calculationHandler) {
         runButton.addEventListener('click', calculationHandler);
     }
 
-    const saveButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageKey}-inputs-btn`);
-    if (saveButton) {
+    const saveButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageConfig?.key}-inputs-btn`);
+    if (saveButton && inputIds.length > 0) {
         saveButton.addEventListener('click', () => {
             const inputs = gatherInputsFromIds(inputIds);
-            saveInputsToFile(inputs, `${pageKey}-inputs.json`);
+            saveInputsToFile(inputs, `${pageConfig?.key}-inputs.json`);
             showFeedback('Inputs saved to file.', false);
         });
     }
@@ -1194,15 +1167,18 @@ async function initializeApp(config) {
     // --- Manual "Save to File" Button ---
     // This is now correctly separated and only handles file downloads.
     const saveToFileButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageKey}-inputs-btn`);
-    if (saveToFileButton) saveToFileButton.addEventListener('click', createSaveInputsHandler(inputIds, `${pageKey}-inputs.json`));
+    if (saveToFileButton && inputIds.length > 0) saveToFileButton.addEventListener('click', createSaveInputsHandler(inputIds, `${pageKey}-inputs.json`));
 
-    inputIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', debouncedSave);
-    });
+    if (inputIds.length > 0) {
+        inputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', debouncedSave);
+        });
+    }
 
     // 4. Load saved data from Local Storage
     loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
+
 }
 
 /**
@@ -1285,6 +1261,7 @@ class ReportBuilder {
                 ...actionButtons,
                 createDOMElement('button', { id: 'copy-report-btn', className: 'bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs' }, ['Copy']),
                 createDOMElement('button', { id: 'download-word-btn', className: 'bg-blue-800 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-900 text-xs' }, ['Word']),
+                createDOMElement('button', { id: 'download-csv-btn', className: 'bg-green-700 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-800 text-xs' }, ['CSV']),
                 createDOMElement('button', { id: 'download-pdf-btn', className: 'bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-xs' }, ['Download PDF'])
             ])
         ]);
@@ -1423,9 +1400,9 @@ function attachReportEventListeners(containerId, config) {
             handleDownloadWord(reportId, `${filenamePrefix}.doc`);
         }
 
-        // --- Download Word ---
-        if (target.id === 'download-word-btn') {
-            handleDownloadWord(reportId, `${filenamePrefix}.doc`);
+        // --- Download CSV ---
+        if (target.id === 'download-csv-btn') {
+            handleDownloadCsv(reportId, `${filenamePrefix}.csv`);
         }
 
         // --- Custom "Send to Combos" button ---
@@ -1466,58 +1443,77 @@ function createCalculationHandler(config) { // This is the function being called
         buttonId
     } = config;
 
-    // Automatically highlight required fields for this calculator on page load.
+    // Automatically highlight required fields for this calculator when it's created.
     if (validationRuleKey) {
         highlightRequiredFields(validationRuleKey);
     }
 
     return async function() { // This function is already async, which is good.
+        // --- 1. SETUP & GATHER INPUTS ---
         if (buttonId) setLoadingState(true, buttonId);
         showFeedback('Gathering inputs...', false, feedbackElId);
 
+        // Use the provided gather function or the default one.
         const inputs = typeof gatherInputsFunction === 'function' 
             ? gatherInputsFunction() 
             : gatherInputsFromIds(inputIds);
         
+        // --- 2. VALIDATE INPUTS ---
         showFeedback('Validating inputs...', false, feedbackElId);
-        await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
+        // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
+        await Promise.resolve();
 
+        // Use the custom validator if provided, otherwise use the default.
         let validation;
         if (typeof validatorFunction === 'function') {
             validation = validatorFunction(inputs);
         } else {
-            const rules = validationRules[validationRuleKey];
+            const rules = window.validationRules ? validationRules[validationRuleKey] : {};
             validation = validateInputs(inputs, rules);
         }
 
         const resultsContainer = document.getElementById(resultsContainerId);
+        // Gracefully exit if the results container doesn't exist.
+        if (!resultsContainer) {
+            console.error(`Results container with ID "${resultsContainerId}" not found.`);
+            if (buttonId) setLoadingState(false, buttonId);
+            return;
+        }
 
-        if (validation.errors.length > 0) {
+        if (validation.errors && validation.errors.length > 0) {
             renderValidationResults(validation, resultsContainer);
             showFeedback('Validation failed. Please correct the errors.', true, feedbackElId);
             if (buttonId) setLoadingState(false, buttonId);
             return;
         }
 
+        // --- 3. PERFORM CALCULATION ---
         showFeedback('Running calculation...', false, feedbackElId);
-        await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
+        await Promise.resolve();
 
         const calculationResult = safeCalculation(
             () => calculatorFunction(inputs, validation),
             'An unexpected error occurred during calculation'
         );
 
-        await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
-
+        // --- 4. RENDER RESULTS ---
         if (calculationResult.error) {
             renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
             showFeedback('Calculation failed.', true, feedbackElId);
         } else {
             showFeedback('Rendering results...', false, feedbackElId);
-            await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to update
-
+            await Promise.resolve();
+            
             saveInputsToLocalStorage(storageKey, inputs);
             renderFunction(calculationResult, inputs);
+            // Attach report event listeners AFTER the report has been rendered.
+            const reportId = `${validationRuleKey}-report-content`;
+            attachReportEventListeners(resultsContainerId, {
+                reportId: reportId,
+                filenamePrefix: `${validationRuleKey.replace(/_/g, '-')}-Report`,
+                onSendToCombos: config.onSendToCombos,
+                toggleTexts: config.toggleTexts
+            });
             showFeedback('Calculation complete!', false, feedbackElId);
         }
 
@@ -1542,4 +1538,77 @@ function sendToCombos(loads, sourceName, loadType, feedbackElId = 'feedback-mess
     };
     localStorage.setItem('loadsForCombinator', JSON.stringify(dataToSend));
     window.location.href = 'combos.html';
+}
+
+/**
+ * Populates material selection dropdowns based on data from AISC_SPEC.
+ * It targets select elements with a `data-fy-target` or `data-fu-target` attribute.
+ */
+function populateMaterialDropdowns() {
+    if (typeof AISC_SPEC === 'undefined' || !AISC_SPEC.structuralSteelGrades) {
+        console.warn("AISC_SPEC or structuralSteelGrades not available for populateMaterialDropdowns.");
+        return;
+    }
+
+    const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
+        `<option value="${grade}">${grade}</option>`
+    ).join('');
+
+    // Find all select elements that are meant to be material dropdowns
+    document.querySelectorAll('select[data-fy-target], select[data-fu-target]').forEach(select => {
+        select.innerHTML = gradeOptions;
+        // Set a sensible default if one isn't already selected
+        if (!select.value) {
+            select.value = select.id.includes('plate') ? 'A36' : 'A992';
+        }
+        select.addEventListener('change', (e) => {
+            const grade = AISC_SPEC.getSteelGrade(e.target.value);
+            if (grade) {
+                if (e.target.dataset.fyTarget) document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
+                if (e.target.dataset.fuTarget) document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
+            }
+        });
+        select.dispatchEvent(new Event('change')); // Trigger initial population
+    });
+}
+
+/**
+ * Populates bolt grade selection dropdowns and sets up listeners to update related fields.
+ * It targets select elements with a `data-is-bolt-grade-select` attribute.
+ *
+ * Required attributes on the <select> element:
+ * - `data-is-bolt-grade-select="true"`: Identifies the dropdown.
+ *
+ * Optional attributes for automatic property updates:
+ * - `data-fut-target="id_of_fut_input"`: ID of the input to update with Fnt value.
+ * - `data-fnv-target="id_of_fnv_input"`: ID of the input to update with Fnv value.
+ * - `data-threads-checkbox="id_of_threads_checkbox"`: ID of the checkbox that controls whether threads are included in the shear plane.
+ */
+function populateBoltGradeDropdowns() {
+    if (typeof AISC_SPEC === 'undefined' || !AISC_SPEC.boltGrades) {
+        console.warn("AISC_SPEC or boltGrades not available for populateBoltGradeDropdowns.");
+        return;
+    }
+
+    const boltGradeOptions = Object.keys(AISC_SPEC.boltGrades).map(grade =>
+        `<option value="${grade}">${grade}</option>`
+    ).join('');
+
+    document.querySelectorAll('select[data-is-bolt-grade-select="true"]').forEach(select => {
+        select.innerHTML = boltGradeOptions;
+        if (!select.value) select.value = 'A325'; // A common default
+
+        const threadsCheckbox = document.getElementById(select.dataset.threadsCheckbox);
+
+        const updateBoltProperties = () => {
+            const grade = select.value;
+            const threadsIncl = threadsCheckbox ? threadsCheckbox.checked : true; // Default to threads included if no checkbox
+            if (select.dataset.fnvTarget) document.getElementById(select.dataset.fnvTarget).value = AISC_SPEC.getFnv(grade, threadsIncl).Fnv;
+            if (select.dataset.futTarget) document.getElementById(select.dataset.futTarget).value = AISC_SPEC.getFnt(grade);
+        };
+
+        select.addEventListener('change', updateBoltProperties);
+        if (threadsCheckbox) threadsCheckbox.addEventListener('change', updateBoltProperties);
+        updateBoltProperties(); // Initial population
+    });
 }

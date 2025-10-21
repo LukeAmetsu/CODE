@@ -123,6 +123,29 @@ const AISC_SPEC = (() => {
     // Standard bolt diameters for optimization
     const standardBoltDiameters = [0.625, 0.75, 0.875, 1.0, 1.125, 1.25];
 
+    // Standard bolt properties (e.g., nominal area Ab)
+    const boltProperties = {
+        // Dia (in): { Ab: area (in^2) }
+        0.5:    { Ab: 0.1963 },
+        0.625:  { Ab: 0.3068 },
+        0.75:   { Ab: 0.4418 },
+        0.875:  { Ab: 0.6013 },
+        1.0:    { Ab: 0.7854 },
+        1.125:  { Ab: 0.9940 },
+        1.25:   { Ab: 1.2272 },
+        1.375:  { Ab: 1.4849 },
+        1.5:    { Ab: 1.7671 },
+    };
+
+    /**
+     * Gets standard properties for a given bolt diameter.
+     * @param {number} diameter - The nominal bolt diameter in inches.
+     * @returns {{Ab: number}|null} An object with bolt properties (e.g., Ab for nominal area), or null if not a valid diameter.
+     */
+    function getBoltProperties(diameter) {
+        return boltProperties[diameter] || (typeof diameter === 'number' && diameter > 0 ? { Ab: Math.PI * (diameter / 2) ** 2 } : null);
+    }
+
     // --- CHAPTER B: DESIGN REQUIREMENTS ---
 
     // Common Structural Steel Grades (Fy and Fu in ksi)
@@ -216,6 +239,7 @@ const AISC_SPEC = (() => {
         getFnv,
         getFnt,
         getTb,
+        getBoltProperties,
         getSteelGrade,
         boltGrades, // Expose for populating dropdowns
         standardBoltDiameters, // Expose for optimizer

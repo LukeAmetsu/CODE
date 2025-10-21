@@ -49,22 +49,22 @@ function generateAciBreakdownHtml(check) {
 
     if (check.type === 'flexure') {
         return format_list([
-            `<b>Effective Depth (d):</b> ${check.details.d.toFixed(3)} in`,
-            `<b>Area of Steel (A<sub>s</sub>):</b> ${check.details.As.toFixed(3)} in²`,
-            `<b>Depth of Compression Block (a):</b> ${check.details.a.toFixed(3)} in`,
-            `<b>Neutral Axis Depth (c):</b> ${check.details.c.toFixed(3)} in`,
-            `<b>Tensile Strain (&epsilon;<sub>t</sub>):</b> ${check.details.strain_t.toFixed(5)} (${check.details.strain_t >= 0.005 ? 'Tension-Controlled' : 'Transition'})`,
-            `<b>Strength Reduction Factor (&phi;<sub>f</sub>):</b> ${check.details.phi_f.toFixed(3)}`,
+            `<b>${getTranslation('report_effective_depth')} (d):</b> ${check.details.d.toFixed(3)} in`,
+            `<b>${getTranslation('report_area_of_steel')} (A<sub>s</sub>):</b> ${check.details.As.toFixed(3)} in²`,
+            `<b>${getTranslation('report_depth_comp_block')} (a):</b> ${check.details.a.toFixed(3)} in`,
+            `<b>${getTranslation('report_neutral_axis_depth')} (c):</b> ${check.details.c.toFixed(3)} in`,
+            `<b>${getTranslation('report_tensile_strain')} (&epsilon;<sub>t</sub>):</b> ${check.details.strain_t.toFixed(5)} (${check.details.strain_t >= 0.005 ? getTranslation('tension_controlled') : getTranslation('transition')})`,
+            `<b>${getTranslation('report_strength_reduction_factor')} (&phi;<sub>f</sub>):</b> ${check.details.phi_f.toFixed(3)}`,
         ]);
     }
     if (check.type === 'shear') {
         return format_list([
-            `<b>Concrete Capacity (V<sub>c</sub>):</b> ${(check.details.Vc / 1000).toFixed(2)} kips`,
-            `<b>Stirrup Capacity (V<sub>s</sub>):</b> ${(check.details.Vs / 1000).toFixed(2)} kips`,
-            `<b>Max Stirrup Capacity (V<sub>s,max</sub>):</b> ${(check.details.Vs_max / 1000).toFixed(2)} kips`,
+            `<b>${getTranslation('report_concrete_capacity')} (V<sub>c</sub>):</b> ${(check.details.Vc / 1000).toFixed(2)} kips`,
+            `<b>${getTranslation('report_stirrup_capacity')} (V<sub>s</sub>):</b> ${(check.details.Vs / 1000).toFixed(2)} kips`,
+            `<b>${getTranslation('report_max_stirrup_capacity')} (V<sub>s,max</sub>):</b> ${(check.details.Vs_max / 1000).toFixed(2)} kips`,
         ]);
     }
-    return 'Details not available.';
+    return getTranslation('details_not_available');
 }
 
 function renderAciResults(calc_results) {
@@ -72,67 +72,57 @@ function renderAciResults(calc_results) {
 
     const report = new ReportBuilder({
         reportId: 'aci-report-content',
-        title: 'Detailed Calculation Report (ACI 318-19)',
+        title: getTranslation('report_title_aci'),
     });
 
     const inputRows = [
-        { cells: ["Concrete Strength (f'c)", `${calc_results.inputs.fc} psi`] },
-        { cells: ["Steel Yield Strength (fy)", `${calc_results.inputs.fy} psi`] },
-        { cells: ["Beam Geometry (b x h)", `${calc_results.inputs.b}" x ${calc_results.inputs.h}"`] },
-        { cells: ["Flexural Reinforcement", `${calc_results.inputs.num_bars} - #${calc_results.inputs.bar_size} bars`] },
-        { cells: ["Shear Reinforcement", `#${calc_results.inputs.stirrup_size} @ ${calc_results.inputs.stirrup_spacing}" (${calc_results.inputs.stirrup_legs} legs)`] },
-        { cells: ["Factored Moment (Mu)", `${calc_results.inputs.Mu / 12000} kip-ft`] },
-        { cells: ["Factored Shear (Vu)", `${calc_results.inputs.Vu / 1000} kips`] },
+        { cells: [getTranslation('concrete_strength_fc'), `${calc_results.inputs.fc} psi`] },
+        { cells: [getTranslation('steel_yield_strength_fy'), `${calc_results.inputs.fy} psi`] },
+        { cells: [getTranslation('beam_geometry_b_h'), `${calc_results.inputs.b}" x ${calc_results.inputs.h}"`] },
+        { cells: [getTranslation('flexural_reinforcement'), `${calc_results.inputs.num_bars} - #${calc_results.inputs.bar_size} bars`] },
+        { cells: [getTranslation('shear_reinforcement'), `#${calc_results.inputs.stirrup_size} @ ${calc_results.inputs.stirrup_spacing}" (${calc_results.inputs.stirrup_legs} legs)`] },
+        { cells: [getTranslation('factored_moment_mu'), `${calc_results.inputs.Mu / 12000} kip-ft`] },
+        { cells: [getTranslation('factored_shear_vu'), `${calc_results.inputs.Vu / 1000} kips`] },
     ];
-    report.addTableSection('Input Summary', { headers: ['Parameter', 'Value'], rows: inputRows }, 'aci-input-summary');
+    report.addTableSection(getTranslation('input_summary'), { headers: [getTranslation('parameter'), getTranslation('value')], rows: inputRows }, 'aci-input-summary');
 
     const M_ratio = results.phiMn > 0 ? inputs.Mu / results.phiMn : Infinity;
     const V_ratio = results.phiVn > 0 ? inputs.Vu / results.phiVn : Infinity;
 
     const flexureRow = {
-        cells: ['Moment Capacity', `${(inputs.Mu / 12000).toFixed(2)} kip-ft`, `${(results.phiMn / 12000).toFixed(2)} kip-ft`, M_ratio.toFixed(3), `${(M_ratio * 100).toFixed(1)}%`, M_ratio <= 1.0 ? '<span class="pass">OK</span>' : '<span class="fail">FAIL</span>'],
+        cells: [getTranslation('moment_capacity'), `${(inputs.Mu / 12000).toFixed(2)} kip-ft`, `${(results.phiMn / 12000).toFixed(2)} kip-ft`, M_ratio.toFixed(3), `${(M_ratio * 100).toFixed(1)}%`, M_ratio <= 1.0 ? `<span class="pass">${getTranslation('pass')}</span>` : `<span class="fail">${getTranslation('fail')}</span>`],
         details: generateAciBreakdownHtml({ type: 'flexure', details: results.flexure_details })
     };
-    report.addTableSection('Flexural Design Check', {
-        headers: ['Check', 'Demand', 'Capacity', 'Ratio', 'Utilization (%)', 'Status'],
+    report.addTableSection(getTranslation('flexural_design_check'), {
+        headers: [getTranslation('check'), getTranslation('demand'), getTranslation('capacity'), getTranslation('ratio'), getTranslation('utilization_pct'), getTranslation('status')],
         rows: [flexureRow]
     }, 'aci-flexure-check');
 
     const shearRow = {
-        cells: ['Shear Capacity', `${(inputs.Vu / 1000).toFixed(2)} kips`, `${(results.phiVn / 1000).toFixed(2)} kips`, V_ratio.toFixed(3), `${(V_ratio * 100).toFixed(1)}%`, V_ratio <= 1.0 ? '<span class="pass">OK</span>' : '<span class="fail">FAIL</span>'],
+        cells: [getTranslation('shear_capacity'), `${(inputs.Vu / 1000).toFixed(2)} kips`, `${(results.phiVn / 1000).toFixed(2)} kips`, V_ratio.toFixed(3), `${(V_ratio * 100).toFixed(1)}%`, V_ratio <= 1.0 ? `<span class="pass">${getTranslation('pass')}</span>` : `<span class="fail">${getTranslation('fail')}</span>`],
         details: generateAciBreakdownHtml({ type: 'shear', details: results.shear_details })
     };
-    report.addTableSection('Shear Design Check', {
-        headers: ['Check', 'Demand', 'Capacity', 'Ratio', 'Utilization (%)', 'Status'],
+    report.addTableSection(getTranslation('shear_design_check'), {
+        headers: [getTranslation('check'), getTranslation('demand'), getTranslation('capacity'), getTranslation('ratio'), getTranslation('utilization_pct'), getTranslation('status')],
         rows: [shearRow]
     }, 'aci-shear-check');
 
     report.render('results-container');
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const handleRunAciCheck = createCalculationHandler({
-        inputIds: aciInputIds,
-        storageKey: 'aci-concrete-inputs',
-        validationRuleKey: 'aci_concrete',
-        calculatorFunction: aciCalculator.calculate,
-        renderFunction: renderAciResults,
-        resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
-    });
+const handleRunAciCheck = createCalculationHandler({
+    inputIds: aciInputIds,
+    storageKey: 'aci-concrete-inputs',
+    validationRuleKey: 'aci_concrete', // FIX: Added the missing validationRuleKey
+    calculatorFunction: aciCalculator.calculate,
+    renderFunction: renderAciResults,
+    resultsContainerId: 'results-container',
+    buttonId: 'run-check-btn'
+});
 
-    await initializeApp({
-        pageKey: 'aci-concrete', // A key for this page
-        pageTitle: 'ACI 318-19 Concrete Beam Checker',
-        inputIds: aciInputIds,
-        calculationHandler: handleRunAciCheck,
-        buttonId: 'run-check-btn',
-        onReady: () => {
-            attachReportEventListeners('results-container', {
-                reportId: 'aci-report-content',
-                filenamePrefix: 'ACI-318-Report',
-                toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos os Detalhes', hideAll: 'Esconder Todos os Detalhes' }
-            });
-        }
-    });
+initializeApp({
+    inputIds: aciInputIds,
+    calculationHandler: handleRunAciCheck
+    // pageKey e pageTitle serão encontrados automaticamente pela nova initializeApp
+    // buttonId também é encontrado por padrão se for 'run-check-btn'
 });

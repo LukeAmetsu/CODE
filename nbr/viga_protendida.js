@@ -960,6 +960,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return el;
     }
 
+/**
+ * --- EVENT LISTENERS AND DOM MANIPULATION ---
+ */
     function addCableDefinitionRow(containerId, cable = { num_strands: 12, jacking_side: 'esquerda', sequence: 1 }) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -1367,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         drawDiagrams(); // Initial draw
 
         // Attach listeners after initial setup
-        const diagramInputIds = inputManager.inputIds.filter(id => id !== 'beam_height').concat(['beam_coords']);
+        const diagramInputIds = inputManager.inputIds.filter(id => id !== 'beam_height').concat(['beam_coords']); // This is fine
         diagramInputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -1382,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             addCableDefinitionRow('cables-definition-container');
         });
     }
-    
+
     function drawDiagrams() {
         const inputs = gatherAllInputs();
         drawCrossSectionDiagram('cross-section-canvas', inputs.vertices);
@@ -1394,18 +1397,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    await initializeApp({
-        pageKey: 'viga-protendida',
-        pageTitle: 'Verificador de Viga Protendida (NBR 6118)',
+    initializeApp({
         inputIds: allInputAndTextareaIds,
         calculationHandler: handleRunCheck,
-        buttonId: 'run-check-btn',
         onReady: () => { 
             onAppReady();
             drawDiagrams();
         }
-    });
+    }); // This was missing a closing parenthesis
 
+    // Attach report listeners after the app is ready
     attachReportEventListeners('results-container', {
         reportId: 'concrete-beam-report',
         filenamePrefix: 'Viga-Protendida-Relatorio',

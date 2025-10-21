@@ -134,22 +134,20 @@ function renderNbrResults(calc_results) {
     report.render('results-container');
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await initializeApp({
-        pageKey: 'viga-concreto',
-        pageTitle: 'Verificador de Viga de Concreto (NBR 6118:2014)',
+initializeApp({
+    calculationHandler: createCalculationHandler({
         inputIds: nbr6118InputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: nbr6118InputIds,
-            storageKey: 'nbr6118-inputs',
-            validationRuleKey: 'nbr_concreto',
-            calculatorFunction: nbr6118Calculator.calculate,
-            renderFunction: renderNbrResults,
-            resultsContainerId: 'results-container',
-            buttonId: 'run-check-btn'
-        }),
-        buttonId: 'run-check-btn',
-        onReady: () => { /* Page-specific initializations can go here */ }
-    });
-    attachReportEventListeners('results-container', { reportId: 'concrete-report-content', filenamePrefix: 'NBR6118-Relatorio', toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' } });
+        storageKey: 'nbr6118-inputs',
+        validationRuleKey: 'nbr_concreto',
+        calculatorFunction: nbr6118Calculator.calculate,
+        renderFunction: renderNbrResults,
+        resultsContainerId: 'results-container',
+        buttonId: 'run-check-btn'
+    }), // This is correct
+    onReady: () => {
+        attachReportEventListeners('results-container', {
+            reportId: 'concrete-report-content',
+            filenamePrefix: 'NBR6118-Concreto-Relatorio'
+        });
+    }
 });

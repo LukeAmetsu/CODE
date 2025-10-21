@@ -1,34 +1,26 @@
 let lastWoodRunResults = null; // To hold the results for report generation
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const inputIds = [
-        'Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted',
-        'b_width', 'd_depth', 'unbraced_length_L', 'effective_length_factor_K', 'bearing_length_Lb',
-        'load_duration', 'wet_service', 'temperature', 'flat_use', 'incising', 'repetitive_member', 'deflection_span', 'deflection_limit',
-        'axial_load_P', 'moment_load_M', 'shear_load_V'
-    ];
-    
-    await initializeApp({
-        pageKey: 'nds',
-        pageTitle: 'NDS Wood Member Design Checker',
+const inputIds = [
+    'Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted',
+    'b_width', 'd_depth', 'unbraced_length_L', 'effective_length_factor_K', 'bearing_length_Lb',
+    'load_duration', 'wet_service', 'temperature', 'flat_use', 'incising', 'repetitive_member', 'deflection_span', 'deflection_limit',
+    'axial_load_P', 'moment_load_M', 'shear_load_V'
+];
+
+initializeApp({
+    pageKey: 'nds',
+    pageTitle: 'NDS Wood Member Design Checker',
+    inputIds: inputIds,
+    calculationHandler: createCalculationHandler({
         inputIds: inputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: inputIds,
-            storageKey: 'wood-design-inputs',
-            validatorFunction: (inputs) => validateInputs(inputs, validationRules.wood),
-            calculatorFunction: woodChecker.run,
-            renderFunction: renderWoodResults,
-            resultsContainerId: 'wood-results-container',
-            buttonId: 'run-wood-check-btn'
-        }),
-        buttonId: 'run-wood-check-btn',
-        onReady: () => {
-            attachReportEventListeners('wood-results-container', {
-                reportId: 'wood-report-content',
-                filenamePrefix: 'Wood-Design-Report',
-            });
-        }
-    });
+        storageKey: 'wood-design-inputs',
+        validatorFunction: (inputs) => validateInputs(inputs, validationRules.wood),
+        calculatorFunction: woodChecker.run,
+        renderFunction: renderWoodResults,
+        resultsContainerId: 'wood-results-container',
+        buttonId: 'run-wood-check-btn'
+    }),
+    buttonId: 'run-wood-check-btn'
 });
 
 const woodChecker = (() => {

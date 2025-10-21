@@ -18,64 +18,55 @@ const comboInputIds = [
  * Initializes the application by attaching event listeners and loading stored data.
  * This function is called from combos.html after the DOM and templates are loaded.
  */
-document.addEventListener('DOMContentLoaded', async () => {
-    initializeApp({
-        pageKey: 'combos',
-        pageTitle: 'ASCE Load Combination Calculator',
+initializeApp({
+    inputIds: comboInputIds,
+    calculationHandler: createCalculationHandler({
         inputIds: comboInputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: comboInputIds,
-            storageKey: 'combo-calculator-inputs',
-            validationRuleKey: 'combo',
-            calculatorFunction: (inputs) => {
-            const validation = validateInputs(inputs, validationRules.combo);
-            const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
-            const scenarios = buildScenarios(inputs);
+        storageKey: 'combo-calculator-inputs',
+        validationRuleKey: 'combo', // This key is used for validation and report naming
+        calculatorFunction: (inputs) => {
+        const validation = validateInputs(inputs, validationRules.combo);
+        const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
+        const scenarios = buildScenarios(inputs);
 
-            const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
-            const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+        const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
+        const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+        
+        const scenarios_data = {};
+        for (const key in scenarios) {
+            const isWallScenario = key.includes('wall');
             
-            const scenarios_data = {};
-            for (const key in scenarios) {
-                const isWallScenario = key.includes('wall');
-                
-                // Start with all loads from the form.
-                const scenario_loads = {
-                    D: inputs.combo_dead_load_d, 
-                    L: inputs.combo_live_load_l, 
-                    Lr: inputs.combo_roof_live_load_lr, 
-                    R: inputs.combo_rain_load_r, 
-                    S: scenarios[key].S, // Use scenario-specific snow
-                    E: inputs.combo_seismic_load_e, 
-                    unit_system: inputs.combo_unit_system 
-                };
+            // Start with all loads from the form.
+            const scenario_loads = {
+                D: inputs.combo_dead_load_d, 
+                L: inputs.combo_live_load_l, 
+                Lr: inputs.combo_roof_live_load_lr, 
+                R: inputs.combo_rain_load_r, 
+                S: scenarios[key].S, // Use scenario-specific snow
+                E: inputs.combo_seismic_load_e, 
+                unit_system: inputs.combo_unit_system 
+            };
 
-                // **CORRECTED LOGIC**: For wall analysis, zero out ALL roof-specific gravity loads.
-                if (isWallScenario) {
-                    scenario_loads.Lr = 0;
-                    scenario_loads.R = 0;
-                    scenario_loads.S = 0; // Walls don't have direct snow load.
-                }
-                
-                scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-                scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            // **CORRECTED LOGIC**: For wall analysis, zero out ALL roof-specific gravity loads.
+            if (isWallScenario) {
+                scenario_loads.Lr = 0;
+                scenario_loads.R = 0;
+                scenario_loads.S = 0; // Walls don't have direct snow load.
             }
-            return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
-            },
-            renderFunction: renderComboResults,
-            resultsContainerId: 'combo-results-container',
-            buttonId: 'run-combo-calculation-btn'
-        }),
-        buttonId: 'run-combo-calculation-btn',
-        onReady: () => {
-            loadDataFromStorage(); // This is specific to the combo calculator
-            attachReportEventListeners('combo-results-container', {
-                reportId: 'combo-report-content',
-                filenamePrefix: 'Load-Combinations',
-                toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
-            });
+            
+            scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
+            scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
         }
-    });
+        return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
+        },
+        renderFunction: renderComboResults,
+        resultsContainerId: 'combo-results-container',
+        buttonId: 'run-combo-calculation-btn',
+        feedbackElId: 'feedback-message'
+    }),
+    onReady: () => {
+        loadDataFromStorage(); // This is specific to the combo calculator
+    }
 });
 function loadDataFromStorage() {
     const storedLoads = localStorage.getItem('loadsForCombinator');

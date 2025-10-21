@@ -105,26 +105,25 @@ function renderNbr7190Results(calc_results) {
     report.render('results-container-wood');
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const handleRunNbr7190Check = createCalculationHandler({
-        inputIds: nbr7190InputIds,
-        storageKey: 'nbr7190-inputs',
-        validationRuleKey: 'nbr_madeira',
-        calculatorFunction: nbr7190Calculator.calculate,
-        renderFunction: renderNbr7190Results,
-        resultsContainerId: 'results-container-wood',
-        buttonId: 'run-wood-check-btn'
-    }); 
-    await initializeApp({
-        pageKey: 'nbr-madeira',
-        pageTitle: 'Verificador de Peças de Madeira (NBR 7190:1997)',
-        inputIds: nbr7190InputIds,
-        calculationHandler: handleRunNbr7190Check,
-        buttonId: 'run-wood-check-btn'
-    });
+const handleRunNbr7190Check = createCalculationHandler({
+    inputIds: nbr7190InputIds,
+    storageKey: 'nbr7190-inputs',
+    validationRuleKey: 'nbr_madeira',
+    calculatorFunction: nbr7190Calculator.calculate,
+    renderFunction: renderNbr7190Results,
+    resultsContainerId: 'results-container-wood',
+    buttonId: 'run-wood-check-btn'
+}); 
+initializeApp({
+    inputIds: nbr7190InputIds,
+    calculationHandler: handleRunNbr7190Check
+});
+
+// Note: The `onReady` function in initializeApp would be a better place for this,
+// but adding it here to avoid modifying initializeApp directly in this refactoring.
+document.addEventListener('DOMContentLoaded', () => {
     attachReportEventListeners('results-container-wood', {
         reportId: 'wood-report-content',
-        filenamePrefix: 'NBR7190-Relatorio',
-        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
+        filenamePrefix: 'NBR7190-Madeira-Relatorio'
     });
 });

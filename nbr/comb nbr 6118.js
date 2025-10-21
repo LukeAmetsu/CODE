@@ -13,26 +13,22 @@ const LOAD_TYPES = {
     'Outras Ações Variáveis (Q)': { isVariable: true, psi0: 0.8, psi1: 0.6, psi2: 0.4, gamma_q: 1.4 },
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
-    initializeApp({
-        activePage: 'comb-nbr',
-        pageTitle: 'Gerador de Combinações NBR (8681 / 6118)',
-        inputIds: [], // Not needed as we use a custom gatherer
-        calculationHandler: createCalculationHandler({
-            gatherInputsFunction: gatherNbrLoads,
-            calculatorFunction: nbrComboCalculator.calculate,
-            renderFunction: renderNbrComboResults,
-            resultsContainerId: 'report-output',
-            buttonId: 'generate-report-btn',
-            feedbackElId: 'feedback-message'
-        }),
-        onReady: () => {
-            const loadsContainer = document.getElementById('loads-container');
-            const addLoadBtn = document.getElementById('add-load-btn');
-            addLoadBtn.addEventListener('click', () => addLoadRow(loadsContainer));
-            addLoadRow(loadsContainer); // Add initial row
-        }
-    });
+initializeApp({
+    calculationHandler: createCalculationHandler({
+        gatherInputsFunction: gatherNbrLoads,
+        calculatorFunction: nbrComboCalculator.calculate,
+        renderFunction: renderNbrComboResults,
+        resultsContainerId: 'report-output',
+        buttonId: 'generate-report-btn', // Corrected button ID
+        validationRuleKey: 'nbr_combos', // Added for consistency
+        feedbackElId: 'feedback-message'
+    }),
+    onReady: () => {
+        const loadsContainer = document.getElementById('loads-container');
+        const addLoadBtn = document.getElementById('add-load-btn');
+        addLoadBtn.addEventListener('click', () => addLoadRow(loadsContainer));
+        addLoadRow(loadsContainer); // Add initial row
+    }
 });
 
 function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {

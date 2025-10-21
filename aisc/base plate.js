@@ -857,7 +857,7 @@ const basePlateCalculator = (() => {
      * @returns {number} The maximum tension force in kips.
      */
     function calculateAnchorTension(inputs) {
-        const { axial_load_P_in: Pu, moment_Mx_in: Mux_kipft, moment_My_in: Muy_kipft, num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B } = inputs;
+        const { axial_load_P_in: Pu, moment_Mx_in: Mux_kipft, moment_My_in: Muy_kipft, num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B, anchor_bolt_diameter } = inputs;
         const Mux = Mux_kipft * 12; // kip-in
         const Muy = Muy_kipft * 12; // kip-in
         const bolt_coords = getBoltCoordinates(inputs);
@@ -869,9 +869,9 @@ const basePlateCalculator = (() => {
 
     // --- Modular Anchor Check Functions (ACI 318-19, Chapter 17) ---
 
-    function checkAnchorSteelTension(inputs) { // FIX: Corrected function name
+    function checkAnchorSteelTension(inputs) {
         const { anchor_bolt_diameter: db, anchor_bolt_Fut: Fut, design_method } = inputs;
-        const Ab = PI * (db ** 2) / 4.0;
+        const Ab = AISC_SPEC.getBoltProperties(db)?.Ab || 0;
         return { Rn: Ab * Fut, phi: getPhi('anchor_tension_steel', design_method), omega: getPhi('anchor_tension_steel', 'ASD') };
     }
 
@@ -902,7 +902,7 @@ const basePlateCalculator = (() => {
 
     function checkAnchorPullout(inputs) {
         const { design_method, anchor_bolt_diameter: db, concrete_fc: fc, assume_cracked_concrete } = inputs;
-        const Abrg = PI * (db ** 2); // Simplified bearing area
+        const Abrg = AISC_SPEC.getBoltProperties(db)?.Ab || 0; // Bearing area of anchor head, simplified as bolt area
         const Np = 8 * Abrg * fc;
         const psi_c_P = assume_cracked_concrete === 'true' ? 1.0 : 1.4;
         const details = { Abrg, Np, psi_c_P };
@@ -913,16 +913,16 @@ const basePlateCalculator = (() => {
         const { design_method, anchor_bolt_diameter: db, concrete_fc: fc, concrete_edge_dist_ca1: ca1, anchor_embedment_hef: hef, bolt_spacing_N, num_bolts_N } = inputs;
         if (ca1 >= 0.4 * hef) return null; // Check does not apply
 
-        const Abrg = PI * (db ** 2);
+        const Abrg = AISC_SPEC.getBoltProperties(db)?.Ab || 0;
         const Nsb_single = 160 * ca1 * sqrt(Abrg) * 1.0 * sqrt(fc * 1000) / 1000; // in kips
         const Nsbg = (1 + bolt_spacing_N / (6 * ca1)) * Nsb_single;
         const details = { ca1, hef, Abrg, Nsb_single, Nsbg, num_bolts_at_edge: num_bolts_N };
         return { Rn: Nsbg * num_bolts_N, phi: getPhi('anchor_side_face', design_method), omega: getPhi('anchor_side_face', 'ASD'), details };
     }
 
-    function checkAnchorSteelShear(inputs) {
+    function checkAnchorSteelShear(inputs) { // This function was missing in the original context
         const { design_method, anchor_bolt_diameter: db, anchor_bolt_Fut: Fut } = inputs;
-        const Ab = PI * (db ** 2) / 4.0;
+        const Ab = AISC_SPEC.getBoltProperties(db)?.Ab || 0;
         return { Rn: 0.6 * Ab * Fut, phi: getPhi('anchor_shear_steel', design_method), omega: getPhi('anchor_shear_steel', 'ASD') };
     }
 
@@ -1485,7 +1485,7 @@ function generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs) {
         return { value: 0, breakdown: 'No bolts defined.' };
     }
 
-    const Ab = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
+    const Ab = AISC_SPEC.getBoltProperties(inputs.anchor_bolt_diameter)?.Ab || 0;
 
     // Correctly calculate the moment of inertia of the bolt group area: I = Σ(A_b * d²)
     let I_bg_x = 0, I_bg_y = 0;
@@ -1810,87 +1810,13 @@ function renderResults(results) {
     report.render('steel-results-container');
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
+// Add a listener to the theme toggle to redraw the 3D diagram
+const themeToggleButton = document.getElementById('theme-toggle');
+if (themeToggleButton) {
+    themeToggleButton.addEventListener('click', () => setTimeout(draw3dBasePlateDiagram, 50)); // Use a small timeout to ensure class has been updated
+}
 
-    function populateMaterialDropdowns() {
-        const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
-            `<option value="${grade}">${grade}</option>`
-        ).join('');
-
-        const select = document.getElementById('base_plate_material');
-        if (select) {
-            select.innerHTML = gradeOptions;
-            select.value = 'A36'; // Default for base plates
-            select.addEventListener('change', (e) => {
-                const grade = AISC_SPEC.getSteelGrade(e.target.value);
-                if (grade) {
-                    if (e.target.dataset.fuTarget) document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
-                    if (e.target.dataset.fyTarget) document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
-                }
-            });
-            select.dispatchEvent(new Event('change')); // Trigger initial population
-        }
- 
-        // Debounce the 3D diagram redraw for performance.
-        const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
- 
-        // Add event listeners to all inputs to redraw diagrams on input/change.
-        basePlateInputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                // Redraw 2D diagram instantly.
-                // Redraw 3D diagram after a short delay to prevent lag.
-                const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
-                el.addEventListener('input', redraw);
-                el.addEventListener('change', redraw);
-            }
-        });
-        // --- Populate Weld Electrode Dropdown ---
-        const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
-        const weldSelect = document.getElementById('weld_electrode');
-        if (weldSelect) {
-            weldSelect.innerHTML = weldOptions;
-            weldSelect.value = 'E70XX'; // Default
-            weldSelect.addEventListener('change', (e) => {
-                const electrode = AISC_SPEC.weldElectrodes[e.target.value];
-                if (electrode) document.getElementById(e.target.dataset.fexxTarget).value = electrode.Fexx;
-            });
-            weldSelect.dispatchEvent(new Event('change'));
-        }
-
-        // --- Populate Bolt Grade Dropdown ---
-        const boltGradeOptions = Object.keys(AISC_SPEC.boltGrades).map(grade =>
-            `<option value="${grade}">${grade}</option>`
-        ).join('');
-        const boltSelect = document.getElementById('anchor_bolt_grade');
-        const threadsCheckbox = document.getElementById('anchor_threads_included');
-
-        function updateBoltProperties() {
-            const grade = boltSelect.value;
-            const threadsIncl = threadsCheckbox.checked;
-            const { Fnv } = AISC_SPEC.getFnv(grade, threadsIncl);
-            const Fnt = AISC_SPEC.getFnt(grade); // Note: AISC provides Fnt (nominal tensile stress), not Fut. Using Fnt for Fut.
-
-            document.getElementById(boltSelect.dataset.futTarget).value = Fnt;
-            document.getElementById(boltSelect.dataset.fnvTarget).value = Fnv;
-        }
-
-        if (boltSelect && threadsCheckbox) {
-            boltSelect.innerHTML = boltGradeOptions;
-            boltSelect.value = 'A325'; // A common default
-            boltSelect.addEventListener('change', updateBoltProperties);
-            threadsCheckbox.addEventListener('change', updateBoltProperties);
-            updateBoltProperties(); // Initial population
-        }
-    }
-
-    // Add a listener to the theme toggle to redraw the 3D diagram
-    const themeToggleButton = document.getElementById('theme-toggle');
-    if (themeToggleButton) {
-        themeToggleButton.addEventListener('click', () => setTimeout(draw3dBasePlateDiagram, 50)); // Use a small timeout to ensure class has been updated
-    }
-
-    async function populateShapeDropdown() {
+async function populateShapeDropdown() {
         const shapeSelect = document.getElementById('aisc_shape_select');
         const columnType = document.getElementById('column_type').value;
         if (!shapeSelect) return;
@@ -1924,10 +1850,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
         }
     }
-
-    async function handleShapeSelection() {
+async function handleShapeSelection() {
         const shapeName = document.getElementById('aisc_shape_select').value;
         const geometryInputs = ['column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw'];
+
 
         if (!shapeName) {
             geometryInputs.forEach(id => {
@@ -1951,9 +1877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 el.readOnly = true;
             }
         });
-    }
-
-    function updateColumnInputsUI() {
+    }function updateColumnInputsUI() {
         const columnType = document.getElementById('column_type').value;
         const label1 = document.getElementById('label_column_dim1');
         const dim2_container = document.getElementById('container_column_dim2');
@@ -1979,55 +1903,77 @@ document.addEventListener('DOMContentLoaded', async () => {
         populateShapeDropdown();
         drawBasePlateDiagram();
     }
+// Attach listener for column type change
+document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
 
-    // Attach listener for column type change
-    document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
-
-    await initializeApp({
-        pageKey: 'base-plate',
-        pageTitle: 'AISC Base Plate & Anchorage Checker',
+initializeApp({
+    calculationHandler: createCalculationHandler({
         inputIds: basePlateInputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: basePlateInputIds,
-            storageKey: 'baseplate-inputs',
-            validatorFunction: basePlateCalculator.validateBasePlateInputs,
-            calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
-            renderFunction: renderResults,
-            resultsContainerId: 'steel-results-container',
-            buttonId: 'run-steel-check-btn'
-        }),
-        onReady: () => {
-            populateMaterialDropdowns();
-            document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-            updateColumnInputsUI();
+        storageKey: 'baseplate-inputs',
+        validatorFunction: basePlateCalculator.validateBasePlateInputs,
+        calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
+        renderFunction: renderResults,
+        buttonId: 'run-steel-check-btn',
+        feedbackElId: 'feedback-message'
+    }),
+    onReady: () => {
+        populateMaterialDropdowns();
 
-            const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
-            basePlateInputIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
-                    el.addEventListener('input', redraw);
-                    el.addEventListener('change', redraw);
-                }
+        // --- Populate Weld Electrode Dropdown ---
+        const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
+        const weldSelect = document.getElementById('weld_electrode');
+        if (weldSelect) {
+            weldSelect.innerHTML = weldOptions;
+            weldSelect.value = 'E70XX'; // Default
+            weldSelect.addEventListener('change', (e) => {
+                const electrode = AISC_SPEC.weldElectrodes[e.target.value];
+                if (electrode) document.getElementById(e.target.dataset.fexxTarget).value = electrode.Fexx;
             });
-
-            // Initial drawing of the diagram on page load
-            drawBasePlateDiagram();
-            draw3dBasePlateDiagram();
-
-            // Diagram copy buttons
-            document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('baseplate-diagram', {}));
-            document.getElementById('copy-3d-diagram-btn').addEventListener('click', () => {
-                // Pass the Babylon.js engine and scene to the copy handler
-                // so it can correctly render the canvas for copying.
-                handleCopyDiagramToClipboard('3d-diagram-container', { engine: bjsEngine, scene: bjsScene });
-            });
-
-            attachReportEventListeners('steel-results-container', {
-                reportId: 'baseplate-report-content',
-                filenamePrefix: 'Base-Plate-Report',
-                toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
-            });
+            weldSelect.dispatchEvent(new Event('change'));
         }
-    });
+
+        // --- Populate Bolt Grade Dropdown ---
+        const boltGradeOptions = Object.keys(AISC_SPEC.boltGrades).map(grade => `<option value="${grade}">${grade}</option>`).join('');
+        const boltSelect = document.getElementById('anchor_bolt_grade');
+        if (boltSelect) {
+            boltSelect.innerHTML = boltGradeOptions;
+            boltSelect.value = 'A325'; // A common default
+        }
+
+        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+        updateColumnInputsUI();
+
+        const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
+        basePlateInputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
+                el.addEventListener('input', redraw);
+                el.addEventListener('change', redraw);
+            }
+        });
+        populateBoltGradeDropdowns();
+
+        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+        updateColumnInputsUI();
+
+        // Initial drawing of the diagram on page load
+        drawBasePlateDiagram();
+        draw3dBasePlateDiagram();
+
+        // Diagram copy buttons
+        document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('baseplate-diagram', {}));
+        document.getElementById('copy-3d-diagram-btn').addEventListener('click', () => {
+            // Pass the Babylon.js engine and scene to the copy handler
+            // so it can correctly render the canvas for copying.
+            handleCopyDiagramToClipboard('3d-diagram-container', { engine: bjsEngine, scene: bjsScene });
+        });
+
+        attachReportEventListeners('steel-results-container', {
+            reportId: 'baseplate-report-content',
+            filenamePrefix: 'Base-Plate-Report',
+            toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+        }
+        );
+    }
 });

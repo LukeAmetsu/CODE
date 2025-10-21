@@ -75,35 +75,25 @@ const rainLoadCalculator = (() => {
     return { run };
 })();
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await initializeApp({
-        pageKey: 'rain',
-        pageTitle: 'ASCE Rain Load Calculator',
+initializeApp({
+    // pageKey e pageTitle serão encontrados automaticamente
+    inputIds: rainInputIds,
+    calculationHandler: createCalculationHandler({
         inputIds: rainInputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: rainInputIds,
-            storageKey: 'rain-calculator-inputs',
-            validationRuleKey: 'rain',
-            calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
-            renderFunction: renderRainResults,
-            resultsContainerId: 'rain-results-container',
-            buttonId: 'run-rain-calculation-btn'
-        }),
+        storageKey: 'rain-calculator-inputs',
+        validationRuleKey: 'rain',
+        calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
+        renderFunction: renderRainResults,
+        resultsContainerId: 'rain-results-container',
         buttonId: 'run-rain-calculation-btn',
-        onReady: () => {
-            document.getElementById('rain_city_selector').addEventListener('change', (event) => {
-                const intensity = event.target.value;
-                if (intensity) document.getElementById('rain_intensity').value = intensity;
-            });
-        }
-    });
-
-    attachReportEventListeners('rain-results-container', {
-        reportId: 'rain-report-content',
-        filenamePrefix: 'Rain-Load',
-        onSendToCombos: () => sendToCombos({ combo_rain_load_r: lastRainRunResults?.results?.R_nominal || 0 }, 'Rain Calculator', 'Rain'),
-        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
-    });
+        feedbackElId: 'feedback-message'
+    }),
+    onReady: () => {
+        document.getElementById('rain_city_selector').addEventListener('change', (event) => {
+            const intensity = event.target.value;
+            if (intensity) document.getElementById('rain_intensity').value = intensity;
+        });
+    }
 });
 
 function generateRainSummary(inputs, results, p_unit, dh_calc_note) {

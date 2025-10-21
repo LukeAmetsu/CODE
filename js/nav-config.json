@@ -1,32 +1,32 @@
 {
     "mainNav": [
-        { "key": "home", "href": "index.html", "text": "Home", "subNav": [] },
+        { "key": "home", "href": "index.html", "textKey": "engineering_hub", "subNav": [] },
         {
             "key": "us",
-            "href": "index.html#us-codes-section",
-            "text": "US Codes",
+            "href": "asce/wind.html",
+            "textKey": "us_codes",
             "subNav": [
-                { "key": "wind", "href": "asce/wind.html", "text": "Wind" },
-                { "key": "snow", "href": "asce/snow.html", "text": "Snow" },
-                { "key": "rain", "href": "asce/rain.html", "text": "Rain" },
-                { "key": "combos", "href": "asce/combos.html", "text": "Combinations" },
-                { "key": "steel-check", "href": "aisc/steel check.html", "text": "Steel Check" },
-                { "key": "base-plate", "href": "aisc/base plate.html", "text": "Base Plate" },
-                { "key": "splice", "href": "aisc/splice.html", "text": "Splice" },
-                { "key": "aci-concrete", "href": "aci/aci 318 concrete.html", "text": "ACI Concrete" },
-                { "key": "nds", "href": "nds/nds wood design.html", "text": "NDS Wood" }
+                { "key": "wind", "href": "asce/wind.html", "textKey": "wind" },
+                { "key": "snow", "href": "asce/snow.html", "textKey": "snow" },
+                { "key": "rain", "href": "asce/rain.html", "textKey": "rain" },
+                { "key": "combos", "href": "asce/combos.html", "textKey": "combinations" },
+                { "key": "steel-check", "href": "aisc/steel check.html", "textKey": "steel_check" },
+                { "key": "base-plate", "href": "aisc/base plate.html", "textKey": "base_plate" },
+                { "key": "splice", "href": "aisc/splice.html", "textKey": "splice" },
+                { "key": "aci-concrete", "href": "aci/aci 318 concrete.html", "textKey": "concrete_beam" },
+                { "key": "nds", "href": "nds/nds wood design.html", "textKey": "nds_wood" }
             ]
         },
         {
             "key": "nbr",
-            "href": "index.html#nbr-codes-section",
-            "text": "NBR (Brazil)",
+            "href": "nbr/comb nbr 6118.html",
+            "textKey": "nbr_brazil",
             "subNav": [
-                { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "text": "Combinações" },
-                { "key": "viga-concreto", "href": "nbr/nbr 6118 concreto.html", "text": "Viga de Concreto" },
-                { "key": "viga-protendida", "href": "nbr/viga_protendida.html", "text": "Viga Protendida" },                
-                { "key": "nbr-aco", "href": "nbr/nbr 8080 estruturas de aço.html", "text": "Aço" },
-                { "key": "nbr-madeira", "href": "nbr/nbr 7190 madeira.html", "text": "Madeira" }
+                { "key": "comb-nbr", "href": "nbr/comb nbr 6118.html", "textKey": "combinations" },
+                { "key": "viga-concreto", "href": "nbr/nbr 6118 concreto.html", "textKey": "concrete_beam" },
+                { "key": "viga-protendida", "href": "nbr/viga_protendida.html", "textKey": "prestressed_beam" },
+                { "key": "nbr-aco", "href": "nbr/nbr 8080 estruturas de aço.html", "textKey": "steel" },
+                { "key": "nbr-madeira", "href": "nbr/nbr 7190 madeira.html", "textKey": "wood" }
             ]
         }
     ]

@@ -1807,42 +1807,37 @@ function renderSteelResults(results) {
 }
 
 // --- DOMContentLoaded: Initialize UI ---
-document.addEventListener('DOMContentLoaded', async () => {
-    const handleRunSteelCheck = createCalculationHandler({
-        gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
-        storageKey: 'steel-check-inputs',
-        validatorFunction: (inputs) => {
-            const { errors, warnings } = steelChecker.validateInputs(inputs);
-            return { errors, warnings };
-        },
-        calculatorFunction: steelChecker.run,
-        renderFunction: renderSteelResults,
-        resultsContainerId: 'steel-results-container',
-        buttonId: 'run-steel-check-btn'
-    });
+const handleRunSteelCheck = createCalculationHandler({
+    gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
+    storageKey: 'steel-check-inputs',
+    validatorFunction: (inputs) => {
+        const { errors, warnings } = steelChecker.validateInputs(inputs);
+        return { errors, warnings };
+    },
+    calculatorFunction: steelChecker.run,
+    renderFunction: renderSteelResults,
+    resultsContainerId: 'steel-results-container',
+    buttonId: 'run-steel-check-btn'
+});
 
-    await initializeApp({
-        activePage: 'steel-check',
-        pageTitle: 'AISC Steel Section Design Checker',
-        inputIds: steelCheckInputIds,
-        calculationHandler: handleRunSteelCheck,
-        buttonId: 'run-steel-check-btn',
-        onReady: (loadedInputs) => {
-            populateMaterialDropdowns();
-            populateShapeDropdown();
-            updateGeometryInputsUI();
-            document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
-            document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-            attachReportEventListeners('steel-results-container', {
-                reportId: 'steel-check-report-content',
-                filenamePrefix: 'Steel-Check-Report',
-                toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
-            });
-            if (loadedInputs) {
-                // If inputs were loaded from storage, we might want to run the check automatically.
-                // For now, we'll just ensure the UI is updated.
-                // To run automatically, you could call: handleRunSteelCheck();
-            }
+initializeApp({
+    inputIds: steelCheckInputIds,
+    calculationHandler: handleRunSteelCheck,
+    onReady: (loadedInputs) => {
+        populateMaterialDropdowns();
+        populateShapeDropdown();
+        updateGeometryInputsUI();
+        document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
+        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+        attachReportEventListeners('steel-results-container', {
+            reportId: 'steel-check-report-content',
+            filenamePrefix: 'Steel-Check-Report',
+            toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+        });
+        if (loadedInputs) {
+            // If inputs were loaded from storage, we might want to run the check automatically.
+            // For now, we'll just ensure the UI is updated.
+            // To run automatically, you could call: handleRunSteelCheck();
         }
-    });
+    }
 });

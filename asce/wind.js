@@ -44,44 +44,6 @@ const windInputIds = [
 ];
 
 // =================================================================================
-//  UI INJECTION & INITIALIZATION
-// =================================================================================
-async function initWindCalculator() {
-    await initializeApp({
-        pageKey: 'wind',
-        pageTitle: 'ASCE Wind Load Calculator',
-        inputIds: windInputIds,
-        calculationHandler: createCalculationHandler({ // This part is correct
-            inputIds: windInputIds, storageKey: 'wind-calculator-inputs',
-            validatorFunction: validateWindInputs, calculatorFunction: windLoadCalculator.run,
-            renderFunction: renderWindResults, resultsContainerId: 'results-container',
-            feedbackElId: 'feedback-message', buttonId: 'run-calculation-btn'
-        }),
-        buttonId: 'run-calculation-btn', // Pass the button ID to initializeApp
-        onReady: () => {
-            // The calculation handler is now attached directly by initializeApp,
-            // so the explicit click listener is no longer needed here.
-            // document.getElementById('run-calculation-btn').addEventListener('click', handleRunWindCalculation);
-            document.getElementById('mean_roof_height').addEventListener('input', (event) => {
-                const h = parseFloat(event.target.value) || 0;
-                const is_imp = document.getElementById('unit_system').value === 'imperial';
-                const limit = is_imp ? 60 : 18.3;
-                document.getElementById('tall-building-section').classList.toggle('hidden', h <= limit);
-                document.getElementById('mwfrs-method-container')?.classList.toggle('hidden', h > limit);
-            });
-            // Attach report event listeners here, after the app is ready
-            attachReportEventListeners('results-container', {
-                reportId: 'wind-report-content',
-                filenamePrefix: 'Wind-Load-Report',
-                onSendToCombos: () => sendWindToCombos(lastWindRunResults),
-                toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
-            });
-        }
-    });
-
-}
-
-// =================================================================================
 //  WIND LOAD CALCULATOR LOGIC
 // =================================================================================
 
@@ -2553,3 +2515,34 @@ function renderWindResults(results) {
         renderHeightVaryingChart('height-varying-chart', heightVaryingData, inputs.design_method, units);
     }
 }
+
+
+// =================================================================================
+//  UI INJECTION & INITIALIZATION
+// =================================================================================
+initializeApp({
+    // pageKey e pageTitle serão encontrados automaticamente
+    inputIds: windInputIds,
+    calculationHandler: createCalculationHandler({ // This part is correct
+        inputIds: windInputIds, storageKey: 'wind-calculator-inputs',
+        validatorFunction: validateWindInputs, calculatorFunction: windLoadCalculator.run,
+        renderFunction: renderWindResults, resultsContainerId: 'results-container',
+        feedbackElId: 'feedback-message', buttonId: 'run-calculation-btn'
+    }), // The onSendToCombos is attached via attachReportEventListeners
+    onReady: () => {
+        // Attach report event listeners here, after the app is ready
+        attachReportEventListeners('results-container', {
+            reportId: 'wind-report-content',
+            filenamePrefix: 'Wind-Load-Report',
+            onSendToCombos: () => sendWindToCombos(lastWindRunResults),
+            toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+        });
+        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
+            const h = parseFloat(event.target.value) || 0;
+            const is_imp = document.getElementById('unit_system').value === 'imperial';
+            const limit = is_imp ? 60 : 18.3;
+            document.getElementById('tall-building-section')?.classList.toggle('hidden', h <= limit);
+            document.getElementById('mwfrs-method-container')?.classList.toggle('hidden', h > limit);
+        });
+    }
+});

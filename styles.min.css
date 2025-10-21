@@ -1,10 +1,75 @@
 /* === BASE & THEME === */
+:root {
+    --color-bg-primary: #f9fafb; /* gray-50 */
+    --color-bg-secondary: #f3f4f6; /* gray-100 */
+    --color-bg-tertiary: #e5e7eb; /* gray-200 */
+    --color-bg-quaternary: #f9fafb; /* gray-50, for table headers in light mode */
+    --color-bg-hover: #f3f4f6; /* gray-100 */
+    --color-text-primary: #1f2937; /* gray-800 */
+    --color-text-secondary: #4b5563; /* gray-600 */
+    --color-border-primary: #e5e7eb; /* gray-200 */
+    --color-border-secondary: #d1d5db; /* gray-300 */
+    --color-accent: #3b82f6; /* blue-500 */
+}
+
+.dark {
+    --color-bg-primary: #111827; /* gray-900 */
+    --color-bg-secondary: #1f2937; /* gray-800 */
+    --color-bg-tertiary: #374151; /* gray-700 */
+    --color-bg-quaternary: #1f2937; /* gray-800, for table headers in dark mode */
+    --color-bg-hover: #374151; /* gray-700 */
+    --color-text-primary: #d1d5db; /* gray-300 */
+    --color-text-secondary: #9ca3af; /* gray-400 */
+    --color-border-primary: #374151; /* gray-700 */
+    --color-border-secondary: #4b5563; /* gray-600 */
+    --color-accent: #3b82f6; /* blue-500 */
+}
+
 body {
     font-family: 'Inter', sans-serif;
-    color: #000;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
-.dark body, .dark p, .dark label, .dark h1, .dark h2, .dark h3, .dark h4 {
+
+/* Language Selector */
+#language-selector {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+}
+.dark #language-selector {
+    background-color: #374151; /* dark:bg-gray-700 */
+    color: #d1d5db; /* dark:text-gray-300 */
+    border-color: #4b5563; /* dark:border-gray-600 */
+}
+
+/* Main Navigation Links */
+.main-nav-link {
+    color: var(--color-text-secondary);
+}
+.main-nav-link:hover {
+    background-color: var(--color-bg-hover);
+}
+.main-nav-link.active {
+    background-color: var(--color-accent);
     color: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.main-nav-link.active-main {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-accent);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Navigation Ribbon Container */
+.nav-ribbon {
+    background-color: var(--color-bg-quaternary);
+    border-radius: 0.5rem;
+    padding: 0.25rem;
+}
+.dark .nav-ribbon {
+    background-color: #374151;
 }
 
 /* === FORM & INPUTS === */
@@ -48,15 +113,17 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     box-shadow: 0 0 0 2px #3b82f666;
 }
 
+/* Theme-aware selector for language dropdown */
+.theme-aware-selector {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+}
+
 /* === Required Field Indicator === */
 .label-required::after {
     content: ' *';
     color: #dc2626; /* red-600 */
     font-weight: bold;
-    margin-left: 2px;
-}
-.dark .label-required::after {
-    color: #f87171; /* red-400 */
 }
 
 /* === RESULTS & TABLES === */
@@ -67,19 +134,13 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
 }
 .results-container th, .results-container td {
     padding: .5rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--color-border-secondary);
     text-align: left;
     font-size: .875rem;
 }
-.dark .results-container th, .dark .results-container td {
-    border-color: #4b5563;
-}
 .results-container th {
-    background-color: #f3f4f6;
+    background-color: var(--color-bg-quaternary);
     font-weight: 600;
-}
-.dark .results-container th {
-    background-color: #1f2937;
 }
 .results-container caption {
     font-size: 1rem;
@@ -87,23 +148,21 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     caption-side: top;
     padding: .75rem;
     text-align: center;
-    background-color: #e5e7eb;
-}
-.dark .results-container caption {
-    background-color: #374151;
+    background-color: var(--color-bg-tertiary);
 }
 .pass { color: #16a34a; font-weight: 700; }
 .fail { color: #dc2626; font-weight: 700; }
-.dark .pass { color: #4ade80; }
-.dark .fail { color: #f87171; }
 
 /* === UI COMPONENTS === */
 .toggle-active { background-color: #3b82f6; color: #fff; }
+.dark .toggle-active {
+    background-color: #2563eb; /* A slightly brighter blue for dark mode */
+    color: #f9fafb;
+}
 .toggle-inactive { background-color: transparent; color: #4b5563; }
-.dark .toggle-inactive { color: #d1d5db; }
 .details-row {
     display: none;
-    background-color: #f9fafb; /* Light gray background for visibility */
+    background-color: var(--color-bg-primary); /* Light gray background for visibility */
 }
 .details-row.is-visible { display: table-row; }
 .toggle-details-btn {
@@ -117,12 +176,9 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     font-size: 1.25rem;
     font-weight: 700;
     text-transform: uppercase;
-    border-bottom: 2px solid #d1d5db;
+    border-bottom: 2px solid var(--color-border-secondary);
     padding-bottom: .5rem;
     margin-bottom: 1rem;
-}
-.dark .report-header {
-    border-color: #4b5563;
 }
 .validation-message {
     border-radius: .5rem;
@@ -131,46 +187,30 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     margin-bottom: 1rem; /* This was a duplicate, removed for cleanliness */
 }
 .validation-message.error {
-    background-color: #fef2f2; /* red-50 */
-    color: #991b1b; /* red-900 */
-}
-.dark .validation-message.error {
-    background-color: rgba(127, 29, 29, 0.3); /* red-900 with opacity */
-    color: #fca5a5; /* red-400 */
+    background-color: #fef2f2;
+    color: #991b1b;
 }
 .validation-message.warning {
-    background-color: #fffbeb; /* amber-50 */
-    color: #92400e; /* amber-900 */
-}
-.dark .validation-message.warning {
-    background-color: rgba(120, 53, 15, 0.3); /* amber-900 with opacity */
-    color: #fcd34d; /* amber-300 */
+    background-color: #fffbeb;
+    color: #92400e;
 }
 .validation-message svg { color: currentColor; } /* This applies the text color to the SVG icon */
 
 /* === DIAGRAMS & BREAKDOWNS === */
 .diagram {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--color-border-primary);
     border-radius: .5rem;
     padding: 1rem;
-    background-color: #f9fafb;
+    background-color: var(--color-bg-primary);
     margin-bottom: 1.5rem;
 }
-.dark .diagram {
-    background-color: #1f2937;
-    border-color: #374151;
-}
 .calc-breakdown {
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
     padding: 1rem;
     border-radius: .5rem;
     margin-top: 1rem;
     font-size: .875rem;
-}
-.dark .calc-breakdown {
-    background-color: #111827;
-    border-color: #374151;
 }
 .calc-breakdown h4 {
     font-weight: 600;
@@ -183,29 +223,19 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
 }
 
 /* --- SVG Diagram Styles --- */
-.svg-dim { stroke: #4b5563; stroke-width: 1; fill: none; marker-end: url(#arrow); marker-start: url(#arrow); }
-.svg-dim-text { font-size: 14px; fill: #4b5563; font-family: sans-serif; text-anchor: middle; }
-.svg-label { font-size: 12px; fill: #1f2937; font-family: sans-serif; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+.svg-dim { stroke: var(--color-text-secondary); stroke-width: 1; fill: none; marker-end: url(#arrow); marker-start: url(#arrow); }
+.svg-dim-text { font-size: 14px; fill: var(--color-text-secondary); font-family: sans-serif; text-anchor: middle; }
+.svg-label { font-size: 12px; fill: var(--color-text-primary); font-family: sans-serif; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
 .svg-plate { fill: #dbeafe; stroke: #60a5fa; stroke-width: 1.5; }
-.svg-member { fill: #374151; stroke: #9ca3af; stroke-width: 1; }
-.svg-bolt { fill: #9ca3af; stroke: #4b5563; stroke-width: 1; }
+.svg-member { fill: var(--color-bg-tertiary); stroke: var(--color-text-secondary); stroke-width: 1; }
+.svg-bolt { fill: var(--color-text-secondary); stroke: var(--color-text-primary); stroke-width: 1; }
 .svg-weld { fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 4 3; }
-
-.dark .svg-dim { stroke: #9ca3af; }
-.dark .svg-dim-text { fill: #9ca3af; }
-.dark .svg-label { fill: #d1d5db; }
-.dark .svg-plate { fill: #1e3a8a; stroke: #3b82f6; }
-.dark .svg-member { fill: #4b5563; stroke: #6b7280; }
-.dark .svg-bolt { fill: #6b7280; stroke: #9ca3af; }
-.dark .svg-weld { stroke: #fcd34d; }
 
 /* --- Weld Specific Styles --- */
 .svg-weld-line { fill: none; stroke: #f97316; stroke-dasharray: 3 2; }
-.dark .svg-weld-line { stroke: #fb923c; }
 
 /* --- Load Arrow Styles --- */
 .svg-load-arrow { stroke: #ef4444; stroke-width: 1.5; fill: none; marker-end: url(#arrow-marker); }
-.dark .svg-load-arrow { stroke: #f87171; }
 
 
 /* --- 3D Diagram Container --- */

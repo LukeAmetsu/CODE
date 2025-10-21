@@ -290,32 +290,22 @@ function run(inputs, validation) {
     return { run };
 })();
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await initializeApp({
-        pageKey: 'snow',
-        pageTitle: 'ASCE Snow Load Calculator',
+initializeApp({
+    // pageKey e pageTitle serão encontrados automaticamente
+    inputIds: snowInputIds,
+    calculationHandler: createCalculationHandler({
         inputIds: snowInputIds,
-        calculationHandler: createCalculationHandler({
-            inputIds: snowInputIds,
-            storageKey: 'snow-calculator-inputs',
-            validationRuleKey: 'snow',
-            calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
-            renderFunction: renderSnowResults,
-            resultsContainerId: 'snow-results-container',
-            buttonId: 'run-snow-calculation-btn',
-        }),
+        storageKey: 'snow-calculator-inputs',
+        validationRuleKey: 'snow',
+        calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
+        renderFunction: renderSnowResults,
+        resultsContainerId: 'snow-results-container',
         buttonId: 'run-snow-calculation-btn',
-        onReady: () => {
-            // Page-specific initializations can go here if needed in the future.
-        }
-    });
-
-    attachReportEventListeners('snow-results-container', {
-        reportId: 'snow-report-content',
-        filenamePrefix: 'Snow-Load',
-        onSendToCombos: () => sendSnowToCombos(lastSnowRunResults),
-        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
-    });
+        onSendToCombos: () => sendSnowToCombos(lastSnowRunResults)
+    }),
+    onReady: () => {
+        // Page-specific initializations can go here if needed in the future.
+    }
 });
 
 function renderSnowNotesAndWarnings(inputs, is_nycbc_min_governed, warnings) {
