@@ -1910,70 +1910,49 @@ initializeApp({
     calculationHandler: createCalculationHandler({
         inputIds: basePlateInputIds,
         storageKey: 'baseplate-inputs',
+        validationRuleKey: 'baseplate', // <-- ADICIONADO
         validatorFunction: basePlateCalculator.validateBasePlateInputs,
         calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
         renderFunction: renderResults,
         buttonId: 'run-steel-check-btn',
         feedbackElId: 'feedback-message'
-    }),
-    onReady: () => {
-        populateMaterialDropdowns();
-
-        // --- Populate Weld Electrode Dropdown ---
-        const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
-        const weldSelect = document.getElementById('weld_electrode');
-        if (weldSelect) {
-            weldSelect.innerHTML = weldOptions;
-            weldSelect.value = 'E70XX'; // Default
-            weldSelect.addEventListener('change', (e) => {
-                const electrode = AISC_SPEC.weldElectrodes[e.target.value];
-                if (electrode) document.getElementById(e.target.dataset.fexxTarget).value = electrode.Fexx;
-            });
-            weldSelect.dispatchEvent(new Event('change'));
-        }
-
-        // --- Populate Bolt Grade Dropdown ---
-        const boltGradeOptions = Object.keys(AISC_SPEC.boltGrades).map(grade => `<option value="${grade}">${grade}</option>`).join('');
-        const boltSelect = document.getElementById('anchor_bolt_grade');
-        if (boltSelect) {
-            boltSelect.innerHTML = boltGradeOptions;
-            boltSelect.value = 'A325'; // A common default
-        }
-
-        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-        updateColumnInputsUI();
-
-        const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
-        basePlateInputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
-                el.addEventListener('input', redraw);
-                el.addEventListener('change', redraw);
+    }),            onReady: () => {
+                // These two functions from shared-utils.js now handle all material and bolt dropdowns
+                populateMaterialDropdowns();
+                populateBoltGradeDropdowns();
+        
+                // --- This logic is unique to base plate.js and should stay ---
+                // --- Populate Weld Electrode Dropdown ---
+                const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
+                const weldSelect = document.getElementById('weld_electrode');
+                if (weldSelect) {
+                    weldSelect.innerHTML = weldOptions;
+                    weldSelect.value = 'E70XX'; // Default
+                    weldSelect.addEventListener('change', (e) => {
+                        const electrode = AISC_SPEC.weldElectrodes[e.target.value];
+                        if (electrode) document.getElementById(e.target.dataset.fexxTarget).value = electrode.Fexx;
+                    });
+                    weldSelect.dispatchEvent(new Event('change'));
+                }
+        
+                // --- Attach listeners for shape/column selection (unique to base plate) ---
+                document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+                document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
+                updateColumnInputsUI();
+        
+                // --- Attach listeners for diagrams (unique to base plate) ---
+                const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
+                basePlateInputIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        const redraw = () => { drawBasePlateDiagram(); debouncedRedraw3D(); };
+                        el.addEventListener('input', redraw);
+                        el.addEventListener('change', redraw);
+                    }
+                });
+        
+                // Initial drawing
+                drawBasePlateDiagram();
+                draw3dBasePlateDiagram();
             }
-        });
-        populateBoltGradeDropdowns();
-
-        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-        updateColumnInputsUI();
-
-        // Initial drawing of the diagram on page load
-        drawBasePlateDiagram();
-        draw3dBasePlateDiagram();
-
-        // Diagram copy buttons
-        document.getElementById('copy-2d-diagram-btn').addEventListener('click', () => handleCopyDiagramToClipboard('baseplate-diagram', {}));
-        document.getElementById('copy-3d-diagram-btn').addEventListener('click', () => {
-            // Pass the Babylon.js engine and scene to the copy handler
-            // so it can correctly render the canvas for copying.
-            handleCopyDiagramToClipboard('3d-diagram-container', { engine: bjsEngine, scene: bjsScene });
-        });
-
-        attachReportEventListeners('steel-results-container', {
-            reportId: 'baseplate-report-content',
-            filenamePrefix: 'Base-Plate-Report',
-            toggleTexts: { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
-        }
-        );
-    }
 });

@@ -1297,17 +1297,31 @@ class ReportBuilder {
             if (section.type === 'table') {
                 const { headers, rows } = section.tableConfig;
                 const table = createDOMElement('table', { className: 'w-full mt-2 results-table' });
-                const thead = createDOMElement('thead', {}, [createDOMElement('tr', {}, headers.map(h => createDOMElement('th', {}, [h])))]);
+                
+                // --- FIX: Apply a distinct grey background to the table header row ---
+                const headerRow = createDOMElement('tr', {});
+                headers.forEach(h => headerRow.appendChild(createDOMElement('th', { className: 'bg-gray-100 dark:bg-gray-700' }, [h])));
+                const thead = createDOMElement('thead', {}, [headerRow]);
+
                 const tbody = createDOMElement('tbody');
 
                 rows.forEach((row, rowIndex) => {
                     if (row.type === 'subheader') {
                         tbody.appendChild(createDOMElement('tr', { className: 'bg-gray-100 dark:bg-gray-700 font-semibold' }, [createDOMElement('td', { colspan: headers.length }, [row.content])]));
                     } else {
+                        // --- FIX: Ensure the first data row always has a top border ---
+                        // Add a top border to all data rows EXCEPT the very first one.
+                        const trClasses = [];
+                        if (rowIndex > 0) trClasses.push('border-t', 'dark:border-gray-700');
+                        
+                        // Apply the grey background if isHeader is true, regardless of position.
+                        if (row.isHeader) {
+                            trClasses.push('bg-gray-100', 'dark:bg-gray-700', 'font-semibold');
+                        }
                         const detailId = `${sectionId}-detail-${rowIndex}`;
                         const detailsButton = row.details ? createDOMElement('button', { className: 'toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs', dataset: { toggleId: detailId } }, ['[Show]']) : null;
                         
-                        const tr = createDOMElement('tr', { className: 'border-t dark:border-gray-700' });
+                        const tr = createDOMElement('tr', { className: trClasses.join(' ') });
                         row.cells.forEach((cell, cellIndex) => {
                             const td = createDOMElement('td');
                             td.innerHTML = cell; // Use innerHTML to render potential HTML in cells
@@ -1320,7 +1334,7 @@ class ReportBuilder {
                         tbody.appendChild(tr);
 
                         if (row.details) {
-                            const detailsRow = createDOMElement('tr', { id: detailId, className: 'details-row hidden' }, [createDOMElement('td', { colspan: headers.length, className: 'p-0' }, [createDOMElement('div', { className: 'calc-breakdown' }, [row.details])])]);
+                            const detailsRow = createDOMElement('tr', { id: detailId, className: 'details-row' }, [createDOMElement('td', { colspan: headers.length, className: 'p-0' }, [createDOMElement('div', { className: 'calc-breakdown' }, [row.details])])]);
                             tbody.appendChild(detailsRow);
                         }
                     }
@@ -1506,14 +1520,16 @@ function createCalculationHandler(config) { // This is the function being called
             
             saveInputsToLocalStorage(storageKey, inputs);
             renderFunction(calculationResult, inputs);
-            // Attach report event listeners AFTER the report has been rendered.
-            const reportId = `${validationRuleKey}-report-content`;
-            attachReportEventListeners(resultsContainerId, {
-                reportId: reportId,
-                filenamePrefix: `${validationRuleKey.replace(/_/g, '-')}-Report`,
-                onSendToCombos: config.onSendToCombos,
-                toggleTexts: config.toggleTexts
-            });
+            // --- FIX: Attach report event listeners AFTER every successful render ---
+            if (validationRuleKey) {
+                const reportId = `${validationRuleKey}-report-content`;
+                attachReportEventListeners(resultsContainerId, {
+                    reportId: reportId,
+                    filenamePrefix: `${validationRuleKey.replace(/_/g, '-')}-Report`,
+                    onSendToCombos: config.onSendToCombos,
+                    toggleTexts: config.toggleTexts
+                });
+            }
             showFeedback('Calculation complete!', false, feedbackElId);
         }
 
@@ -1611,4 +1627,39 @@ function populateBoltGradeDropdowns() {
         if (threadsCheckbox) threadsCheckbox.addEventListener('change', updateBoltProperties);
         updateBoltProperties(); // Initial population
     });
+}
+
+/**
+ * Populates a shape selection dropdown based on the currently selected section type.
+ * It targets a select element with the ID `aisc_shape_select`.
+ * It determines the shape type from an element with the ID `section_type` or `column_type`.
+ */
+async function populateShapeDropdown() {
+    const shapeSelect = document.getElementById('aisc_shape_select');
+    const typeSelect = document.getElementById('section_type') || document.getElementById('column_type');
+    if (!shapeSelect || !typeSelect || typeof AISC_SPEC === 'undefined') return;
+
+    const aiscShapeType = typeSelect.value;
+
+    try {
+        const shapes = await AISC_SPEC.getShapesByType(aiscShapeType);
+        const shapeNames = Object.keys(shapes).sort();
+
+        const currentVal = shapeSelect.value;
+        shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>'; // Reset
+        shapeNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            shapeSelect.appendChild(option);
+        });
+
+        if (shapeNames.includes(currentVal)) {
+            shapeSelect.value = currentVal;
+        }
+
+    } catch (error) {
+        console.error("Failed to populate shape dropdown:", error);
+        shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
+    }
 }

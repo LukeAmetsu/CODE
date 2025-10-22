@@ -3,7 +3,7 @@
     --color-bg-primary: #f9fafb; /* gray-50 */
     --color-bg-secondary: #f3f4f6; /* gray-100 */
     --color-bg-tertiary: #e5e7eb; /* gray-200 */
-    --color-bg-quaternary: #f9fafb; /* gray-50, for table headers in light mode */
+    --color-bg-quaternary: #f3f4f6; /* gray-100, for table headers in light mode */
     --color-bg-hover: #f3f4f6; /* gray-100 */
     --color-text-primary: #1f2937; /* gray-800 */
     --color-text-secondary: #4b5563; /* gray-600 */
@@ -16,7 +16,7 @@
     --color-bg-primary: #111827; /* gray-900 */
     --color-bg-secondary: #1f2937; /* gray-800 */
     --color-bg-tertiary: #374151; /* gray-700 */
-    --color-bg-quaternary: #1f2937; /* gray-800, for table headers in dark mode */
+    --color-bg-quaternary: #374151; /* gray-700, for table headers in dark mode */
     --color-bg-hover: #374151; /* gray-700 */
     --color-text-primary: #d1d5db; /* gray-300 */
     --color-text-secondary: #9ca3af; /* gray-400 */
@@ -163,6 +163,9 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
 .details-row {
     display: none;
     background-color: var(--color-bg-primary); /* Light gray background for visibility */
+}
+.details-row.is-visible {
+    display: table-row;
 }
 .details-row.is-visible { display: table-row; }
 .toggle-details-btn {

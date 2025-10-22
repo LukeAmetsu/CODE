@@ -135,7 +135,29 @@ const validationRules = {
         'D_fp': { min: 0.1, required: true, label: 'Flange Bolt Diameter' },
         'D_wp': { min: 0.1, required: true, label: 'Web Bolt Diameter' },
     }
-    ,nbr_concreto: {
+    ,
+    splice: {
+        'member_d': { min: 1, required: true, label: 'Member Depth' },
+        'member_bf': { min: 1, required: true, label: 'Member Flange Width' },
+        'member_tf': { min: 0.1, required: true, label: 'Member Flange Thickness' },
+        'member_tw': { min: 0.1, required: true, label: 'Member Web Thickness' },
+        'member_Fy': { min: 36, required: true, label: 'Member Fy' },
+        'H_fp': { min: 1, required: true, label: 'Flange Plate Width' },
+        't_fp': { min: 0.1, required: true, label: 'Flange Plate Thickness' },
+        'L_fp': { min: 1, required: true, label: 'Flange Plate Length' },
+        'H_wp': { min: 1, required: true, label: 'Web Plate Height' },
+        't_wp': { min: 0.1, required: true, label: 'Web Plate Thickness' },
+        'L_wp': { min: 1, required: true, label: 'Web Plate Length' },
+        'D_fp': { min: 0.1, required: true, label: 'Flange Bolt Diameter' },
+        'D_wp': { min: 0.1, required: true, label: 'Web Bolt Diameter' },
+        crossField: [
+            {
+                condition: (inputs) => inputs.H_fp >= inputs.g_gage_fp,
+                message: "Flange plate width (H_fp) must be greater than or equal to the bolt gage (g)."
+            }
+        ]
+    },
+    nbr_concreto: {
         'fck': { min: 1, required: true, label: 'Resist. do Concreto (fck)' },
         'fyk': { min: 1, required: true, label: 'Resist. do Aço (fyk)' },
         'bw': { min: 0.01, required: true, label: 'Largura (bw)' },
