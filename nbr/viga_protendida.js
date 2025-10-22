@@ -1339,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const handleRunCheck = createCalculationHandler({
         gatherInputsFunction: gatherAllInputs,
         storageKey: 'prestressed-beam-inputs-v2',
-        validationRuleKey: 'prestressed-beam-inputs-v2',
+        validationRuleKey: 'prestressed-beam-inputs-v2', // This key is used for validation and report naming
         calculatorFunction: (inputs) => concreteBeamCalculator.run(inputs),
         renderFunction: renderResults,
         resultsContainerId: 'results-container',
@@ -1397,19 +1397,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    const handleRunCheck = createCalculationHandler({
+        gatherInputsFunction: gatherAllInputs,
+        storageKey: 'prestressed-beam-inputs-v2',
+        validationRuleKey: 'prestressed-beam-inputs-v2',
+        calculatorFunction: (inputs) => concreteBeamCalculator.run(inputs),
+        renderFunction: renderResults,
+        resultsContainerId: 'results-container',
+        buttonId: 'run-check-btn'
+    });
+
     initializeApp({
         inputIds: allInputAndTextareaIds,
         calculationHandler: handleRunCheck,
-        onReady: () => { 
-            onAppReady();
-            drawDiagrams();
-        }
-    }); // This was missing a closing parenthesis
-
-    // Attach report listeners after the app is ready
-    attachReportEventListeners('results-container', {
-        reportId: 'concrete-beam-report',
-        filenamePrefix: 'Viga-Protendida-Relatorio',
-        toggleTexts: { show: '[Mostrar]', hide: '[Esconder]', showAll: 'Mostrar Todos Detalhes', hideAll: 'Esconder Todos Detalhes' }
+        onReady: onAppReady
     });
 });

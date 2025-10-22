@@ -1401,31 +1401,29 @@ function validateWindInputs(inputs) {
     return { errors, warnings };
 }
 
-/**
- * Executes the core wind load calculation logic.
- * @param {object} inputs - The validated input values.
- * @param {object} validation - The validation object, which may contain warnings to be passed through.
- * @returns {object} The complete results object from the calculation.
- */
-function performWindCalculation(inputs, validation) { // This function was missing in the original context
-    try {
-        return windLoadCalculator.run(inputs, validation);
-    } catch (error) {
-        console.error('An unexpected error occurred during the wind calculation.', error);
-        return { errors: ['An unexpected error occurred during the wind calculation. Check console for details.'], warnings: [] };
-    }
-}
-function renderRoofPressureChart(canvasId, pressureData, building_dimension, design_method, units) { // This function was missing in the original context
-    const factor = design_method === 'ASD' ? 0.6 : 1.0;
-    const labels = pressureData.map(p => safeToFixed(p.distance, 1));
-    const data = pressureData.map(p => safeToFixed(p.p_neg * factor, 2));
+const handleRunWindCheck = createCalculationHandler({
+    inputIds: windInputIds,
+    storageKey: 'wind-calculator-inputs',
+    validationRuleKey: 'wind',
+    validatorFunction: validateWindInputs,
+    calculatorFunction: windLoadCalculator.run,
+    renderFunction: renderWindResults,
+    resultsContainerId: 'results-container',
+    feedbackElId: 'feedback-message',
+    buttonId: 'run-calculation-btn'
+});
 
+function renderRoofPressureChart(canvasId, pressureData, building_dimension, design_method, units) {
     const ctx = document.getElementById(canvasId);
     if (!ctx || typeof Chart === 'undefined') {
         console.warn('Chart.js not available or canvas not found');
         if (ctx) ctx.parentElement.innerHTML = `<div class="text-center text-red-500">Chart.js library not loaded.</div>`;
         return;
     }
+
+    const factor = design_method === 'ASD' ? 0.6 : 1.0;
+    const labels = pressureData.map(p => safeToFixed(p.distance, 1));
+    const data = pressureData.map(p => safeToFixed(p.p_neg * factor, 2));
 
     try {
         new Chart(ctx, {
@@ -1467,7 +1465,7 @@ function renderRoofPressureChart(canvasId, pressureData, building_dimension, des
     }
 }
 
-function generateCandCDiagram(inputs, candc) { // This function was missing in the original context
+function generateCandCDiagram(inputs, candc) {
     if (!candc || !candc.applicable) return '';
 
     const { mean_roof_height: h, building_length_L: L, building_width_B: B, roof_type, roof_slope_deg, unit_system } = inputs;
@@ -1578,7 +1576,7 @@ function generateCandCDiagram(inputs, candc) { // This function was missing in t
     return `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${wall_diagram}${roof_diagram}</div>`;
 }
 
-function generateWindSummary(inputs, directional_results, candc, p_unit) { // This function was missing in the original context
+function generateWindSummary(inputs, directional_results, candc, p_unit) {
     // FIX: Initialize with null to safely handle empty result arrays.
     let gov_mwfrs_pos = { value: null, surface: 'N/A' };
     let gov_mwfrs_neg = { value: null, surface: 'N/A' };
@@ -2265,25 +2263,15 @@ function renderCandCSection(candc, inputs, intermediate, units) {
     return html;
 }
 
-document.addEventListener('click', async (event) => {
-    // ... (existing event listeners)
-    if (event.target.id === 'send-to-combos-btn' && lastWindRunResults) {
-        const results = lastWindRunResults;
-        const comboData = {
-            combo_wind_wall_ww_max: 0, combo_wind_wall_ww_min: 0,
-            combo_wind_wall_lw_max: 0, combo_wind_wall_lw_min: 0,
-            combo_wind_roof_ww_max: 0, combo_wind_roof_ww_min: 0,
-            combo_wind_roof_lw_max: 0, combo_wind_roof_lw_min: 0,
-            combo_wind_cc_max: 0, combo_wind_cc_min: 0,
-            combo_wind_cc_wall_max: 0, combo_wind_cc_wall_min: 0,
-        };
-
+function sendWindToCombos(results) {
+    if (results) {
         const getGoverningMwfrsPressure = (surface_name) => {
             let max_abs_pressure = { p_pos_asd: 0, p_neg_asd: 0 };
             let max_abs_val = -1;
             for (const dir in results.directional_results) {
                 const resultSet = results.directional_results[dir] || [];
                 const surfaceResult = resultSet.find(r => r.surface.includes(surface_name));
+
                 if (surfaceResult) {
                     const current_max_abs = Math.max(Math.abs(surfaceResult.p_pos_asd), Math.abs(surfaceResult.p_neg_asd));
                     if (current_max_abs > max_abs_val) {
@@ -2294,6 +2282,16 @@ document.addEventListener('click', async (event) => {
             }
             return { max: max_abs_pressure.p_pos_asd, min: max_abs_pressure.p_neg_asd };
         };
+
+        const comboData = {
+            combo_wind_wall_ww_max: 0, combo_wind_wall_ww_min: 0,
+            combo_wind_wall_lw_max: 0, combo_wind_wall_lw_min: 0,
+            combo_wind_roof_ww_max: 0, combo_wind_roof_ww_min: 0,
+            combo_wind_roof_lw_max: 0, combo_wind_roof_lw_min: 0,
+            combo_wind_cc_max: 0, combo_wind_cc_min: 0,
+            combo_wind_cc_wall_max: 0, combo_wind_cc_wall_min: 0,
+        };
+
 
         const ww_wall = getGoverningMwfrsPressure('Windward Wall');
         const lw_wall = getGoverningMwfrsPressure('Leeward Wall');
@@ -2325,26 +2323,21 @@ document.addEventListener('click', async (event) => {
         }
         sendToCombos(comboData, 'Wind Calculator', 'Wind');
     }
-});
-/**
- * Main rendering orchestrator function.
- */
-function renderWindResults(results) {
-    if (!results || (!results.directional_results && !results.open_sign_results && !results.solid_sign_results && !results.chimney_results && !results.truss_tower_results)) {
-        document.getElementById('results-container').innerHTML = '';
-        return;
+}
+
+initializeApp({
+    inputIds: windInputIds,
+    calculationHandler: handleRunWindCheck,
+    onReady: () => {
+        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
+            const h = parseFloat(event.target.value) || 0;
+            const is_imp = document.getElementById('unit_system').value === 'imperial';
+            const limit = is_imp ? 60 : 18.3;
+            document.getElementById('tall-building-section')?.classList.toggle('hidden', h <= limit);
+            document.getElementById('mwfrs-method-container')?.classList.toggle('hidden', h > limit);
+        });
     }
-    lastWindRunResults = results;
-
-    const {
-        inputs, intermediate, directional_results, jurisdiction_note, temporary_structure_note, warnings, torsional_case, open_building_ref, candc, mwfrs_method, heightVaryingResults_L, parapet_results, overhang_results, rooftop_results,
-        open_sign_results, is_open_sign, solid_sign_results, is_solid_sign, chimney_results, is_chimney, truss_tower_results, is_truss_tower, arched_roof_results, is_arched_roof
-    } = results;
-    
-    const is_imp = inputs.unit_system === 'imperial';
-    const [v_unit, h_unit, p_unit] = is_imp ? ['mph', 'ft', 'psf'] : ['m/s', 'm', 'Pa'];
-    const units = { is_imp, v_unit, h_unit, p_unit };
-
+});
     const report = new ReportBuilder({
         reportId: 'wind-report-content',
         title: `WIND LOAD REPORT (${inputs.effective_standard})`,
@@ -2526,6 +2519,7 @@ initializeApp({
     calculationHandler: createCalculationHandler({ // This part is correct
         inputIds: windInputIds, storageKey: 'wind-calculator-inputs',
         validatorFunction: validateWindInputs, calculatorFunction: windLoadCalculator.run,
+        validationRuleKey: 'wind',
         renderFunction: renderWindResults, resultsContainerId: 'results-container',
         feedbackElId: 'feedback-message', buttonId: 'run-calculation-btn'
     }), // The onSendToCombos is attached via attachReportEventListeners

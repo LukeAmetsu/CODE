@@ -1458,8 +1458,11 @@ function createCalculationHandler(config) { // This is the function being called
     } = config;
 
     // Automatically highlight required fields for this calculator when it's created.
-    if (validationRuleKey) {
+    if (validationRuleKey) { // This was already correct
         highlightRequiredFields(validationRuleKey);
+    } else {
+        // Add a console warning if the key is missing, as it's crucial for validation and report functionality.
+        console.warn(`[createCalculationHandler] A 'validationRuleKey' não foi fornecida na configuração. A validação de entrada e os botões de relatório (Copiar, PDF, etc.) não funcionarão.`);
     }
 
     return async function() { // This function is already async, which is good.
@@ -1521,7 +1524,7 @@ function createCalculationHandler(config) { // This is the function being called
             saveInputsToLocalStorage(storageKey, inputs);
             renderFunction(calculationResult, inputs);
             // --- FIX: Attach report event listeners AFTER every successful render ---
-            if (validationRuleKey) {
+            if (validationRuleKey) { // This was already correct
                 const reportId = `${validationRuleKey}-report-content`;
                 attachReportEventListeners(resultsContainerId, {
                     reportId: reportId,

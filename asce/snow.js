@@ -290,19 +290,20 @@ function run(inputs, validation) {
     return { run };
 })();
 
-initializeApp({
-    // pageKey e pageTitle serão encontrados automaticamente
+const handleRunSnowCheck = createCalculationHandler({
     inputIds: snowInputIds,
-    calculationHandler: createCalculationHandler({
-        inputIds: snowInputIds,
-        storageKey: 'snow-calculator-inputs',
-        validationRuleKey: 'snow',
-        calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
-        renderFunction: renderSnowResults,
-        resultsContainerId: 'snow-results-container',
-        buttonId: 'run-snow-calculation-btn',
-        onSendToCombos: () => sendSnowToCombos(lastSnowRunResults)
-    }),
+    storageKey: 'snow-calculator-inputs',
+    validationRuleKey: 'snow',
+    calculatorFunction: (inputs, validation) => snowLoadCalculator.run(inputs, validation),
+    renderFunction: renderSnowResults,
+    resultsContainerId: 'snow-results-container',
+    buttonId: 'run-snow-calculation-btn',
+    onSendToCombos: () => sendSnowToCombos(lastSnowRunResults)
+});
+
+initializeApp({
+    inputIds: snowInputIds,
+    calculationHandler: handleRunSnowCheck,
     onReady: () => {
         // Page-specific initializations can go here if needed in the future.
     }
@@ -555,13 +556,6 @@ function sendSnowToCombos(results) {
     localStorage.setItem('loadsForCombinator', JSON.stringify(dataToSend));
     // Redirect to the combos page
     window.location.href = 'combos.html';
-}
-function generateBalancedSnowCard(load, unit) {
-    return `
-        <div class="border dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800/50 text-center">
-            <h4 class="text-lg font-semibold mb-3">Governing Balanced Snow Load</h4>
-            <p class="font-bold text-3xl">${load.toFixed(2)} <span class="text-xl font-medium">${unit}</span></p>
-        </div>`
 }
 
 function generateBalancedSnowDiagram(roofType = 'gable') {

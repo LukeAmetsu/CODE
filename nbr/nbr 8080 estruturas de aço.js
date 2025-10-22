@@ -166,20 +166,17 @@ function renderNbr8800Results(calc_results) {
     report.render('results-container'); // Render into the main container
 }
 
+const handleRunNbr8800Check = createCalculationHandler({
+    inputIds: nbr8800InputIds,
+    storageKey: 'nbr8800-inputs',
+    validationRuleKey: 'nbr_aco', // This key is used for validation and report naming
+    calculatorFunction: nbr8800Calculator.calculate,
+    renderFunction: renderNbr8800Results,
+    resultsContainerId: 'results-container',
+    buttonId: 'run-check-btn'
+});
+
 initializeApp({
-    calculationHandler: createCalculationHandler({
-        inputIds: nbr8800InputIds,
-        storageKey: 'nbr8800-inputs',
-        validationRuleKey: 'nbr_aco',
-        calculatorFunction: nbr8800Calculator.calculate,
-        renderFunction: renderNbr8800Results,
-        resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
-    }),
-    onReady: () => {
-        attachReportEventListeners('results-container', {
-            reportId: 'steel-report-content',
-            filenamePrefix: 'NBR8800-Aco-Relatorio'
-        });
-    }
+    inputIds: nbr8800InputIds,
+    calculationHandler: handleRunNbr8800Check
 });

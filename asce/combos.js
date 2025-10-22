@@ -13,18 +13,11 @@ const comboInputIds = [
     'combo_wind_cc_max', 'combo_wind_cc_min',
     'combo_wind_cc_wall_max', 'combo_wind_cc_wall_min'
 ];
-
-/**
- * Initializes the application by attaching event listeners and loading stored data.
- * This function is called from combos.html after the DOM and templates are loaded.
- */
-initializeApp({
+const handleRunComboCheck = createCalculationHandler({
     inputIds: comboInputIds,
-    calculationHandler: createCalculationHandler({
-        inputIds: comboInputIds,
-        storageKey: 'combo-calculator-inputs',
-        validationRuleKey: 'combo', // This key is used for validation and report naming
-        calculatorFunction: (inputs) => {
+    storageKey: 'combo-calculator-inputs',
+    validationRuleKey: 'combo',
+    calculatorFunction: (inputs) => {
         const validation = validateInputs(inputs, validationRules.combo);
         const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
         const scenarios = buildScenarios(inputs);
@@ -58,12 +51,16 @@ initializeApp({
             scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
         }
         return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
-        },
-        renderFunction: renderComboResults,
-        resultsContainerId: 'combo-results-container',
-        buttonId: 'run-combo-calculation-btn',
-        feedbackElId: 'feedback-message'
-    }),
+    },
+    renderFunction: renderComboResults,
+    resultsContainerId: 'combo-results-container',
+    buttonId: 'run-combo-calculation-btn',
+    feedbackElId: 'feedback-message'
+});
+
+initializeApp({
+    inputIds: comboInputIds,
+    calculationHandler: handleRunComboCheck,
     onReady: () => {
         loadDataFromStorage(); // This is specific to the combo calculator
     }

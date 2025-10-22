@@ -75,19 +75,20 @@ const rainLoadCalculator = (() => {
     return { run };
 })();
 
-initializeApp({
-    // pageKey e pageTitle serão encontrados automaticamente
+const handleRunRainCheck = createCalculationHandler({
     inputIds: rainInputIds,
-    calculationHandler: createCalculationHandler({
-        inputIds: rainInputIds,
-        storageKey: 'rain-calculator-inputs',
-        validationRuleKey: 'rain',
-        calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
-        renderFunction: renderRainResults,
-        resultsContainerId: 'rain-results-container',
-        buttonId: 'run-rain-calculation-btn',
-        feedbackElId: 'feedback-message'
-    }),
+    storageKey: 'rain-calculator-inputs',
+    validationRuleKey: 'rain', // This key is used for validation and report naming
+    calculatorFunction: (inputs, validation) => rainLoadCalculator.run(inputs, validation),
+    renderFunction: renderRainResults,
+    resultsContainerId: 'rain-results-container',
+    buttonId: 'run-rain-calculation-btn',
+    feedbackElId: 'feedback-message'
+});
+
+initializeApp({
+    inputIds: rainInputIds,
+    calculationHandler: handleRunRainCheck,
     onReady: () => {
         document.getElementById('rain_city_selector').addEventListener('change', (event) => {
             const intensity = event.target.value;

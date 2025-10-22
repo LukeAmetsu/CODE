@@ -115,15 +115,9 @@ const handleRunNbr7190Check = createCalculationHandler({
     buttonId: 'run-wood-check-btn'
 }); 
 initializeApp({
-    inputIds: nbr7190InputIds,
-    calculationHandler: handleRunNbr7190Check
-});
-
-// Note: The `onReady` function in initializeApp would be a better place for this,
-// but adding it here to avoid modifying initializeApp directly in this refactoring.
-document.addEventListener('DOMContentLoaded', () => {
-    attachReportEventListeners('results-container-wood', {
-        reportId: 'wood-report-content',
-        filenamePrefix: 'NBR7190-Madeira-Relatorio'
-    });
+    inputIds: nbr7190InputIds, // Pass inputIds here
+    calculationHandler: handleRunNbr7190Check,
+    onReady: () => {
+        // The attachReportEventListeners is now handled by createCalculationHandler
+    }
 });

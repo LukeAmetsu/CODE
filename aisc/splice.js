@@ -2221,22 +2221,24 @@ const inputIds = [
     'aisc_shape_select' // Added shape select to the list
 ];
 
+const handleRunSpliceCheck = createCalculationHandler({
+    inputIds: inputIds,
+    storageKey: 'splice-inputs',
+    validationRuleKey: 'splice',
+    validatorFunction: (inputs) => {
+        const { errors, warnings } = validateInputs(inputs, validationRules.splice);
+        // Add custom cross-field validations here if needed
+        return { errors, warnings };
+    },
+    calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),
+    renderFunction: renderResults,
+    resultsContainerId: 'results-container',
+    buttonId: 'run-check-btn'
+});
+
 initializeApp({
     inputIds: inputIds,
-    calculationHandler: createCalculationHandler({
-        inputIds: inputIds,
-        storageKey: 'splice-inputs',
-        validationRuleKey: 'splice',
-        validatorFunction: (inputs) => {
-            const { errors, warnings } = validateInputs(inputs, validationRules.splice);
-            // Add custom cross-field validations here if needed
-            return { errors, warnings };
-        },
-        calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),
-        renderFunction: renderResults,
-        resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
-    }),
+    calculationHandler: handleRunSpliceCheck,
     onReady: () => {
     populateMaterialDropdowns();
     populateBoltGradeDropdowns();

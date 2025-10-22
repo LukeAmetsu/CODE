@@ -7,20 +7,19 @@ const inputIds = [
     'axial_load_P', 'moment_load_M', 'shear_load_V'
 ];
 
-initializeApp({
-    pageKey: 'nds',
-    pageTitle: 'NDS Wood Member Design Checker',
+const handleRunWoodCheck = createCalculationHandler({
     inputIds: inputIds,
-    calculationHandler: createCalculationHandler({
-        inputIds: inputIds,
-        storageKey: 'wood-design-inputs',
-        validatorFunction: (inputs) => validateInputs(inputs, validationRules.wood),
-        calculatorFunction: woodChecker.run,
-        renderFunction: renderWoodResults,
-        resultsContainerId: 'wood-results-container',
-        buttonId: 'run-wood-check-btn'
-    }),
+    storageKey: 'wood-design-inputs',
+    validationRuleKey: 'wood',
+    calculatorFunction: woodChecker.run,
+    renderFunction: renderWoodResults,
+    resultsContainerId: 'wood-results-container',
     buttonId: 'run-wood-check-btn'
+});
+
+initializeApp({
+    inputIds: inputIds,
+    calculationHandler: handleRunWoodCheck
 });
 
 const woodChecker = (() => {

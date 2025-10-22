@@ -134,20 +134,17 @@ function renderNbrResults(calc_results) {
     report.render('results-container');
 }
 
+const handleRunNbrCheck = createCalculationHandler({
+    inputIds: nbr6118InputIds,
+    storageKey: 'nbr6118-inputs',
+    validationRuleKey: 'nbr_concreto', // This key is used for validation and report naming
+    calculatorFunction: nbr6118Calculator.calculate,
+    renderFunction: renderNbrResults,
+    resultsContainerId: 'results-container',
+    buttonId: 'run-check-btn'
+});
+
 initializeApp({
-    calculationHandler: createCalculationHandler({
-        inputIds: nbr6118InputIds,
-        storageKey: 'nbr6118-inputs',
-        validationRuleKey: 'nbr_concreto',
-        calculatorFunction: nbr6118Calculator.calculate,
-        renderFunction: renderNbrResults,
-        resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
-    }), // This is correct
-    onReady: () => {
-        attachReportEventListeners('results-container', {
-            reportId: 'concrete-report-content',
-            filenamePrefix: 'NBR6118-Concreto-Relatorio'
-        });
-    }
+    inputIds: nbr6118InputIds,
+    calculationHandler: handleRunNbrCheck
 });
