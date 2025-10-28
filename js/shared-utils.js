@@ -1138,25 +1138,16 @@ async function initializeApp(config) { // This function is already async
     const effectiveStorageKey = storageKey || `${pageConfig?.key || 'default'}-inputs`;
 
     // 2. Initialize Shared UI Components
-    initializeSharedUI();
+    initializeSharedUI(); // This is correct
 
     const buttonId = config.buttonId || 'run-check-btn'; // Default button ID
     // 3. Attach Core Event Listeners
     const runButton = document.getElementById(buttonId);
-    if (runButton && calculationHandler) {
+    if (runButton && typeof calculationHandler === 'function') {
         runButton.addEventListener('click', calculationHandler);
     }
 
-    const saveButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageConfig?.key}-inputs-btn`);
-    if (saveButton && inputIds.length > 0) {
-        saveButton.addEventListener('click', () => {
-            const inputs = gatherInputsFromIds(inputIds);
-            saveInputsToFile(inputs, `${pageConfig?.key}-inputs.json`);
-            showFeedback('Inputs saved to file.', false);
-        });
-    }
-
-    // --- Automatic Save to Local Storage ---
+    // --- Automatic Save to Local Storage on Input Change ---
     // This function runs automatically whenever an input changes.
     const debouncedSave = debounce(() => {
         const currentInputs = gatherInputsFromIds(inputIds);
@@ -1164,21 +1155,23 @@ async function initializeApp(config) { // This function is already async
         // Do not show feedback on auto-save to avoid being intrusive.
     }, 500); // Debounce to avoid excessive writes on rapid changes.
 
-    // --- Manual "Save to File" Button ---
-    // This is now correctly separated and only handles file downloads.
-    const saveToFileButton = document.getElementById('save-inputs-btn') || document.getElementById(`save-${pageKey}-inputs-btn`);
-    if (saveToFileButton && inputIds.length > 0) saveToFileButton.addEventListener('click', createSaveInputsHandler(inputIds, `${pageKey}-inputs.json`));
-
     if (inputIds.length > 0) {
         inputIds.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.addEventListener('input', debouncedSave);
+            if (el) {
+                // Listen to both 'input' and 'change' to cover all element types
+                el.addEventListener('input', debouncedSave);
+                el.addEventListener('change', debouncedSave);
+            }
         });
     }
 
     // 4. Load saved data from Local Storage
     loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
 
+    // 5. Auto-load the page-specific script after all shared setup is complete.
+    // This is the last step to ensure all dependencies are met.
+    autoLoadPageScript();
 }
 
 /**
@@ -1466,11 +1459,13 @@ function createCalculationHandler(config) { // This is the function being called
     }
 
     return async function() { // This function is already async, which is good.
+        console.log(`[${validationRuleKey}] Calculation triggered.`);
         // --- 1. SETUP & GATHER INPUTS ---
         if (buttonId) setLoadingState(true, buttonId);
         showFeedback('Gathering inputs...', false, feedbackElId);
 
         // Use the provided gather function or the default one.
+        console.log(`[${validationRuleKey}] Gathering inputs...`);
         const inputs = typeof gatherInputsFunction === 'function' 
             ? gatherInputsFunction() 
             : gatherInputsFromIds(inputIds);
@@ -1478,6 +1473,7 @@ function createCalculationHandler(config) { // This is the function being called
         // --- 2. VALIDATE INPUTS ---
         showFeedback('Validating inputs...', false, feedbackElId);
         // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
+        console.log(`[${validationRuleKey}] Validating inputs...`);
         await Promise.resolve();
 
         // Use the custom validator if provided, otherwise use the default.
@@ -1499,6 +1495,7 @@ function createCalculationHandler(config) { // This is the function being called
 
         if (validation.errors && validation.errors.length > 0) {
             renderValidationResults(validation, resultsContainer);
+            console.error(`[${validationRuleKey}] Validation failed. Errors:`, validation.errors);
             showFeedback('Validation failed. Please correct the errors.', true, feedbackElId);
             if (buttonId) setLoadingState(false, buttonId);
             return;
@@ -1506,6 +1503,7 @@ function createCalculationHandler(config) { // This is the function being called
 
         // --- 3. PERFORM CALCULATION ---
         showFeedback('Running calculation...', false, feedbackElId);
+        console.log(`[${validationRuleKey}] Performing calculation...`);
         await Promise.resolve();
 
         const calculationResult = safeCalculation(
@@ -1515,23 +1513,32 @@ function createCalculationHandler(config) { // This is the function being called
 
         // --- 4. RENDER RESULTS ---
         if (calculationResult.error) {
+            console.error(`[${validationRuleKey}] Calculation error:`, calculationResult.error);
             renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
             showFeedback('Calculation failed.', true, feedbackElId);
         } else {
+            console.log(`[${validationRuleKey}] Calculation successful. Rendering results...`);
             showFeedback('Rendering results...', false, feedbackElId);
             await Promise.resolve();
             
             saveInputsToLocalStorage(storageKey, inputs);
             renderFunction(calculationResult, inputs);
-            // --- FIX: Attach report event listeners AFTER every successful render ---
-            if (validationRuleKey) { // This was already correct
-                const reportId = `${validationRuleKey}-report-content`;
-                attachReportEventListeners(resultsContainerId, {
-                    reportId: reportId,
-                    filenamePrefix: `${validationRuleKey.replace(/_/g, '-')}-Report`,
+            
+            console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
+            // Re-attach event listeners for the newly rendered report content.
+            // FIX: Ensure this runs for all calculators that use this handler.
+            // The reportId is now derived from the renderFunction's implementation details.
+            const reportContentElement = resultsContainer.querySelector('[id$="-report-content"]');
+            if (reportContentElement) {
+                 attachReportEventListeners(resultsContainerId, {
+                    reportId: reportContentElement.id,
+                    filenamePrefix: `${validationRuleKey || 'report'}-Report`,
                     onSendToCombos: config.onSendToCombos,
-                    toggleTexts: config.toggleTexts
+                    toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
                 });
+                console.log(`[${validationRuleKey}] Event listeners attached to #${reportContentElement.id}.`);
+            } else {
+                console.warn(`[${validationRuleKey}] Could not find a report content element (e.g., #splice-report-content) inside #${resultsContainerId} to attach event listeners.`);
             }
             showFeedback('Calculation complete!', false, feedbackElId);
         }
@@ -1632,6 +1639,67 @@ function populateBoltGradeDropdowns() {
     });
 }
 
+/**
+ * Populates bolt diameter dropdowns with typical sizes from the AISC database.
+ * It targets select elements with a `data-is-bolt-diameter-select="true"` attribute.
+ */
+function populateBoltDiameterDropdowns() {
+    if (typeof AISC_SPEC === 'undefined' || !AISC_SPEC.getTypicalBoltSizes) {
+        console.warn("AISC_SPEC or getTypicalBoltSizes not available for populateBoltDiameterDropdowns.");
+        return;
+    }
+
+    const boltSizes = AISC_SPEC.getTypicalBoltSizes();
+    if (!boltSizes) {
+        console.warn("getTypicalBoltSizes() returned no data.");
+        return;
+    }
+
+    const boltOptions = Object.entries(boltSizes).map(([decimal, fractional]) =>
+        `<option value="${decimal}">${fractional} (${decimal}")</option>`
+    ).join('');
+
+    document.querySelectorAll('select[data-is-bolt-diameter-select="true"]').forEach(select => {
+        select.innerHTML = boltOptions;
+        if (!select.value) select.value = '0.875'; // Set a common default (7/8") if no value is set
+        // Dispatch a change event to ensure any dependent logic is triggered on initial load.
+        select.dispatchEvent(new Event('change'));
+    });
+}
+
+/**
+ * Automatically loads the page-specific JavaScript file based on the HTML file's name.
+ * For example, if the page is `wind.html`, it will attempt to load `wind.js`.
+ * This avoids having to manually link each page's script in the HTML.
+ */
+function autoLoadPageScript() {
+    const path = window.location.pathname;
+    // Gets the full filename from the path, e.g., "wind.html" or "steel%20check.html"
+    const pageFileName = path.substring(path.lastIndexOf('/') + 1);
+
+    // Don't run on the index page or if there's no page name
+    if (pageFileName === '' || pageFileName === 'index.html') {
+        return;
+    }
+
+    // Decode URI component to handle spaces (e.g., "steel%20check.html" -> "steel check.html")
+    // Then replace the .html extension with .js
+    const scriptFileName = decodeURIComponent(pageFileName).replace('.html', '.js');
+
+    // Check if a script with this name is already in the document to prevent re-declaration errors.
+    // This is crucial because initializeApp might be called multiple times (e.g., by template.js and a page-specific script).
+    const scriptAlreadyExists = document.querySelector(`script[src$="${encodeURIComponent(scriptFileName)}"]`);
+    if (scriptAlreadyExists) {
+        return; // Don't load the script again
+    }
+
+    const script = document.createElement('script');
+    // Set the source to just the script's filename. The browser correctly resolves
+    // this relative to the current HTML page's directory (e.g., from /asce/wind.html it will load asce/wind.js).
+    script.src = scriptFileName;
+    script.defer = true;
+    document.head.appendChild(script);
+}
 /**
  * Populates a shape selection dropdown based on the currently selected section type.
  * It targets a select element with the ID `aisc_shape_select`.

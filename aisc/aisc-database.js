@@ -43,15 +43,18 @@ const AISC_SPEC = (() => {
     // AISC 360-16 Table J3.3: Nominal Hole Dimensions
     const nominalHoleTable = {
         // Bolt Dia: Standard Hole Dia
+        0.25:   5/16,  // 1/4"
+        0.375:  7/16,  // 3/8"
+        // Bolt Dia: Standard Hole Dia
         0.5:    9/16,
-        0.625:  11/16,
-        0.75:   13/16,
-        0.875:  15/16,
-        1.0:    1 + 1/8,
-        1.125:  1 + 1/4,
-        1.25:   1 + 3/8,
-        1.375:  1 + 1/2, // Note: J3.3 is d + 5/16, but 1.5 is common practice for >1.25
-        1.5:    1 + 5/8,
+        0.625:  11/16, // 5/8"
+        0.75:   13/16, // 3/4"
+        0.875:  15/16, // 7/8"
+        1.0:    1 + 1/16,  // 1"
+        1.125:  1.125 + 1/8, // 1 1/8"
+        1.25:   1.25 + 1/8,  // 1 1/4"
+        1.375:  1.375 + 1/8, // 1 3/8"
+        1.5:    1.5 + 1/8,   // 1 1/2"
     };
 
     /**
@@ -62,23 +65,31 @@ const AISC_SPEC = (() => {
      * @returns {number} The nominal hole diameter in inches.
      */
     function getNominalHoleDiameter(db, method = 'table', holeType = 'standard') {
+        // FIX: Ensure the bolt diameter is treated as a number to prevent string concatenation.
+        const db_num = parseFloat(db);
+        if (isNaN(db_num)) return 0; // Return 0 if the input is not a valid number.
+
         if (holeType !== 'standard') {
             // TODO: Implement oversized and slotted holes from Table J3.3
-            return db + 1/16;
+            return db_num + 1/16;
         }
 
         if (method === 'table') {
             const closestDb = Object.keys(nominalHoleTable).reduce((prev, curr) => {
-                return (Math.abs(curr - db) < Math.abs(prev - db) ? curr : prev);
+                // Compare the numeric value of the keys against the numeric input.
+                return (Math.abs(parseFloat(curr) - db_num) < Math.abs(parseFloat(prev) - db_num) ? curr : prev);
             });
-            return nominalHoleTable[closestDb] || (db + 1/8); // Fallback for unusual sizes
+            return nominalHoleTable[closestDb] || (db_num + 1/8); // Fallback for unusual sizes
         } else { // 'rule'
-            return (db < 1.0) ? (db + 1/16) : (db + 1/8);
+            return (db_num < 1.0) ? (db_num + 1/16) : (db_num + 1/8);
         }
     }
 
     // AISC 360-16 Table J3.4: Minimum Edge Distance
     const minEdgeDistanceTable = {
+        // Bolt Dia: Min Edge Distance for Sheared Edge
+        0.25:   0.5,   // 1/4" -> 1/2"
+        0.375:  0.625, // 3/8" -> 5/8"
         // Bolt Dia: Min Edge Distance for Sheared Edge
         0.5:    0.875,
         0.625:  1.125,
@@ -91,9 +102,9 @@ const AISC_SPEC = (() => {
 
     // AISC 360-16 Table J3.1: Minimum Bolt Pretension (kips)
     const minPretensionTable = {
-        "A325": { 0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 56, 1.25: 71, 1.375: 85, 1.5: 103 },
-        "A490": { 0.5: 15, 0.625: 24, 0.75: 35, 0.875: 49, 1.0: 64, 1.125: 80, 1.25: 102, 1.375: 121, 1.5: 148 },
-        "F3148": { 0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 56, 1.25: 71, 1.375: 85, 1.5: 103 }, // Same as A325
+        "A325": { 0.25: 3, 0.375: 7, 0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 56, 1.25: 71, 1.375: 85, 1.5: 103 },
+        "A490": { 0.25: 4, 0.375: 9, 0.5: 15, 0.625: 24, 0.75: 35, 0.875: 49, 1.0: 64, 1.125: 80, 1.25: 102, 1.375: 121, 1.5: 148 },
+        "F3148": { 0.25: 3, 0.375: 7, 0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 56, 1.25: 71, 1.375: 85, 1.5: 103 }, // Same as A325
     };
 
     /**
@@ -121,10 +132,26 @@ const AISC_SPEC = (() => {
     };
 
     // Standard bolt diameters for optimization
-    const standardBoltDiameters = [0.625, 0.75, 0.875, 1.0, 1.125, 1.25];
+    const standardBoltDiameters = [0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0, 1.125, 1.25, 1.375, 1.5];
+
+    // Typical bolt sizes for UI dropdowns, mapping decimal to fractional representation.
+    const typicalBoltSizes = {
+        "0.25": "1/4\"",
+        "0.3125": "5/16\"",
+        "0.375": "3/8\"",
+        "0.5": "1/2\"", "0.625": "5/8\"", "0.75": "3/4\"", "0.875": "7/8\"",
+        "1.0": "1\"", "1.125": "1 1/8\"", "1.25": "1 1/4\"", "1.375": "1 3/8\"", "1.5": "1 1/2\""
+    };
+
+    function getTypicalBoltSizes() {
+        return typicalBoltSizes;
+    }
 
     // Standard bolt properties (e.g., nominal area Ab)
     const boltProperties = {
+        // Dia (in): { Ab: area (in^2) }
+        0.25:   { Ab: 0.0491 },
+        0.375:  { Ab: 0.1104 },
         // Dia (in): { Ab: area (in^2) }
         0.5:    { Ab: 0.1963 },
         0.625:  { Ab: 0.3068 },
@@ -243,6 +270,7 @@ const AISC_SPEC = (() => {
         getSteelGrade,
         boltGrades, // Expose for populating dropdowns
         standardBoltDiameters, // Expose for optimizer
+        getTypicalBoltSizes, // Expose for populating dropdowns
         structuralSteelGrades, // Expose for populating dropdowns
         slipCoefficients, // Expose for UI and calculations
         getNominalHoleDiameter,

@@ -1,37 +1,3 @@
-/**
- * Automatically loads the page-specific JavaScript file based on the HTML file's name.
- * For example, if the page is `wind.html`, it will attempt to load `wind.js`.
- * This avoids having to manually link each page's script in the HTML.
- */
-function autoLoadPageScript() {
-    const path = window.location.pathname;
-    // Gets the full filename from the path, e.g., "wind.html" or "steel%20check.html"
-    const pageFileName = path.substring(path.lastIndexOf('/') + 1);
-
-    // Don't run on the index page or if there's no page name
-    if (pageFileName === '' || pageFileName === 'index.html') {
-        return;
-    }
-
-    // Decode URI component to handle spaces (e.g., "steel%20check.html" -> "steel check.html")
-    // Then replace the .html extension with .js
-    const scriptFileName = decodeURIComponent(pageFileName).replace('.html', '.js');
-
-    // Check if a script with the same name is already included to avoid duplication
-    const encodedScriptFileName = encodeURI(scriptFileName);
-    const scriptAlreadyExists = document.querySelector(`script[src$="${encodedScriptFileName}"]`);
-    if (scriptAlreadyExists) {
-        return;
-    }
-
-    const script = document.createElement('script');
-    // Set the source to just the script's filename. The browser correctly resolves
-    // this relative to the current HTML page's directory (e.g., from /asce/wind.html it will load asce/wind.js).
-    script.src = scriptFileName;
-    script.defer = true;
-    document.head.appendChild(script);
-}
-
 async function injectHeader(options) {
     const { activePage, pageTitle, headerPlaceholderId } = options;
     const placeholder = document.getElementById(headerPlaceholderId);
@@ -215,11 +181,6 @@ function attachReportEventListeners(containerId, config) {
 }
 
 // --- Auto-initialize ---
-// This code runs after the document is parsed because the script has the 'defer' attribute.
-
-// Auto-load the script for the specific calculator page
-autoLoadPageScript();
-
 // Initialize the application (header, footer, etc.)
 // We assume initializeApp is defined in shared-utils.js, which is loaded before this script.
 // The individual calculator scripts will call initializeApp with their specific configs.

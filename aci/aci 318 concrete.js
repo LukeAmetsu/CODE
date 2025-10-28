@@ -123,6 +123,4 @@ const handleRunAciCheck = createCalculationHandler({
 initializeApp({
     inputIds: aciInputIds,
     calculationHandler: handleRunAciCheck
-    // pageKey e pageTitle serão encontrados automaticamente pela nova initializeApp
-    // buttonId também é encontrado por padrão se for 'run-check-btn'
 });
