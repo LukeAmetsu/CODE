@@ -8,7 +8,7 @@ let areDimensionsVisible = true; // Flag to track dimension visibility state
 const diagramInputIds = [
     'gap', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'num_flange_plates',
     'H_fp', 't_fp', 'L_fp', 'H_fp_inner', 't_fp_inner', 'L_fp_inner', 'D_fp', 'Nc_fp',
-    'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp', 'D_fp', 'D_wp',
+    'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp',
     'num_web_plates', 'H_wp', 't_wp', 'L_wp', 'D_wp', 'Nc_wp', 'Nr_wp',
     'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp'
 ];
@@ -28,8 +28,11 @@ let masterBolts = {};
  * @returns {BABYLON.Mesh} The merged bolt mesh.
  */
 function createBoltMesh(name, options, scene) {
-    const { diameter, thickness, position } = options;
-    if (!diameter || !thickness || isNaN(diameter) || isNaN(thickness)) return null;
+    // FIX: Ensure diameter and thickness are numbers before use.
+    const diameter = parseFloat(options.diameter);
+    const thickness = parseFloat(options.thickness);
+    const { position } = options;
+    if (!diameter || !thickness || isNaN(diameter) || isNaN(thickness)) return null; // This check is now more robust
 
     const masterBoltKey = `d${diameter.toFixed(3)}-t${thickness.toFixed(3)}`;
     let masterBolt = masterBolts[masterBoltKey];
@@ -243,7 +246,7 @@ function draw3dSpliceDiagram() {
     if (beam2) beam2.position.z = (inputs.gap / 2 + beamLength / 2);
 
     // Flange Plates
-    if (inputs.L_fp > 0 && inputs.H_fp > 0 && inputs.t_fp > 0) {
+    if (inputs.num_flange_plates > 0 && inputs.L_fp > 0 && inputs.H_fp > 0 && inputs.t_fp > 0) {
         const outerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("outer_fp_top", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
         outerFlangePlateTop.material = plateMaterial;
         outerFlangePlateTop.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
@@ -266,22 +269,23 @@ function draw3dSpliceDiagram() {
     }
 
     // Web Plates
-    for (let i = 0; i < inputs.num_web_plates; i++) {
+    if (inputs.num_web_plates > 0) {
         if (inputs.L_wp > 0 && inputs.H_wp > 0 && inputs.t_wp > 0) {
-            const webPlate = BABYLON.MeshBuilder.CreateBox(`wp_${i}`, { width: inputs.t_wp, height: inputs.H_wp, depth: inputs.L_wp }, bjsScene);
-            webPlate.material = plateMaterial;
-            const offset = (inputs.member_tw / 2 + inputs.t_wp / 2 + (i > 0 ? inputs.t_wp : 0));
-            webPlate.position.x = i % 2 === 0 ? offset : -offset;
-            shadowGenerator.addShadowCaster(webPlate);
-            webPlate.receiveShadows = true;
+            for (let i = 0; i < inputs.num_web_plates; i++) {
+                    const webPlate = BABYLON.MeshBuilder.CreateBox(`wp_${i}`, { width: inputs.t_wp, height: inputs.H_wp, depth: inputs.L_wp }, bjsScene);
+                    webPlate.material = plateMaterial;
+                    const offset = (inputs.member_tw / 2 + inputs.t_wp / 2);
+                    webPlate.position.x = (inputs.num_web_plates === 1) ? offset : (i === 0 ? offset : -offset);
+                    shadowGenerator.addShadowCaster(webPlate);
+                    webPlate.receiveShadows = true;
+                }
         }
     }
 
     // --- Bolt Creation ---
     const createWebBoltGroup = () => {
-        const { D_wp, Nc_wp: Nc, Nr_wp: Nr, S4_col_spacing_wp: S_col, S5_row_spacing_wp: S_row, S6_end_dist_wp: S_end } = inputs;
-        const D = parseFloat(D_wp); // Convert string from select to number
-        if (!D || !Nc || !Nr) return;
+        const { D_wp: D, Nc_wp: Nc, Nr_wp: Nr, S4_col_spacing_wp: S_col, S5_row_spacing_wp: S_row, S6_end_dist_wp: S_end } = inputs;
+        if (inputs.num_web_plates == 0 || !D || !Nc || !Nr) return;
 
         // Calculate total thickness of the web connection
         const thickness = inputs.member_tw + (inputs.num_web_plates * inputs.t_wp);
@@ -301,7 +305,7 @@ function draw3dSpliceDiagram() {
 
                     if (bolt) {
                         bolt.material = boltMaterial;
-                        bolt.rotation.z = Math.PI / 2; // Orient horizontally
+                        bolt.rotation.z = Math.PI / 2; // Correct rotation to align bolt with X-axis
                         shadowGenerator.addShadowCaster(bolt);
                     }
                 }
@@ -310,9 +314,8 @@ function draw3dSpliceDiagram() {
     };
 
     const createFlangeBoltGroup = () => {
-        const { D_fp, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, g_gage_fp: gage, S3_end_dist_fp: S_end, num_flange_plates, t_fp, member_tf, t_fp_inner, member_d } = inputs;
-        const D = parseFloat(D_fp); // Convert string from select to number
-        if (!D || !Nc || !Nr) return;
+        const { D_fp: D, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, g_gage_fp: gage, S3_end_dist_fp: S_end, num_flange_plates, t_fp, member_tf, t_fp_inner, member_d } = inputs;
+        if (inputs.num_flange_plates == 0 || !D || !Nc || !Nr) return;
 
         let clamped_thickness, y_center_top;
 
@@ -431,12 +434,176 @@ function draw3dSpliceDiagram() {
     }
 }
 
+// --- State for 2D Diagram Panning ---
+let splice2dPan = { x: 0, y: 0, scale: 1.0 };
+let splice2dIsPanning = false;
+let splice2dStartPoint = { x: 0, y: 0 };
+
+/**
+ * Draws a 2D elevation view of the splice connection using SVG.
+ */
+function draw2dSpliceDiagram() {
+    const svg = document.getElementById('splice-2d-diagram');
+    if (!svg) return;
+    svg.innerHTML = ''; // Clear previous drawing
+    const ns = "http://www.w3.org/2000/svg";
+    
+    // FIX: Define helper functions before they are called.
+    const createEl = (tag, attrs) => {
+        const el = document.createElementNS(ns, tag);
+        for (const k in attrs) el.setAttribute(k, attrs[k]);
+        return el;
+    };
+
+    const drawDim = (x1, y1, x2, y2, text, vertical = false, offset = 20) => {
+        const g = createEl('g', { class: 'svg-dim' });
+        const textBg = createEl('text', { 'text-anchor': 'middle' });
+        const textFg = createEl('text', { 'text-anchor': 'middle', class: 'svg-dim-text' });
+        textBg.textContent = text;
+        textFg.textContent = text;
+
+        if (vertical) {
+            const midY = (y1 + y2) / 2;
+            g.appendChild(createEl('line', { x1: x1, y1: y1, x2: x1, y2: y2 }));
+            g.appendChild(createEl('line', { x1: x1 - 5, y1: y1, x2: x1 + 5, y2: y1 }));
+            g.appendChild(createEl('line', { x1: x1 - 5, y1: y2, x2: x1 + 5, y2: y2 }));
+            textBg.setAttribute('x', x1 - offset); textBg.setAttribute('y', midY);
+            textFg.setAttribute('x', x1 - offset); textFg.setAttribute('y', midY);
+            textBg.setAttribute('transform', `rotate(-90 ${x1 - offset},${midY})`);
+            textFg.setAttribute('transform', `rotate(-90 ${x1 - offset},${midY})`);
+        } else {
+            const midX = (x1 + x2) / 2;
+            g.appendChild(createEl('line', { x1: x1, y1: y1, x2: x2, y2: y1 }));
+            g.appendChild(createEl('line', { x1: x1, y1: y1 - 5, x2: x1, y2: y1 + 5 }));
+            g.appendChild(createEl('line', { x1: x2, y1: y1 - 5, x2: x2, y2: y1 + 5 }));
+            textBg.setAttribute('x', midX); textBg.setAttribute('y', y1 - offset);
+            textFg.setAttribute('x', midX); textFg.setAttribute('y', y1 - offset);
+        }
+        g.appendChild(textBg);
+        g.appendChild(textFg);
+        return g;
+    };
+
+    // Create a group element for panning
+    const group = createEl('g', { id: 'splice-2d-pan-group' });
+    svg.appendChild(group);
+
+    const inputs = gatherInputsFromIds(diagramInputIds);
+    const { member_d, member_tf, gap, L_fp, L_wp, H_wp, t_fp, Nc_fp, S1_col_spacing_fp, S3_end_dist_fp, Nc_wp, S4_col_spacing_wp, S6_end_dist_wp, Nr_wp, S5_row_spacing_wp, D_fp, D_wp } = inputs;
+
+    // --- 1. Setup Scene and Scaling ---
+    const W = 800, H = 400;
+    const padX = 60, padY = 60;
+    const total_length = Math.max(L_fp, L_wp) * 2 + gap;
+    const total_height = member_d + 2 * t_fp;
+
+    // FIX: Ensure scale is always a positive, finite number.
+    let scale = 0.1; // Default to a small, safe scale.
+    if (total_length > 0 && total_height > 0) {
+        scale = Math.min((W - 2 * padX) / total_length, (H - 2 * padY) / total_height);
+    }
+    if (scale <= 0 || !isFinite(scale)) scale = 0.1; // Final safety check.
+
+    const cx = W / 2, cy = H / 2;
+
+    // --- 2. Draw Beam Members ---
+    const s_d = member_d * scale;
+    const s_tf = member_tf * scale;
+    const s_gap = gap * scale;
+    const beam_len = Math.max(L_fp, L_wp) * scale + 40;
+
+    const beamLeftX = cx - s_gap / 2 - beam_len; // This was already correct
+    group.appendChild(createEl('rect', { x: beamLeftX, y: cy - s_d / 2, width: Math.max(0, beam_len), height: Math.max(0, s_d), class: 'svg-member-outline' }));
+    group.appendChild(createEl('line', { x1: beamLeftX, y1: cy - s_d / 2 + s_tf, x2: beamLeftX + beam_len, y2: cy - s_d / 2 + s_tf, class: 'svg-member-line' }));
+    group.appendChild(createEl('line', { x1: beamLeftX, y1: cy + s_d / 2 - s_tf, x2: beamLeftX + beam_len, y2: cy + s_d / 2 - s_tf, class: 'svg-member-line' }));
+
+    const beamRightX = cx + s_gap / 2; // This was already correct
+    group.appendChild(createEl('rect', { x: beamRightX, y: cy - s_d / 2, width: Math.max(0, beam_len), height: Math.max(0, s_d), class: 'svg-member-outline' }));
+    group.appendChild(createEl('line', { x1: beamRightX, y1: cy - s_d / 2 + s_tf, x2: beamRightX + beam_len, y2: cy - s_d / 2 + s_tf, class: 'svg-member-line' }));
+    group.appendChild(createEl('line', { x1: beamRightX, y1: cy + s_d / 2 - s_tf, x2: beamRightX + beam_len, y2: cy + s_d / 2 - s_tf, class: 'svg-member-line' }));
+
+    // --- 3. Draw Splice Plates & Bolts ---
+    let s_t_fp = 0;
+    if (inputs.num_flange_plates > 0 && L_fp > 0) {
+        const s_L_fp = L_fp * scale;
+        s_t_fp = t_fp * scale;
+        group.appendChild(createEl('rect', { x: cx - s_L_fp, y: cy - s_d / 2 - s_t_fp, width: Math.max(0, s_L_fp * 2), height: Math.max(0, s_t_fp), class: 'svg-plate-flange' }));
+        group.appendChild(createEl('rect', { x: cx - s_L_fp, y: cy + s_d / 2, width: Math.max(0, s_L_fp * 2), height: Math.max(0, s_t_fp), class: 'svg-plate-flange' }));
+
+        for (let i = 0; i < Nc_fp; i++) {
+            const bolt_z_right = (S3_end_dist_fp + i * S1_col_spacing_fp) * scale;
+            const bolt_z_left = -bolt_z_right;
+            const bolt_r = (D_fp * scale) / 2;
+            group.appendChild(createEl('circle', { cx: cx + s_gap / 2 + bolt_z_right, cy: cy - s_d / 2 - s_t_fp / 2, r: bolt_r, class: 'svg-bolt' }));
+            group.appendChild(createEl('circle', { cx: cx + s_gap / 2 + bolt_z_right, cy: cy + s_d / 2 + s_t_fp / 2, r: bolt_r, class: 'svg-bolt' }));
+            group.appendChild(createEl('circle', { cx: cx - s_gap / 2 + bolt_z_left, cy: cy - s_d / 2 - s_t_fp / 2, r: bolt_r, class: 'svg-bolt' }));
+            group.appendChild(createEl('circle', { cx: cx - s_gap / 2 + bolt_z_left, cy: cy + s_d / 2 + s_t_fp / 2, r: bolt_r, class: 'svg-bolt' }));
+        }
+    }
+
+    if (inputs.num_web_plates > 0 && L_wp > 0) {
+        const s_L_wp = L_wp * scale;
+        const s_H_wp = H_wp * scale;
+        group.appendChild(createEl('rect', { x: cx - s_L_wp, y: cy - s_H_wp / 2, width: Math.max(0, s_L_wp * 2), height: Math.max(0, s_H_wp), class: 'svg-plate-web' }));
+
+        const startY = -((Nr_wp - 1) * S5_row_spacing_wp) / 2 * scale;
+        for (let i = 0; i < Nc_wp; i++) {
+            const bolt_z_right = (S6_end_dist_wp + i * S4_col_spacing_wp) * scale;
+            const bolt_z_left = -bolt_z_right;
+            const bolt_r = (D_wp * scale) / 2;
+            for (let j = 0; j < Nr_wp; j++) {
+                const y_pos = startY + j * S5_row_spacing_wp * scale;
+                group.appendChild(createEl('circle', { cx: cx + s_gap / 2 + bolt_z_right, cy: cy + y_pos, r: bolt_r, class: 'svg-bolt' }));
+                group.appendChild(createEl('circle', { cx: cx - s_gap / 2 + bolt_z_left, cy: cy + y_pos, r: bolt_r, class: 'svg-bolt' }));
+            }
+        }
+    }
+
+    // --- 4. Draw Dimensions ---
+    const dimY_top = cy - s_d / 2 - s_t_fp - 10;
+    const dimY_bot = cy + s_d / 2 + s_t_fp + 10;
+    const dimX_left = cx - Math.max(L_fp, L_wp) * scale - 40;
+
+    group.appendChild(drawDim(cx - s_gap / 2, dimY_top, cx + s_gap / 2, dimY_top, `Gap=${gap}"`));
+    if (L_fp > 0) group.appendChild(drawDim(cx - L_fp * scale, dimY_top - 25, cx + L_fp * scale, dimY_top - 25, `L_fp=${L_fp * 2}"`));
+    if (L_wp > 0) group.appendChild(drawDim(cx - L_wp * scale, dimY_bot + 25, cx + L_wp * scale, dimY_bot + 25, `L_wp=${L_wp * 2}"`));
+    if (H_wp > 0) group.appendChild(drawDim(dimX_left, cy - H_wp * scale / 2, dimX_left, cy + H_wp * scale / 2, `H_wp=${H_wp}"`, true));
+
+    if (Nc_fp > 1) group.appendChild(drawDim(cx + s_gap / 2 + S3_end_dist_fp * scale, dimY_top, cx + s_gap / 2 + (S3_end_dist_fp + S1_col_spacing_fp) * scale, dimY_top, `S1=${S1_col_spacing_fp}"`));
+    if (Nc_wp > 1) group.appendChild(drawDim(cx + s_gap / 2 + S6_end_dist_wp * scale, dimY_bot, cx + s_gap / 2 + (S6_end_dist_wp + S4_col_spacing_wp) * scale, dimY_bot, `S4=${S4_col_spacing_wp}"`));
+    if (Nr_wp > 1) group.appendChild(drawDim(dimX_left, cy - S5_row_spacing_wp * scale / 2, dimX_left, cy + S5_row_spacing_wp * scale / 2, `S5=${S5_row_spacing_wp}"`, true));
+
+    // Apply the current pan transform
+    group.setAttribute('transform', `translate(${splice2dPan.x}, ${splice2dPan.y}) scale(${splice2dPan.scale})`);
+}
+
 // --- Main Calculator Logic (DOM interaction and event handling) ---
 const spliceCalculator = (() => {
     // --- PRIVATE HELPER & CALCULATION FUNCTIONS ---
     const { PI, sqrt, min, max, abs } = Math;
     const E_MOD = 29000.0; // ksi
     
+    /**
+     * Validates the inputs for the splice calculation.
+     * @param {object} inputs - The collected input values.
+     * @returns {{errors: string[], warnings: string[]}} - Validation results.
+     */
+    function validateSpliceInputs(inputs) {
+        const { errors, warnings } = validateInputs(inputs, validationRules.splice);
+
+        // Custom cross-field validation
+        if (inputs.H_fp < inputs.g_gage_fp) {
+            errors.push("Flange plate width (H_fp) must be greater than or equal to the bolt gage (g).");
+        }
+
+        // Add a warning if no plates are selected
+        if (inputs.num_flange_plates == 0 && inputs.num_web_plates == 0) {
+            warnings.push("No splice plates are selected. The connection has no capacity.");
+        }
+
+        return { errors, warnings };
+    }
+
     // Define a zero-value check object to use as a fallback for bearing calculations.
     const zero_bearing_check = { Rn: 0, phi: 0.75, omega: 2.00, Lc: 0, Rn_tearout: 0, Rn_bearing: 0 };
     
@@ -736,51 +903,42 @@ function calculateWebSpliceEccentricity(V_load, H_load, gap, Nc, Nr, S_pitch, S_
  * @param {number} params.B_bolt - The applied tensile force demand per bolt (kips).
  * @returns {object} An object containing the total required force (T_req), prying force (Q), and critical thickness (tc).
  */
-function checkPryingAction(params) {
-    const { t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt } = params;
-
+function checkPryingAction({ t_plate, Fy_plate, b, a, p, d_bolt, d_hole, B_bolt }) {
     // B_bolt is the required tension demand per bolt (e.g., Tu / num_bolts)
     if (p <= 0 || Fy_plate <= 0 || B_bolt < 0) {
-        return { ...params, T_req: B_bolt, Q: 0, tc: Infinity, alpha_prime: 0, b_prime: 0, a_prime: 0, rho: 0, delta: 0 };
+        return { T_req: B_bolt, Q: 0, tc: Infinity, alpha_prime: 0 };
     }
     
     const b_prime = b - d_bolt / 2.0;
     const a_prime = Math.min(a + d_bolt / 2.0, 1.25 * b);
 
     if (a_prime <= 0 || b_prime < 0) {
-        return { ...params, T_req: B_bolt, Q: 0, tc: Infinity, alpha_prime: 0, b_prime, a_prime, rho: 0, delta: 0 };
+        return { T_req: B_bolt, Q: 0, tc: Infinity, alpha_prime: 0 };
     }
 
     const rho = b_prime / a_prime;
     const delta = 1 - (d_hole / p);
 
     if (delta < 0) {
-        return { ...params, T_req: Infinity, Q: Infinity, tc: 0, alpha_prime: 0, b_prime, a_prime, rho, delta };
+        return { T_req: Infinity, Q: Infinity, tc: 0, alpha_prime: 0 };
     }
 
     // Critical thickness tc required to eliminate prying, based on the applied DEMAND B_bolt (AISC Eq. 9-27).
     const tc = Math.sqrt((4 * B_bolt * b_prime) / (p * Fy_plate));
 
     let Q = 0;
-    let alpha_prime = 1.0; // Default to 1.0 if no prying
+    let alpha_prime = 0;
     if (t_plate < tc) { // Prying occurs if the actual plate thickness is less than the critical thickness
         alpha_prime = (1 / (delta * (1 + rho))) * (((t_plate / tc)**2) - 1);
         alpha_prime = Math.max(0, Math.min(alpha_prime, 1.0));
         
         // Prying force Q per bolt, based on the demand B_bolt.
         Q = B_bolt * delta * alpha_prime * rho;
-    } else {
-        // If t >= tc, prying force Q is zero, and alpha_prime is effectively 0 for the Q calculation.
-        // However, for reporting, it's clearer to show alpha_prime as 1.0 when t >= tc,
-        // as it signifies the full capacity is available without prying reduction.
-        // The calculation of Q will still be zero.
-        Q = 0;
-        alpha_prime = 1.0;
     }
 
     const T_req = B_bolt + Q; // Total required tension in the bolt is the initial demand plus the prying force.
     
-    return { ...params, T_req, Q, tc, alpha_prime, delta, rho, b_prime, a_prime };
+    return { T_req, Q, tc, alpha_prime, delta, rho, b_prime, a_prime, Fy_plate };
 }
 
 function getGeometryChecks({ db, s_col, s_row, gage, le_long, le_tran, t_thinner }) { 
@@ -836,6 +994,9 @@ function calculateBoltGroupGeometry({ L_plate, H_plate, Nc, Nr, S_col, S_row, S_
  * @returns {object} An object containing the results of the checks for this plate.
  */
 function performPlateChecks(plateName, inputs, config) {
+    // If plate has no dimensions, skip all checks for it.
+    if (config.H_p <= 0 || config.t_p <= 0 || config.L_p <= 0) return {};
+
     const {
         demand, demand_comp, H_p, t_p, L_p, Fy, Fu,
         Nc, Nr, S_col, S_row, S_end, gage, D_bolt,
@@ -883,6 +1044,9 @@ function performPlateChecks(plateName, inputs, config) {
  * @returns {object} An object containing the results of the checks.
  */
 function performBeamConnectionChecks(partName, inputs, config) {
+    // If bolt diameter is zero, no bolt checks can be performed.
+    if (config.D_bolt <= 0) return {};
+
     const {
         demand, t_beam, Fu_beam, Fy_beam,
         Nc, Nr, S_col, S_row, S_end, gage, D_bolt,
@@ -917,13 +1081,17 @@ function performFlangeChecks(inputs, demands) {
     const { total_flange_demand_tension, demand_fp_outer, demand_fp_inner, demand_fp_outer_comp, demand_fp_inner_comp } = demands;
     const checks = {};
     const geomChecks = {};
-    // FIX: Ensure bolt diameter is a number before using it in any calculations.
-    const D_fp_num = parseFloat(inputs.D_fp);
+
+    // If flange plates are disabled, skip all flange checks
+    if (inputs.num_flange_plates == 0) {
+        // Return empty objects as no flange checks are applicable.
+        return { checks: {}, geomChecks: {}, inputs };
+    }
     
     // --- Flange Splice Checks ---
-    // FIX: Correctly get hole diameters from the AISC database module
-    const hole_for_bearing_fp = AISC_SPEC.getNominalHoleDiameter(D_fp_num);
-    const hole_for_net_area_fp = hole_for_bearing_fp + 1.0 / 16.0; // Per AISC B4.3b
+    const hole_nominal_fp = AISC_SPEC.getNominalHoleDiameter(inputs.D_fp, inputs.hole_calc_method, 'standard');
+    const hole_for_bearing_fp = hole_nominal_fp;
+    const hole_for_net_area_fp = hole_nominal_fp + 1.0 / 16.0; // Per AISC commentary for net area calculations
     
     const { le_long: le_long_fp, le_tran: le_tran_fp, edge_dist_gap: edge_dist_gap_fp, bolt_pattern_height: bolt_pattern_height_fp } = calculateBoltGroupGeometry({
         L_plate: inputs.L_fp,
@@ -943,7 +1111,7 @@ function performFlangeChecks(inputs, demands) {
     const single_bolt_shear_fp_check = checkBoltShear({
         grade: inputs.bolt_grade_fp, 
         threadsIncl: inputs.threads_included_fp, 
-        db: D_fp_num, 
+        db: inputs.D_fp, 
         numPlanes: num_shear_planes_fp, 
         fastenerPatternLength: fastenerPatternLength_flange
     });
@@ -970,7 +1138,7 @@ function performFlangeChecks(inputs, demands) {
         demand: demand_fp_outer, demand_comp: demand_fp_outer_comp,
         H_p: inputs.H_fp, t_p: inputs.t_fp, L_p: inputs.L_fp, Fy: inputs.flange_plate_Fy, Fu: inputs.flange_plate_Fu,
         Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S_col: inputs.S1_col_spacing_fp, S_row: inputs.S2_row_spacing_fp, S_end: inputs.S3_end_dist_fp,
-        gage: inputs.g_gage_fp, D_bolt: D_fp_num,
+        gage: inputs.g_gage_fp, D_bolt: inputs.D_fp,
         hole_for_net_area: hole_for_net_area_fp, hole_for_bearing: hole_for_bearing_fp
     }));
 
@@ -980,7 +1148,7 @@ function performFlangeChecks(inputs, demands) {
             demand: demand_fp_inner, demand_comp: demand_fp_inner_comp,
             H_p: inputs.H_fp_inner, t_p: inputs.t_fp_inner, L_p: inputs.L_fp_inner, Fy: inputs.flange_plate_Fy_inner, Fu: inputs.flange_plate_Fu_inner,
             Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S_col: inputs.S1_col_spacing_fp, S_row: inputs.S2_row_spacing_fp, S_end: inputs.S3_end_dist_fp,
-            gage: inputs.g_gage_fp, D_bolt: D_fp_num,
+            gage: inputs.g_gage_fp, D_bolt: inputs.D_fp,
             hole_for_net_area: hole_for_net_area_fp, hole_for_bearing: hole_for_bearing_fp
         }));
     }
@@ -1014,7 +1182,7 @@ function performFlangeChecks(inputs, demands) {
         demand: total_flange_demand_tension,
         t_beam: inputs.member_tf, Fu_beam: inputs.member_Fu, Fy_beam: inputs.member_Fy,
         Nc: inputs.Nc_fp, Nr: inputs.Nr_fp, S_col: inputs.S1_col_spacing_fp, S_row: inputs.S2_row_spacing_fp, S_end: inputs.S3_end_dist_fp,
-        gage: inputs.g_gage_fp, D_bolt: D_fp_num,
+        gage: inputs.g_gage_fp, D_bolt: inputs.D_fp,
         hole_for_net_area: hole_for_net_area_fp, hole_for_bearing: hole_for_bearing_fp
     }));
     // --- Prying Action Check ---
@@ -1033,12 +1201,12 @@ function performFlangeChecks(inputs, demands) {
             // Each plate sees half the bolt force
             const B_per_plate = B_per_bolt / 2;
             const b_pry_outer = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
-            const a_pry_outer = (inputs.H_fp - inputs.g_gage_fp) / 2.0;
-            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry_outer, a: a_pry_outer, p: inputs.S1_col_spacing_fp, d_bolt: D_fp_num, d_hole: d_hole_pry, B_bolt: B_per_plate /* ✅ Half the bolt force */ });
+            const a_pry_outer = (inputs.H_fp - bolt_pattern_height_fp) / 2.0;
+            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry_outer, a: a_pry_outer, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_plate /* ✅ Half the bolt force */ });
             
             const b_pry_inner = inputs.g_gage_fp / 2.0;
-            const a_pry_inner = (inputs.H_fp_inner - inputs.g_gage_fp) / 2.0;
-            const prying_inner = checkPryingAction({ t_plate: inputs.t_fp_inner, Fy_plate: inputs.flange_plate_Fy_inner, b: b_pry_inner, a: a_pry_inner, p: inputs.S1_col_spacing_fp, d_bolt: D_fp_num, d_hole: d_hole_pry, B_bolt: B_per_plate /* ✅ Half the bolt force */ });
+            const a_pry_inner = (inputs.g_gage_fp / 2.0) + (inputs.member_bf - inputs.member_tw) / 2.0;
+            const prying_inner = checkPryingAction({ t_plate: inputs.t_fp_inner, Fy_plate: inputs.flange_plate_Fy_inner, b: b_pry_inner, a: a_pry_inner, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_plate /* ✅ Half the bolt force */ });
             
             Q_total = prying_outer.Q + prying_inner.Q;
             prying_details = { outer: prying_outer, inner: prying_inner };
@@ -1048,17 +1216,17 @@ function performFlangeChecks(inputs, demands) {
             // 'b' is from bolt centerline to the web face.
             const b_pry = (inputs.g_gage_fp / 2.0) - (inputs.member_tw / 2.0);
             // 'a' is from bolt centerline to the plate edge.
-            const a_pry = (inputs.H_fp - inputs.g_gage_fp) / 2.0; // This is correct
-            const prying_result = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry, a: a_pry, p: inputs.S1_col_spacing_fp, d_bolt: D_fp_num, d_hole: d_hole_pry, B_bolt: B_per_bolt });
-            Q_total = prying_result.Q;
-            prying_details = { outer: prying_result };
+            const a_pry = (inputs.H_fp - inputs.g_gage_fp) / 2.0;
+            const prying_outer = checkPryingAction({ t_plate: inputs.t_fp, Fy_plate: inputs.flange_plate_Fy, b: b_pry, a: a_pry, p: inputs.S1_col_spacing_fp, d_bolt: inputs.D_fp, d_hole: d_hole_pry, B_bolt: B_per_bolt /* ✅ Full bolt force */ });
+            Q_total = prying_outer.Q;
+            prying_details = { outer: prying_outer };
         }
     
         T_req += Q_total; // Add total prying force to the initial demand
-        
+
         checks['Flange Bolt Tension with Prying'] = {
             demand: T_req, // The demand is the total required force including prying
-            check: checkBoltTension(inputs.bolt_grade_fp, D_fp_num), // Check against bolt's nominal capacity
+            check: checkBoltTension(inputs.bolt_grade_fp, inputs.D_fp), // Check against bolt's nominal capacity
             details: { ...prying_details, B_per_bolt, Q_total, T_req }
         };
     }
@@ -1068,13 +1236,15 @@ function performFlangeChecks(inputs, demands) {
     checks['Plate Thickness for Prying'] = {
         demand: inputs.t_fp, // Provided thickness
         check: { Rn: outer_plate_tc, phi: 1.0, omega: 1.0 }, // Required thickness
-        // The prying_details object now contains all necessary info, including B_bolt
-        details: prying_details
+        // Pass the correct details object to the breakdown generator.
+        // The breakdown needs the `B_per_bolt` value which is not inside `prying_details_combined`.
+        // We create a new object that includes both for the breakdown function to use.
+        details: { ...prying_details, B_per_bolt }
     };
     
     const t_thinner_flange = min(inputs.member_tf, inputs.t_fp, inputs.num_flange_plates === 2 ? inputs.t_fp_inner : Infinity);
     geomChecks['Flange Bolts'] = getGeometryChecks({
-        db: D_fp_num, 
+        db: inputs.D_fp, 
         s_col: inputs.S1_col_spacing_fp, 
         s_row: inputs.S2_row_spacing_fp, 
         gage: inputs.g_gage_fp,
@@ -1198,11 +1368,17 @@ function performWebChecks(inputs, demands) {
     const { V_load, Hw } = demands;
     const checks = {};
     const geomChecks = {};
-    // FIX: Ensure bolt diameter is a number before using it in any calculations.
-    const D_wp_num = parseFloat(inputs.D_wp);
-    // FIX: Correctly get hole diameters from the AISC database module
-    const hole_for_bearing_wp = AISC_SPEC.getNominalHoleDiameter(inputs.D_wp);
-    const hole_for_net_area_wp = hole_for_bearing_wp + 1.0 / 16.0; // Per AISC B4.3b
+
+    // If web plates are disabled, skip all web checks
+    if (inputs.num_web_plates == 0) {
+        // Add a placeholder check to indicate it was skipped
+        checks['Web Bolt Group Shear (ICR)'] = { demand: Math.sqrt(V_load**2 + Hw**2), check: { Rn: 0, phi: 0.75, omega: 2.00 }, details: { note: "Web splice not provided." } };
+        return { checks, geomChecks, inputs };
+    }
+
+    const hole_nominal_wp = AISC_SPEC.getNominalHoleDiameter(inputs.D_wp, inputs.hole_calc_method);
+    const hole_for_bearing_wp = hole_nominal_wp;
+    const hole_for_net_area_wp = hole_nominal_wp + 1.0 / 16.0; // Per AISC commentary for net area calculations
 
     const { le_long: le_long_wp, le_tran: le_tran_wp, edge_dist_gap: edge_dist_gap_wp } = calculateBoltGroupGeometry({
         L_plate: inputs.L_wp,
@@ -1219,7 +1395,7 @@ function performWebChecks(inputs, demands) {
     // --- Bolt Slip Check (if applicable) ---
     if (inputs.connection_type === 'slip-critical') {
         const single_bolt_slip_check = checkBoltSlip({
-            db: D_wp_num,
+            db: inputs.D_wp,
             faying_surface_class: inputs.faying_surface_class,
             num_slip_planes: inputs.num_web_plates,
         });
@@ -1232,7 +1408,7 @@ function performWebChecks(inputs, demands) {
     const single_web_bolt_shear_check = checkBoltShear({
         grade: inputs.bolt_grade_wp, 
         threadsIncl: inputs.threads_included_wp, 
-        db: D_wp_num, 
+        db: inputs.D_wp, 
         numPlanes: inputs.num_web_plates, 
         fastenerPatternLength: fastenerPatternLength_web
     });
@@ -1271,7 +1447,7 @@ function performWebChecks(inputs, demands) {
     if (Tu_per_bolt > 0) {
         checks['Web Bolt Shear/Tension Interaction'] = {
             demand: Tu_per_bolt,
-            check: checkBoltShearTensionInteraction(Tu_per_bolt, Vu_per_bolt, single_web_bolt_shear_check.Fnv, inputs.bolt_grade_wp, D_wp_num, inputs.design_method)
+            check: checkBoltShearTensionInteraction(Tu_per_bolt, Vu_per_bolt, single_web_bolt_shear_check.Fnv, inputs.bolt_grade_wp, inputs.D_wp, inputs.design_method)
         };
     }
 
@@ -1322,13 +1498,13 @@ function performWebChecks(inputs, demands) {
     const num_edge_bolts_web = inputs.Nr_wp; // All bolts in the first column are edge bolts
     const num_int_bolts_web = (inputs.Nc_wp - 1) * inputs.Nr_wp;
     const bearing_wp_plate_edge = checkBoltBearing({
-        db: D_wp_num, t_ply: total_t_wp, Fu_ply: inputs.web_plate_Fu,
+        db: inputs.D_wp, t_ply: total_t_wp, Fu_ply: inputs.web_plate_Fu,
         le: le_long_wp, s: inputs.S4_col_spacing_wp,
         isEdgeBolt: true, deformationIsConsideration: inputs.deformation_is_consideration,
         hole_dia: hole_for_bearing_wp
     });
     const bearing_wp_plate_int = checkBoltBearing({
-        db: D_wp_num, t_ply: total_t_wp, Fu_ply: inputs.web_plate_Fu,
+        db: inputs.D_wp, t_ply: total_t_wp, Fu_ply: inputs.web_plate_Fu,
         le: Infinity, s: inputs.S4_col_spacing_wp, isEdgeBolt: false,
         deformationIsConsideration: inputs.deformation_is_consideration, hole_dia: hole_for_bearing_wp
     });
@@ -1339,8 +1515,8 @@ function performWebChecks(inputs, demands) {
     Object.assign(checks, performBeamConnectionChecks("Web", inputs, {
         demand: V_load,
         t_beam: inputs.member_tw, Fu_beam: inputs.member_Fu, Fy_beam: inputs.member_Fy,
-        Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S_col: inputs.S4_col_spacing_wp, S_row: inputs.S5_row_spacing_wp, S_end: inputs.S6_end_dist_wp, // Use numeric diameter
-        D_bolt: D_wp_num, hole_for_bearing: hole_for_bearing_wp
+        Nc: inputs.Nc_wp, Nr: inputs.Nr_wp, S_col: inputs.S4_col_spacing_wp, S_row: inputs.S5_row_spacing_wp, S_end: inputs.S6_end_dist_wp,
+        D_bolt: inputs.D_wp, hole_for_bearing: hole_for_bearing_wp
     }));
 
     const t_thinner_web = min(inputs.member_tw, inputs.t_wp * inputs.num_web_plates);
@@ -1360,9 +1536,10 @@ function performWebChecks(inputs, demands) {
     return { checks, geomChecks, inputs };
 }
 
-function performMemberChecks(inputs, demands, calculated_holes) {
-    const { M_load, V_load, Axial_load } = demands;    
-    const { hole_for_net_area_fp, hole_for_net_area_wp } = calculated_holes;
+function performMemberChecks(inputs, demands) {
+    const { M_load, V_load, Axial_load } = demands;
+    const hole_for_net_area_fp = AISC_SPEC.getNominalHoleDiameter(inputs.D_fp, inputs.hole_calc_method, 'standard') + 1.0 / 16.0;
+    const hole_for_net_area_wp = AISC_SPEC.getNominalHoleDiameter(inputs.D_wp, inputs.hole_calc_method, 'standard') + 1.0 / 16.0;
     const checks = {};
 
     // --- Beam Flexural Yielding (Gross Section) ---
@@ -1379,10 +1556,12 @@ function performMemberChecks(inputs, demands, calculated_holes) {
         details: { d: inputs.member_d, tf: inputs.member_tf, tw: inputs.member_tw }
     };
     
-    // The number of bolts in the critical section of one flange is 2 * Nr_fp (one for each bolt line on the gage).
-    const num_bolts_in_flange_cs = 2 * inputs.Nr_fp;
-    checks['Beam Flexural Rupture'] = { demand: M_load * 12, check: checkBeamFlexuralRupture(inputs.member_Sx, inputs.member_Fy, inputs.member_Fu, inputs.member_bf, inputs.member_tf, num_bolts_in_flange_cs, hole_for_net_area_fp) };
-
+    // Only check for flexural rupture if there are flange bolts creating holes.
+    if (inputs.num_flange_plates > 0) {
+        // The number of bolts in the critical section of one flange is 2 * Nr_fp (one for each bolt line on the gage).
+        const num_bolts_in_flange_cs = 2 * inputs.Nr_fp;
+        checks['Beam Flexural Rupture'] = { demand: M_load * 12, check: checkBeamFlexuralRupture(inputs.member_Sx, inputs.member_Fy, inputs.member_Fu, inputs.member_bf, inputs.member_tf, num_bolts_in_flange_cs, hole_for_net_area_fp) };
+    }
     const Anv_beam_web = (inputs.member_d - 2*inputs.member_tf - inputs.Nr_wp * hole_for_net_area_wp) * inputs.member_tw;
     checks['Beam Web Shear Rupture'] = { 
         demand: V_load,
@@ -1426,20 +1605,30 @@ function performChecks(inputs, M_load, V_load) {
     const flange_force_from_moment = (M_load * 12) / moment_arm_flange;
     const axial_per_flange = inputs.Axial_load / 2.0;
     const total_flange_demand_tension = flange_force_from_moment + axial_per_flange;
-    const total_flange_demand_compression = flange_force_from_moment - axial_per_flange;
-    const demand_fp_outer = inputs.num_flange_plates === 2 ? total_flange_demand_tension * 0.5 : total_flange_demand_tension;
-    const demand_fp_inner = inputs.num_flange_plates === 2 ? total_flange_demand_tension * 0.5 : 0;
-    const demand_fp_outer_comp = inputs.num_flange_plates === 2 ? Math.abs(total_flange_demand_compression) * 0.5 : Math.abs(total_flange_demand_compression);
-    const demand_fp_inner_comp = inputs.num_flange_plates === 2 ? Math.abs(total_flange_demand_compression) * 0.5 : 0;
+    const total_flange_demand_compression = Math.max(0, flange_force_from_moment - axial_per_flange); // Compression cannot be negative
+    const demand_fp_outer = (inputs.num_flange_plates == 2) ? total_flange_demand_tension * 0.5 : total_flange_demand_tension;
+    const demand_fp_inner = (inputs.num_flange_plates == 2) ? total_flange_demand_tension * 0.5 : 0;
+    const demand_fp_outer_comp = (inputs.num_flange_plates == 2) ? total_flange_demand_compression * 0.5 : total_flange_demand_compression;
+    const demand_fp_inner_comp = (inputs.num_flange_plates == 2) ? total_flange_demand_compression * 0.5 : 0;
 
     const flangeResults = performFlangeChecks(inputs, { total_flange_demand_tension, total_flange_demand_compression, demand_fp_outer, demand_fp_inner, demand_fp_outer_comp, demand_fp_inner_comp });
-    const flange_capacity_for_moment = (flangeResults.checks['Flange Bolt Shear']?.check?.Rn ?? 0);
-    const Mu_flange_splice_capacity = flange_capacity_for_moment * moment_arm_flange;
-    const Mu_resisted_by_web = Math.max(0, Math.abs(M_load * 12) - Mu_flange_splice_capacity);
-    const Hw = (inputs.H_wp > 0) ? Mu_resisted_by_web / (inputs.H_wp * 0.75) : 0; // Prevent division by zero
-    const webResults = performWebChecks(inputs, { V_load, Hw, Mu_resisted_by_web });
-    const calculated_holes = { hole_for_net_area_fp: flangeResults.checks['Beam Flange Tensile Rupture']?.check?.hole_dia_net_area, hole_for_net_area_wp: webResults.checks['Web Plate Net Shear Rupture']?.details?.hole_dia };
-    const memberResults = performMemberChecks(inputs, { M_load, V_load, Axial_load: inputs.Axial_load }, calculated_holes);
+
+    let Mu_resisted_by_web, Hw;
+
+    if (inputs.num_flange_plates > 0) {
+        // If flange plates exist, they take the moment first
+        const flange_capacity_for_moment = (flangeResults.checks['Flange Bolt Shear']?.check?.Rn ?? 0);
+        const Mu_flange_splice_capacity = flange_capacity_for_moment * moment_arm_flange;
+        Mu_resisted_by_web = Math.max(0, Math.abs(M_load * 12) - Mu_flange_splice_capacity);
+        Hw = (inputs.H_wp > 0) ? Mu_resisted_by_web / (inputs.H_wp * 0.75) : 0; // Prevent division by zero
+    } else {
+        // If no flange plates, the web must take the entire moment
+        Mu_resisted_by_web = Math.abs(M_load * 12);
+        Hw = (inputs.H_wp > 0) ? Mu_resisted_by_web / (inputs.H_wp * 0.75) : 0;
+    }
+
+    const webResults = performWebChecks(inputs, { V_load, Hw });
+    const memberResults = performMemberChecks(inputs, { M_load, V_load, Axial_load: inputs.Axial_load });
 
     return {
         checks: { ...flangeResults.checks, ...webResults.checks, ...memberResults.checks }, // FIX: Spread first, then set the correct total Rn
@@ -1591,7 +1780,7 @@ function optimizeWebBolts(inputs, optimizationLog) {
 function runOptimization(inputs) {
     let optimizationLog = [];
 
-    // --- Step 1: Optimize Flange ---
+    // --- Step 1: Optimize Flange --- //
     const optimizedFlangeInputs = optimizeFlangeBolts(inputs, optimizationLog);
 
     if (!optimizedFlangeInputs) {
@@ -1647,7 +1836,7 @@ function run(rawInputs) {
     const __test_exports__ = { checkBoltShear, checkBlockShear };
 
     return { run, __test_exports__ };
-})();
+})(); // This is a bug, it should be inside the IIFE
 const baseBreakdownGenerators = {
     'Flange Bolt Shear': ({ check, details }, common) => {
         const wasReducedText = check.wasReduced ? `<br><span class="text-yellow-600">Note: F<sub>nv</sub> was reduced by 20% for long joint length.</span>` : '';
@@ -1785,7 +1974,7 @@ const baseBreakdownGenerators = {
         if (!check.applies) {
             return common.format_list([
                 `<u>Flexural Rupture Check per AISC F13.2</u>`,
-                `Applicability: F<sub>u</sub> &times; A<sub>fn</sub> &ge; Y<sub>t</sub> &times; F<sub>y</sub> &times; A<sub>fg</sub>`,
+                `Applicability: F<sub>u</sub>&times;A<sub>fn</sub> &ge; Y<sub>t</sub>&times;F<sub>y</sub>&times;A<sub>fg</sub>`,
                 `${common.fmt(check.Fu)} &times; ${common.fmt(check.Afn,3)} &ge; ${common.fmt(check.Yt)} &times; ${common.fmt(check.Fy)} &times; ${common.fmt(check.Afg,3)}`,
                 `${common.fmt(check.Fu * check.Afn)} &ge; ${common.fmt(check.Yt * check.Fy * check.Afg)}`,
                 `<b>Limit state of tensile rupture does not apply.</b>`
@@ -1794,8 +1983,7 @@ const baseBreakdownGenerators = {
         return common.format_list([
             `<u>Flexural Rupture Check per AISC F13.2</u>`,
             `Y<sub>t</sub> Factor = ${common.fmt(check.Yt, 1)} (since F<sub>y</sub>/F<sub>u</sub> is ${ (check.Fy/check.Fu).toFixed(2) })`,
-            `Applicability: F<sub>u</sub> &times; A<sub>fn</sub> &lt; Y<sub>t</sub> &times; F<sub>y</sub> &times; A<sub>fg</sub>, so rupture check is required.`,
-            `Net Flange Area (A<sub>fn</sub>) = (b<sub>f</sub> - n &times; d<sub>h,eff</sub>) &times; t<sub>f</sub> = (${common.fmt(common.inputs.member_bf)} - ${2 * common.inputs.Nr_fp} &times; ${common.fmt(check.hole_dia_net_area, 3)}) &times; ${common.fmt(common.inputs.member_tf)} = ${common.fmt(check.Afn, 3)} in²`,
+            `Applicability: F<sub>u</sub>&times;A<sub>fn</sub> &lt; Y<sub>t</sub>&times;F<sub>y</sub>&times;A<sub>fg</sub>, so rupture check is required.`,
             `<u>Nominal Moment Strength (M<sub>n</sub>)</u>`,
             `M<sub>n</sub> = (F<sub>u</sub> &times; A<sub>fn</sub> / A<sub>fg</sub>) &times; S<sub>x</sub>`,
             `M<sub>n</sub> = (${common.fmt(check.Fu)} &times; ${common.fmt(check.Afn, 3)} / ${common.fmt(check.Afg, 3)}) &times; ${common.fmt(check.Sx)} = <b>${common.fmt(check.Rn)} kip-in</b>`,
@@ -1804,13 +1992,18 @@ const baseBreakdownGenerators = {
         ]);
     },
     'Plate Thickness for Prying': ({ check, details }, common) => {
-        const prying_data = details.outer || {}; // Use outer plate details for this check
-        if (!prying_data.B_bolt) return 'Prying details not available.';
+        const outer_details = details.outer;
+        if (!outer_details) return 'Prying details for outer plate not available.';
+
+        // B_bolt is the demand on the bolts for the outer plate
+        const B_bolt = common.inputs.num_flange_plates === 2 
+            ? (details.B_per_bolt || 0) * 0.5 
+            : (details.B_per_bolt || 0);
 
         return common.format_list([
             `<u>Required Thickness (t<sub>c</sub>) per AISC Eq. 9-27</u>`,
             `t<sub>c</sub> = &radic;[ (4 &times; B &times; b') / (p &times; F<sub>y,plate</sub>) ]`,
-            `t<sub>c</sub> = &radic;[ (4 &times; ${common.fmt(prying_data.B_bolt)} kips &times; ${common.fmt(prying_data.b_prime, 3)}") / (${common.fmt(prying_data.p)}" &times; ${common.fmt(prying_data.Fy_plate)} ksi) ] = <b>${common.fmt(check.Rn, 3)} in</b>`,
+            `t<sub>c</sub> = &radic;[ (4 &times; ${common.fmt(B_bolt)} kips &times; ${common.fmt(outer_details.b_prime, 3)}") / (${common.fmt(common.inputs.S1_col_spacing_fp)}" &times; ${common.fmt(outer_details.Fy_plate)} ksi) ] = <b>${common.fmt(check.Rn, 3)} in</b>`,
             `<em>Note: This check is based on the outer plate geometry and its portion of the bolt tension demand (B). The provided plate thickness should be greater than this required thickness.</em>`
         ]);
     },
@@ -1895,12 +2088,13 @@ function generateSpliceBreakdownHtml(name, data, inputs) {
 
 async function populateShapeDropdown() {
     const shapeSelect = document.getElementById('aisc_shape_select');
-    const shapeTypeSelect = document.getElementById('aisc_shape_type_select');
-    if (!shapeSelect || !shapeTypeSelect) return;
+    if (!shapeSelect) return;
+    const shapeTypeSelect = document.getElementById('member_shape_type');
+    const selectedShapeType = shapeTypeSelect ? shapeTypeSelect.value : 'W-Shape';
 
     try {
-        const selectedType = shapeTypeSelect.value;
-        const shapes = await AISC_SPEC.getShapesByType(selectedType);
+        // Fetch shapes based on the selected type (W, S, HP, M)
+        const shapes = await AISC_SPEC.getShapesByType(selectedShapeType);
         const shapeNames = Object.keys(shapes).sort();
 
         const currentVal = shapeSelect.value;
@@ -1951,9 +2145,35 @@ async function handleShapeSelection() {
     });
 }
 
+/**
+ * Populates bolt diameter dropdowns with typical sizes from the AISC database.
+ * It targets select elements with a `data-is-bolt-diameter-select="true"` attribute.
+ */
+function populateBoltDiameterDropdowns() {
+    if (typeof AISC_SPEC === 'undefined' || !AISC_SPEC.getTypicalBoltSizes) {
+        console.warn("AISC_SPEC or getTypicalBoltSizes not available for populateBoltDiameterDropdowns.");
+        return;
+    }
+
+    const boltSizes = AISC_SPEC.getTypicalBoltSizes();
+    if (!boltSizes) {
+        console.warn("getTypicalBoltSizes() returned no data.");
+        return;
+    }
+
+    const boltOptions = Object.entries(boltSizes).map(([decimal, fractional]) =>
+        `<option value="${decimal}">${fractional} (${decimal}")</option>`
+    ).join('');
+
+    document.querySelectorAll('select[data-is-bolt-diameter-select="true"]').forEach(select => {
+        select.innerHTML = boltOptions;
+        if (!select.value) select.value = '0.875'; // Set a common default (7/8") if no value is set
+    });
+}
+
 function getAllInputIdsOnPage() {
     const ids = new Set();
-    document.querySelectorAll('input[id], select[id]').forEach(el => ids.add(el.id));
+    document.querySelectorAll('input[id], select[id], textarea[id]').forEach(el => ids.add(el.id));
     return Array.from(ids);
 }
 
@@ -2005,29 +2225,34 @@ function renderSpliceInputSummary(inputs) {
                 { cells: ['Member Material', `F<sub>y</sub>=${member_Fy} ksi, F<sub>u</sub>=${member_Fu} ksi`] }
             ]
         },
-        {
+    ];
+
+    if (num_flange_plates > 0) {
+        sections.push({
             title: 'Flange Splice Details',
             rows: [
                 { cells: ['Outer Plate', `PL ${H_fp}" &times; ${L_fp * 2}" &times; ${t_fp}"`] },
                 { cells: ['Outer Plate Material', `F<sub>y</sub>=${flange_plate_Fy} ksi, F<sub>u</sub>=${flange_plate_Fu} ksi`] },
                 ...(num_flange_plates == 2 ? [
-                    { cells: ['Inner Plate', `2 x PL ${H_fp_inner}" &times; ${L_fp_inner * 2}" &times; ${t_fp_inner}"`] },
+                    { cells: ['Inner Plate', `PL ${H_fp_inner}" &times; ${L_fp_inner * 2}" &times; ${t_fp_inner}"`] },
                     { cells: ['Inner Plate Material', `F<sub>y</sub>=${flange_plate_Fy_inner} ksi, F<sub>u</sub>=${flange_plate_Fu_inner} ksi`] }
                 ] : [])
             ]
-        },
-        {
+        });
+        sections.push({
             title: 'Flange Bolt Details',
             rows: [
-                { cells: ['Configuration', `${Nc_fp * Nr_fp * 4} total bolts (${2 * Nc_fp} cols &times; ${2 * Nr_fp} rows)`] },
+                { cells: ['Configuration', `${Nc_fp * Nr_fp * 2} bolts per side (${Nc_fp} cols &times; ${2 * Nr_fp} rows)`] },
                 { cells: ['Bolt Details', `&empty;${D_fp}" ${bolt_grade_fp} (${threads_included_fp ? 'Threads Included' : 'Threads Excluded'})`] },
                 { cells: ['Spacing (Pitch, S1)', `${S1_col_spacing_fp}"`] },
                 { cells: ['Spacing (Gage, g)', `${g_gage_fp}"`] },
                 { cells: ['Spacing (Row, S2)', `${S2_row_spacing_fp}"`] },
                 { cells: ['End Distance (S3)', `${S3_end_dist_fp}"`] }
             ]
-        },
-        {
+        });
+    }
+    if (num_web_plates > 0) {
+        sections.push({
             title: 'Web Splice Details',
             rows: [
                 { cells: ['Web Plate(s)', `${num_web_plates} &times; PL ${H_wp}" &times; ${L_wp * 2}" &times; ${t_wp}"`] },
@@ -2037,14 +2262,14 @@ function renderSpliceInputSummary(inputs) {
         {
             title: 'Web Bolt Details',
             rows: [
-                { cells: ['Configuration', `${Nc_wp * Nr_wp * 2} total bolts (${2 * Nc_wp} cols &times; ${Nr_wp} rows)`] },
+                { cells: ['Configuration', `${Nc_wp * Nr_wp} bolts per side (${Nc_wp} cols &times; ${Nr_wp} rows)`] },
                 { cells: ['Bolt Details', `&empty;${D_wp}" ${bolt_grade_wp} (${threads_included_wp ? 'Threads Included' : 'Threads Excluded'})`] },
                 { cells: ['Spacing (Pitch, S4)', `${S4_col_spacing_wp}"`] },
                 { cells: ['Spacing (Gage, S5)', `${S5_row_spacing_wp}"`] },
                 { cells: ['End Distance (S6)', `${S6_end_dist_wp}"`] }
             ]
-        }
-    ];
+        });
+    }
     return sections;
 }
 
@@ -2052,222 +2277,177 @@ function renderResults(results, rawInputs) {
     const { checks, geomChecks, inputs, final_loads, demands } = results; // `inputs` here are the potentially modified ones from the calc
     const report = new ReportBuilder({
         reportId: 'splice-report-content',
-        title: getTranslation('splice_check'),
+        title: 'Splice Check Results',
         warnings: results.optimizationLog
     });
 
-    // --- 1. Input Summary Sections ---
-    const inputSummarySections = renderSpliceInputSummary(rawInputs);
-    inputSummarySections.forEach(section => {
-        report.addTableSection(section.title, { headers: [getTranslation('parameter'), getTranslation('value')], rows: section.rows });
-    });
-
-    // --- 2. Load Summary Table ---
-    const loadSummaryData = renderLoadSummary(rawInputs, final_loads, demands, inputs);
-    report.addTableSection(loadSummaryData.title, loadSummaryData.table);
-
-    // --- 3. Geometry Checks Table ---
+    // --- Geometry Checks Table ---
     const geomRows = [];
     const addGeomRow = (name, data, isMaxCheck = false) => {
-        const status = data.pass ? `<span class="pass">${getTranslation('pass')}</span>` : `<span class="fail">${getTranslation('fail')}</span>`;
+        const status = data.pass ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
         const limit_val = isMaxCheck ? (data.max ?? 'N/A') : (data.min ?? 'N/A');
         const limit_label = isMaxCheck ? 'Maximum' : 'Minimum';
         geomRows.push({ cells: [`${name} (${limit_label})`, data.actual.toFixed(3), limit_val.toFixed(3), status] });
     };
-
-    addGeomRow(getTranslation('flange_bolt_edge_dist_long'), geomChecks['Flange Bolts'].edge_dist_long);
-    addGeomRow(getTranslation('flange_bolt_edge_dist_tran'), geomChecks['Flange Bolts'].edge_dist_tran);
-    addGeomRow(getTranslation('flange_bolt_edge_dist_gap'), geomChecks['Flange Bolts'].edge_dist_gap);
-    addGeomRow(getTranslation('flange_bolt_spacing_pitch'), geomChecks['Flange Bolts'].spacing_col);
-    addGeomRow(getTranslation('flange_bolt_spacing_gage'), geomChecks['Flange Bolts'].spacing_gage);
-    addGeomRow(getTranslation('flange_bolt_spacing_pitch'), geomChecks['Flange Bolts'].max_spacing_col, true);
-    addGeomRow(getTranslation('flange_bolt_spacing_gage'), geomChecks['Flange Bolts'].max_spacing_row, true);
-    addGeomRow(getTranslation('web_bolt_edge_dist_long'), geomChecks['Web Bolts'].edge_dist_long);
-    addGeomRow(getTranslation('web_bolt_edge_dist_tran'), geomChecks['Web Bolts'].edge_dist_tran); // This line was already present, no change needed.
-    addGeomRow(getTranslation('web_bolt_edge_dist_gap'), geomChecks['Web Bolts'].edge_dist_gap);
-    addGeomRow(getTranslation('web_bolt_spacing_pitch'), geomChecks['Web Bolts'].spacing_col);
-    addGeomRow(getTranslation('web_bolt_spacing_gage'), geomChecks['Web Bolts'].spacing_row);
-    addGeomRow(getTranslation('web_bolt_spacing_pitch'), geomChecks['Web Bolts'].max_spacing_col, true);
-    addGeomRow(getTranslation('web_bolt_spacing_gage'), geomChecks['Web Bolts'].max_spacing_row, true);
     
-    // --- 4. Strength & Serviceability Checks ---
-    const checkCategories = [
-        {
-            title: getTranslation('flange_plate_checks'),
-            checks: [
-                'Flange Bolt Shear', 'Flange Bolt Tension with Prying', 'Plate Thickness for Prying',
-                'Outer Plate GSY', 'Outer Plate Compression', 'Outer Plate NSF', 'Outer Plate Block Shear', 'Outer Plate Bolt Bearing',
-                'Inner Plate GSY', 'Inner Plate Compression', 'Inner Plate NSF', 'Inner Plate Block Shear', 'Inner Plate Bolt Bearing'
-            ]
-        },
-        {
-            title: getTranslation('web_plate_checks'),
-            checks: [
-                'Web Bolt Group Shear (ICR)', 'Web Bolt Slip', 'Web Plate Flexural Yielding', 'Web Plate Flexural Rupture',
-                'Web Bolt Tension with Prying', 'Web Plate Gross Shear Yield', 'Web Plate Net Shear Rupture',
-                'Web Plate Block Shear', 'Web Plate Bolt Bearing'
-            ]
-        },
-        {
-            title: getTranslation('beam_flange_checks'),
-            checks: ['Beam Flange Tensile Rupture', 'Beam Flange Block Shear', 'Beam Flange Bolt Bearing']
-        },
-        {
-            title: getTranslation('beam_web_checks'),
-            checks: ['Beam Web Bolt Bearing', 'Beam Web Shear Yielding', 'Beam Web Shear Rupture']
-        },
-        {
-            title: getTranslation('full_member_checks'),
-            checks: ['Beam Flexural Yielding', 'Beam Flexural Rupture', 'Beam Section Tensile Rupture']
-        }
-    ];
+    // FIX: Add checks to ensure geomChecks properties exist before accessing them.
+    if (geomChecks['Flange Bolts']) {
+        addGeomRow('Flange Bolt Edge Distance (Long.)', geomChecks['Flange Bolts'].edge_dist_long);
+        addGeomRow('Flange Bolt Edge Distance (Tran.)', geomChecks['Flange Bolts'].edge_dist_tran);
+        addGeomRow('Flange Bolt Edge Distance (Gap Side)', geomChecks['Flange Bolts'].edge_dist_gap);
+        addGeomRow('Flange Bolt Spacing (Pitch)', geomChecks['Flange Bolts'].spacing_col);
+        addGeomRow('Flange Bolt Spacing (Gage)', geomChecks['Flange Bolts'].spacing_gage);
+        addGeomRow('Flange Bolt Spacing (Pitch)', geomChecks['Flange Bolts'].max_spacing_col, true);
+        addGeomRow('Flange Bolt Spacing (Gage)', geomChecks['Flange Bolts'].max_spacing_row, true);
+    }
+    if (geomChecks['Web Bolts']) {
+        addGeomRow('Web Bolt Edge Distance (Long.)', geomChecks['Web Bolts'].edge_dist_long);
+        addGeomRow('Web Bolt Edge Distance (Tran.)', geomChecks['Web Bolts'].edge_dist_tran);
+        addGeomRow('Web Bolt Edge Distance (Gap Side)', geomChecks['Web Bolts'].edge_dist_gap);
+        addGeomRow('Web Bolt Spacing (Pitch)', geomChecks['Web Bolts'].spacing_col);
+        addGeomRow('Web Bolt Spacing (Gage)', geomChecks['Web Bolts'].spacing_row);
+        addGeomRow('Web Bolt Spacing (Pitch)', geomChecks['Web Bolts'].max_spacing_col, true);
+        addGeomRow('Web Bolt Spacing (Gage)', geomChecks['Web Bolts'].max_spacing_row, true);
+    }
+    
+    report.addTableSection('Geometry & Spacing Checks (AISC J3)', { headers: ['Item', 'Actual (in)', 'Limit (in)', 'Status'], rows: geomRows });
 
+    // --- Load Summary Table ---
+    const loadSummaryData = renderLoadSummary(rawInputs, final_loads, demands, inputs);
+    report.addTableSection(loadSummaryData.title, loadSummaryData.table);
+
+    // --- Strength Checks Table ---
+    const strengthRows = [];
     let checkCounter = 0;
+    const addStrengthRow = (name, data, isHeader = false) => {
+        if (!data || !data.check) return;
 
-    // Render each section by iterating through the defined lists
-    checkCategories.forEach(category => {
-        const { title: categoryTitle, checks: checkList } = category;
-        const categoryRows = [];
-
-        // Check if any of the checks in this category exist in the results
-        const hasChecks = checkList.some(name => checks[name]);
-
-        // Only render the header and the checks if at least one check is present
-        if (hasChecks) {
-            checkList.forEach(name => {
-                if (checks[name]) {
-                    checkCounter++;
-                    const data = checks[name];
-                    const { demand, check } = data;
-                    const { Rn, phi, omega } = check;
-                    const capacity = Rn || 0;
-                    const design_capacity_raw = inputs.design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
-
-                    let ratio, status, display_demand, display_capacity;
-
-                    if (name === 'Plate Thickness for Prying') {
-                        display_demand = design_capacity_raw;
-                        display_capacity = demand;
-                        ratio = display_capacity > 0 ? display_demand / display_capacity : Infinity;
-                    } else {
-                        display_demand = demand;
-                        display_capacity = design_capacity_raw;
-                        ratio = display_capacity > 0 ? Math.abs(display_demand) / display_capacity : Infinity;
-                    }                    status = ratio <= 1.0 ? `<span class="pass">${getTranslation('pass')}</span>` : `<span class="fail">${getTranslation('fail')}</span>`;
-
-                    let demand_unit = 'kips', capacity_unit = 'kips';
-                    // FIX: Correctly assign units. Prying check is a force (kips), not a moment.
-                    if (name === 'Plate Thickness for Prying') { 
-                        demand_unit = 'in (req)'; 
-                        capacity_unit = 'in'; 
-                    }
-                    // Only convert to kip-ft for Flexural checks.
-                    if (name.includes('Flexural')) { display_demand /= 12.0; display_capacity /= 12.0; demand_unit = 'kip-ft'; capacity_unit = 'kip-ft'; }
-
-                    const breakdownHtml = generateSpliceBreakdownHtml(name, data, inputs);
-
-                    categoryRows.push({
-                        cells: [name, `${display_demand.toFixed(2)} ${demand_unit}`, `${display_capacity.toFixed(2)} ${capacity_unit}`, ratio.toFixed(3), status],
-                        details: breakdownHtml
-                    });
-                }
-            });
-
-            const tableTitle = `${categoryTitle} (${inputs.design_method})`;
-            if (categoryTitle === getTranslation('flange_plate_checks')) { // Add geometry checks before the first strength check section
-                report.addTableSection(getTranslation('geometry_spacing_checks_title'), { headers: [getTranslation('check_column_header'), getTranslation('actual_in'), getTranslation('min_required_in'), getTranslation('status')], rows: geomRows });
-            }
-            report.addTableSection(tableTitle, {
-                headers: [getTranslation('limit_state'), getTranslation('demand'), getTranslation('capacity'), getTranslation('ratio'), getTranslation('status')],
-                rows: categoryRows
-            });
+        if (isHeader) {
+            strengthRows.push({ type: 'subheader', content: name });
+            return;
         }
-    });
 
-    // --- 5. Governing Capacity Summary Table ---
-    // Redefine which checks contribute to the final splice capacity.
-    // PER USER REQUEST: The summary should show the BEAM MEMBER's capacity at the splice, not the splice assembly capacity.
-    // Moment capacity is governed ONLY by the beam's own flange and flexural checks at the splice location.
-    const momentChecks = Object.entries(checks).filter(([key]) => 
-        key.startsWith('Beam Flange') || key.startsWith('Beam Flexural')
-    );
+        checkCounter++;
+        const detailId = `details-${checkCounter}`;
+        const { demand, check } = data;
+        const { Rn, phi, omega } = check;
+        const capacity = Rn || 0;
+        const design_capacity_raw = inputs.design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
 
-    // Shear capacity is governed ONLY by the beam's own web checks at the splice location.
-    const shearChecks = Object.entries(checks).filter(([key]) => 
-        key.startsWith('Beam Web')
-    );
+        let ratio, status, display_demand, display_capacity;
 
-    let governingMomentCapacity = Infinity;
-    let governingMomentCheck = 'N/A';
-    let governingShearCapacity = Infinity;
-    let governingShearCheck = 'N/A';
-
-    let momentBreakdownHtml = '<ul class="list-disc list-inside space-y-1">';
-    let shearBreakdownHtml = '<ul class="list-disc list-inside space-y-1">';
-
-    const moment_arm = demands.moment_arm_flange || 1;
-
-    momentChecks.forEach(([key, data]) => {
-        if (!data.check || !isFinite(data.check.Rn) || data.check.Rn === 0) return;
-        let design_capacity = inputs.design_method === 'LRFD' ? data.check.Rn * (data.check.phi || 0.75) : data.check.Rn / (data.check.omega || 2.00);
-        let moment_equiv_capacity;
-
-        // For the BEAM MEMBER checks, differentiate between force-based and moment-based capacities.
-        if (key.startsWith('Beam Flange')) {
-            // These are FORCE capacities of the beam flange (kips). Convert to moment (kip-ft) using the moment arm.
-            moment_equiv_capacity = (design_capacity * moment_arm) / 12.0;
-        } else if (key.startsWith('Beam Flexural')) {
-            // These are already MOMENT capacities (kip-in). Just convert to kip-ft.
-            moment_equiv_capacity = design_capacity / 12.0;
+        if (name === 'Plate Thickness for Prying') {
+            // For this check, demand is the required thickness (Rn) and capacity is the provided thickness (demand).
+            display_demand = design_capacity_raw; // The required thickness (tc) is stored in Rn
+            display_capacity = demand; // The provided thickness is stored in the demand field
+            ratio = display_capacity > 0 ? display_demand / display_capacity : Infinity;
         } else {
-            // Fallback for any other type of check, though this path is unlikely for moment checks.
-            moment_equiv_capacity = design_capacity;
+            display_demand = demand;
+            display_capacity = design_capacity_raw;
+            ratio = display_capacity > 0 ? Math.abs(display_demand) / display_capacity : Infinity;
         }
+        status = ratio <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
 
-        if (moment_equiv_capacity < governingMomentCapacity) {
-            governingMomentCapacity = moment_equiv_capacity;
-            governingMomentCheck = key;
-        }
-        momentBreakdownHtml += `<li><em>${key}:</em> ${moment_equiv_capacity.toFixed(2)} kip-ft</li>`;
-    });
+        let demand_unit = 'kips', capacity_unit = 'kips';
+        if (name === 'Plate Thickness for Prying') { demand_unit = 'in (req)'; capacity_unit = 'in'; }
+        if (name.includes('Flexural')) { display_demand /= 12.0; display_capacity /= 12.0; demand_unit = 'kip-ft'; capacity_unit = 'kip-ft'; }
 
-    shearChecks.forEach(([key, data]) => {
-        if (!data.check || !isFinite(data.check.Rn) || data.check.Rn === 0) return;
-        const capacity = inputs.design_method === 'LRFD' ? data.check.Rn * (data.check.phi || 0.90) : data.check.Rn / (data.check.omega || 1.67);
+        const breakdownHtml = generateSpliceBreakdownHtml(name, data, inputs);
 
-        if (capacity < governingShearCapacity) {
-            governingShearCapacity = capacity;
-            governingShearCheck = key;
-        }
-        shearBreakdownHtml += `<li><em>${key}:</em> ${capacity.toFixed(2)} kips</li>`;
-    });
+        strengthRows.push({
+            cells: [
+                `${name}`, // The [Show] button will be added by ReportBuilder
+                `${display_demand.toFixed(2)} ${demand_unit}`,
+                `${display_capacity.toFixed(2)} ${capacity_unit}`,
+                ratio.toFixed(3),
+                status
+            ],
+            details: breakdownHtml
+        });
+    };
 
-    // --- Generate Detailed Breakdown for Governing Cases ---
-    // Instead of just listing all capacities, generate the detailed calculation breakdown for the single governing check.
-    if (governingMomentCheck !== 'N/A' && checks[governingMomentCheck]) {
-        momentBreakdownHtml = generateSpliceBreakdownHtml(governingMomentCheck, checks[governingMomentCheck], inputs);
-    } else {
-        momentBreakdownHtml = '<p>No valid moment capacity could be determined.</p>';
-    }
-
-    if (governingShearCheck !== 'N/A' && checks[governingShearCheck]) {
-        shearBreakdownHtml = generateSpliceBreakdownHtml(governingShearCheck, checks[governingShearCheck], inputs);
-    } else {
-        shearBreakdownHtml = '<p>No valid shear capacity could be determined.</p>';
-    }
-
-    const summaryRows = [
-        { 
-            cells: ['Spliced Member Moment Capacity', `<b>${governingMomentCapacity.toFixed(2)} kip-ft</b>`, `Controlled by: <em>${governingMomentCheck}</em>`],
-            details: momentBreakdownHtml
-        },
-        { 
-            cells: ['Spliced Member Shear Capacity', `<b>${governingShearCapacity.toFixed(2)} kips</b>`, `Controlled by: <em>${governingShearCheck}</em>`],
-            details: shearBreakdownHtml
-        }
+    // Define specific check lists for each section to render them in order.
+    const flangePlateChecks = [
+        'Flange Bolt Shear',
+        'Flange Bolt Tension with Prying',
+        'Plate Thickness for Prying',
+        'Outer Plate GSY',
+        'Outer Plate Compression',
+        'Outer Plate NSF',
+        'Outer Plate Block Shear',
+        'Outer Plate Bolt Bearing',
+        'Inner Plate GSY',
+        'Inner Plate Compression',
+        'Inner Plate NSF',
+        'Inner Plate Block Shear',
+        'Inner Plate Bolt Bearing'
     ];
 
-    report.addTableSection('Splice Capacity Summary', { headers: ['Capacity Type', 'Value', 'Governing Limit State'], rows: summaryRows }, 'splice-capacity-summary');
+    const webPlateChecks = [
+        'Web Bolt Group Shear (ICR)', // This was already correct
+        'Web Bolt Slip',
+        'Web Plate Flexural Yielding',
+        'Web Plate Flexural Rupture',
+        'Web Bolt Tension with Prying',
+        'Web Plate Gross Shear Yield',
+        'Web Plate Net Shear Rupture',
+        'Web Plate Block Shear',
+        'Web Plate Bolt Bearing',
+    ];
+
+    const memberChecks = [
+        'Beam Flange Tensile Rupture',
+        'Beam Flange Block Shear',
+        'Beam Flange Bolt Bearing',
+        'Beam Web Bolt Bearing',
+        'Beam Flexural Yielding',
+        'Beam Flexural Rupture',
+        'Beam Web Shear Yielding',
+        'Beam Web Shear Rupture',
+        'Beam Section Tensile Rupture'
+    ];
+
+    // Conditionally render Flange Plate checks
+    if (inputs.num_flange_plates > 0) {
+        addStrengthRow('Flange Plate Checks', null, true);
+        flangePlateChecks.forEach(name => {
+            if (checks[name]) {
+                addStrengthRow(name, checks[name]);
+            }
+        });
+    }
+
+    // Conditionally render Web Plate checks
+    if (inputs.num_web_plates > 0) {
+        addStrengthRow('Web Plate Checks', null, true);
+        webPlateChecks.forEach(name => {
+            if (checks[name]) {
+                addStrengthRow(name, checks[name]);
+            }
+        });
+    }
+
+    addStrengthRow('Member Checks (at Splice)', null, true);
+    memberChecks.forEach(name => {
+        if (checks[name]) {
+            addStrengthRow(name, checks[name]);
+        }
+    });
+
+    const inputSummarySections = renderSpliceInputSummary(rawInputs);
+    inputSummarySections.forEach(section => {
+        report.addTableSection(section.title, { headers: ['Parameter', 'Value'], rows: section.rows });
+    });
+
+    report.addTableSection(`Strength Checks (${inputs.design_method})`, {
+        headers: ['Limit State', 'Demand', 'Capacity', 'Ratio', 'Status'],
+        rows: strengthRows.map(row => {
+            // The ReportBuilder expects a specific object structure.
+            // We map the generated rows to this structure.
+            if (row.type === 'subheader') return row; // Pass subheaders through
+            return { cells: row.cells, details: row.details };
+        })
+    });
 
     report.render('results-container');
 }
@@ -2276,7 +2456,7 @@ function renderResults(results, rawInputs) {
 const inputIds = [
     'design_method', 'gap', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'member_Fy', 'member_Fu',
     'member_material', 'member_Zx', 'member_Sx', 'M_load', 'V_load', 'Axial_load', 'develop_capacity_check', 'deformation_is_consideration', 'g_gage_fp', 'optimize_bolts_check', 'optimize_diameter_check', 'optimize_web_plates_check', 'optimize_flange_plates_check',
-    'num_flange_plates', 'flange_plate_material', 'flange_plate_Fy', 'flange_plate_Fu', 'H_fp', 't_fp', 'L_fp',
+    'member_shape_type', 'num_flange_plates', 'flange_plate_material', 'flange_plate_Fy', 'flange_plate_Fu', 'H_fp', 't_fp', 'L_fp',
     'flange_plate_material_inner', 'flange_plate_Fy_inner', 'flange_plate_Fu_inner', 'H_fp_inner', 't_fp_inner', 'L_fp_inner',
     'Nc_fp', 'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp',
     'num_web_plates', 'web_plate_material', 'web_plate_Fy', 'web_plate_Fu', 'H_wp', 't_wp', 'L_wp', 'connection_type', 'faying_surface_class',
@@ -2289,18 +2469,7 @@ const handleRunSpliceCheck = createCalculationHandler({
     inputIds: inputIds,
     storageKey: 'splice-inputs',
     validationRuleKey: 'splice',
-    validatorFunction: (inputs) => {
-        const { errors, warnings } = validateInputs(inputs, validationRules.splice); // Basic validation
-
-        // Custom cross-field validation for web plate height
-        const clearWebDepth = inputs.member_d - (2 * inputs.member_tf);
-        if (inputs.H_wp > clearWebDepth) {
-            errors.push(`Web plate height (${inputs.H_wp}") cannot exceed the beam's clear web depth (${clearWebDepth.toFixed(3)}").`);
-        }
-
-        // Return all found errors and warnings
-        return { errors, warnings };
-    },
+    validatorFunction: spliceCalculator.validateSpliceInputs,
     calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),
     renderFunction: renderResults,
     resultsContainerId: 'results-container',
@@ -2310,15 +2479,17 @@ const handleRunSpliceCheck = createCalculationHandler({
 initializeApp({
     inputIds: inputIds,
     calculationHandler: handleRunSpliceCheck,
+    // Expose private functions for unit testing
+    __test_exports__: {
+        checkBoltShear: spliceCalculator.checkBoltShear,
+        checkBlockShear: spliceCalculator.checkBlockShear
+    },
     onReady: () => {
     populateMaterialDropdowns();
     populateBoltGradeDropdowns();
     populateBoltDiameterDropdowns();
     populateShapeDropdown();
-
-    const shapeTypeSelect = document.getElementById('aisc_shape_type_select');
-    if (shapeTypeSelect) shapeTypeSelect.addEventListener('change', populateShapeDropdown);
-
+    document.getElementById('member_shape_type').addEventListener('change', populateShapeDropdown);
     document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
 
         // --- Dimension Toggle Logic ---
@@ -2335,20 +2506,72 @@ initializeApp({
         }
 
         // --- Attach event listeners for DYNAMIC diagram updates with debouncing ---
-        const debouncedRecalculateAndRedraw = debounce(() => {
-            draw3dSpliceDiagram(); // Redraw the 3D model
-            // handleRunSpliceCheck(); // REMOVED: Calculation will now only run on button click.
-        }, 400);
+        const debouncedRedraw3D = debounce(draw3dSpliceDiagram, 300);
         diagramInputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Use 'change' for select elements and 'input' for others for better performance.
-                const eventType = el.tagName.toLowerCase() === 'select' ? 'change' : 'input';
-                el.addEventListener(eventType, debouncedRecalculateAndRedraw);
+                const redraw = () => {
+                    // Redraw both 2D and 3D diagrams on any relevant input change
+                    draw2dSpliceDiagram();
+                    debouncedRedraw3D();
+                };
+                el.addEventListener('input', redraw);
+                el.addEventListener('change', redraw);
             }
         });
 
         // Initial draw
         setTimeout(draw3dSpliceDiagram, 100);
+        setTimeout(draw2dSpliceDiagram, 100);
+
+        // --- 2D Diagram Panning Logic ---
+        const svg2d = document.getElementById('splice-2d-diagram');
+        if (svg2d) {
+            svg2d.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return; // Only pan with left-click
+                splice2dIsPanning = true;
+                splice2dStartPoint = { x: e.clientX, y: e.clientY };
+                svg2d.classList.add('is-grabbing');
+            });
+            svg2d.addEventListener('mousemove', (e) => {
+                if (!splice2dIsPanning) return;
+                const dx = (e.clientX - splice2dStartPoint.x) / splice2dPan.scale;
+                const dy = (e.clientY - splice2dStartPoint.y) / splice2dPan.scale;
+                const group = svg2d.querySelector('#splice-2d-pan-group');
+                if (group) {
+                    group.setAttribute('transform', `translate(${splice2dPan.x + dx}, ${splice2dPan.y + dy}) scale(${splice2dPan.scale})`);
+                }
+            });
+            const stopPanning = (e) => {
+                if (!splice2dIsPanning) return;
+                splice2dIsPanning = false;
+                svg2d.classList.remove('is-grabbing');
+                splice2dPan.x += (e.clientX - splice2dStartPoint.x) / splice2dPan.scale;
+                splice2dPan.y += (e.clientY - splice2dStartPoint.y) / splice2dPan.scale;
+            };
+            svg2d.addEventListener('mouseup', stopPanning);
+            svg2d.addEventListener('mouseleave', stopPanning);
+
+            svg2d.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = 1.1;
+                const oldScale = splice2dPan.scale;
+                const newScale = e.deltaY < 0 ? oldScale * zoomFactor : oldScale / zoomFactor;
+                splice2dPan.scale = Math.max(0.1, Math.min(10, newScale)); // Clamp zoom
+
+                const pt = svg2d.createSVGPoint();
+                pt.x = e.clientX;
+                pt.y = e.clientY;
+                const svgP = pt.matrixTransform(svg2d.getScreenCTM().inverse());
+
+                splice2dPan.x = svgP.x - (svgP.x - splice2dPan.x) * (splice2dPan.scale / oldScale);
+                splice2dPan.y = svgP.y - (svgP.y - splice2dPan.y) * (splice2dPan.scale / oldScale);
+
+                const group = svg2d.querySelector('#splice-2d-pan-group');
+                if (group) {
+                    group.setAttribute('transform', `translate(${splice2dPan.x}, ${splice2dPan.y}) scale(${splice2dPan.scale})`);
+                }
+            });
+        }
     }
 });

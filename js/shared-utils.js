@@ -109,6 +109,10 @@ function initializeUiToggles() {
 
     function setupController(controller, targetSelector) {
         const updateUi = () => {
+            if (!targetSelector || targetSelector === '#') {
+                // If the selector is invalid or empty, do nothing.
+                return;
+            }
             const targets = document.querySelectorAll(targetSelector);
             if (targets.length === 0) return;
 

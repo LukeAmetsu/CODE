@@ -1,8 +1,3 @@
-// --- State for 2D Diagram Panning ---
-let baseplate2dPan = { x: 0, y: 0 };
-let baseplate2dIsPanning = false;
-let baseplate2dStartPoint = { x: 0, y: 0 };
-
 /**
  * Draws the 2D base plate diagram using SVG for clarity and performance.
  * @param {object} inputs - An object containing all necessary geometric inputs.
@@ -12,10 +7,6 @@ function drawBasePlateDiagram(inputs) {
     if (!svg) return;
     svg.innerHTML = ''; // Clear previous drawing
     const ns = "http://www.w3.org/2000/svg";
-
-    // Create a group element for panning
-    const group = document.createElementNS(ns, 'g');
-    svg.appendChild(group);
 
     // --- 1. Setup Scene and Scaling ---
     const W = 500, H = 350; // ViewBox dimensions
@@ -41,17 +32,14 @@ function drawBasePlateDiagram(inputs) {
         for (const k in attrs) el.setAttribute(k, attrs[k]);
         return el;
     };
-    
+
     sceneObjects.forEach(obj => {
         const el = createEl(obj.tag, obj.attrs);
         if (obj.text) {
             el.textContent = obj.text;
         }
-        group.appendChild(el);
+        svg.appendChild(el);
     });
-
-    // Apply the current pan transform
-    group.setAttribute('transform', `translate(${baseplate2dPan.x}, ${baseplate2dPan.y})`);
 }
 
 function getPlateComponents(inputs, cx, cy, scale) {
@@ -439,10 +427,10 @@ function draw3dBasePlateDiagram() {
 }
 
 const basePlateInputIds = [ // FIX: Corrected variable name
-    'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
-    'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx', 
+    'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu', 'anchor_bolt_grade', 'anchor_threads_included',
+    'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx',
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
-    'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
+    'column_flange_width_bf', 'column_type', 'aisc_shape_select', 'anchor_bolt_diameter',
     'anchor_embedment_hef',
     'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_type', 'weld_size', 'weld_effective_throat', 'axial_load_P_in',
     'moment_Mx_in', 'moment_My_in', 'shear_V_in', 'assume_cracked_concrete', 'concrete_edge_dist_ca1'
@@ -1885,34 +1873,5 @@ initializeApp({
                 // Initial drawing
                 drawBasePlateDiagram(gatherInputsFromIds(basePlateInputIds)); // Pass inputs directly
                 draw3dBasePlateDiagram();
-
-                // --- 2D Diagram Panning Logic ---
-                const svg2d = document.getElementById('baseplate-diagram');
-                if (svg2d) {
-                    svg2d.addEventListener('mousedown', (e) => {
-                        if (e.button !== 0) return; // Only pan with left-click
-                        baseplate2dIsPanning = true;
-                        baseplate2dStartPoint = { x: e.clientX, y: e.clientY };
-                        svg2d.classList.add('is-grabbing');
-                    });
-                    svg2d.addEventListener('mousemove', (e) => {
-                        if (!baseplate2dIsPanning) return;
-                        const dx = e.clientX - baseplate2dStartPoint.x;
-                        const dy = e.clientY - baseplate2dStartPoint.y;
-                        const group = svg2d.querySelector('g');
-                        if (group) {
-                            group.setAttribute('transform', `translate(${baseplate2dPan.x + dx}, ${baseplate2dPan.y + dy})`);
-                        }
-                    });
-                    const stopPanning = (e) => {
-                        if (!baseplate2dIsPanning) return;
-                        baseplate2dIsPanning = false;
-                        svg2d.classList.remove('is-grabbing');
-                        baseplate2dPan.x += e.clientX - baseplate2dStartPoint.x;
-                        baseplate2dPan.y += e.clientY - baseplate2dStartPoint.y;
-                    };
-                    svg2d.addEventListener('mouseup', stopPanning);
-                    svg2d.addEventListener('mouseleave', stopPanning);
-                }
             }
 });

@@ -85,7 +85,7 @@
                                     <div class="col-span-2">
                                         <label for="optimize_bolts_check" class="flex items-center text-sm font-medium">
                                             <input type="checkbox" id="optimize_bolts_check" class="h-4 w-4 rounded mr-2"
-                                                   data-ui-toggle-controller
+                                                   data-ui-toggle-controller data-ui-toggle-target="#Nc_fp, #Nr_fp, #Nc_wp, #Nr_wp"
                                                    data-ui-toggle-target="#Nc_fp, #Nr_fp, #Nc_wp, #Nr_wp"
                                                    data-ui-toggle-type="disable">
                                             Optimize number of bolts?
@@ -105,6 +105,15 @@
                             <div class="form-section">
                                 <h2>Member Properties</h2>
                                 <div class="grid grid-cols-2 gap-4">
+                                    <div class="col-span-2">
+                                        <label for="member_shape_type" class="block text-sm font-medium mb-1">Shape Type</label>
+                                        <select id="member_shape_type">
+                                            <option value="W-Shape" selected>W-Shape</option>
+                                            <option value="S-Shape">S-Shape</option>
+                                            <option value="HP-Shape">HP-Shape</option>
+                                            <option value="M-Shape">M-Shape</option>
+                                        </select>
+                                    </div>
                                     <div class="col-span-2">
                                         <label for="aisc_shape_select" class="block text-sm font-medium mb-1">Select Shape</label>
                                         <select id="aisc_shape_select">
@@ -136,12 +145,16 @@
                                     <div><label for="Axial_load" class="block text-sm">Axial (P, kips)</label><input type="number" id="Axial_load" value="0"></div>
                                 </div>
                             </div>
-                            <div class="form-section">
+                            <div class="form-section" data-ui-toggle-target-for="num_web_plates" data-ui-toggle-condition-value="1,2">
                                 <h2>Web Splice Plates</h2>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label for="num_web_plates" class="block text-sm font-medium mb-1"># of Plates</label>
-                                        <select id="num_web_plates"><option value="1">1</option><option value="2" selected>2</option></select>
+                                        <select id="num_web_plates" data-ui-toggle-controller>
+                                            <option value="0">0 (None)</option>
+                                            <option value="1">1</option>
+                                            <option value="2" selected>2</option>
+                                        </select>
                                     </div>
                                     <div class="col-span-1">
                                         <label for="optimize_web_plates_check" class="flex items-center text-sm font-medium">
@@ -167,45 +180,23 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-section">
-                                <h2>Web Bolts</h2>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="D_wp" class="block text-sm">Diameter</label>
-                                        <select id="D_wp" data-is-bolt-diameter-select="true"></select>
-                                    </div>
-                                    <div>
-                                        <label for="bolt_grade_wp" class="block text-sm">Grade</label>
-                                        <select id="bolt_grade_wp" data-is-bolt-grade-select="true">
-                                            <!-- Options will be populated by JS -->
-                                        </select>
-                                    </div>
-                                    <div class="col-span-2">
-                                        <label for="threads_included_wp" class="flex items-center text-sm font-medium">
-                                            <input type="checkbox" id="threads_included_wp" class="h-4 w-4 rounded mr-2" checked> Threads included in shear plane?
-                                        </label>
-                                    </div>
-                                    <div><label for="Nc_wp" class="block text-sm">Cols (Nc)</label><input type="number" id="Nc_wp" value="2"></div>
-                                    <div><label for="Nr_wp" class="block text-sm">Rows (Nr)</label><input type="number" id="Nr_wp" value="3"></div>
-                                    <div><label for="S4_col_spacing_wp" class="block text-sm">Col Spacing (S4)</label><input type="number" id="S4_col_spacing_wp" value="3"></div>
-                                    <div><label for="S5_row_spacing_wp" class="block text-sm">Row Spacing (S5)</label><input type="number" id="S5_row_spacing_wp" value="3"></div>
-                                    <div><label for="S6_end_dist_wp" class="block text-sm">End Dist (S6)</label><input type="number" id="S6_end_dist_wp" value="1.5"></div>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Column 2: Flange Splice -->
                         <div>
-                            <div class="form-section">
+                            <div class="form-section" data-ui-toggle-target-for="num_flange_plates" data-ui-toggle-condition-value="1,2">
                                 <h2>Flange Splice Plates</h2>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label for="num_flange_plates" class="block text-sm font-medium mb-1"># of Plates</label>
                                         <select id="num_flange_plates"
                                                 data-ui-toggle-controller
-                                                data-ui-toggle-target="#inner-flange-inputs"
+                                                data-ui-toggle-target="#inner-flange-inputs, #flange-bolts-section"
                                                 data-ui-toggle-condition-value="2">
-                                            <option value="1">1 (Outer)</option><option value="2" selected>2 (Outer & Inner)</option></select>
+                                            <option value="0">0 (None)</option>
+                                            <option value="1">1 (Outer)</option>
+                                            <option value="2" selected>2 (Outer & Inner)</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="col-span-2 mt-4">
@@ -250,7 +241,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-section">
+                            <div id="flange-bolts-section" class="form-section" data-ui-toggle-target-for="num_flange_plates" data-ui-toggle-condition-value="1,2">
                                 <h2>Flange Bolts</h2>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
@@ -276,6 +267,31 @@
                                     <div><label for="g_gage_fp" class="block text-sm">Gage (g)</label><input type="number" id="g_gage_fp" value="5.5"></div>
                                 </div>
                             </div>
+                            <div class="form-section" data-ui-toggle-target-for="num_web_plates" data-ui-toggle-condition-value="1,2">
+                                <h2>Web Bolts</h2>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="D_wp" class="block text-sm">Diameter</label>
+                                        <select id="D_wp" data-is-bolt-diameter-select="true"></select>
+                                    </div>
+                                    <div>
+                                        <label for="bolt_grade_wp" class="block text-sm">Grade</label>
+                                        <select id="bolt_grade_wp" data-is-bolt-grade-select="true">
+                                            <!-- Options will be populated by JS -->
+                                        </select>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label for="threads_included_wp" class="flex items-center text-sm font-medium">
+                                            <input type="checkbox" id="threads_included_wp" class="h-4 w-4 rounded mr-2" checked> Threads included in shear plane?
+                                        </label>
+                                    </div>
+                                    <div><label for="Nc_wp" class="block text-sm">Cols (Nc)</label><input type="number" id="Nc_wp" value="2"></div>
+                                    <div><label for="Nr_wp" class="block text-sm">Rows (Nr)</label><input type="number" id="Nr_wp" value="3"></div>
+                                    <div><label for="S4_col_spacing_wp" class="block text-sm">Col Spacing (S4)</label><input type="number" id="S4_col_spacing_wp" value="3"></div>
+                                    <div><label for="S5_row_spacing_wp" class="block text-sm">Row Spacing (S5)</label><input type="number" id="S5_row_spacing_wp" value="3"></div>
+                                    <div><label for="S6_end_dist_wp" class="block text-sm">End Dist (S6)</label><input type="number" id="S6_end_dist_wp" value="1.5"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Column 3: Web Splice -->
@@ -294,6 +310,12 @@
                         </div>
                         <div class="diagram">
                             <canvas id="splice-3d-canvas" class="w-full h-[600px]"></canvas>
+                        </div>
+                        <div class="mt-6">
+                            <h2 class="text-xl font-semibold text-center">2D Elevation View</h2>
+                            <div class="diagram mt-2">
+                                <svg id="splice-2d-diagram" viewBox="0 0 800 400" class="w-full h-auto"></svg>
+                            </div>
                         </div>
                     </div>
                 </div>

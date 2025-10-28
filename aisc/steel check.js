@@ -4,7 +4,7 @@ let lastSteelRunResults = null;
 const steelCheckInputIds = [
     'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
     'section_type', 'aisc_shape_select',
-    'd', 'bf', 'tf', 'tw', 'stiffener_spacing_a', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
+    'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
     'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input'
 ];

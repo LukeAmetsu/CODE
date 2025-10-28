@@ -225,13 +225,31 @@ input[type=number]:focus, input[type=text]:focus, select:focus {
     margin-left: 20px;
 }
 
+/* --- Interactive Diagram Styles --- */
+.diagram svg {
+    cursor: grab;
+}
+.diagram svg.is-grabbing {
+    cursor: grabbing;
+}
+
 /* --- SVG Diagram Styles --- */
-.svg-dim { stroke: var(--color-text-secondary); stroke-width: 1; fill: none; marker-end: url(#arrow); marker-start: url(#arrow); }
-.svg-dim-text { font-size: 14px; fill: var(--color-text-secondary); font-family: sans-serif; text-anchor: middle; }
+.svg-dim { stroke: var(--color-text-secondary); stroke-width: 1; fill: none; }
+.svg-dim-text { font-size: 16px; fill: var(--color-text-primary); font-family: sans-serif; text-anchor: middle; dominant-baseline: middle; }
+.svg-dim text {
+    paint-order: stroke;
+    stroke: var(--color-bg-primary);
+    stroke-width: 4px;
+    stroke-linecap: butt;
+    stroke-linejoin: miter;
+}
 .svg-label { font-size: 12px; fill: var(--color-text-primary); font-family: sans-serif; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
-.svg-plate { fill: #dbeafe; stroke: #60a5fa; stroke-width: 1.5; }
+.svg-plate-flange { fill: #dbeafe; stroke: #60a5fa; stroke-width: 1.5; } /* blue-100 / blue-500 */
+.svg-plate-web { fill: #ffedd5; stroke: #f97316; stroke-width: 1.5; } /* orange-100 / orange-500 */
 .svg-member { fill: var(--color-bg-tertiary); stroke: var(--color-text-secondary); stroke-width: 1; }
-.svg-bolt { fill: var(--color-text-secondary); stroke: var(--color-text-primary); stroke-width: 1; }
+.svg-member-outline { fill: none; stroke: var(--color-text-secondary); stroke-width: 1; }
+.svg-member-line { fill: none; stroke: var(--color-text-secondary); stroke-width: 0.5; }
+.svg-bolt { fill: var(--color-text-secondary); stroke: var(--color-text-primary); stroke-width: 1.5; }
 .svg-weld { fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 4 3; }
 
 /* --- Weld Specific Styles --- */
