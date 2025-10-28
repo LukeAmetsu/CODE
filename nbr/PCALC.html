@@ -3,26 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PCALC</title>
-    <link rel="stylesheet" href="../../styles.min.css">
-    <script src="../../js/i18n.js" defer></script>
-    <script src="../../js/shared-utils.js" defer></script>
-    <script src="../../js/template.js" defer></script>
-    <script src="../../js/validation-rules.js" defer></script>
-    <script src="PCALC.js" defer></script>
+    <title>PCalc Web</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <div id="header-placeholder" style="min-height: 110px;"></div>
-
-        <main id="pcalc-form">
-            <h1 class="text-2xl font-bold mb-4">PCALC</h1>
-            <!-- Add form elements here -->
-        </main>
-
-        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
-        <div id="results-container" class="mt-10 results-container"></div>
-        <div id="footer-placeholder"></div>
-    </div>
+<body>
+    <header>
+        <h1>PCalc Web</h1>
+        <nav>
+            <button id="new-btn">New</button>
+            <button id="open-btn">Open</button>
+            <button id="save-btn">Save</button>
+        </nav>
+    </header>
+    <main>
+        <div class="container">
+            <div class="left-panel">
+                <section id="inputs">
+                    <h2>Inputs</h2>
+                    <div class="input-group">
+                        <h3>Geometry</h3>
+                        <form id="geometry-form">
+                            <label for="section-type">Section Type:</label>
+                            <select id="section-type" name="section-type">
+                                <option value="Retangular">Rectangular</option>
+                                <option value="Circular">Circular</option>
+                            </select><br><br>
+                            <label for="hx">hx (cm):</label>
+                            <input type="number" id="hx" name="hx" value="30"><br><br>
+                            <label for="hy">hy (cm):</label>
+                            <input type="number" id="hy" name="hy" value="50"><br><br>
+                        </form>
+                    </div>
+                    <div class="input-group">
+                        <h3>Materials</h3>
+                        <form id="materials-form">
+                            <label for="fck">fck (MPa):</label>
+                            <input type="number" id="fck" name="fck" value="25"><br><br>
+                        </form>
+                    </div>
+                    <div class="input-group">
+                        <h3>Reinforcement</h3>
+                        <form id="reinforcement-form">
+                            <table id="reinforcement-table">
+                                <thead>
+                                    <tr>
+                                        <th>x (cm)</th>
+                                        <th>y (cm)</th>
+                                        <th>Diameter (mm)</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                            <button type="button" id="add-bar-btn">Add Bar</button>
+                        </form>
+                    </div>
+                    <div class="input-group">
+                        <h3>Loads</h3>
+                        <form id="loads-form">
+                            <table id="loads-table">
+                                <thead>
+                                    <tr>
+                                        <th>N (kN)</th>
+                                        <th>Mx (kNm)</th>
+                                        <th>My (kNm)</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                            <button type="button" id="add-load-btn">Add Load</button>
+                        </form>
+                    </div>
+                    <button id="calculate-btn">Calculate</button>
+<button id="pdf-btn">Generate PDF</button>
+                </section>
+            </div>
+            <div class="right-panel">
+                <section id="cross-section">
+                    <h2>Cross Section</h2>
+                    <div id="cross-section-canvas"></div>
+                </section>
+                <section id="results">
+                    <h2>Results</h2>
+                    <div class="results-toolbar">
+                        <label for="combination-select">Combination:</label>
+                        <select id="combination-select"></select>
+                        <div class="graph-toggles">
+                            <button id="nmxmy-btn">N-Mx-My</button>
+                            <button id="nmx-btn">N-Mx</button>
+                            <button id="nmy-btn">N-My</button>
+                            <button id="deformation-btn">Deformation</button>
+                            <button id="stress-btn">Stress</button>
+                        </div>
+                    </div>
+                    <div id="graph-container">
+                        <canvas id="myChart"></canvas>
+                    </div>
+                    <div id="results-table-container">
+                        <table id="results-table">
+                            <thead>
+                                <tr>
+                                    <th>z</th>
+                                    <th>Nsd</th>
+                                    <th>Msd,x</th>
+                                    <th>Msd,y</th>
+                                    <th>F.S.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2023 PCalc Web</p>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="app.js"></script>
+    <script src="calculations.js"></script>
 </body>
 </html>
