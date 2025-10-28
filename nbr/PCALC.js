@@ -571,6 +571,67 @@ function calculateMomentCurvature(pcalcData) {
     console.log('Moment-curvature curves calculated:', curvasMr);
 }
 
+/**
+ * Calcula os momentos de 2ª ordem pelo método do pilar-padrão com curvatura aproximada.
+ * NBR 6118:2014 - Item 15.8.3.3.4
+ * @param {number} nsd - Força normal de cálculo (compressão é negativa, em kN).
+ * @param {number} h - Dimensão do pilar na direção considerada (em cm).
+ * @param {Array<number>} md1 - Momentos de 1ª ordem [base, meio, topo] (em kNm).
+ * @param {object} pcalcData - Objeto de dados principal.
+ * @returns {Array<number>} Momentos totais (1ª + 2ª ordem) [base, meio, topo].
+ */
+function calculateSecondOrderMoments(nsd, h, md1, pcalcData) {
+    const { config, secao, materiais } = pcalcData;
+    const { fck } = materiais;
+    const { gamaC } = config;
+    const { areaAc, lFlamb } = secao;
+
+    const md2 = [...md1]; // Inicia com os momentos de 1ª ordem
+
+    // 1. Cálculo da excentricidade de 2ª ordem (e2)
+    // e2 = (le^2 / 10) * (1/r)
+    const le = lFlamb * 100; // Comprimento de flambagem em cm
+
+    // 2. Cálculo da curvatura (1/r) - Eq. 15.20
+    // (1/r) = (ε_c / x)
+    // Para o método aproximado, a curvatura é estimada pela Eq. 15.23
+    const fcd = fck / gamaC;
+    const ni = Math.abs(nsd) / (areaAc * (fcd * 10)); // Adimensional (nsd em kN, areaAc em cm², fcd em MPa -> kN/cm²)
+    
+    // Curvatura (1/r) conforme Eq. 15.23
+    // O fator 0.005/h é o valor máximo para a curvatura.
+    // O termo (ni + 0.5) reduz a curvatura para pilares com baixa compressão.
+    const invR = Math.min((0.005 / h) / (ni + 0.5), 0.005 / h);
+
+    // 3. Cálculo do momento de 2ª ordem (M2d)
+    // M2d = Nd * e2 = Nd * (le^2 / 10) * (1/r)
+    const m2d = Math.abs(nsd) * (le * le / 10) * invR; // Em kNm
+
+    // 4. Adiciona o momento de 2ª ordem ao momento de 1ª ordem no meio do pilar
+    // O sinal é adicionado para aumentar o momento de 1ª ordem.
+    if (md2[1] !== 0) {
+        md2[1] += m2d * (md2[1] / Math.abs(md2[1]));
+    } else {
+        // Se o momento no meio for zero, o momento de 2ª ordem é simplesmente adicionado.
+        // A norma não é explícita sobre o sinal, mas assume-se que ele age na direção mais desfavorável.
+        // Para um pilar birotulado com carga centrada, o momento de 1ª ordem é zero, mas o de 2ª não.
+        // Adotamos o valor absoluto.
+        md2[1] = m2d;
+    }
+
+    // 5. Verificação do momento mínimo (M1d,min) - Item 17.2.4.7.1
+    // M1d,min = Nd * (1.5 + 0.03 * h) em cm
+    const m1d_min = Math.abs(nsd) * (1.5 + 0.03 * h) / 100; // em kNm
+
+    // O momento total deve ser, no mínimo, o momento de 1ª ordem acrescido do de 2ª,
+    // e também no mínimo o momento mínimo.
+    const momento_final_meio = Math.max(Math.abs(md2[1]), m1d_min);
+
+    // Retorna os momentos finais, ajustando o sinal do momento no meio
+    return [md1[0], momento_final_meio * (md1[1] !== 0 ? md1[1]/Math.abs(md1[1]) : 1), md1[2]];
+}
+
+
 function calculaMomento1Ord(mdTopo, mdBase, pcalcData) {
     // ...
     return [mdBase, (mdTopo+mdBase)/2, mdTopo]
@@ -579,7 +640,7 @@ function calculaMomento1Ord(mdTopo, mdBase, pcalcData) {
 
 function calculateEsforcos(pcalcData) {
     const { config, esforcos, secao } = pcalcData;
-    const { gamaF } = config;
+    const gamaF = 1.4; // Fator de ponderação para ações
     const { tipoVinculacao } = secao;
 
     const nsd = [];
@@ -604,7 +665,7 @@ function calculateEsforcos(pcalcData) {
             msxd.push(calculaMomento1Ord(msxdTopoI, msxdBaseI, pcalcData));
 
             if (config.calcular2ord === 1 && nsdI < 0 && config.metodoSegOrd === 1) {
-                msxd2.push(calculaMomento2OrdP1(nsdI, secao.hy, msxd[msxd.length - 1], pcalcData));
+                msxd2.push(calculateSecondOrderMoments(nsdI, secao.hy, msxd[msxd.length - 1], pcalcData));
             } else {
                 msxd2.push(msxd[msxd.length - 1]);
             }
@@ -613,8 +674,11 @@ function calculateEsforcos(pcalcData) {
             const msydBaseI = gamaF * -esforco.my; // Assuming same moment at base for now
             msyd.push(calculaMomento1Ord(msydTopoI, msydBaseI, pcalcData));
 
-            // ... (second order moment calculations will go here)
-            msyd2.push(msyd[msyd.length - 1]); // Placeholder
+            if (config.calcular2ord === 1 && nsdI < 0 && config.metodoSegOrd === 1) {
+                msyd2.push(calculateSecondOrderMoments(nsdI, secao.hx, msyd[msyd.length - 1], pcalcData));
+            } else {
+                msyd2.push(msyd[msyd.length - 1]);
+            }
         }
     }
 

@@ -135,5 +135,16 @@
     "leeward_roof_min_w": "Cobertura Sotavento Mín (W)",
     "lateral_loads_seismic": "Cargas Sísmicas",
     "seismic_load_e": "Carga Sísmica (E)",
-    "run_load_combinations": "Gerar Combinações"
+    "run_load_combinations": "Gerar Combinações",
+    "pcalc_title": "PCalc - Verificador de Pilar de Concreto",
+    "pcalc_section_geometry": "Geometria da Seção",
+    "pcalc_section_type": "Tipo de Seção",
+    "pcalc_materials": "Materiais",
+    "pcalc_reinforcement": "Armadura",
+    "pcalc_add_bar": "+ Adicionar Barra",
+    "pcalc_loads": "Esforços Solicitantes",
+    "pcalc_add_load": "+ Adicionar Esforço",
+    "pcalc_cross_section": "Seção Transversal",
+    "pcalc_config": "Configurações de Cálculo",
+    "pcalc_calculate": "Calcular"
 }
