@@ -517,7 +517,11 @@ const windLoadCalculator = (() => {
         return { Kz: 1.0, alpha, zg, ref_note: "Error: Kz calculation failed" };
     }
 
-    return { Kz, alpha, zg, ref_note };
+    // The reference for Kz itself is Table 26.10-1, not 26.9-1 (which is for the constants alpha and zg).
+    const kz_ref_note = `ASCE 7 Table 26.10-1 (Exposure ${category})`;
+
+    // Return the calculated Kz, the intermediate constants, and the corrected reference.
+    return { Kz, alpha, zg, ref_note: kz_ref_note };
 }
 
     // Elevation factor Ke (ASCE 7-16 Table 26.9-1; ASCE 7-22 Sec 26.9)
@@ -1287,7 +1291,16 @@ const windLoadCalculator = (() => {
             temporary_structure_note = `A 0.8 reduction factor has been applied for temporary construction (PROJECT-SPECIFIC ALLOWANCE, NOT ASCE 7). Calculation wind speed is ${safeToFixed(v_input, 1)} ${v_unit} (reduced from ${v_unreduced} ${v_unit}).`;
         }
 
-        const [abs_gcpi, gcpi_ref] = getInternalPressureCoefficient(inputs.enclosure_classification);
+        // --- Correctly determine GCpi based on structure type ---
+        // GCpi is only applicable to buildings. For other structures, net force coefficients (Cf, CN) are used, so internal pressure is not added.
+        let abs_gcpi, gcpi_ref;
+        const isBuilding = inputs.structure_type === 'Buildings (MWFRS, C&C)';
+        if (isBuilding) {
+            [abs_gcpi, gcpi_ref] = getInternalPressureCoefficient(inputs.enclosure_classification);
+        } else {
+            abs_gcpi = 0.0;
+            gcpi_ref = "Not applicable for non-building structures (using net coefficients)";
+        }
         const [Kd, kd_ref] = getKdFactor(inputs.structure_type, inputs.asce_standard);
         const [Ke, ke_ref] = calculateKe(inputs.ground_elevation, inputs.unit_system, effective_standard);
         const { Kz, alpha, zg, ref_note: kz_ref } = calculateKz(inputs.mean_roof_height, inputs.exposure_category, inputs.unit_system); // Kz at roof height h
