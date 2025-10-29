@@ -2473,7 +2473,9 @@ const handleRunSpliceCheck = createCalculationHandler({
     calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),
     renderFunction: renderResults,
     resultsContainerId: 'results-container',
-    buttonId: 'run-check-btn'
+    buttonId: 'run-check-btn',
+    reportId: 'splice-report-content',
+    filenamePrefix: 'Splice-Check-Report'
 });
 
 initializeApp({

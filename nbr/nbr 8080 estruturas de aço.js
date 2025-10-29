@@ -177,6 +177,7 @@ const handleRunNbr8800Check = createCalculationHandler({
 });
 
 initializeApp({
+    // pageKey and pageTitle are now found automatically
     inputIds: nbr8800InputIds,
     calculationHandler: handleRunNbr8800Check
 });

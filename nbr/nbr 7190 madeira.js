@@ -115,7 +115,7 @@ const handleRunNbr7190Check = createCalculationHandler({
     buttonId: 'run-wood-check-btn'
 }); 
 initializeApp({
-    inputIds: nbr7190InputIds, // Pass inputIds here
+    inputIds: nbr7190InputIds,
     calculationHandler: handleRunNbr7190Check,
     onReady: () => {
         // The attachReportEventListeners is now handled by createCalculationHandler

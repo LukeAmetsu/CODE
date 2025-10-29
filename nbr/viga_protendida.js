@@ -1408,6 +1408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     initializeApp({
+        // pageKey and pageTitle are now found automatically
         inputIds: allInputAndTextareaIds,
         calculationHandler: handleRunCheck,
         onReady: onAppReady

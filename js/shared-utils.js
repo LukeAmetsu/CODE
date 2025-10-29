@@ -1075,7 +1075,6 @@ async function initializeApp(config) {
 
     loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
 
-    autoLoadPageScript();
 }
 
 /**
@@ -1316,6 +1315,8 @@ function attachReportEventListeners(containerId, config) {
  * @param {function} [config.validatorFunction] - Optional. A custom function to perform validation.
  * @param {string} [config.feedbackElId='feedback-message'] - Optional. The ID of the feedback element.
  * @param {string} [config.buttonId] - Optional ID of the run button for loading state.
+ * @param {string} [config.reportId] - Optional. The ID of the report content element for event listeners.
+ * @param {string} [config.filenamePrefix] - Optional. The prefix for report filenames.
  * @returns {function} The generated event handler function.
  */
 function createCalculationHandler(config) {
@@ -1329,7 +1330,9 @@ function createCalculationHandler(config) {
         resultsContainerId,
         validatorFunction,
         feedbackElId = 'feedback-message',
-        buttonId
+        buttonId,
+        reportId, // New config option
+        filenamePrefix // New config option
     } = config;
 
     if (validationRuleKey) {
@@ -1397,15 +1400,14 @@ function createCalculationHandler(config) {
             renderFunction(calculationResult, inputs);
             
             console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
-            const reportContentElement = resultsContainer.querySelector('[id$="-report-content"]');
-            if (reportContentElement) {
+            const reportContentElementId = reportId || (resultsContainer.querySelector('[id$="-report-content"]') ? resultsContainer.querySelector('[id$="-report-content"]').id : null);
+            if (reportContentElementId) {
                  attachReportEventListeners(resultsContainerId, {
-                    reportId: reportContentElement.id,
-                    filenamePrefix: `${validationRuleKey || 'report'}-Report`,
+                    reportId: reportContentElementId,
+                    filenamePrefix: filenamePrefix || `${validationRuleKey || 'report'}-Report`,
                     onSendToCombos: config.onSendToCombos,
                     toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
                 });
-                console.log(`[${validationRuleKey}] Event listeners attached to #${reportContentElement.id}.`);
             } else {
                 console.warn(`[${validationRuleKey}] Could not find a report content element (e.g., #splice-report-content) inside #${resultsContainerId} to attach event listeners.`);
             }

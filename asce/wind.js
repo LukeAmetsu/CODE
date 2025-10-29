@@ -2338,196 +2338,22 @@ function sendWindToCombos(results) {
     }
 }
 
-initializeApp({
-    inputIds: windInputIds,
-    calculationHandler: handleRunWindCheck,
-    onReady: () => {
-        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
-            const h = parseFloat(event.target.value) || 0;
-            const is_imp = document.getElementById('unit_system').value === 'imperial';
-            const limit = is_imp ? 60 : 18.3;
-            document.getElementById('tall-building-section')?.classList.toggle('hidden', h <= limit);
-            document.getElementById('mwfrs-method-container')?.classList.toggle('hidden', h > limit);
-        });
-    }
-});
-    const report = new ReportBuilder({
-        reportId: 'wind-report-content',
-        title: `WIND LOAD REPORT (${inputs.effective_standard})`,
-        warnings: warnings,
-        actionButtons: [
-            { id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-purple-600 hover:bg-purple-700' }
-        ]
-    });
-
-    if (jurisdiction_note) report.addSection(null, `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md"><p><strong>Jurisdiction Note:</strong> ${jurisdiction_note}</p></div>`);
-
-    report.addSection('Design Parameters', renderDesignParameters(results.inputs, results.intermediate, units), 'design-parameters-section');
-    report.addSection('Detailed Calculation Breakdown', renderCalculationBreakdown(results, units), 'calc-breakdown-section');
-
-    // --- Special rendering path for Arched Roofs ---
-    if (is_arched_roof) {
-        const { cnMap, ref, pressures } = arched_roof_results;
-    let archedRoofHtml = `
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
-                    <table class="w-full mt-4 border-collapse">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
-                            <tr>
-                                <th>Roof Zone</th>
-                                <th>C<sub>N</sub></th>
-                                <th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
-                            </tr>
-                        </thead>
-                        <tbody class="dark:text-gray-300 text-center">`;
-        for (const [zone, data] of Object.entries(pressures)) {
-            const final_pressure = inputs.design_method === 'ASD' ? data.pressure_asd : data.pressure;
-            archedRoofHtml += `<tr>
-                        <td>${zone}</td>
-                        <td>${safeToFixed(data.CN, 3)}</td>
-                        <td>${safeToFixed(final_pressure, 2)}</td>
-                     </tr>`;
-        }
-        report.addSection('Arched Roof Net Pressures', archedRoofHtml, 'arched-roof-section');
-        report.render('results-container');
-        return;
-    }
-
-    // --- Special rendering path for Trussed Towers ---
-    if (is_truss_tower) {
-        const { Cf, ref, pressure, pressure_asd, Kz_tower, qz_tower } = truss_tower_results;
-        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        // Custom breakdown for trussed towers
-    const trussHtml = `
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the tower's centroid height (h/2).</p>
-                    <div class="calc-breakdown">
-                        <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
-                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_tower, 3)}</p>
-                        <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_tower, 2)} ${p_unit}</p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
-                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
-                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the solid area of one face (A<sub>f</sub> = ε &times; w &times; h).</p>
-                    </div>
-                 `;
-        report.addSection('Trussed Tower Calculation Breakdown', trussHtml, 'truss-tower-breakdown');
-        report.render('results-container');
-        return;
-    }
-
-    // --- Special rendering path for Chimneys/Tanks ---
-    if (is_chimney) {
-        const { Cf, ref, pressure, pressure_asd, h_struct, Kz_struct, qz_struct } = chimney_results;
-        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        // Custom breakdown for chimneys/tanks
-    const chimneyHtml = `
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
-                    <div class="calc-breakdown">
-                        <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
-                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at h:</b> ${safeToFixed(Kz_struct, 3)}</p>
-                        <p><b>Velocity Pressure (q<sub>z</sub>) at h:</b> ${safeToFixed(qz_struct, 2)} ${p_unit}</p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
-                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
-                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the projected area normal to the wind (A = D &times; h).</p>
-                    </div>
-                 `;
-        report.addSection('Chimney/Tank Calculation Breakdown', chimneyHtml, 'chimney-breakdown');
-        report.render('results-container');
-        return;
-    }
-
-    // --- Special rendering path for Solid Signs ---
-    if (is_solid_sign) {
-        const { CN, ref, pressure, pressure_asd, h_sign, Kz_sign, qz_sign } = solid_sign_results;
-        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-        // Custom breakdown for solid signs
-    const solidSignHtml = `
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the sign's centroid height.</p>
-                    <div class="calc-breakdown">
-                        <p><b>Height to Sign Centroid (z):</b> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</p>
-                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_sign, 3)}</p>
-                        <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_sign, 2)} ${p_unit}</p>
-                        <p><b>Net Pressure Coefficient (C<sub>N</sub>):</b> ${safeToFixed(CN, 3)} (from ${ref})</p>
-                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(CN, 3)}</p>
-                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
-                    </div>
-                 `;
-        report.addSection('Solid Sign Calculation Breakdown', solidSignHtml, 'solid-sign-breakdown');
-        report.render('results-container');
-        return;
-    }
-    // --- Special rendering path for Open Signs ---
-    if (is_open_sign) {
-        const { Cf, ref, pressure, pressure_asd } = open_sign_results;
-        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-    const openSignHtml = `
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">The design wind pressure below should be multiplied by the solid area of the sign (A<sub>s</sub>) to get the total design force (F).</p>
-                    <div class="calc-breakdown">
-                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub></p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.solidity_ratio})</p>
-                        <p><b>Design Wind Pressure (p):</b> ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
-                    </div>
-                 `;
-        report.addSection('Open Sign Force Calculation', openSignHtml, 'open-sign-section');
-        report.render('results-container');
-        return; // End rendering for open signs
-    }
-
-    // --- Assemble Report Sections for Buildings ---
-    if (results.envelope_results && results.envelope_results.applicable) {
-        // For Envelope Procedure, we call the same render function but pass the envelope_results
-        report.addSection(`MWFRS Pressures (${mwfrs_method})`, renderMwfrsSection(results.envelope_results, inputs, intermediate, mwfrs_method, units), 'mwfrs-section');
-        // C&C is still relevant for Envelope procedure
-        report.addSection('Components & Cladding (C&C) Pressures', renderCandCSection(candc, inputs, intermediate, units), 'candc-section');
-    } else if (inputs.enclosure_classification === 'Open') {
-        // --- Handle Open Buildings as a special case ---
-        const openBuildingData = directional_results.open_roof || (directional_results.rooftop_structure ? directional_results : null);
-        const openBuildingHtml = openBuildingData ? renderOpenBuildingResults(openBuildingData, open_building_ref, inputs, units) : '<p class="text-center text-red-500">Could not calculate open building pressures for the given roof type.</p>';
-        report.addSection('MWFRS Design Pressures', openBuildingHtml, 'mwfrs-section');
-    } else {
-        // --- Standard Enclosed/Partially Enclosed Building Sections ---
-        if (directional_results.perp_to_L && directional_results.perp_to_B) {
-            report.addSection(`MWFRS DESIGN PRESSURES (${mwfrs_method})`, renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units), 'mwfrs-section');
-            if (heightVaryingResults_L && heightVaryingResults_L.length > 0) {
-                const leeward_pressure_L = directional_results.perp_to_L.find(r => r.surface.includes("Leeward"))?.p_pos || 0;
-                report.addSection('Height-Varying Windward Wall Pressures', renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure_L, inputs, units), 'height-varying-section');
-                report.addChartSection('Windward Pressure vs. Height', 'height-varying-chart', 'height-varying-chart-section', { height: '300px' });
-            }
-        }
-        report.addSection('Torsional Load Cases', renderTorsionalCase(torsional_case, inputs, units), 'torsional-section');
-        report.addSection('Components & Cladding (C&C) Pressures', renderCandCSection(candc, inputs, intermediate, units), 'candc-section');
-        if (parapet_results && parapet_results.applicable) {
-            report.addSection('Parapet Wind Loads', renderParapetSection(parapet_results, inputs, units), 'parapet-section');
-        }
-        if (overhang_results && overhang_results.applicable) {
-            report.addSection('Roof Overhang Wind Loads', renderOverhangSection(overhang_results, inputs, units), 'overhang-section');
-        }
-        if (rooftop_results && rooftop_results.applicable) {
-            report.addSection('Rooftop Equipment Wind Loads', renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, units), 'rooftop-section');
-        }
-    }
-
-    report.addSection('Governing Load Summary', generateWindSummary(inputs, directional_results, candc, p_unit), 'wind-summary-section');
-    report.render('results-container');
-
-    // Render charts after the canvas elements are in the DOM
-    const { roofPressureDist_L, roofPressureDist_B, heightVaryingResults_L: heightVaryingData } = results;
-    if (roofPressureDist_L && roofPressureDist_B && !results.heightVaryingResults_L) { // Only for low-rise
-        renderRoofPressureChart('roofChartL', roofPressureDist_L, inputs.building_length_L, inputs.design_method, units);
-        renderRoofPressureChart('roofChartB', roofPressureDist_B, inputs.building_width_B, inputs.design_method, units);
-    }
-    // Render the new height-varying chart
-    if (heightVaryingData && heightVaryingData.length > 0) {
-        renderHeightVaryingChart('height-varying-chart', heightVaryingData, inputs.design_method, units);
-    }
-}
-
-
 // =================================================================================
 //  UI INJECTION & INITIALIZATION
 // =================================================================================
-initializeApp({
-    // pageKey e pageTitle serão encontrados automaticamente
+const handleRunWindCheck = createCalculationHandler({
+    inputIds: windInputIds,
+    storageKey: 'wind-calculator-inputs',
+    validationRuleKey: 'wind',
+    validatorFunction: validateWindInputs,
+    calculatorFunction: windLoadCalculator.run,
+    renderFunction: renderWindResults,
+    resultsContainerId: 'results-container',
+    feedbackElId: 'feedback-message',
+    buttonId: 'run-calculation-btn'
+});
+
+initializeApp({ // pageKey and pageTitle are now found automatically
     inputIds: windInputIds,
     calculationHandler: createCalculationHandler({ // This part is correct
         inputIds: windInputIds, storageKey: 'wind-calculator-inputs',

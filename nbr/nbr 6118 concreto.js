@@ -145,6 +145,7 @@ const handleRunNbrCheck = createCalculationHandler({
 });
 
 initializeApp({
+    // pageKey and pageTitle are now found automatically
     inputIds: nbr6118InputIds,
     calculationHandler: handleRunNbrCheck
 });
