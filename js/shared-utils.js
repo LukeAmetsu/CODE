@@ -1,6 +1,6 @@
 /**
- * Updates the theme toggle icons based on the current theme.
- * @param {string} newTheme - The theme being set ('light' or 'dark').
+ * Updates the theme toggle icons to reflect the current theme.
+ * @param {string} newTheme - The new theme, either 'light' or 'dark'.
  */
 function updateThemeIcons(newTheme) {
     const darkIcon = document.getElementById('theme-toggle-dark-icon');
@@ -12,7 +12,8 @@ function updateThemeIcons(newTheme) {
 }
 
 /**
- * Toggles the color theme, saves the preference, and updates the icons.
+ * Toggles the application's color theme between light and dark,
+ * saves the user's preference to local storage, and updates the theme icons.
  */
 function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark');
@@ -22,24 +23,26 @@ function toggleTheme() {
 }
 
 /**
- * Initializes the theme toggle button functionality.
+ * Initializes the theme toggle button, attaching a click event listener
+ * to it and setting the initial state of the theme icons.
  */
 function initializeThemeToggle() {
     const themeToggleButton = document.getElementById('theme-toggle');
     if (themeToggleButton) {
         themeToggleButton.addEventListener('click', toggleTheme);
-        // Initial icon state
         updateThemeIcons(localStorage.getItem('color-theme') || 'light');
     }
 }
 
 /**
- * Checks the local storage for a theme and applies it.
+ * Applies the theme from local storage or the user's system preferences
+ * when the page loads to prevent a flash of unstyled content.
  */
 function applyThemeFromLocalStorage() {
     const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', isDark);
 }
+
 /**
  * Adds a visual indicator (e.g., a red asterisk) to the labels of required input fields.
  * It reads the validation rules and applies a specific CSS class to the corresponding labels.
@@ -62,6 +65,8 @@ function highlightRequiredFields(validationRuleKey) {
 
 /**
  * A single initialization function for all shared UI components.
+ * This function should be called on page load to set up the theme,
+ * back-to-top button, and other shared UI elements.
  */
 function initializeSharedUI() {
     applyThemeFromLocalStorage();
@@ -72,18 +77,14 @@ function initializeSharedUI() {
 
 /**
  * Initializes UI toggles based on data attributes for declarative UI logic.
- * Looks for `data-ui-toggle-controller` and attaches event listeners.
+ * Looks for `data-ui-toggle-controller` and attaches event listeners to create
+ * interactive UI elements that can toggle visibility or disable other elements
+ * based on conditions.
  *
- * Attributes:
- * - `data-ui-toggle-controller`: Marks the element as a controller.
- * - `data-ui-toggle-target`: A CSS selector for the target element(s).
- * - `data-ui-toggle-type`: 'visibility' (default) or 'disable'.
- * - `data-ui-toggle-condition-value`: The value the controller must have to trigger the action.
- * - `data-ui-toggle-condition-value`: The value(s) the controller must have to trigger the action (comma-separated for multiple values).
- * - `data-ui-toggle-condition-checked`: 'true' or 'false' for checkboxes.
- * - `data-ui-toggle-target-for`: The ID of the controller. Used on the target element.
- * - `data-ui-toggle-class`: The class to toggle for visibility (default: 'hidden').
- * - `data-ui-toggle-invert`: 'true' to invert the condition's result.
+ * @example
+ * <!-- A checkbox that toggles the visibility of a div -->
+ * <input type="checkbox" data-ui-toggle-controller data-ui-toggle-target="#my-div">
+ * <div id="my-div" class="hidden">...</div>
  */
 function initializeUiToggles() {
     const controllers = document.querySelectorAll('[data-ui-toggle-controller], [data-ui-toggle-target-for]');
@@ -107,10 +108,14 @@ function initializeUiToggles() {
         }
     });
 
+    /**
+     * Sets up the event listeners for a controller and its targets.
+     * @param {HTMLElement} controller - The controller element.
+     * @param {string} targetSelector - The CSS selector for the target elements.
+     */
     function setupController(controller, targetSelector) {
         const updateUi = () => {
             if (!targetSelector || targetSelector === '#') {
-                // If the selector is invalid or empty, do nothing.
                 return;
             }
             const targets = document.querySelectorAll(targetSelector);
@@ -127,9 +132,9 @@ function initializeUiToggles() {
                 if (controller.type === 'checkbox') {
                     const isChecked = controller.checked;
                     conditionMet = conditionChecked ? String(isChecked) === conditionChecked : isChecked;
-                } else { // Handles select, text, number inputs
+                } else {
                 if (conditionValue === 'all') {
-                    conditionMet = true; // Always show for 'all'
+                    conditionMet = true;
                 } else if (conditionValue) {
                     const conditionValues = conditionValue.split(',').map(v => v.trim());
                     conditionMet = conditionValues.includes(controller.value);
@@ -140,11 +145,11 @@ function initializeUiToggles() {
                 if (toggleType === 'visibility') target.classList.toggle(toggleClass, !finalCondition);
                 else if (toggleType === 'disable') target.disabled = finalCondition;
             });
-        }; // End of updateUi
+        };
 
         controller.addEventListener('change', updateUi);
         controller.addEventListener('input', updateUi);
-        updateUi(); // Initial call to set the correct state on page load
+        updateUi();
     }
 }
 
@@ -186,7 +191,6 @@ function initializeBackToTopButton() {
     const backToTopButton = document.getElementById('back-to-top-btn');
     if (!backToTopButton) return;
 
-    // Debounce the scroll event to improve performance
     const handleScroll = debounce(() => {
         const isVisible = window.scrollY > 300;
         backToTopButton.classList.toggle('opacity-100', isVisible);
@@ -196,17 +200,17 @@ function initializeBackToTopButton() {
 
     window.addEventListener('scroll', handleScroll);
 
-    // Scroll to top on click
     backToTopButton.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 }
 
 /**
- * Wraps a calculation function in a try-catch block to prevent crashes.
+ * Wraps a calculation function in a try-catch block to prevent crashes
+ * and provide a consistent error handling mechanism.
  * @param {function} calcFunction - The function to execute.
- * @param {string} errorMessage - A user-friendly error message.
- * @returns The result of the function or an error object.
+ * @param {string} errorMessage - A user-friendly error message to display if the function throws an error.
+ * @returns {any|{error: string, success: boolean}} The result of the function or an error object.
  */
 function safeCalculation(calcFunction, errorMessage) {
     try {
@@ -218,7 +222,8 @@ function safeCalculation(calcFunction, errorMessage) {
 }
 
 /**
- * Creates a debounced function that delays invoking `func` until after `wait` milliseconds have elapsed.
+ * Creates a debounced function that delays invoking `func` until after `wait`
+ * milliseconds have elapsed since the last time the debounced function was invoked.
  * @param {function} func - The function to debounce.
  * @param {number} wait - The number of milliseconds to delay.
  * @returns {function} The new debounced function.
@@ -237,6 +242,7 @@ function debounce(func, wait) {
 
 /**
  * Toggles the loading state of a button, showing a spinner and disabling it.
+ * This provides visual feedback to the user during long-running operations.
  * @param {boolean} isLoading - Whether to show the loading state.
  * @param {string} buttonId - The ID of the button to update.
  */
@@ -263,7 +269,6 @@ function setLoadingState(isLoading, buttonId) {
  * @returns {number} The interpolated y-value.
  */
 function interpolate(x, xp, fp) {
-    // Ensure inputs are valid arrays
     if (!Array.isArray(xp) || !Array.isArray(fp) || xp.length !== fp.length || xp.length === 0) {
         console.error("Invalid input for interpolate function.");
         return 0;
@@ -274,7 +279,6 @@ function interpolate(x, xp, fp) {
     while (x > xp[i + 1]) i++;
     const x1 = xp[i], y1 = fp[i];
     const x2 = xp[i + 1], y2 = fp[i + 1];
-    // Avoid division by zero if x-points are identical
     const dx = x2 - x1;
     if (Math.abs(dx) < 1e-9) return y1;
     return y1 + ((x - x1) * (y2 - y1)) / dx;
@@ -352,7 +356,6 @@ function renderValidationResults(validation, container) {
  */
 function sanitizeHTML(str) {
     if (typeof str !== 'string') {
-        // If it's not a string (e.g., a number), convert it safely.
         return String(str);
     }
     const map = {
@@ -387,8 +390,6 @@ function showFeedback(message, isError = false, feedbackElId = 'feedback-message
 function getAllCssStyles() {
     let cssText = "";
     for (const styleSheet of document.styleSheets) {
-        // Skip external stylesheets (like Google Fonts) to avoid CORS security errors.
-        // We can only access cssRules for stylesheets on the same domain.
         if (styleSheet.href) {
             continue;
         }
@@ -418,19 +419,16 @@ async function convertSvgToPng(svg) {
             const rect = svg.getBoundingClientRect();
             const viewBox = svg.viewBox.baseVal;
 
-            // Prioritize dimensions: rendered size, viewBox, fallback. Ensure non-zero dimensions.
             const width = rect.width || (viewBox && viewBox.width) || 500;
             const height = rect.height || (viewBox && viewBox.height) || 300;
 
             clone.setAttribute('width', width);
             clone.setAttribute('height', height);
 
-            // Determine background color from theme
             const isDarkMode = document.documentElement.classList.contains('dark');
-            const backgroundColor = isDarkMode ? '#1f2937' : '#f9fafb'; // Corresponds to .diagram bg colors
+            const backgroundColor = isDarkMode ? '#1f2937' : '#f9fafb';
             const backgroundRect = `<rect width="100%" height="100%" fill="${backgroundColor}"></rect>`;
 
-            // Embed all page styles into the SVG for correct rendering.
             const styles = getAllCssStyles();
             const defs = document.createElementNS("http://www.w3.org/2000/svg", 'defs');
             defs.innerHTML = styles;
@@ -438,7 +436,6 @@ async function convertSvgToPng(svg) {
 
             clone.setAttribute('width', width);
             clone.setAttribute('height', height);
-            // Prepend the background rectangle to the cloned SVG's innerHTML
             clone.innerHTML = backgroundRect + clone.innerHTML;
             const xml = new XMLSerializer().serializeToString(clone);
             const svg64 = btoa(unescape(encodeURIComponent(xml)));
@@ -503,7 +500,6 @@ function createWordCompatibleHTML(content, title) {
  * @returns {string} A plain text representation of the element's content.
  */
 function convertElementToPlainText(element) {
-    // Special handling for combo summary cards to make the text output cleaner
     if (element.id.startsWith('combo-summary-card-')) {
         const title = element.querySelector('h4')?.innerText.trim() || 'Summary';
         const maxPressure = element.querySelector('p.text-xl')?.innerText.trim() || 'N/A';
@@ -514,7 +510,6 @@ function convertElementToPlainText(element) {
         return `${title}\n- Max Pressure: ${maxPressure} (From: ${maxCombo})\n- Max Uplift/Suction: ${minPressure} (From: ${minCombo})`;
     }
 
-    // Generic conversion for other elements
     const textParts = [];
     element.querySelectorAll('h1, h2, h3, h4, p, li, tr, caption').forEach(el => {
         const tagName = el.tagName.toLowerCase();
@@ -524,19 +519,22 @@ function convertElementToPlainText(element) {
         else if (tagName === 'h3') textParts.push(`\n### ${line}\n`);
         else if (tagName === 'h4') textParts.push(`\n#### ${line}\n`);
         else if (tagName === 'caption') textParts.push(`\n--- ${line} ---\n`);
-        else if (tagName === 'li') textParts.push(`* ${line}`); // Keep li as is
+        else if (tagName === 'li') textParts.push(`* ${line}`);
         else if (tagName === 'tr') {
             const cells = Array.from(el.querySelectorAll('th, td')).map(cell => cell.innerText?.trim() ?? '');
-            textParts.push(cells.join('\t|\t')); // Tab-separated for better column alignment
+            textParts.push(cells.join('\t|\t'));
         } else if (tagName === 'p') textParts.push(line);
     });
-    return textParts.join('\n').replace(/\n{3,}/g, '\n\n'); // Collapse multiple blank lines
+    return textParts.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
 /**
  * Copies the content of a given container to the clipboard, converting SVGs to images.
- * @param {string} containerId - The ID of the container with the report content.
- * @param {string} feedbackElId - The ID of the feedback element.
+ * @param {string} targetId - The ID of the container with the report content.
+ * @param {object} [options={}] - Optional parameters.
+ * @param {string} [options.feedbackElId='feedback-message'] - The ID of the feedback element.
+ * @param {any} [options.engine] - The BabylonJS engine instance.
+ * @param {any} [options.scene] - The BabylonJS scene instance.
  */
 async function handleCopy(targetId, options = {}) {
     const { feedbackElId = 'feedback-message', engine, scene } = options;
@@ -550,23 +548,19 @@ async function handleCopy(targetId, options = {}) {
         showFeedback('Preparing report for copying...', false, feedbackElId);
         const clone = elementToCopy.cloneNode(true);
 
-        // Prepare the clone for copying: remove interactive elements, expand details, and remove empty rows.
         clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
         clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
 
-        // Convert SVGs to PNGs
         let conversionFailures = 0;
         const diagramElements = Array.from(clone.querySelectorAll('svg, canvas'));
         if (diagramElements.length > 0) {
             showFeedback(`Converting ${diagramElements.length} diagram(s) to images...`, false, feedbackElId);
-            // Use Promise.all to run conversions in parallel for better performance.
             await Promise.all(diagramElements.map(async (diagram) => {
                 try {
                     let pngImage;
                     if (diagram.tagName.toLowerCase() === 'svg') {
                         pngImage = await convertSvgToPng(diagram);
                     } else if (diagram.tagName.toLowerCase() === 'canvas' && engine && scene) {
-                        // Handle BabylonJS canvas
                         pngImage = await new Promise(res => BABYLON.Tools.CreateScreenshot(engine, scene.activeCamera, { finalWidth: diagram.width, finalHeight: diagram.height }, data => res(data)));
                     }
                     if (pngImage && diagram.parentNode) {
@@ -575,12 +569,11 @@ async function handleCopy(targetId, options = {}) {
                 } catch (error) {
                     console.warn("SVG to PNG conversion failed:", error);
                     conversionFailures++;
-                    if (svg.parentNode) svg.parentNode.remove(); // Remove SVG if conversion fails to avoid broken images.
+                    if (svg.parentNode) svg.parentNode.remove();
                 }
             }));
         }
         
-        // Remove empty table rows that might be left after removing buttons
         clone.querySelectorAll('tr').forEach(tr => {
             if (tr.innerText.trim() === '') {
                 tr.remove();
@@ -589,9 +582,8 @@ async function handleCopy(targetId, options = {}) {
 
         showFeedback('Copiando para a área de transferência...', false, feedbackElId);
         
-        // Generate final HTML and Text content, consistent with handleDownloadWord
         const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-        const htmlContent = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Use the simpler HTML structure
+        const htmlContent = createWordCompatibleHTML(clone.innerHTML, reportTitle);
         const plainTextContent = convertElementToPlainText(clone);
 
         const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
@@ -630,11 +622,9 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
     
     showFeedback('Generating PDF...', false, feedbackElId);
 
-    // --- Get Header Info ---
     const projectTitle = document.getElementById('main-title')?.innerText || 'Engineering Report';
     const reportDate = new Date().toLocaleDateString();
 
-    // --- Configure PDF Options ---
     const opt = {
         margin:       0.5,
         filename:     filename,
@@ -644,7 +634,6 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
         pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    // --- Generate PDF with Custom Header ---
     await html2pdf().from(reportContainer).set(opt).toPdf().get('pdf').then(function (pdf) {
         const totalPages = pdf.internal.getNumberOfPages();
         const pageWidth = pdf.internal.pageSize.getWidth();
@@ -653,15 +642,14 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
         for (let i = 1; i <= totalPages; i++) {
             pdf.setPage(i);
             pdf.setFontSize(10);
-            pdf.setTextColor(100); // Gray color
-            // Header
+            pdf.setTextColor(100);
             pdf.text(projectTitle, pageWidth / 2, 0.3, { align: 'center' });
             pdf.text(`Date: ${reportDate}`, pageWidth - 0.5, 0.3, { align: 'right' });
-            // Footer
             pdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 0.3, { align: 'center' });
         }
     }).save();
 }
+
 
 /**
  * Downloads the content of a given container as a Microsoft Word (.doc) file.
@@ -683,13 +671,11 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
     clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
     clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
     
-    // Remove empty table rows that might be left after removing buttons
     clone.querySelectorAll('tr').forEach(tr => {
         if (tr.innerText.trim() === '') {
             tr.remove();
         }
     });
-    // Convert SVGs to PNGs
     const svgElements = Array.from(clone.querySelectorAll('svg'));
     if (svgElements.length > 0) {
         showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
@@ -706,7 +692,7 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
     }
 
     const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
+    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle);
 
     const blob = new Blob([finalHtml], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
@@ -737,95 +723,31 @@ function convertReportToCsv(reportId) {
         const tableEl = section.querySelector('table');
 
         if (titleEl && tableEl) {
-            // Add a title for the section in the CSV
             csvContent += `"${titleEl.innerText.trim()}"\n`;
 
-            // Process table headers
             const headers = Array.from(tableEl.querySelectorAll('thead th')).map(th => `"${th.innerText.trim()}"`);
             csvContent += headers.join(',') + '\n';
 
-            // Process table rows
             const rows = tableEl.querySelectorAll('tbody tr');
             rows.forEach(row => {
-                // Skip subheader rows or detail rows
                 if (row.classList.contains('details-row') || row.querySelector('td[colspan]')) {
                     return;
                 }
 
                 const cells = Array.from(row.querySelectorAll('td')).map(td => {
-                    // Clone the cell to manipulate it without affecting the DOM
                     const cellClone = td.cloneNode(true);
-                    // Remove the "[Show]" button from the cell content
                     const button = cellClone.querySelector('.toggle-details-btn');
                     if (button) button.remove();
-                    // Get the cleaned text and escape quotes
                     const text = (cellClone.innerText || '').trim().replace(/"/g, '""');
                     return `"${text}"`;
                 });
                 csvContent += cells.join(',') + '\n';
             });
-            csvContent += '\n'; // Add a blank line between sections
+            csvContent += '\n';
         }
     });
 
     return csvContent;
-}
-
-/**
- * Downloads the content of a given container as a Microsoft Word (.doc) file.
- * It converts SVGs to PNGs and formats the HTML for Word compatibility.
- * @param {string} containerId - The ID of the container with the report content.
- * @param {string} filename - The desired filename for the downloaded Word file.
- * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
- */
-async function handleDownloadWord(containerId, filename, feedbackElId = 'feedback-message') {
-    const reportContainer = document.getElementById(containerId);
-    if (!reportContainer) {
-        showFeedback('Report container not found for Word export.', true, feedbackElId);
-        return;
-    }
-
-    showFeedback('Generating Word document...', false, feedbackElId);
-
-    const clone = reportContainer.cloneNode(true);
-    clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
-    clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
-    
-    // Remove empty table rows that might be left after removing buttons
-    clone.querySelectorAll('tr').forEach(tr => {
-        if (tr.innerText.trim() === '') {
-            tr.remove();
-        }
-    });
-    // Convert SVGs to PNGs
-    const svgElements = Array.from(clone.querySelectorAll('svg'));
-    if (svgElements.length > 0) {
-        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
-        await Promise.all(svgElements.map(async (svg) => {
-            try {
-                const pngImage = await convertSvgToPng(svg);
-                if (pngImage && svg.parentNode) {
-                    svg.parentNode.replaceChild(pngImage, svg);
-                }
-            } catch (error) {
-                console.warn("SVG to PNG conversion failed for Word export:", error);
-            }
-        }));
-    }
-
-    const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
-
-    const blob = new Blob([finalHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showFeedback('Word document download started.', false, feedbackElId);
 }
 
 /**
@@ -850,27 +772,27 @@ function handleDownloadCsv(reportId, filename, feedbackElId = 'feedback-message'
     link.setAttribute("download", filename);
     link.click();
 }
+
 /**
  * Gathers values from a list of input IDs.
  * @param {string[]} inputIds - An array of input element IDs.
  * @returns {Object} An object with keys as input IDs and values as their values.
  */
-function gatherInputsFromIds(inputIds) { // Updated for better validation
+function gatherInputsFromIds(inputIds) {
     const inputs = {};
     inputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             let value;
             if (el.type === 'number') {
-                value = parseFloat(el.value) || 0; // Default to 0 if parsing fails
+                value = parseFloat(el.value) || 0;
                 inputs[id] = value;
             } else if (el.type === 'checkbox') {
                 inputs[id] = el.checked;
             } else {
-                inputs[id] = el.value || ''; // Ensure we don't get undefined
+                inputs[id] = el.value || '';
             }
         } else {
-            // Provide default for missing elements
             inputs[id] = '';
         }
     });
@@ -881,6 +803,7 @@ function gatherInputsFromIds(inputIds) { // Updated for better validation
  * Saves a given data object to a text file.
  * @param {Object} data - The JavaScript object to save.
  * @param {string} filename - The name of the file to download.
+ * @param {string} [appVersion='1.0'] - The version of the application.
  */
 function saveInputsToFile(data, filename, appVersion = '1.0') {
     const dataToSave = {
@@ -901,7 +824,7 @@ function saveInputsToFile(data, filename, appVersion = '1.0') {
 
 /**
  * Triggers the file input to open the file selection dialog.
- * @param {string} fileInputId - The ID of the hidden file input element.
+ * @param {string} [fileInputId='file-input'] - The ID of the hidden file input element.
  */
 function initiateLoadInputsFromFile(fileInputId = 'file-input') {
     document.getElementById(fileInputId)?.click();
@@ -917,7 +840,6 @@ function initiateLoadInputsFromFile(fileInputId = 'file-input') {
 function createSaveInputsHandler(inputIds, filename, feedbackElId = 'feedback-message') {
     return function() { 
         const inputs = gatherInputsFromIds(inputIds);
-        // Pass a version number when saving
         saveInputsToFile(inputs, filename, '1.1');
         showFeedback(`Inputs saved to ${filename}`, false, feedbackElId);
     };
@@ -937,7 +859,6 @@ function applyInputsToDOM(inputs, inputIds) {
             } else {
                 el.value = inputs[id];
             }
-            // Trigger change/input events to update any dependent UI or calculations
             el.dispatchEvent(new Event('change', { bubbles: true }));
             el.dispatchEvent(new Event('input', { bubbles: true }));
         }
@@ -947,7 +868,7 @@ function applyInputsToDOM(inputs, inputIds) {
 /**
  * Creates a generic "load inputs" event handler for a file input.
  * @param {string[]} inputIds - The array of input IDs to populate.
- * @param {function} onComplete - A callback function to run after inputs are loaded (e.g., re-run calculation).
+ * @param {function} onComplete - A callback function to run after inputs are loaded.
  * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
  * @param {string} [appVersion='1.1'] - The current application version to check against.
  * @returns {function} An event handler function that takes the file input event.
@@ -957,7 +878,7 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
         const displayEl = document.getElementById('file-name-display');
         const file = event.target.files[0];
         if (!file) {
-            if (displayEl) displayEl.textContent = ''; // User cancelled, clear display
+            if (displayEl) displayEl.textContent = '';
             return;
         }
 
@@ -966,7 +887,6 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
         reader.onload = (e) => {
             try {
                 const inputs = JSON.parse(e.target.result);
-                // Temporarily store the full parsed object for complex loaders to use
                 localStorage.setItem('temp-loaded-inputs', JSON.stringify(inputs));
 
                 if (inputs._appVersion !== appVersion) {
@@ -980,10 +900,9 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
                 showFeedback('Failed to load inputs. Data may be corrupt.', true, feedbackElId);
                 console.error("Error parsing saved data:", err);
             } finally {
-                // Reset file input to allow loading the same file again
                 event.target.value = ''; 
-                if (displayEl) displayEl.textContent = ''; // Clear filename display after processing
-                localStorage.removeItem('temp-loaded-inputs'); // Clean up temp storage
+                if (displayEl) displayEl.textContent = '';
+                localStorage.removeItem('temp-loaded-inputs');
             }
         };
         reader.readAsText(file);
@@ -994,6 +913,7 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
  * Saves a key-value pair to the browser's local storage.
  * @param {string} storageKey - The key to use for storing the data.
  * @param {object} inputs - The input data object to be stringified and saved.
+ * @param {string} [appVersion='1.0'] - The version of the application.
  */
 function saveInputsToLocalStorage(storageKey, inputs, appVersion = '1.0') {
     try {
@@ -1018,12 +938,11 @@ function saveInputsToLocalStorage(storageKey, inputs, appVersion = '1.0') {
 function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion = '1.0') {
     const dataStr = localStorage.getItem(storageKey);
     if (!dataStr) {
-        return; // No saved data found, do not proceed.
+        return;
     }
     try {
         const inputs = JSON.parse(dataStr);
 
-        // Version check: If the saved data has no version or a different version, discard it.
         if (inputs._version !== appVersion) {
             console.warn(`LocalStorage data for '${storageKey}' is outdated (v${inputs._version} vs current v${appVersion}). Discarding.`);
             localStorage.removeItem(storageKey);
@@ -1034,9 +953,6 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
             const el = document.getElementById(id);
             if (!el) return;
 
-            // Try to find a value for the current element's ID.
-            // 1. Look for a direct match (e.g., inputs['snow_risk_category']).
-            // 2. If it's project data, look for a generic match (e.g., inputs['risk_category']).
             let valueToApply;
             if (inputs[id] !== undefined) {
                 valueToApply = inputs[id];
@@ -1057,7 +973,6 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
                 el.dispatchEvent(new Event('input', { bubbles: true }));
             }
         });
-        // Only run the onComplete callback if data was actually found and loaded.
         if (typeof onComplete === 'function') {
             onComplete(inputs);
         }
@@ -1077,7 +992,6 @@ function clearLocalStorageAndResetUI(storageKey, inputIds, feedbackElId = 'feedb
     inputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            // This will reset the form to its initial HTML state
             el.form.reset();
             el.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -1087,29 +1001,25 @@ function clearLocalStorageAndResetUI(storageKey, inputIds, feedbackElId = 'feedb
 
 /**
  * A master initialization function for calculator pages.
- * It handles header/footer injection, UI setup, and event listener attachment for a consistent user experience.
  * @param {object} config - The configuration object for the page.
- * @param {string} config.pageKey - A unique key for the page (e.g., 'wind', 'snow'). Used for navigation highlighting.
- * @param {string} config.pageTitle - The title to display in the header.
  * @param {string[]} config.inputIds - An array of all input IDs on the page for saving/loading.
  * @param {function} config.calculationHandler - The function to call when the main "run" button is clicked.
  * @param {function} [config.onReady] - An optional callback to run after all initial setup is complete.
+ * @param {string} [config.storageKey] - The local storage key for saving inputs.
+ * @param {string} [config.fileInputId] - The ID of the file input element.
  */
-async function initializeApp(config) { // This function is already async
+async function initializeApp(config) {
     const {
         inputIds = [],
         calculationHandler,
         onReady,
         storageKey,
-        fileInputId = 'file-input' // Default file input ID
+        fileInputId = 'file-input'
     } = config;
 
-    // --- 0. Initialize Internationalization (i18n) First ---
     await i18n.initialize();
 
-    // --- 1. Discover Page and Inject Header/Footer ---
     const path = window.location.pathname;
-    // Decode the page name to handle spaces and other special characters (e.g., "steel%20check.html" -> "steel check.html")
     const pageName = decodeURIComponent(path.substring(path.lastIndexOf('/') + 1));
     const isRoot = path.endsWith('/') || path.endsWith('/index.html');
     const pathPrefix = isRoot ? './' : '../';
@@ -1118,10 +1028,10 @@ async function initializeApp(config) { // This function is already async
     try {
         const response = await fetch(`${pathPrefix}js/nav-config.json`);
         navConfig = await response.json();
-        window.NAV_CONFIG = navConfig; // Make it globally available
+        window.NAV_CONFIG = navConfig;
     } catch (error) {
         console.error("Failed to load nav-config.json for initialization:", error);
-        return; // Stop initialization if nav config fails
+        return;
     }
 
     const pageConfig = navConfig.mainNav.flatMap(item => item.subNav.length > 0 ? item.subNav : [item]).find(link => link.href.endsWith(pageName))
@@ -1132,7 +1042,6 @@ async function initializeApp(config) { // This function is already async
 
     if (!pageConfig) {
         console.error(`Could not find page configuration for "${pageName}" in nav-config.json.`);
-        // Fallback to a generic header if config is not found but we need to continue
         await injectHeader({ activePage: '', pageTitle: 'engineering_hub', headerPlaceholderId: 'header-placeholder' });
     } else {
         await injectHeader({ activePage: pageKey, pageTitle: pageTitle, headerPlaceholderId: 'header-placeholder' });
@@ -1141,47 +1050,36 @@ async function initializeApp(config) { // This function is already async
 
     const effectiveStorageKey = storageKey || `${pageConfig?.key || 'default'}-inputs`;
 
-    // 2. Initialize Shared UI Components
-    initializeSharedUI(); // This is correct
+    initializeSharedUI();
 
-    const buttonId = config.buttonId || 'run-check-btn'; // Default button ID
-    // 3. Attach Core Event Listeners
+    const buttonId = config.buttonId || 'run-check-btn';
     const runButton = document.getElementById(buttonId);
     if (runButton && typeof calculationHandler === 'function') {
         runButton.addEventListener('click', calculationHandler);
     }
 
-    // --- Automatic Save to Local Storage on Input Change ---
-    // This function runs automatically whenever an input changes.
     const debouncedSave = debounce(() => {
         const currentInputs = gatherInputsFromIds(inputIds);
         saveInputsToLocalStorage(effectiveStorageKey, currentInputs);
-        // Do not show feedback on auto-save to avoid being intrusive.
-    }, 500); // Debounce to avoid excessive writes on rapid changes.
+    }, 500);
 
     if (inputIds.length > 0) {
         inputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Listen to both 'input' and 'change' to cover all element types
                 el.addEventListener('input', debouncedSave);
                 el.addEventListener('change', debouncedSave);
             }
         });
     }
 
-    // 4. Load saved data from Local Storage
     loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
 
-    // 5. Auto-load the page-specific script after all shared setup is complete.
-    // This is the last step to ensure all dependencies are met.
     autoLoadPageScript();
 }
 
 /**
  * A class to build and render structured calculation reports.
- * It supports adding different types of sections (HTML, tables, charts)
- * and handles the rendering process, including attaching event listeners.
  */
 class ReportBuilder {
     /**
@@ -1214,7 +1112,7 @@ class ReportBuilder {
      * @param {string} title - The title of the section.
      * @param {object} tableConfig - Configuration for the table.
      * @param {string[]} tableConfig.headers - Array of header strings.
-     * @param {Array<object>} tableConfig.rows - Array of row objects. Each object has a `cells` array and an optional `details` string.
+     * @param {Array<object>} tableConfig.rows - Array of row objects.
      * @param {string} [sectionId] - An optional ID for the section container.
      */
     addTableSection(title, tableConfig, sectionId) {
@@ -1244,9 +1142,8 @@ class ReportBuilder {
             console.error(`Report container with ID "${containerId}" not found.`);
             return;
         }
-        mainContainer.innerHTML = ''; // Clear previous content
+        mainContainer.innerHTML = '';
 
-        // --- Build Header ---
         const actionButtons = this.actionButtons.map(btn =>
             createDOMElement('button', { id: btn.id, className: `bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden ${btn.classes || ''}` }, [btn.text])
         );
@@ -1263,18 +1160,15 @@ class ReportBuilder {
             ])
         ]);
 
-        // --- Build Report Container ---
         const reportContainer = createDOMElement('div', { id: this.reportId, className: 'p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg' });
         reportContainer.appendChild(header);
 
-        // --- Add Warnings Section (if any) ---
         if (this.warnings.length > 0) {
             const warningsContainer = createDOMElement('div', { className: 'report-section-container' });
             warningsContainer.innerHTML = renderValidationResults({ warnings: this.warnings, errors: [] });
             reportContainer.appendChild(warningsContainer);
         }
 
-        // --- Build and Add Each Section ---
         this.sections.forEach((section, index) => {
             const sectionId = section.sectionId || `${this.reportId}-section-${index}`;
             const contentId = `${sectionId}-content`;
@@ -1290,12 +1184,10 @@ class ReportBuilder {
 
             const contentContainer = createDOMElement('div', { id: contentId, className: 'copy-content' });
 
-            // Handle different section types
             if (section.type === 'table') {
                 const { headers, rows } = section.tableConfig;
                 const table = createDOMElement('table', { className: 'w-full mt-2 results-table' });
                 
-                // --- FIX: Apply a distinct grey background to the table header row ---
                 const headerRow = createDOMElement('tr', {});
                 headers.forEach(h => headerRow.appendChild(createDOMElement('th', { className: 'bg-gray-100 dark:bg-gray-700' }, [h])));
                 const thead = createDOMElement('thead', {}, [headerRow]);
@@ -1306,12 +1198,9 @@ class ReportBuilder {
                     if (row.type === 'subheader') {
                         tbody.appendChild(createDOMElement('tr', { className: 'bg-gray-100 dark:bg-gray-700 font-semibold' }, [createDOMElement('td', { colspan: headers.length }, [row.content])]));
                     } else {
-                        // --- FIX: Ensure the first data row always has a top border ---
-                        // Add a top border to all data rows EXCEPT the very first one.
                         const trClasses = [];
                         if (rowIndex > 0) trClasses.push('border-t', 'dark:border-gray-700');
                         
-                        // Apply the grey background if isHeader is true, regardless of position.
                         if (row.isHeader) {
                             trClasses.push('bg-gray-100', 'dark:bg-gray-700', 'font-semibold');
                         }
@@ -1321,7 +1210,7 @@ class ReportBuilder {
                         const tr = createDOMElement('tr', { className: trClasses.join(' ') });
                         row.cells.forEach((cell, cellIndex) => {
                             const td = createDOMElement('td');
-                            td.innerHTML = cell; // Use innerHTML to render potential HTML in cells
+                            td.innerHTML = cell;
                             if (cellIndex === 0 && detailsButton) {
                                 td.appendChild(document.createTextNode(' '));
                                 td.appendChild(detailsButton);
@@ -1352,11 +1241,10 @@ class ReportBuilder {
 
 /**
  * Attaches all necessary event listeners to a rendered report container.
- * This includes handling copy, download, and detail-toggling actions.
  * @param {string} containerId - The ID of the main report container.
  * @param {object} config - Configuration options for the event listeners.
  * @param {string} config.reportId - The ID of the specific report content element to be targeted by actions.
- * @param {string} config.filenamePrefix - The prefix for filenames when downloading (e.g., "Wind-Report").
+ * @param {string} config.filenamePrefix - The prefix for filenames when downloading.
  * @param {function} [config.onSendToCombos] - Optional callback for a "Send to Combos" button.
  * @param {object} [config.toggleTexts] - Optional custom texts for toggle buttons.
  */
@@ -1365,11 +1253,9 @@ function attachReportEventListeners(containerId, config) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Use event delegation to handle clicks on dynamically added elements.
     container.addEventListener('click', (event) => {
         const target = event.target;
 
-        // --- Toggle individual details ---
         if (target.matches('.toggle-details-btn')) {
             const detailId = target.dataset.toggleId;
             const detailRow = document.getElementById(detailId);
@@ -1379,7 +1265,6 @@ function attachReportEventListeners(containerId, config) {
             }
         }
 
-        // --- Copy Section ---
         if (target.matches('.copy-section-btn')) {
             const copyTargetId = target.dataset.copyTargetId;
             if (copyTargetId) {
@@ -1387,7 +1272,6 @@ function attachReportEventListeners(containerId, config) {
             }
         }
 
-        // --- Toggle all details ---
         if (target.id === 'toggle-all-details-btn') {
             const shouldShow = target.dataset.state === 'hidden';
             container.querySelectorAll('.details-row').forEach(row => row.classList.toggle('is-visible', shouldShow));
@@ -1396,27 +1280,22 @@ function attachReportEventListeners(containerId, config) {
             target.textContent = shouldShow ? (toggleTexts?.hideAll || 'Hide All Details') : (toggleTexts?.showAll || 'Show All Details');
         }
 
-        // --- Copy Report ---
         if (target.id === 'copy-report-btn') {
             handleCopyToClipboard(reportId);
         }
 
-        // --- Download PDF ---
         if (target.id === 'download-pdf-btn') {
             handleDownloadPdf(reportId, `${filenamePrefix}.pdf`);
         }
 
-        // --- Download Word ---
         if (target.id === 'download-word-btn') {
             handleDownloadWord(reportId, `${filenamePrefix}.doc`);
         }
 
-        // --- Download CSV ---
         if (target.id === 'download-csv-btn') {
             handleDownloadCsv(reportId, `${filenamePrefix}.csv`);
         }
 
-        // --- Custom "Send to Combos" button ---
         if (target.id === 'send-to-combos-btn' && typeof onSendToCombos === 'function') {
             onSendToCombos();
         }
@@ -1426,21 +1305,20 @@ function attachReportEventListeners(containerId, config) {
 
 /**
  * Creates a standardized calculation handler to reduce boilerplate code.
- * This function encapsulates the common pattern: gather, validate, calculate, render.
  * @param {object} config - The configuration object for the handler.
- * @param {string[]} [config.inputIds] - Array of input element IDs. Used if gatherInputsFunction is not provided.
- * @param {function} [config.gatherInputsFunction] - A function that returns the inputs object. Overrides inputIds.
+ * @param {string[]} [config.inputIds] - Array of input element IDs.
+ * @param {function} [config.gatherInputsFunction] - A function that returns the inputs object.
  * @param {string} config.storageKey - Local storage key for saving inputs.
  * @param {string} config.validationRuleKey - Key for the validationRules object.
  * @param {function} config.calculatorFunction - The function that performs the calculation.
  * @param {function} config.renderFunction - The function that renders the results.
  * @param {string} config.resultsContainerId - The ID of the DOM element to render results into.
- * @param {function} [config.validatorFunction] - Optional. A custom function to perform validation. If not provided, a default validator is used.
+ * @param {function} [config.validatorFunction] - Optional. A custom function to perform validation.
  * @param {string} [config.feedbackElId='feedback-message'] - Optional. The ID of the feedback element.
  * @param {string} [config.buttonId] - Optional ID of the run button for loading state.
  * @returns {function} The generated event handler function.
  */
-function createCalculationHandler(config) { // This is the function being called
+function createCalculationHandler(config) {
     const {
         inputIds,
         gatherInputsFunction,
@@ -1454,33 +1332,26 @@ function createCalculationHandler(config) { // This is the function being called
         buttonId
     } = config;
 
-    // Automatically highlight required fields for this calculator when it's created.
-    if (validationRuleKey) { // This was already correct
+    if (validationRuleKey) {
         highlightRequiredFields(validationRuleKey);
     } else {
-        // Add a console warning if the key is missing, as it's crucial for validation and report functionality.
         console.warn(`[createCalculationHandler] A 'validationRuleKey' não foi fornecida na configuração. A validação de entrada e os botões de relatório (Copiar, PDF, etc.) não funcionarão.`);
     }
 
-    return async function() { // This function is already async, which is good.
+    return async function() {
         console.log(`[${validationRuleKey}] Calculation triggered.`);
-        // --- 1. SETUP & GATHER INPUTS ---
         if (buttonId) setLoadingState(true, buttonId);
         showFeedback('Gathering inputs...', false, feedbackElId);
 
-        // Use the provided gather function or the default one.
         console.log(`[${validationRuleKey}] Gathering inputs...`);
         const inputs = typeof gatherInputsFunction === 'function' 
             ? gatherInputsFunction() 
             : gatherInputsFromIds(inputIds);
         
-        // --- 2. VALIDATE INPUTS ---
         showFeedback('Validating inputs...', false, feedbackElId);
-        // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
         console.log(`[${validationRuleKey}] Validating inputs...`);
         await Promise.resolve();
 
-        // Use the custom validator if provided, otherwise use the default.
         let validation;
         if (typeof validatorFunction === 'function') {
             validation = validatorFunction(inputs);
@@ -1490,7 +1361,6 @@ function createCalculationHandler(config) { // This is the function being called
         }
 
         const resultsContainer = document.getElementById(resultsContainerId);
-        // Gracefully exit if the results container doesn't exist.
         if (!resultsContainer) {
             console.error(`Results container with ID "${resultsContainerId}" not found.`);
             if (buttonId) setLoadingState(false, buttonId);
@@ -1505,7 +1375,6 @@ function createCalculationHandler(config) { // This is the function being called
             return;
         }
 
-        // --- 3. PERFORM CALCULATION ---
         showFeedback('Running calculation...', false, feedbackElId);
         console.log(`[${validationRuleKey}] Performing calculation...`);
         await Promise.resolve();
@@ -1515,7 +1384,6 @@ function createCalculationHandler(config) { // This is the function being called
             'An unexpected error occurred during calculation'
         );
 
-        // --- 4. RENDER RESULTS ---
         if (calculationResult.error) {
             console.error(`[${validationRuleKey}] Calculation error:`, calculationResult.error);
             renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
@@ -1529,9 +1397,6 @@ function createCalculationHandler(config) { // This is the function being called
             renderFunction(calculationResult, inputs);
             
             console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
-            // Re-attach event listeners for the newly rendered report content.
-            // FIX: Ensure this runs for all calculators that use this handler.
-            // The reportId is now derived from the renderFunction's implementation details.
             const reportContentElement = resultsContainer.querySelector('[id$="-report-content"]');
             if (reportContentElement) {
                  attachReportEventListeners(resultsContainerId, {
@@ -1584,10 +1449,8 @@ function populateMaterialDropdowns() {
         `<option value="${grade}">${grade}</option>`
     ).join('');
 
-    // Find all select elements that are meant to be material dropdowns
     document.querySelectorAll('select[data-fy-target], select[data-fu-target]').forEach(select => {
         select.innerHTML = gradeOptions;
-        // Set a sensible default if one isn't already selected
         if (!select.value) {
             select.value = select.id.includes('plate') ? 'A36' : 'A992';
         }
@@ -1598,21 +1461,13 @@ function populateMaterialDropdowns() {
                 if (e.target.dataset.fuTarget) document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
             }
         });
-        select.dispatchEvent(new Event('change')); // Trigger initial population
+        select.dispatchEvent(new Event('change'));
     });
 }
 
 /**
  * Populates bolt grade selection dropdowns and sets up listeners to update related fields.
  * It targets select elements with a `data-is-bolt-grade-select` attribute.
- *
- * Required attributes on the <select> element:
- * - `data-is-bolt-grade-select="true"`: Identifies the dropdown.
- *
- * Optional attributes for automatic property updates:
- * - `data-fut-target="id_of_fut_input"`: ID of the input to update with Fnt value.
- * - `data-fnv-target="id_of_fnv_input"`: ID of the input to update with Fnv value.
- * - `data-threads-checkbox="id_of_threads_checkbox"`: ID of the checkbox that controls whether threads are included in the shear plane.
  */
 function populateBoltGradeDropdowns() {
     if (typeof AISC_SPEC === 'undefined' || !AISC_SPEC.boltGrades) {
@@ -1626,20 +1481,20 @@ function populateBoltGradeDropdowns() {
 
     document.querySelectorAll('select[data-is-bolt-grade-select="true"]').forEach(select => {
         select.innerHTML = boltGradeOptions;
-        if (!select.value) select.value = 'A325'; // A common default
+        if (!select.value) select.value = 'A325';
 
         const threadsCheckbox = document.getElementById(select.dataset.threadsCheckbox);
 
         const updateBoltProperties = () => {
             const grade = select.value;
-            const threadsIncl = threadsCheckbox ? threadsCheckbox.checked : true; // Default to threads included if no checkbox
+            const threadsIncl = threadsCheckbox ? threadsCheckbox.checked : true;
             if (select.dataset.fnvTarget) document.getElementById(select.dataset.fnvTarget).value = AISC_SPEC.getFnv(grade, threadsIncl).Fnv;
             if (select.dataset.futTarget) document.getElementById(select.dataset.futTarget).value = AISC_SPEC.getFnt(grade);
         };
 
         select.addEventListener('change', updateBoltProperties);
         if (threadsCheckbox) threadsCheckbox.addEventListener('change', updateBoltProperties);
-        updateBoltProperties(); // Initial population
+        updateBoltProperties();
     });
 }
 
@@ -1665,8 +1520,7 @@ function populateBoltDiameterDropdowns() {
 
     document.querySelectorAll('select[data-is-bolt-diameter-select="true"]').forEach(select => {
         select.innerHTML = boltOptions;
-        if (!select.value) select.value = '0.875'; // Set a common default (7/8") if no value is set
-        // Dispatch a change event to ensure any dependent logic is triggered on initial load.
+        if (!select.value) select.value = '0.875';
         select.dispatchEvent(new Event('change'));
     });
 }
@@ -1674,36 +1528,28 @@ function populateBoltDiameterDropdowns() {
 /**
  * Automatically loads the page-specific JavaScript file based on the HTML file's name.
  * For example, if the page is `wind.html`, it will attempt to load `wind.js`.
- * This avoids having to manually link each page's script in the HTML.
  */
 function autoLoadPageScript() {
     const path = window.location.pathname;
-    // Gets the full filename from the path, e.g., "wind.html" or "steel%20check.html"
     const pageFileName = path.substring(path.lastIndexOf('/') + 1);
 
-    // Don't run on the index page or if there's no page name
     if (pageFileName === '' || pageFileName === 'index.html') {
         return;
     }
 
-    // Decode URI component to handle spaces (e.g., "steel%20check.html" -> "steel check.html")
-    // Then replace the .html extension with .js
     const scriptFileName = decodeURIComponent(pageFileName).replace('.html', '.js');
 
-    // Check if a script with this name is already in the document to prevent re-declaration errors.
-    // This is crucial because initializeApp might be called multiple times (e.g., by template.js and a page-specific script).
     const scriptAlreadyExists = document.querySelector(`script[src$="${encodeURIComponent(scriptFileName)}"]`);
     if (scriptAlreadyExists) {
-        return; // Don't load the script again
+        return;
     }
 
     const script = document.createElement('script');
-    // Set the source to just the script's filename. The browser correctly resolves
-    // this relative to the current HTML page's directory (e.g., from /asce/wind.html it will load asce/wind.js).
     script.src = scriptFileName;
     script.defer = true;
     document.head.appendChild(script);
 }
+
 /**
  * Populates a shape selection dropdown based on the currently selected section type.
  * It targets a select element with the ID `aisc_shape_select`.
@@ -1721,7 +1567,7 @@ async function populateShapeDropdown() {
         const shapeNames = Object.keys(shapes).sort();
 
         const currentVal = shapeSelect.value;
-        shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>'; // Reset
+        shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>';
         shapeNames.forEach(name => {
             const option = document.createElement('option');
             option.value = name;
