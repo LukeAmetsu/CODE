@@ -1,3 +1,5 @@
+// steel check.js
+console.log('steel check.js loaded');
 // --- Global variables for the 3D scene ---
 let lastSteelRunResults = null;
 
@@ -1816,7 +1818,9 @@ initializeApp({
         calculatorFunction: steelChecker.run,
         renderFunction: renderSteelResults,
         resultsContainerId: 'steel-results-container',
-        buttonId: 'run-steel-check-btn'
+        buttonId: 'run-steel-check-btn',
+        reportId: 'steel-check-report-content',
+        filenamePrefix: 'AISC-Steel-Check-Report'
     }),
     onReady: (loadedInputs) => {
         populateMaterialDropdowns();

@@ -1,3 +1,4 @@
+console.log("viga_protendida.js loaded");
 /**
  * @file viga_protendida.js
  * @description NBR 6118 Prestressed Concrete Beam Checker with Detailed, Step-by-Step Prestressing Loss Calculations.
@@ -1343,7 +1344,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         calculatorFunction: (inputs) => concreteBeamCalculator.run(inputs),
         renderFunction: renderResults,
         resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
+        buttonId: 'run-check-btn',
+        reportId: 'concrete-beam-report',
+        filenamePrefix: 'viga-protendida-concreto-nbr6118'
     });
 
     const onAppReady = () => {

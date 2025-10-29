@@ -1336,7 +1336,10 @@ function createCalculationHandler(config) {
     } = config;
 
     if (validationRuleKey) {
-        highlightRequiredFields(validationRuleKey);
+        // Defer highlighting until the DOM is fully loaded to ensure validationRules is available
+        document.addEventListener('DOMContentLoaded', () => {
+            highlightRequiredFields(validationRuleKey);
+        });
     } else {
         console.warn(`[createCalculationHandler] A 'validationRuleKey' não foi fornecida na configuração. A validação de entrada e os botões de relatório (Copiar, PDF, etc.) não funcionarão.`);
     }

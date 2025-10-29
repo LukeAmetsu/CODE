@@ -1,3 +1,5 @@
+// aci 318 concrete.js
+console.log('aci 318 concrete.js loaded');
 const aciInputIds = [
     'fc', 'fy', 'b', 'h', 'cover', 'num_bars', 'bar_size',
     'stirrup_size', 'stirrup_legs', 'stirrup_spacing', 'Mu', 'Vu'
@@ -117,7 +119,9 @@ const handleRunAciCheck = createCalculationHandler({
     calculatorFunction: aciCalculator.calculate,
     renderFunction: renderAciResults,
     resultsContainerId: 'results-container',
-    buttonId: 'run-check-btn'
+    buttonId: 'run-check-btn',
+    reportId: 'aci-report-content',
+    filenamePrefix: 'ACI-318-Concrete-Report'
 });
 
 initializeApp({

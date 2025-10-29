@@ -1,3 +1,5 @@
+// splice.js
+console.log('splice.js loaded');
 // --- Global variables for the 3D scene ---
 let bjsEngine, bjsScene, bjsGuiTexture;
 let dimensionElements = { meshes: [], labels: [] };

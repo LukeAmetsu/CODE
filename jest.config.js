@@ -1,7 +1,9 @@
 module.exports = {
-    testEnvironment: 'jsdom',
-    transformIgnorePatterns: [
-      'node_modules/(?!(jsdom|whatwg-url|webidl-conversions|tldts|data-urls|formdata-polyfill|p-from-each)/)',
-    ],
-  };
-  
+  testEnvironment: 'jsdom',
+  transform: {
+    '^.+\\.js$': 'babel-jest',
+  },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(jsdom|parse5|whatwg-url|webidl-conversions|data-urls))',
+  ],
+};

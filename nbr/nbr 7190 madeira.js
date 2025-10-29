@@ -1,3 +1,5 @@
+// nbr 7190 madeira.js
+console.log('nbr 7190 madeira.js loaded');
 const nbr7190InputIds = [
     'fc0k', 'fvk', 'Ec0_ef', 'b', 'h', 'L', 'kmod1', 'kmod2', 'Msd', 'Vsd'
 ];
@@ -112,7 +114,9 @@ const handleRunNbr7190Check = createCalculationHandler({
     calculatorFunction: nbr7190Calculator.calculate,
     renderFunction: renderNbr7190Results,
     resultsContainerId: 'results-container-wood',
-    buttonId: 'run-wood-check-btn'
+    buttonId: 'run-wood-check-btn',
+    reportId: 'wood-report-content',
+    filenamePrefix: 'NBR-7190-Wood-Report'
 }); 
 initializeApp({
     inputIds: nbr7190InputIds,

@@ -1,3 +1,6 @@
+// wind.js
+console.log('wind.js loaded');
+
 // --- GLOBAL VARIABLES for state management ---
 let lastWindRunResults = null;
 
@@ -2579,15 +2582,10 @@ function sendWindToCombos(results) {
 //  UI INJECTION & INITIALIZATION
 // =================================================================================
 
-initializeApp({ // pageKey and pageTitle are now found automatically
+initializeApp({
     inputIds: windInputIds,
-    calculationHandler: createCalculationHandler({ // This part is correct
-        inputIds: windInputIds, storageKey: 'wind-calculator-inputs',
-        validatorFunction: validateWindInputs, calculatorFunction: windLoadCalculator.run,
-        validationRuleKey: 'wind',
-        renderFunction: renderWindResults, resultsContainerId: 'results-container',
-        feedbackElId: 'feedback-message', buttonId: 'run-calculation-btn'
-    }), // The onSendToCombos is attached via attachReportEventListeners
+    calculationHandler: handleRunWindCheck,
+    buttonId: 'run-calculation-btn',
     onReady: () => {
         // Attach report event listeners here, after the app is ready
         attachReportEventListeners('results-container', {

@@ -1,3 +1,5 @@
+// nds wood design.js
+console.log('nds wood design.js loaded');
 let lastWoodRunResults = null; // To hold the results for report generation
 
 const inputIds = [
@@ -14,7 +16,9 @@ const handleRunWoodCheck = createCalculationHandler({
     calculatorFunction: woodChecker.run,
     renderFunction: renderWoodResults,
     resultsContainerId: 'wood-results-container',
-    buttonId: 'run-wood-check-btn'
+    buttonId: 'run-wood-check-btn',
+    reportId: 'wood-report-content',
+    filenamePrefix: 'NDS-Wood-Design-Report'
 });
 
 initializeApp({

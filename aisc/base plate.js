@@ -1,3 +1,5 @@
+// base plate.js
+console.log('base plate.js loaded');
 /**
  * Draws the 2D base plate diagram using SVG for clarity and performance.
  * @param {object} inputs - An object containing all necessary geometric inputs.
@@ -1827,7 +1829,9 @@ const handleRunBasePlateCheck = createCalculationHandler({
     calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
     renderFunction: renderResults,
     buttonId: 'run-steel-check-btn',
-    feedbackElId: 'feedback-message'
+    feedbackElId: 'feedback-message',
+    reportId: 'baseplate-report-content',
+    filenamePrefix: 'AISC-Base-Plate-Report'
 });
 initializeApp({
     inputIds: basePlateInputIds,

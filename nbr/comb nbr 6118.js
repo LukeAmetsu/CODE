@@ -1,3 +1,5 @@
+// comb nbr 6118.js
+console.log('comb nbr 6118.js loaded');
 // --- 1. CONFIGURAÇÕES E DADOS BASE (NBR 8681 e 6118) ---
 // This section defines the core coefficients and load types according to Brazilian standards.
 const LOAD_TYPES = {
@@ -21,7 +23,9 @@ initializeApp({
         resultsContainerId: 'report-output',
         buttonId: 'generate-report-btn', // Corrected button ID
         validationRuleKey: 'nbr_combos', // Added for consistency
-        feedbackElId: 'feedback-message'
+        feedbackElId: 'feedback-message',
+        reportId: 'nbr-report-content',
+        filenamePrefix: 'NBR-Combinations-Report'
     }),
     onReady: () => {
         const loadsContainer = document.getElementById('loads-container');

@@ -1,3 +1,5 @@
+// nbr 6118 concreto.js
+console.log('nbr 6118 concreto.js loaded');
 const nbr6118InputIds = [
     'fck', 'fyk', 'bw', 'h', 'c', 'num_barras', 'diam_barra',
     'diam_estribo', 'pernas_estribo', 's_estribo', 'Msd', 'Vsd'
@@ -141,7 +143,9 @@ const handleRunNbrCheck = createCalculationHandler({
     calculatorFunction: nbr6118Calculator.calculate,
     renderFunction: renderNbrResults,
     resultsContainerId: 'results-container',
-    buttonId: 'run-check-btn'
+    buttonId: 'run-check-btn',
+    reportId: 'concrete-report-content',
+    filenamePrefix: 'NBR-6118-Concrete-Report'
 });
 
 initializeApp({
