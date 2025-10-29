@@ -1336,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById(id)?.addEventListener('input', debouncedSave);
     });
 
-    const handleRunCheck = createCalculationHandler({
+    const handleRunCheckGlobal = createCalculationHandler({
         gatherInputsFunction: gatherAllInputs,
         storageKey: 'prestressed-beam-inputs-v2',
         validationRuleKey: 'prestressed-beam-inputs-v2', // This key is used for validation and report naming

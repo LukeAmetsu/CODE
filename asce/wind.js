@@ -1414,6 +1414,241 @@ function validateWindInputs(inputs) {
     return { errors, warnings };
 }
 
+/**
+ * Renders all the wind results into a structured report using ReportBuilder.
+ * @param {object} results - The complete results object from the calculator.
+ * @param {object} inputs - The user inputs object.
+ */
+function renderWindResults(results, inputs) {
+    const { inputs: calcInputs, intermediate, directional_results, candc, warnings, mwfrs_method, envelope_results, heightVaryingResults_L, torsional_case, parapet_results, overhang_results, rooftop_results } = results;
+    const { unit_system, design_method, structure_type } = inputs;
+
+    const units = {
+        v_unit: unit_system === 'imperial' ? 'mph' : 'm/s',
+        h_unit: unit_system === 'imperial' ? 'ft' : 'm',
+        p_unit: unit_system === 'imperial' ? 'psf' : 'Pa',
+        f_unit: unit_system === 'imperial' ? 'lb' : 'N',
+        m_unit: unit_system === 'imperial' ? 'lb-ft' : 'N-m'
+    };
+
+    const report = new ReportBuilder({
+        reportId: 'wind-report-content',
+        title: 'Wind Load Calculation Report',
+        actionButtons: [{ id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-green-600 text-white hover:bg-green-700' }],
+        warnings: warnings
+    });
+
+    // --- Section 1: Design Parameters ---
+    report.addSection('Design Parameters', renderDesignParameters(calcInputs, intermediate, units), 'wind-params-section');
+
+    // --- Section 2: Calculation Breakdown ---
+    report.addSection('Calculation Breakdown', renderCalculationBreakdown(results, units), 'wind-breakdown-section');
+
+    // --- Section 3: MWFRS Results (for buildings) ---
+    if (directional_results) {
+        const mwfrsContent = renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_method, units);
+        report.addSection(`MWFRS Pressures (${mwfrs_method})`, mwfrsContent, 'mwfrs-section');
+    } else if (envelope_results && envelope_results.applicable) {
+        const envelopeContent = `<div class="copy-content">${renderEnvelopeProcedureTable(envelope_results, inputs, units)}</div>`;
+        report.addSection(`MWFRS Pressures (Envelope Procedure)`, envelopeContent, 'mwfrs-envelope-section');
+    }
+
+    // --- Section 4: Height-Varying Pressures ---
+    if (heightVaryingResults_L) {
+        const leeward_pressure = directional_results?.perp_to_L?.find(r => r.surface.includes('Leeward'))?.p_pos || 0;
+        const heightVaryingContent = renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure, inputs, units);
+        report.addSection('Height-Varying Windward Pressure', heightVaryingContent, 'height-varying-section');
+    }
+
+    // --- Section 5: C&C Results ---
+    if (candc && candc.applicable) {
+        const candcContent = `<div class="copy-content">
+            ${generateCandCDiagram(inputs, candc)}
+            ${renderCandCTable(candc, inputs, intermediate, units)}
+        </div>`;
+        report.addSection(`Components & Cladding Pressures (${candc.ref})`, candcContent, 'candc-section');
+    }
+
+    // --- Section 6: Other Structure Results (Signs, Chimneys, etc.) ---
+    if (results.is_open_sign || results.is_solid_sign || results.is_chimney || results.is_truss_tower) {
+        // The breakdown section already contains the primary result for these simple cases.
+        // This space can be used for additional details if needed in the future.
+    }
+
+    // --- Section 7: Special Cases (Parapets, Overhangs, Rooftop Equipment) ---
+    if (parapet_results && parapet_results.applicable) {
+        const parapetContent = `<div class="copy-content">${renderSpecialCaseTable(parapet_results.pressures, 'Parapet Pressures', inputs, units)}</div>`;
+        report.addSection('Parapet Pressures', parapetContent, 'parapet-section');
+    }
+    if (overhang_results && overhang_results.applicable) {
+        const overhangContent = `<div class="copy-content">${renderSpecialCaseTable(overhang_results.pressure, 'Overhang Pressures', inputs, units)}</div>`;
+        report.addSection('Roof Overhang Pressures', overhangContent, 'overhang-section');
+    }
+    if (rooftop_results && rooftop_results.applicable) {
+        const rooftopContent = `<div class="copy-content">${renderSpecialCaseTable(rooftop_results.pressures, `Rooftop ${rooftop_results.type} Pressures`, inputs, units, rooftop_results.ref, { GCrh: rooftop_results.GCrh, GCrv: rooftop_results.GCrv })}</div>`;
+        report.addSection('Rooftop Equipment Pressures', rooftopContent, 'rooftop-section');
+    }
+    
+    // --- Section 8: Torsional Moment ---
+    if (torsional_case) {
+        const torsionalContent = `<div class="copy-content">${renderTorsionalCaseTable(torsional_case, units)}</div>`;
+        report.addSection('Torsional Moment Cases (MWFRS)', torsionalContent, 'torsional-section');
+    }
+
+
+    // --- Final Rendering ---
+    report.render('results-container');
+
+    // --- Post-Render Actions (Charts, Event Listeners) ---
+    // if (directional_results?.roofPressureDist_L) {
+    //     renderRoofPressureChart('roofChartL', directional_results.roofPressureDist_L, inputs.building_length_L, design_method, units);
+    // }
+    // if (directional_results?.roofPressureDist_B) {
+    //     renderRoofPressureChart('roofChartB', directional_results.roofPressureDist_B, inputs.building_width_B, design_method, units);
+    // }
+}
+
+/**
+ * Renders a generic table for special cases like parapets, overhangs, and rooftop equipment.
+ * @param {object} pressures - The pressure data object.
+ * @param {string} title - The title for the table caption.
+ * @param {object} inputs - The user inputs.
+ * @param {object} units - The units object.
+ * @param {string} [ref] - Optional reference string.
+ * @param {object} [coeffs] - Optional object with extra coefficients (e.g., { GCrh, GCrv }).
+ * @returns {string} The HTML string for the table.
+ */
+function renderSpecialCaseTable(pressures, title, inputs, units, ref = '', coeffs = {}) {
+    const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
+    let extraHeaders = '';
+    if (coeffs.GCrh !== undefined) extraHeaders += '<th>GC_rh</th>';
+    if (coeffs.GCrv !== undefined) extraHeaders += '<th>GC_rv</th>';
+
+    let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title} ${ref ? `<span class='ref'>[${ref}]</span>` : ''}</caption>
+        <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
+            <th>Surface/Case</th>
+            ${extraHeaders}
+            <th>Design Pressure (${inputs.design_method}) [${units.p_unit}]</th>
+        </tr></thead>
+        <tbody class="dark:text-gray-300 text-center">`;
+
+    Object.entries(pressures).forEach(([name, data]) => {
+        let extraCells = '';
+        if (coeffs.GCrh !== undefined) extraCells += `<td>${name.includes('Horizontal') ? safeToFixed(coeffs.GCrh, 2) : 'N/A'}</td>`;
+        if (coeffs.GCrv !== undefined) extraCells += `<td>${name.includes('Vertical') ? safeToFixed(coeffs.GCrv, 2) : 'N/A'}</td>`;
+
+        tableHtml += `
+            <tr>
+                <td>${name}</td>
+                ${extraCells}
+                <td>${safeToFixed(data.pressure * factor, 2)}</td>
+            </tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
+}
+
+/**
+ * Renders the table for torsional moment cases.
+ * @param {object} torsional_case - The torsional case results.
+ * @param {object} units - The units object.
+ * @returns {string} The HTML string for the table.
+ */
+function renderTorsionalCaseTable(torsional_case, units) {
+    let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Torsional Moment Cases</caption>
+        <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
+            <th>Case</th>
+            <th>Torsional Moment (M_t) [${units.m_unit}]</th>
+            <th>Notes</th>
+        </tr></thead>
+        <tbody class="dark:text-gray-300 text-center">`;
+
+    Object.entries(torsional_case).forEach(([caseName, data]) => {
+        tableHtml += `
+            <tr>
+                <td>${caseName.replace('perp_to_L', 'Wind ⟂ to L').replace('perp_to_B', 'Wind ⟂ to B')}</td>
+                <td>${safeToFixed(data.Mt, 2)}</td>
+                <td>${data.note}</td>
+            </tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
+}
+
+/**
+ * Renders the table for the Envelope Procedure.
+ * @param {object} envelope_results - The envelope procedure results.
+ * @param {object} inputs - The user inputs.
+ * @param {object} units - The units object.
+ * @returns {string} The HTML string for the table.
+ */
+function renderEnvelopeProcedureTable(envelope_results, inputs, units) {
+    if (!envelope_results.applicable) {
+        return `<p class="text-center text-red-500">${envelope_results.note}</p>`;
+    }
+
+    const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
+    let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${envelope_results.ref}</caption>
+        <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
+            <th>Zone</th>
+            <th>GC_pf</th>
+            <th>Net Pressure (+GCpi) [${units.p_unit}]</th>
+            <th>Net Pressure (-GCpi) [${units.p_unit}]</th>
+        </tr></thead>
+        <tbody class="dark:text-gray-300 text-center">`;
+
+    Object.entries(envelope_results.pressures).forEach(([zone, data]) => {
+        tableHtml += `
+            <tr>
+                <td>${zone}</td>
+                <td>${safeToFixed(data.gcpf, 2)}</td>
+                <td>${safeToFixed(data.p_net * factor, 2)}</td>
+                <td>${safeToFixed(data.p_net_uplift * factor, 2)}</td>
+            </tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
+}
+
+/**
+ * Renders the table for Components and Cladding pressures.
+ * @param {object} candc - The C&C results object.
+ * @param {object} inputs - The user inputs.
+ * @param {object} intermediate - The intermediate calculation values.
+ * @param {object} units - The units object.
+ * @returns {string} The HTML string for the table.
+ */
+function renderCandCTable(candc, inputs, intermediate, units) {
+    const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
+    let tableHtml = `<table class="w-full mt-4 border-collapse">
+        <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
+            <th>Zone</th>
+            <th>GC_p (+)</th>
+            <th>GC_p (-)</th>
+            <th>Positive Pressure [${units.p_unit}]</th>
+            <th>Negative Pressure [${units.p_unit}]</th>
+        </tr></thead>
+        <tbody class="dark:text-gray-300 text-center">`;
+
+    Object.entries(candc.pressures).forEach(([zone, data]) => {
+        tableHtml += `
+            <tr>
+                <td>${zone}</td>
+                <td>${safeToFixed(data.gcp_pos, 2)}</td>
+                <td>${safeToFixed(data.gcp_neg, 2)}</td>
+                <td>${safeToFixed(data.p_pos * factor, 2)}</td>
+                <td>${safeToFixed(data.p_neg * factor, 2)}</td>
+            </tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
+}
+
+
 const handleRunWindCheck = createCalculationHandler({
     inputIds: windInputIds,
     storageKey: 'wind-calculator-inputs',
@@ -1423,7 +1658,9 @@ const handleRunWindCheck = createCalculationHandler({
     renderFunction: renderWindResults,
     resultsContainerId: 'results-container',
     feedbackElId: 'feedback-message',
-    buttonId: 'run-calculation-btn'
+    buttonId: 'run-calculation-btn',
+    reportId: 'wind-report-content',
+    filenamePrefix: 'Wind-Load-Report'
 });
 
 function renderRoofPressureChart(canvasId, pressureData, building_dimension, design_method, units) {
@@ -2341,17 +2578,6 @@ function sendWindToCombos(results) {
 // =================================================================================
 //  UI INJECTION & INITIALIZATION
 // =================================================================================
-const handleRunWindCheck = createCalculationHandler({
-    inputIds: windInputIds,
-    storageKey: 'wind-calculator-inputs',
-    validationRuleKey: 'wind',
-    validatorFunction: validateWindInputs,
-    calculatorFunction: windLoadCalculator.run,
-    renderFunction: renderWindResults,
-    resultsContainerId: 'results-container',
-    feedbackElId: 'feedback-message',
-    buttonId: 'run-calculation-btn'
-});
 
 initializeApp({ // pageKey and pageTitle are now found automatically
     inputIds: windInputIds,
