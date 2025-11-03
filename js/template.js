@@ -92,7 +92,8 @@ function injectFooter(options) {
         <footer class="text-center mt-12 py-6 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 print-hidden">
             <p>&copy; ${new Date().getFullYear()} Engineering Calculators. All Rights Reserved.</p>
             <div class="mt-2">
-                <a href="${pathPrefix}index.html" class="text-blue-600 hover:underline dark:text-blue-400">Back to Hub</a>
+                <a href="${pathPrefix}index.html" class="text-blue-600 hover:underline dark:text-blue-400" data-i18n="back_to_hub">Back to Hub</a>
+                <span class="mx-2">|</span> <a href="${pathPrefix}about.html" class="text-blue-600 hover:underline dark:text-blue-400" data-i18n="about">About</a>
             </div>
             <p class="text-xs mt-4">
                 Disclaimer: These tools are for preliminary design and educational purposes only. Always verify results with a licensed professional engineer and the latest code standards.

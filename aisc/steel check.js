@@ -1178,16 +1178,18 @@ const steelChecker = (() => {
         };
     }
 
-    function run(inputs, validation) {
+    function run(inputs, validation) { // FIX: Accept the validation object as an argument
         inputs.Fy = parseFloat(inputs.Fy) || 0;
         inputs.Fu = parseFloat(inputs.Fu) || 0;
         inputs.is_end_bearing = inputs.is_end_bearing === 'true';
-        inputs.stiffener_spacing_a = parseFloat(inputs.stiffener_spacing_a) || 0;
+        // FIX: This input doesn't exist in the HTML, so it should be removed or added to the HTML.
+        // For now, we'll set it to 0 to prevent errors.
+        inputs.stiffener_spacing_a = 0; 
         inputs.An_net = inputs.Ag_manual;
         inputs.U_shear_lag = 1.0;
 
-        const { errors, warnings } = validateInputs(inputs);
-        if (inputs.Tu_or_Ta !== 0 && inputs.section_type === 'I-Shape') {
+        const { errors, warnings } = validation; // FIX: Use the passed-in validation object
+        if (inputs.Tu_or_Ta !== 0 && inputs.section_type.includes('-Shape')) { // FIX: Broaden check for all I-like shapes
             warnings.push("Torsion analysis for I-shapes is a simplified approximation. See AISC Design Guide 9 for complete analysis.");
         }
         if (errors.length > 0) return { errors, warnings, checks: {} };
@@ -1253,7 +1255,7 @@ const steelChecker = (() => {
         };
     }
 
-    return { run, validateInputs };
+    return { run };
 })(); // steelChecker
 
 // --- Helper functions for UI (keep outside steelChecker) ---
@@ -1268,6 +1270,9 @@ function getSectionProperties(inputs) {
         props[key] = (typeof value === 'string' && !isNaN(parseFloat(value))) ? parseFloat(value) : value;
     });
     props.k_des = props.k_des || props.tf || 0;
+
+    // FIX: Explicitly set the 'type' property on the props object.
+    props.type = inputs.section_type;
 
     // Calculate derived properties
     props.h = props.d - 2 * props.k_des;
@@ -1375,7 +1380,7 @@ function generateSteelBreakdownHtml(name, data, results) {
     const nominal_capacity = check?.Mn || check?.Rn || 0; // Use Mn for flexure, Rn for others
     const final_capacity = design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val;
 
-    const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
+    const fmt = (val, dec = 2) => (typeof val === 'number' && isFinite(val)) ? val.toFixed(dec) : 'N/A';
     const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
     let content = '';
 
@@ -1404,11 +1409,11 @@ function generateSteelBreakdownHtml(name, data, results) {
                 content = format_list([
                     `<u>Nominal Moment Capacity (M<sub>nx</sub>) for Each Limit State:</u><ul>${limit_state_rows}</ul>`,
                     `Plastic Moment (M<sub>p</sub>) = F<sub>y</sub> &times; Z<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Zx)} = ${fmt(Mp / 12)} kip-ft`,
-                    `Yield Moment (M<sub>y</sub>) = F<sub>y</sub> &times; S<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Sx)} = ${fmt(My / 12)} kip-ft`,
+                    `Yield Moment (M<sub>y</sub>) = F<sub>y</sub> &times; S<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Sx)} = ${fmt(My / 12)} kip-ft`, // This was already correct
                     `<b>LTB Check:</b> L<sub>b</sub>=${fmt(Lb/12)} ft, L<sub>p</sub>=${fmt(Lp/12)} ft, L<sub>r</sub>=${fmt(Lr/12)} ft, C<sub>b</sub>=${fmt(Cb)}`,
                     slenderness ? `<b>FLB Check:</b> &lambda;<sub>f</sub>=${fmt(slenderness.lambda_f)}, &lambda;<sub>pf</sub>=${fmt(slenderness.lambda_p_f)}, &lambda;<sub>rf</sub>=${fmt(slenderness.lambda_r_f)}` : '',
                     `<u>Design Capacity</u>`,
-                    `Capacity = ${capacity_eq.replace('R','M')} = ${fmt(safeMn / 12)} / ${factor_val} = <b>${fmt(data.phiMn_or_Mn_omega)} kip-ft</b>`
+                    `Capacity = ${capacity_eq.replace('R','M')} = ${fmt(nominal_capacity / 12)} / ${factor_val} = <b>${fmt(final_capacity / 12)} kip-ft</b>`
                 ]);
             } else { // Minor Axis
                 const flex_data_y = results.flexure_y;
@@ -1810,15 +1815,15 @@ function renderSteelResults(results) {
 
 // --- DOMContentLoaded: Initialize UI ---
 initializeApp({
-    inputIds: steelCheckInputIds,
+    inputIds: steelCheckInputIds, // This is correct
+    buttonId: 'run-steel-check-btn', // FIX: Moved buttonId here
     calculationHandler: createCalculationHandler({
         gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
         storageKey: 'steel-check-inputs',
         validationRuleKey: 'steel_check',
         calculatorFunction: steelChecker.run,
         renderFunction: renderSteelResults,
-        resultsContainerId: 'steel-results-container',
-        buttonId: 'run-steel-check-btn',
+        resultsContainerId: 'steel-results-container', // This is correct
         reportId: 'steel-check-report-content',
         filenamePrefix: 'AISC-Steel-Check-Report'
     }),

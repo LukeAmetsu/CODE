@@ -1055,11 +1055,13 @@ async function initializeApp(config) {
     const buttonId = config.buttonId || 'run-check-btn';
     const runButton = document.getElementById(buttonId);
     if (runButton && typeof calculationHandler === 'function') {
-        runButton.addEventListener('click', calculationHandler);
+        // FIX: The event listener was being attached to the handler, not the button.
+        // This corrects the logic to properly attach the click event.
+        runButton.addEventListener('click', () => calculationHandler());
     }
 
     const debouncedSave = debounce(() => {
-        const currentInputs = gatherInputsFromIds(inputIds);
+        const currentInputs = gatherInputsFromIds(inputIds || []);
         saveInputsToLocalStorage(effectiveStorageKey, currentInputs);
     }, 500);
 

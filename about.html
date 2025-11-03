@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="about_page_title">About - Engineering Calculator Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Immediate theme logic to prevent flash
+        (function() {
+            if (localStorage.getItem('theme') === 'dark' || 
+               (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script src="js/i18n.js" defer></script>
+    <script src="js/shared-utils.js" defer></script>
+    <script src="js/template.js" defer></script>
+    <script src="js/about.js" defer></script>
+</head>
+<body>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main>
+            <div class="form-section">
+                <h2 class="text-2xl font-bold mb-4" data-i18n="about_this_project">About This Project</h2>
+                <div class="space-y-4 text-[var(--color-text-secondary)]">
+                    <p>This project is a web-based collection of engineering calculators designed to provide quick and accurate results for common structural engineering tasks, based on US and Brazilian codes.</p>
+                    <p>The goal is to create a free, open-source, and easy-to-use tool for students and professionals. The calculators are intended for preliminary design and educational purposes.</p>
+                    <h3 class="text-xl font-semibold pt-4" data-i18n="disclaimer">Disclaimer</h3>
+                    <p>These tools are for preliminary design and educational purposes only. Always verify results with a licensed professional engineer and the latest code standards before use in any real-world application.</p>
+                </div>
+            </div>
+        </main>
+
+        <div id="footer-placeholder"></div>
+    </div>
+
+</body>
+</html>

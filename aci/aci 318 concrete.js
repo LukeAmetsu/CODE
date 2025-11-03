@@ -115,7 +115,7 @@ function renderAciResults(calc_results) {
 const handleRunAciCheck = createCalculationHandler({
     inputIds: aciInputIds,
     storageKey: 'aci-concrete-inputs',
-    validationRuleKey: 'aci_concrete', // FIX: Added the missing validationRuleKey
+    validationRuleKey: 'aci_concrete',
     calculatorFunction: aciCalculator.calculate,
     renderFunction: renderAciResults,
     resultsContainerId: 'results-container',

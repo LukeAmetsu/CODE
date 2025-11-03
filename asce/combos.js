@@ -17,8 +17,7 @@ const handleRunComboCheck = createCalculationHandler({
     inputIds: comboInputIds,
     storageKey: 'combo-calculator-inputs',
     validationRuleKey: 'combo',
-    calculatorFunction: (inputs) => {
-        const validation = validateInputs(inputs, validationRules.combo);
+    calculatorFunction: (inputs, validation) => { // The validation object is now correctly passed in from createCalculationHandler
         const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
         const scenarios = buildScenarios(inputs);
 

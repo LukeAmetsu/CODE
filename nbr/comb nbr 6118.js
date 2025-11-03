@@ -21,7 +21,7 @@ initializeApp({
         calculatorFunction: nbrComboCalculator.calculate,
         renderFunction: renderNbrComboResults,
         resultsContainerId: 'report-output',
-        buttonId: 'generate-report-btn', // Corrected button ID
+        buttonId: 'generate-report-btn',
         validationRuleKey: 'nbr_combos', // Added for consistency
         feedbackElId: 'feedback-message',
         reportId: 'nbr-report-content',

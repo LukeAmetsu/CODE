@@ -24,7 +24,7 @@ function debounce(func, wait) {
  */
 const inputManager = {
     /** List of standard input element IDs to gather. */
-    inputIds: [ // Removido num_cables e num_strands_per_cable
+    inputIds: [
         'design_code', 'unit_system', 'fck', 'age_at_prestress', 'Ap', 'Kperdas',
         'load_pp', 'load_perm', 'load_var', 'beam_length', 'beam_height', 'beam_coords', 'Ep',
         'humidity', 'fptk', 'mu', 'k', 'anchorage_slip', 'exposed_perimeter',
@@ -1400,20 +1400,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    const handleRunCheck = createCalculationHandler({
-        gatherInputsFunction: gatherAllInputs,
-        storageKey: 'prestressed-beam-inputs-v2',
-        validationRuleKey: 'prestressed-beam-inputs-v2',
-        calculatorFunction: (inputs) => concreteBeamCalculator.run(inputs),
-        renderFunction: renderResults,
-        resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
-    });
-
     initializeApp({
         // pageKey and pageTitle are now found automatically
         inputIds: allInputAndTextareaIds,
-        calculationHandler: handleRunCheck,
+        calculationHandler: createCalculationHandler({
+            gatherInputsFunction: gatherAllInputs,
+            storageKey: 'prestressed-beam-inputs-v2',
+            validationRuleKey: 'prestressed-beam-inputs-v2',
+            calculatorFunction: (inputs) => concreteBeamCalculator.run(inputs),
+            renderFunction: renderResults,
+            resultsContainerId: 'results-container',
+            buttonId: 'run-check-btn'
+        }),
         onReady: onAppReady
     });
 });

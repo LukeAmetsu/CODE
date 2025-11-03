@@ -762,7 +762,7 @@ function checkPlateCompression({ Ag, Fy, t, unbraced_length, k=0.65 }) {
 
 function checkBoltSlip({ db, faying_surface_class, num_fillers = 0, num_slip_planes, hole_type = 'standard' }) {
     // AISC 360-22 Section J3.8
-    const Tb = AISC_SPEC.getTb(db); // Minimum bolt pretension from Table J3.1
+    const Tb = AISC_SPEC.getTb(inputs.bolt_grade_wp, db); // Minimum bolt pretension from Table J3.1
     const mu = AISC_SPEC.getMu(faying_surface_class); // Mean slip coefficient from Table J3.5
     const Du = 1.13; // Multiplier that reflects the ratio of mean installed bolt pretension to the specified minimum
     const hf = (num_fillers === 1) ? 1.0 : (num_fillers > 1) ? 0.85 : 1.0; // Factor for fillers

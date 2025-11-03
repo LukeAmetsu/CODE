@@ -428,7 +428,7 @@ function draw3dBasePlateDiagram() {
     }
 }
 
-const basePlateInputIds = [ // FIX: Corrected variable name
+const basePlateInputIds = [
     'design_method', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu', 'anchor_bolt_grade', 'anchor_threads_included',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx',
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
@@ -487,7 +487,7 @@ const basePlateCalculator = (() => {
      * @param {object} inputs - The collected input values.
      * @returns {object} An object containing the geometry check results.
      */
-    function getBasePlateGeometryChecks(inputs) { // FIX: Corrected function name
+    function getBasePlateGeometryChecks(inputs) {
         const { anchor_bolt_diameter: db, bolt_spacing_N, bolt_spacing_B, bolt_type, concrete_edge_dist_ca1, concrete_edge_dist_ca2 } = inputs;
         const checks = {};
         const tolerance = 1e-9;
@@ -1142,38 +1142,6 @@ const basePlateCalculator = (() => {
         return { demand: f_max_weld, check: { Rn: design_strength_weld_per_in, phi: 1.0, omega: 1.0 }, details: weld_details };
     }
 
-    function checkColumnWebChecks(inputs, bearing_results) {
-        const { column_type, column_depth_d: d, column_flange_width_bf: bf, column_web_tw: tw, column_flange_tf: tf, base_plate_Fy: Fy, design_method } = inputs;
-        
-        // These checks only apply to Wide Flange sections under compression
-        if (column_type !== 'Wide Flange' || !bearing_results || bearing_results.details.Pu > 0) return {};
-        const f_p_max = bearing_results.details.f_p_max;
-
-        // These properties are not direct inputs, so we must approximate them.
-        const k_des = tf; // Approx. k distance
-        if (tw <= 0 || tf <= 0) return { error: "Approximated column thickness is zero." };
-        const checks = {};
-
-        // Web Local Yielding (AISC J10.2)
-        const R_wly_demand = f_p_max * bf * tf; // Force on the critical flange area
-        const Rn_wly = Fy * tw * (5 * k_des + bf);
-        checks['Column Web Local Yielding'] = {
-            demand: R_wly_demand,
-            check: { Rn: Rn_wly, phi: 1.0, omega: 1.5 },
-            details: { Rn_wly, k_des, tw, bf, Fy }
-        };
-
-        // Web Local Crippling (AISC J10.3)
-        const Rn_wlc = 0.80 * tw**2 * (1 + 3 * (bf / d) * (tw / tf)**1.5) * sqrt(29000 * Fy * tf / tw);
-        checks['Column Web Local Crippling'] = {
-            demand: R_wly_demand, // Same demand
-            check: { Rn: Rn_wlc, phi: 0.75, omega: 2.00 },
-            details: { Rn_wlc, tw, bf, d, tf, Fy }
-        };
-
-        return checks;
-    }
-
     function calculateEdgeDistances(inputs) {
         const { pedestal_N, num_bolts_N, bolt_spacing_N, pedestal_B, num_bolts_B, bolt_spacing_B } = inputs;
         // Edge distance along N dimension
@@ -1184,7 +1152,7 @@ const basePlateCalculator = (() => {
         const ca2 = (pedestal_B - bolt_group_width) / 2.0;
         return { ca1: ca1 >= 0 ? ca1 : 0, ca2: ca2 >= 0 ? ca2 : 0 };
     }
-    function run(inputs, validation) { // FIX: Accept the validation object as an argument
+    function run(inputs, validation) {
         // --- FIX: Call getBasePlateGeometryChecks ---
         // This function was defined but not called in the main run function.
         // It's now called to perform the ACI checks on every run.
@@ -1827,8 +1795,8 @@ const handleRunBasePlateCheck = createCalculationHandler({
     validationRuleKey: 'baseplate',
     validatorFunction: basePlateCalculator.validateBasePlateInputs,
     calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
-    renderFunction: renderResults,
-    buttonId: 'run-steel-check-btn',
+    renderFunction: renderResults, // This was already correct
+    buttonId: 'run-base-plate-check-btn', // FIX: Corrected the button ID to match the HTML
     feedbackElId: 'feedback-message',
     reportId: 'baseplate-report-content',
     filenamePrefix: 'AISC-Base-Plate-Report'

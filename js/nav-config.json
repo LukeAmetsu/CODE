@@ -28,6 +28,7 @@
                 { "key": "nbr-aco", "href": "nbr/nbr 8080 estruturas de aço.html", "textKey": "steel" },
                 { "key": "nbr-madeira", "href": "nbr/nbr 7190 madeira.html", "textKey": "wood" }
             ]
-        }
+        },
+        { "key": "about", "href": "about.html", "textKey": "about", "subNav": [] }
     ]
 }
