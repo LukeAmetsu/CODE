@@ -37,9 +37,10 @@ const aciCalculator = (() => {
         // --- Shear Calculation (ACI 318-19 Ch. 22) ---
         console.log('[ACI Calc] --- Shear Calculation ---');
         const Av = i.stirrup_legs * (BAR_AREAS[i.stirrup_size] || 0);
-        const Vc = 2 * Math.sqrt(i.fc) * i.b * d;
+        const fc_psi = i.fc < 1000 ? i.fc * 1000 : i.fc;
+        const Vc = 2 * Math.sqrt(fc_psi) * i.b * d;
         const Vs = (Av * i.fy * d) / i.stirrup_spacing;
-        const Vs_max = 8 * Math.sqrt(i.fc) * i.b * d;
+        const Vs_max = 8 * Math.sqrt(fc_psi) * i.b * d;
         const phi_v = 0.75;
         res.phiVn = phi_v * (Vc + Math.min(Vs, Vs_max));
         res.shear_details = { Vc, Vs, Vs_max, Av, phi_v };
