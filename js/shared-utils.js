@@ -261,6 +261,17 @@ function setLoadingState(isLoading, buttonId) {
 }
 
 /**
+ * Safely formats a number to a fixed number of decimal places, returning 'N/A' if the number is null, undefined, or not finite.
+ * @param {number | null | undefined} val - The number to format.
+ * @param {number} [digits=2] - The number of decimal places.
+ * @returns {string} The formatted number or 'N/A'.
+ */
+function safeToFixed(val, digits = 2) {
+    if (val === null || val === undefined || !isFinite(val)) return "N/A";
+    return val.toFixed(digits);
+}
+
+/**
  * Performs linear interpolation for a given value within a dataset.
  * This is commonly used for looking up values in normative tables.
  * @param {number} x - The point at which to evaluate the interpolated value.

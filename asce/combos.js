@@ -220,7 +220,7 @@ const comboStrategies = {
             '5b. D + 0.7E': [{ factor: 1.0, load: 'D' }, { factor: 0.7, load: 'E' }],
             '6a. D + 0.75L + 0.75(0.6W) + 0.75(Lr|S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.45, load: 'W' }, { factor: 0.75, maxOf: ['Lr', 'S', 'R'] }],
             '6b. D + 0.75L + 0.75(0.7E) + 0.75S': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.525, load: 'E' }, { factor: 0.75, load: 'S' }],
-            '7. 0.6D + 0.6W': [{ factor: 0.6, load: 'D' }, { factor: 0.6, load: 'W' }],
+            '7. 0.6D + 0.6W': [{ factor: 0.6, load: 'D' }, { factor: 0.6, load: 'W' }], // This is correct as 0.6 * (W_nom/0.6) = W_nom
             '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }]
         }
     },

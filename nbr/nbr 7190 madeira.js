@@ -6,6 +6,10 @@ const nbr7190InputIds = [
 
 const nbr7190Calculator = (() => {
     function calculate(inputs) {
+        console.log(`[nbr7190] Calculation triggered.`);
+        console.log(`[nbr7190] Gathering inputs...`, inputs);
+        console.log(`[nbr7190] Performing calculation...`);
+
         const i = { ...inputs };
         // Convert to base units (kN, cm)
         i.Msd = i.Msd * 100; // kN·m to kN·cm
@@ -36,6 +40,8 @@ const nbr7190Calculator = (() => {
         res.deformacao_imediata = (5 * w_d * L_cm ** 4) / (384 * (i.Ec0_ef / 10) * I); // Ec0_ef in kN/cm²
         res.limite_deformacao = L_cm / 350;
         res.deformacao_ratio = res.limite_deformacao > 0 ? res.deformacao_imediata / res.limite_deformacao : Infinity;
+
+        console.log(`[nbr7190] Calculation successful. Rendering results...`);
 
         return { inputs: i, results: res };
     }

@@ -4,17 +4,6 @@ console.log('wind.js loaded');
 // --- GLOBAL VARIABLES for state management ---
 let lastWindRunResults = null;
 
-/**
- * Safely formats a number to a fixed number of decimal places, returning 'N/A' if the number is null, undefined, or not finite.
- * @param {number | null | undefined} val - The number to format.
- * @param {number} [digits=2] - The number of decimal places.
- * @returns {string} The formatted number or 'N/A'.
- */
-function safeToFixed(val, digits = 2) { // Already correct, no changes needed.
-    if (val === null || val === undefined || !isFinite(val)) return "N/A";
-    return val.toFixed(digits);
-}
-
 function addRangeIndicators() {
     document.querySelectorAll('input[type="number"][min], input[type="number"][max]').forEach(input => {
         const min = input.min ? `Min: ${input.min}` : '';

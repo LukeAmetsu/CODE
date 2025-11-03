@@ -7,6 +7,10 @@ const rainInputIds = [
 
 const rainLoadCalculator = (() => {
     function run(inputs) {
+        console.log(`[rain] Calculation triggered.`);
+        console.log(`[rain] Gathering inputs...`, inputs);
+        console.log(`[rain] Performing calculation...`);
+
         // Use default values to prevent NaN errors if optional fields are empty
         const {
             rain_static_head: ds = 0,
@@ -58,6 +62,8 @@ const rainLoadCalculator = (() => {
 
         const R_nominal = (unit_system === 'imperial') ? 5.2 * (ds + dh) : 0.0098 * (ds + dh);
         const jurisdiction_note = (jurisdiction === "NYCBC 2022") ? "NYCBC 2022 adopts ASCE 7-16 for rain loads. Note: The hydraulic head (dh) must be based on the 100-year hourly rainfall rate of 4 in/hr as per the NYC Plumbing Code." : "";
+
+        console.log(`[rain] Calculation successful. Rendering results...`);
 
         return {
             inputs,

@@ -7,6 +7,10 @@ const nbr6118InputIds = [
 
 const nbr6118Calculator = (() => {
     function calculate(inputs) {
+        console.log(`[nbr6118] Calculation triggered.`);
+        console.log(`[nbr6118] Gathering inputs...`, inputs);
+        console.log(`[nbr6118] Performing calculation...`);
+
         const i = { ...inputs };
         // Convert to base units (kN, cm)
         i.Msd = i.Msd * 100; // kN·m to kN·cm
@@ -33,6 +37,8 @@ const nbr6118Calculator = (() => {
         const VRd2 = 0.27 * (1 - i.fck / 250) * fcd * i.bw * (0.9 * d);
         const VRd = Vc + Vsw;
         res.shear_details = { VRd, Vc, Vsw, VRd2 };
+
+        console.log(`[nbr6118] Calculation successful. Rendering results...`);
 
         return { inputs: i, results: res };
     }

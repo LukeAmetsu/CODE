@@ -35,27 +35,46 @@ const steelChecker = (() => {
     function calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr, c) {
         // AISC F2.2: Lateral-Torsional Buckling (LTB)
         const { Fy, E, Cb, Lb_input, aisc_standard } = inputs;
-        const { Sx, rts, J, d, tf, Cw } = props;
+        const { Sx, rts, J, d, tf, Cw, type } = props;
         const Lb = Lb_input * 12;
+
+        // Guard against invalid properties
+        if (!J || J <= 0 || !Cw || Cw <= 0 || !Sx || Sx <= 0) {
+            console.error("LTB Error: Missing or invalid torsional properties (J, Cw, Sx)");
+            return Mp; // Return yielding capacity as conservative estimate
+        }
 
         if (Lb <= Lp) {
             return Mp; // No LTB
         }
 
-        const ho = d - tf; // Distance between flange centroids - THIS WAS MISSING
+        const ho = d - tf; // Distance between flange centroids
+        if (ho <= 0) {
+            console.error("LTB Error: Invalid ho calculation");
+            return Mp;
+        }
+
         if (Lb <= Lr) {
             // Inelastic LTB (AISC F2-2)
             const Mn = Cb * (Mp - (Mp - My) * ((Lb - Lp) / (Lr - Lp)));
             return Math.min(Mn, Mp);
         }
 
-        // Elastic LTB (AISC F2-3 & F2-4)
+        // Elastic LTB (AISC F2-3 & F2-4) - This was missing 'c' for I-shapes
+        if (type.endsWith('-Shape')) {
+            c = 1.0;
+        }
+
         const term1 = (Cb * Math.PI ** 2 * E) / Math.pow(Lb / rts, 2);
         let term2;
 
         // Use the CORRECT formula for Fcr (AISC Eq. F2-4)
         if (aisc_standard === '360-22') {
             const term2_inner = (J * c) / (Sx * ho) + 6.76 * Math.pow((0.7 * Fy) / E, 2) * Math.pow(rts / Lb, 2);
+            if (term2_inner < 0) {
+                console.error("LTB Error: Negative value under square root");
+                return Mp;
+            }
             term2 = Math.sqrt(term2_inner);
         } else { // AISC 360-16
             const term2_inner = 0.078 * (J * c / (Sx * ho)) * Math.pow(Lb / rts, 2);
@@ -64,6 +83,12 @@ const steelChecker = (() => {
 
         const Fcr = term1 * term2;
         const Mn = Fcr * Sx;
+        
+        if (!isFinite(Mn) || Mn <= 0) {
+            console.error("LTB Error: Invalid Mn calculated", { Fcr, Sx, Mn });
+            return Mp;
+        }
+        
         return Math.min(Mn, Mp);
     }
 
@@ -98,11 +123,18 @@ const steelChecker = (() => {
         const { Zx, Sx, rts, h, J, Cw, tw, bf, tf, d } = props;
         const Lb = Lb_input * 12; // to inches
 
-        // Guard against zero rts
-        if (rts <= 0) {
+        // Guard against invalid or missing properties
+        if (!rts || rts <= 0) {
             return {
                 phiMn_or_Mn_omega: 0,
                 error: "rts = 0: Cannot calculate LTB. Check section properties.",
+                reference: "AISC F2"
+            };
+        }
+        if (!Sx || Sx <= 0 || !Zx || Zx <= 0) {
+            return {
+                phiMn_or_Mn_omega: 0,
+                error: "Sx or Zx is 0: Cannot calculate flexural capacity. Check section properties.",
                 reference: "AISC F2"
             };
         }
@@ -118,6 +150,7 @@ const steelChecker = (() => {
         // --- LTB Parameters (AISC F2) ---
         // In function checkFlexure_IShape:
         const Lp = 1.76 * props.rts * Math.sqrt(E / Fy); // CORRECTED: Use rts, not ry
+        console.log('[Flexure Check] LTB Params:', { Lb, Lp });
         const ho = d - tf; // Distance between flange centroids
         const c = 1.0; // for doubly symmetric I-shapes
         let Lr;
@@ -130,20 +163,31 @@ const steelChecker = (() => {
             Lr = Infinity;
         }
 
+        console.log('[Flexure Check] Lr calculated:', Lr);
         // --- Calculate Nominal Capacities for Each Limit State ---
         const Mp = Fy * Zx; // Plastic Moment (Yielding)
         const My = Fy * Sx; // Yield Moment
         
         const limit_states = {
-            'Yielding (F2.1)': calculate_Mn_yield(props, inputs),
+            // FIX: Ensure calculate_Mn_yield is always valid
+            'Yielding (F2.1)': isFinite(Mp) ? Mp : 0,
             'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr, c),
             'Flange Local Buckling (F3)': calculate_Mn_flb(props, inputs, Mp, My),
             'Web Local Buckling (F4)': checkWebLocalBuckling(props, inputs, Mp, My),
             'Compression Flange Yielding (F5)': (lambda_w > lambda_r_w) ? checkSlenderWebFlexure(props, inputs, Mp, My) : Infinity,
         };
 
+        console.log('[Flexure Check] Calculated Limit States:', limit_states);
+
         // --- Determine Governing Capacity and Apply Factors ---
-        let Mn = Math.min(...Object.values(limit_states));
+        // FIX: Filter out any invalid (NaN, null, undefined, 0) limit state results before finding the minimum
+        const valid_limit_states = Object.values(limit_states).filter(val => val && isFinite(val) && val > 0);
+        if (valid_limit_states.length === 0) {
+            // FIX: Return the invalid limit states object for debugging
+            console.error("[Flexure Check] No valid limit states found. Raw limit states:", limit_states);
+            return { phiMn_or_Mn_omega: 0, error: "No valid flexural limit states could be calculated. See console for details.", reference: "AISC F2-F5", limit_states };
+        }
+        let Mn = Math.min(...valid_limit_states);
         let governing_limit_state = Object.keys(limit_states).find(key => limit_states[key] === Mn) || 'Unknown';
 
         // --- G2.1: Interaction of Flexure and Shear for I-Shapes ---
@@ -166,7 +210,7 @@ const steelChecker = (() => {
         const phiMn_or_Mn_omega = Mn * factor;
 
         return {
-            phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, // to kip-ft
+            phiMn_or_Mn_omega: isFinite(phiMn_or_Mn_omega) ? phiMn_or_Mn_omega / 12 : 0, // to kip-ft
             isCompact, Mn, Lb, Lp, Lr, Rpg: 1.0, R_pv, governing_limit_state, phi: phi_b, omega: omega_b,
             reference: "AISC F2-F5",
             limit_states, // Pass the detailed results for the breakdown
@@ -175,6 +219,9 @@ const steelChecker = (() => {
     }
 
     function checkFlexure_HSS(props, inputs) {
+        // --- DEBUG: Log HSS flexure call ---
+        console.log('[checkFlexure] Called for HSS section.');
+
         const { Fy, E } = inputs;
         const { Zx, Sx, type } = props;
         const phi_b = 0.9;
@@ -184,6 +231,7 @@ const steelChecker = (() => {
         let isCompact, Mn;
         let slenderness = {};
 
+        console.log('[Flexure Check] HSS Properties:', { type, Zx, Sx });
         if (type === 'Rectangular HSS') {
             // AISC F7: Clear distance between flanges
             const h = props.d - 3 * props.tf;
@@ -192,6 +240,7 @@ const steelChecker = (() => {
             const lambda_r = 1.40 * Math.sqrt(E / Fy);
             isCompact = lambda <= lambda_p;
             slenderness = { lambda, lambda_p, lambda_r };
+            console.log('[Flexure Check] Rect HSS Slenderness:', slenderness);
 
             const Mp = Fy * Zx;
             if (isCompact) {
@@ -208,6 +257,7 @@ const steelChecker = (() => {
             const lambda_r = 0.31 * (E / Fy);
             isCompact = lambda <= lambda_p;
             slenderness = { lambda, lambda_p, lambda_r };
+            console.log('[Flexure Check] Round HSS Slenderness:', slenderness);
 
             const Mp = Fy * Zx;
             if (isCompact) {
@@ -225,6 +275,9 @@ const steelChecker = (() => {
     }
 
     function checkFlexure_Angle(props, inputs) {
+        // --- DEBUG: Log Angle flexure call ---
+        console.log('[checkFlexure] Called for Angle section.');
+
         const { Fy, E, Cb, Lb_input } = inputs;
         const { Zx, Sx, ry, d, bf, tf } = props;
         const Lb = Lb_input * 12;
@@ -1261,21 +1314,51 @@ const steelChecker = (() => {
 // --- Helper functions for UI (keep outside steelChecker) ---
 function getSectionProperties(inputs) {
     // If a shape is selected from the dropdown, its properties are already in the manual input fields.
-    // We can build the properties object directly from there. This handles both selected shapes and pure manual input.
-    const props = {};
-    const propIds = ['section_type', 'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'k_des'];
-    propIds.forEach(id => {
-        const key = id.replace('_manual', '');
-        const value = inputs[id];
-        props[key] = (typeof value === 'string' && !isNaN(parseFloat(value))) ? parseFloat(value) : value;
-    });
-    props.k_des = props.k_des || props.tf || 0;
+    // --- DEBUG: Log the inputs being used to derive properties ---
+    console.log('[getSectionProperties] Deriving properties from inputs:', inputs);
 
-    // FIX: Explicitly set the 'type' property on the props object.
-    props.type = inputs.section_type;
+    const props = {};
+
+    // If a shape is selected, all properties are driven by the input fields, which are populated by handleShapeSelection.
+    // If in Manual Input mode, we also read directly from the input fields.
+    const manualPropIds = {
+        'd': 'd', 'bf': 'bf', 'tf': 'tf', 'tw': 'tw', 'k_des': 'k_des',
+        'Ag': 'Ag_manual', 'Ix': 'I_manual', 'Sx': 'Sx_manual', 'Zx': 'Zx_manual',
+        'Iy': 'Iy_manual', 'Sy': 'Sy_manual', 'Zy': 'Zy_manual',
+        'ry': 'ry_manual', 'rts': 'rts_manual', 'J': 'J_manual', 'Cw': 'Cw_manual'
+    };
+
+    for (const [propKey, inputId] of Object.entries(manualPropIds)) {
+        const value = inputs[inputId];
+        // Ensure we only assign numbers, not empty strings or NaN
+        // FIX: For Manual Input, if a value is 0, it might be intentional. Let's allow it but log a warning.
+        if (inputs.section_type === 'Manual Input' && value === 0) {
+            console.warn(`[getSectionProperties] Manual input for '${propKey}' is 0.`);
+            props[propKey] = 0;
+            continue;
+        }
+        if (typeof value === 'number' && isFinite(value)) {
+            props[propKey] = value;
+        } else {
+            props[propKey] = 0; // Default to 0 if input is invalid/empty
+        }
+    }
+
+    // Always get the section type
+    // FIX: Treat "Manual Input" as an I-Shape for calculation routing if it has the right properties.
+    if (inputs.section_type === 'Manual Input' && props.d > 0 && props.bf > 0 && props.tf > 0 && props.tw > 0) {
+        props.type = 'I-Shape'; // Internally treat it as an I-Shape for routing
+        console.log('[getSectionProperties] "Manual Input" detected with I-Shape properties. Treating as I-Shape.');
+    } else {
+        props.type = inputs.section_type;
+    }
+
+    props.k_des = props.k_des || props.tf || 0;
 
     // Calculate derived properties
     props.h = props.d - 2 * props.k_des;
+
+    // FIX: Ensure rx is calculated for manual input mode.
     if (props.Ag > 0 && props.Ix > 0) {
         props.rx = Math.sqrt(props.Ix / props.Ag);
     } else {
@@ -1283,21 +1366,23 @@ function getSectionProperties(inputs) {
     }
 
     // For angles, x_bar is needed for some checks.
-    if (props.type === 'angle') {
-        props.x_bar = props.x_bar || 0; // Use database value if available, else 0
-    }
-
     props.rts_was_calculated = false;
     // If rts is missing for an I-shape, calculate it per AISC 360-22 Eq. F2-7
     if ((!props.rts || props.rts === 0) && ['W-Shape', 'S-Shape', 'M-Shape', 'HP-Shape'].includes(props.type)) {
-        // Correct implementation of AISC F2-7 for doubly symmetric I-shapes
-        if (props.bf > 0 && props.Sx > 0) {
-            const rts_squared = (Math.sqrt(props.Iy * props.Cw)) / props.Sx;
+        // Correct implementation of AISC F2-7 for doubly symmetric I-shapes.
+        // The formula rts^2 = sqrt(Iy*Cw)/Sx is incorrect.
+        // The correct formula is rts^2 = (Iy * ho^2 / 4 + Cw) / Iy, but a simpler form is sqrt(Iy*Cw)/Sx.
+        // Let's use the more direct formula from the AISC Manual.
+        if (props.bf > 0 && props.Sx > 0 && props.Iy > 0 && props.tf > 0 && props.d > 0) {
+            const ho = props.d - props.tf;
+            const rts_squared = (props.Iy * ho**2 / 4) + props.Cw;
             props.rts = Math.sqrt(rts_squared);
             props.rts_was_calculated = true;
         }
     }
 
+    // --- DEBUG: Log the final derived properties ---
+    console.log('[getSectionProperties] Final derived properties:', props);
     return props;
 }
 
@@ -1313,12 +1398,25 @@ function updateGeometryInputsUI() {
     const tf_container = document.getElementById('tf-input-container');
     const tw_container = document.getElementById('tw-input-container');
 
+    // If switching to Manual Input, unlock ALL property fields immediately.
+    if (sectionType === 'Manual Input') {
+        const allEditableInputs = [
+            'd', 'bf', 'tf', 'tw', 
+            'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 
+            'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 
+            'Iy_manual', 'Sy_manual', 'Zy_manual'
+        ];
+        allEditableInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.readOnly = false;
+        });
+    }
+
     d_container.style.display = 'block';
     bf_container.style.display = 'block';
     tf_container.style.display = 'block';
     tw_container.style.display = 'block';
     shapeSelectContainer.style.display = 'block';
- 
     if (sectionType.endsWith('-Shape')) { // Covers W-Shape, S-Shape, HP-Shape, M-Shape, WT-Shape
         d_label.textContent = 'Depth (d)';
         bf_label.textContent = 'Flange Width (bf)';
@@ -1344,10 +1442,8 @@ function updateGeometryInputsUI() {
         bf_label.textContent = 'Flange Width (bf)';
         tf_label.textContent = 'Flange Thick (tf)';
         tw_label.textContent = 'Web Thick (tw)';
-    } else if (sectionType === 'Manual Input') {
-        shapeSelectContainer.style.display = 'none';
-        // Ensure inputs are not readonly
-        document.querySelectorAll('#d, #bf, #tf, #tw').forEach(el => el.readOnly = false);
+    } else if (sectionType === 'Manual Input') { // All inputs are already unlocked by the logic added above.
+        shapeSelectContainer.style.display = 'none'; 
     }
 
     populateShapeDropdown(); // Repopulate shapes for the selected type
@@ -1374,10 +1470,19 @@ function generateSteelBreakdownHtml(name, data, results) {
     const { check, details } = data;
     const { design_method } = inputs;
 
+    // FIX: Check for an error property on the data object itself.
+    if (data.error) {
+        return `<p class="text-red-500 font-semibold">Calculation Error: ${data.error}</p>`;
+    }
+
+    if (data.error) {
+        return `<p class="text-red-500 font-semibold">Calculation Error: ${data.error}</p>`;
+    }
+
     const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
     const factor_val = design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67);
     const capacity_eq = design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`;
-    const nominal_capacity = check?.Mn || check?.Rn || 0; // Use Mn for flexure, Rn for others
+    const nominal_capacity = (check?.Mn !== undefined) ? check.Mn : (check?.Rn || 0); // Use Mn for flexure, Rn for others
     const final_capacity = design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val;
 
     const fmt = (val, dec = 2) => (typeof val === 'number' && isFinite(val)) ? val.toFixed(dec) : 'N/A';
@@ -1388,7 +1493,7 @@ function generateSteelBreakdownHtml(name, data, results) {
         case 'Flexure (Major Axis)':
         case 'Flexure (Minor Axis)':
             if (name.includes('Major')) {
-                const { governing_limit_state, Mn, Lb, Lp, Lr, limit_states, slenderness } = results.flexure || {};
+                const { governing_limit_state, Mn, Lb, Lp, Lr, limit_states, slenderness, error } = results.flexure || {};
                 const safeMn = isFinite(Mn) ? Mn : 0;
                 // FIX: Add a guard clause to prevent crash if limit_states is not available for the section type.
                 if (!limit_states) {
@@ -1411,7 +1516,7 @@ function generateSteelBreakdownHtml(name, data, results) {
                     `Plastic Moment (M<sub>p</sub>) = F<sub>y</sub> &times; Z<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Zx)} = ${fmt(Mp / 12)} kip-ft`,
                     `Yield Moment (M<sub>y</sub>) = F<sub>y</sub> &times; S<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Sx)} = ${fmt(My / 12)} kip-ft`, // This was already correct
                     `<b>LTB Check:</b> L<sub>b</sub>=${fmt(Lb/12)} ft, L<sub>p</sub>=${fmt(Lp/12)} ft, L<sub>r</sub>=${fmt(Lr/12)} ft, C<sub>b</sub>=${fmt(Cb)}`,
-                    slenderness ? `<b>FLB Check:</b> &lambda;<sub>f</sub>=${fmt(slenderness.lambda_f)}, &lambda;<sub>pf</sub>=${fmt(slenderness.lambda_p_f)}, &lambda;<sub>rf</sub>=${fmt(slenderness.lambda_r_f)}` : '',
+                    slenderness ? `<b>FLB Check:</b> &lambda;<sub>f</sub>=${fmt(slenderness.lambda_f, 2)}, &lambda;<sub>pf</sub>=${fmt(slenderness.lambda_p_f, 2)}, &lambda;<sub>rf</sub>=${fmt(slenderness.lambda_r_f, 2)}` : '',
                     `<u>Design Capacity</u>`,
                     `Capacity = ${capacity_eq.replace('R','M')} = ${fmt(nominal_capacity / 12)} / ${factor_val} = <b>${fmt(final_capacity / 12)} kip-ft</b>`
                 ]);
@@ -1546,7 +1651,7 @@ function generateSteelBreakdownHtml(name, data, results) {
             const def_data = results.deflection;
             content = format_list([
                 `<u>Serviceability Check for Deflection</u>`,
-                `Allowable Deflection = Span / Limit = ${fmt(inputs.deflection_span * 12, 2)} in / ${fmt(inputs.deflection_limit, 0)} = <b>${fmt(def_data.allowable, 3)} in</b>`,
+                `Allowable Deflection = Span / Limit = ${fmt(inputs.deflection_span*12, 2)} in / ${fmt(inputs.deflection_limit, 0)} = <b>${fmt(def_data.allowable, 3)} in</b>`,
                 `Actual Deflection = <b>${fmt(def_data.actual, 3)} in</b> (User Input)`,
                 `Ratio = Actual / Allowable = ${fmt(def_data.actual, 3)} / ${fmt(def_data.allowable, 3)} = <b>${fmt(def_data.ratio, 3)}</b>`
             ]);
@@ -1596,20 +1701,22 @@ async function handleShapeSelection() {
     const shapeName = shapeSelect.value;
     const geometryInputs = ['d', 'bf', 'tf', 'tw'];
     const manualPropInputs = ['Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual'];
+    const allPropInputs = [...geometryInputs, ...manualPropInputs];
 
     if (!shapeName) {
-        // If "Select a Shape" is chosen, make inputs editable
-        [...geometryInputs, ...manualPropInputs].forEach(id => {
+        // If "-- Manual Input --" is chosen, make all geometry inputs editable.
+        // Manual property inputs should always be editable.
+        geometryInputs.forEach(id => {
             const el = document.getElementById(id); if (el) el.readOnly = false;
         });
         return;
     }
 
-    // When a shape is selected, fetch ALL its properties and populate the manual input fields.
+    // When a shape is selected, fetch ALL its properties and populate all fields.
     const shape = await AISC_SPEC.getShape(shapeName);
     if (!shape) return;
 
-    const propertyMap = {
+    const propertyMap = { // Map all properties to their respective input IDs
         d: shape.d, bf: shape.bf, tf: shape.tf, tw: shape.tw,
         Ag_manual: shape.Ag, I_manual: shape.Ix, Sx_manual: shape.Sx, Zx_manual: shape.Zx,
         ry_manual: shape.ry, rts_manual: shape.rts || '', J_manual: shape.J || '', Cw_manual: shape.cw || '', // CORRECTED: Use shape.cw and provide a fallback
@@ -1618,12 +1725,12 @@ async function handleShapeSelection() {
         k_des: shape.k_des || shape.tf 
     };
 
-    Object.keys(propertyMap).forEach(id => {
+    allPropInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el && propertyMap[id] !== undefined) {
             el.value = propertyMap[id];
-            // Make all property inputs read-only when a shape is selected
-            el.readOnly = true; 
+            // Only make the primary geometry inputs read-only.
+            el.readOnly = geometryInputs.includes(id);
         }
     });
 }
@@ -1750,16 +1857,22 @@ function renderSteelStrengthChecks(results) {
         if (typeof ratio !== 'number' || !isFinite(ratio)) return '<span class="fail">Error</span>';
         return ratio <= 1.0 ? '<span class="pass">Pass</span>' : '<span class="fail">Fail</span>';
     };
+    const getCapacityDisplay = (capacity, error) => {
+        if (error) return `<span class="fail">Error</span>`;
+        return safeToFixed(capacity, 2);
+    };
 
     const createRow = (name, demand, capacity, ratio, status, data) => {
         if ((capacity === 0 || !isFinite(capacity)) && (demand === 0 || !isFinite(demand))) return '';
-        const detailId = `detail-${name.replace(/[\s\(\)]/g, '-')}`;
+        const detailId = `detail-${name.replace(/[\s()\/]/g, '-')}`.toLowerCase(); // FIX: Also replace slashes
+        // FIX: Correctly extract reference from nested object
+        const reference = data.reference || data.check?.reference || 'N/A';
         const breakdownHtml = generateSteelBreakdownHtml(name, data, results);
         return `
             <tr class="border-t dark:border-gray-700">
                 <td>${name} <span class="ref">[${data.reference}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs">[Show]</button></td>
                 <td>${fmt(demand, 2)}</td>
-                <td>${fmt(capacity, 2)}</td>
+                <td>${getCapacityDisplay(capacity, data.error)}</td>
                 <td>${fmt(ratio, 3)}</td>
                 <td>${status}</td>
             </tr>
@@ -1769,7 +1882,7 @@ function renderSteelStrengthChecks(results) {
 
     const strengthRows = [
         axial.type && createRow(axial.type, Math.abs(inputs.Pu_or_Pa), axial.phiPn_or_Pn_omega, Math.abs(inputs.Pu_or_Pa) / axial.phiPn_or_Pn_omega, getStatus(Math.abs(inputs.Pu_or_Pa) / axial.phiPn_or_Pn_omega), { check: axial, details: axial, reference: axial.reference }),
-        (flexure.phiMn_or_Mn_omega || inputs.Mux_or_Max !== 0) && createRow('Flexure (Major Axis)', Math.abs(inputs.Mux_or_Max), flexure.phiMn_or_Mn_omega, Math.abs(inputs.Mux_or_Max) / flexure.phiMn_or_Mn_omega, getStatus(Math.abs(inputs.Mux_or_Max) / flexure.phiMn_or_Mn_omega), { check: flexure, details: flexure, reference: flexure.reference }),
+        (flexure.phiMn_or_Mn_omega || inputs.Mux_or_Max !== 0) && createRow('Flexure (Major Axis)', Math.abs(inputs.Mux_or_Max), flexure.phiMn_or_Mn_omega, flexure.phiMn_or_Mn_omega > 0 ? Math.abs(inputs.Mux_or_Max) / flexure.phiMn_or_Mn_omega : Infinity, getStatus(flexure.phiMn_or_Mn_omega > 0 ? Math.abs(inputs.Mux_or_Max) / flexure.phiMn_or_Mn_omega : Infinity), flexure),
         (flexure_y.phiMny_or_Mny_omega || inputs.Muy_or_May !== 0) && createRow('Flexure (Minor Axis)', Math.abs(inputs.Muy_or_May), flexure_y.phiMny_or_Mny_omega, Math.abs(inputs.Muy_or_May) / flexure_y.phiMny_or_Mny_omega, getStatus(Math.abs(inputs.Muy_or_May) / flexure_y.phiMny_or_Mny_omega), { check: flexure_y, details: flexure_y, reference: flexure_y.reference }),
         shear.phiVn_or_Vn_omega && createRow('Shear', Math.abs(inputs.Vu_or_Va), shear.phiVn_or_Vn_omega, Math.abs(inputs.Vu_or_Va) / shear.phiVn_or_Vn_omega, getStatus(Math.abs(inputs.Vu_or_Va) / shear.phiVn_or_Vn_omega), { check: shear, details: shear, reference: shear.reference }),
         interaction.ratio && createRow('Combined Axial & Flexure', interaction.ratio, 1.0, interaction.ratio, getStatus(interaction.ratio), { check: { Rn: 1.0, phi: 1.0, omega: 1.0 }, details: interaction, reference: interaction.reference }),

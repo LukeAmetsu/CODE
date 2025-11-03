@@ -200,6 +200,10 @@ const snowLoadCalculator = (() => {
 
 
 function run(inputs, validation) {
+    console.log(`[snow] Calculation triggered.`);
+    console.log(`[snow] Gathering inputs...`, inputs);
+    console.log(`[snow] Performing calculation...`);
+
     const validationResult = { warnings: [], ...validation };
 
     // Add jurisdiction-specific warnings
@@ -261,6 +265,8 @@ function run(inputs, validation) {
             note: "For continuous/cantilevered members, check a case with full balanced load on one span and 0.5 times the balanced load on the adjacent span (ASCE 7-16/22 Sec. 7.8)."
         };
     }
+
+    console.log(`[snow] Calculation successful. Rendering results...`);
 
     return {
         inputs,

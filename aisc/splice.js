@@ -1810,6 +1810,10 @@ function runOptimization(inputs) {
  * @returns {object} The complete results object.
  */
 function run(rawInputs) {
+    console.log(`[splice] Calculation triggered.`);
+    console.log(`[splice] Gathering inputs...`, rawInputs);
+    console.log(`[splice] Performing calculation...`);
+
     const inputs = { ...rawInputs };
 
     // The user inputs TOTAL plate length. Convert to length-per-side for calculations.
@@ -1828,9 +1832,13 @@ function run(rawInputs) {
     inputs.web_plate_Fu = parseFloat(inputs.web_plate_Fu);
 
     if (inputs.optimize_bolts_check) {
-        return runOptimization(inputs);
+        const results = runOptimization(inputs);
+        console.log(`[splice] Calculation successful. Rendering results...`);
+        return results;
     } else {
-        return runSingleCheck(inputs);
+        const results = runSingleCheck(inputs);
+        console.log(`[splice] Calculation successful. Rendering results...`);
+        return results;
     }
 }
 
@@ -1838,7 +1846,7 @@ function run(rawInputs) {
     const __test_exports__ = { checkBoltShear, checkBlockShear };
 
     return { run, __test_exports__ };
-})(); // This is a bug, it should be inside the IIFE
+})();
 const baseBreakdownGenerators = {
     'Flange Bolt Shear': ({ check, details }, common) => {
         const wasReducedText = check.wasReduced ? `<br><span class="text-yellow-600">Note: F<sub>nv</sub> was reduced by 20% for long joint length.</span>` : '';

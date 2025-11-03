@@ -136,28 +136,7 @@ function getDimensionComponents(inputs, cx, cy, scale) {
     return components;
 }
 
-/**
- * Gets the appropriate resistance factor (phi) or safety factor (omega) for a given limit state.
- * @param {string} limit_state - The name of the limit state (e.g., 'bearing', 'bending').
- * @param {string} design_method - The design method ('LRFD' or 'ASD').
- * @returns {number} The corresponding phi or omega factor.
- */
-function getPhi(limit_state, design_method) {
-    const factors = {
-        'bearing': { phi: 0.65, omega: 2.31 }, // AISC J8
-        'bending': { phi: 0.90, omega: 1.67 }, // AISC F1
-        'weld': { phi: 0.75, omega: 2.00 },    // AISC J2
-        'anchor_tension_steel': { phi: 0.75, omega: 2.00 },
-        'anchor_tension_concrete': { phi: 0.65, omega: 2.31 },
-        'anchor_pullout': { phi: 0.70, omega: 2.14 },
-        'anchor_side_face': { phi: 0.75, omega: 2.00 },
-        'anchor_shear_steel': { phi: 0.65, omega: 2.31 },
-        'anchor_shear_concrete': { phi: 0.65, omega: 2.31 },
-        'anchor_pryout': { phi: 0.65, omega: 2.31 },
-    };
-    const f = factors[limit_state] || { phi: 1.0, omega: 1.0 };
-    return design_method === 'LRFD' ? f.phi : f.omega;
-}
+
 
 // --- Global variables for the 3D scene to avoid re-creation ---
 let bjsEngine, bjsScene, bjsGuiTexture;
@@ -856,22 +835,7 @@ const basePlateCalculator = (() => {
         }
         return coords;
     }
-    /**
-     * Calculates the maximum tension force on a single anchor bolt under combined axial load and biaxial bending.
-     * @param {object} inputs - The user inputs object.
-     * @param {object} bearing_results - The results from the concrete bearing check.
-     * @returns {number} The maximum tension force in kips.
-     */
-    function calculateAnchorTension(inputs) {
-        const { axial_load_P_in: Pu, moment_Mx_in: Mux_kipft, moment_My_in: Muy_kipft, num_bolts_N, num_bolts_B, bolt_spacing_N, bolt_spacing_B, anchor_bolt_diameter } = inputs;
-        const Mux = Mux_kipft * 12; // kip-in
-        const Muy = Muy_kipft * 12; // kip-in
-        const bolt_coords = getBoltCoordinates(inputs);
-
-        // Call the new breakdown function to get the value
-        const result = generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs);
-        return result; // This now returns an object { value, breakdown }
-    }
+    
 
     // --- Modular Anchor Check Functions (ACI 318-19, Chapter 17) ---
 
@@ -1157,6 +1121,10 @@ const basePlateCalculator = (() => {
         // This function was defined but not called in the main run function.
         // It's now called to perform the ACI checks on every run.
         const geomChecks = getBasePlateGeometryChecks(inputs); 
+
+        console.log(`[baseplate] Calculation triggered.`);
+        console.log(`[baseplate] Gathering inputs...`, inputs);
+
         if (validation.errors.length > 0) {
             return { errors: validation.errors, warnings: validation.warnings, checks: {}, geomChecks };
         }
@@ -1166,6 +1134,8 @@ const basePlateCalculator = (() => {
         inputs.concrete_edge_dist_ca1 = ca1;
         inputs.concrete_edge_dist_ca2 = ca2;
         let checks = {};
+
+        console.log(`[baseplate] Performing calculation...`);
 
         const bearing_results = checkConcreteBearing(inputs);
         if (bearing_results.error) return { errors: [bearing_results.error], checks, geomChecks };
@@ -1211,6 +1181,8 @@ const basePlateCalculator = (() => {
         // Add minimum thickness check based on Thornton's formula
         checks['Minimum Plate Thickness (Rigidity)'] = checkMinimumThickness(inputs, bearing_results);
 
+        console.log(`[baseplate] Calculation successful. Rendering results...`);
+
         return { checks, geomChecks, inputs, warnings: validation.warnings };
     }
 
@@ -1244,11 +1216,7 @@ const basePlateCalculator = (() => {
     return { run };
 })();
 
-function generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs) {
-    if (bolt_coords.length === 0) {
-        return { value: 0, breakdown: 'No bolts defined.' };
-    }
-}
+
 
 function generateBasePlateBreakdownHtml(name, data, inputs, results) {
     const { check } = data;
@@ -1700,40 +1668,7 @@ if (themeToggleButton) {
     themeToggleButton.addEventListener('click', () => setTimeout(draw3dBasePlateDiagram, 50)); // Use a small timeout to ensure class has been updated
 }
 
-async function populateShapeDropdown() {
-        const shapeSelect = document.getElementById('aisc_shape_select');
-        const columnType = document.getElementById('column_type').value;
-        if (!shapeSelect) return;
 
-        const shapeTypeMap = {
-            'W-Shape': 'W-Shape', // Maps UI selection to JSON type
-            'Round HSS': 'Round HSS',
-            'Pipe': 'Pipe'
-        };
-        const aiscShapeType = shapeTypeMap[columnType];
-
-        try {
-            const shapes = await AISC_SPEC.getShapesByType(aiscShapeType);
-            const shapeNames = Object.keys(shapes).sort();
-
-            const currentVal = shapeSelect.value;
-            shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>'; // Reset
-            shapeNames.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                shapeSelect.appendChild(option);
-            });
-
-            if (shapeNames.includes(currentVal)) {
-                shapeSelect.value = currentVal;
-            }
-
-        } catch (error) {
-            console.error("Failed to populate shape dropdown:", error);
-            shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
-        }
-    }
 async function handleShapeSelection() {
         const shapeName = document.getElementById('aisc_shape_select').value;
         const geometryInputs = ['column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw'];

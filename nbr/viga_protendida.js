@@ -374,6 +374,10 @@ const concreteBeamCalculator = (() => {
      * @returns {object} The results of the calculation.
      */
     function run(raw_inputs) {
+        console.log(`[viga_protendida] Calculation triggered.`);
+        console.log(`[viga_protendida] Gathering inputs...`, raw_inputs);
+        console.log(`[viga_protendida] Performing calculation...`);
+
         const inputs = { ...raw_inputs }; // Make a mutable copy
 
         const { vertices, fck, beam_length, cable_path, Ap, cable_definitions } = inputs;
@@ -466,6 +470,8 @@ const concreteBeamCalculator = (() => {
         
         // --- 10. Preliminary Prestress Estimation (for reporting only) ---
         const prestress_estimation = calculateInitialPrestressEstimate({ ...inputs, moments, materials, props, ecc_mid, cable_definitions });
+
+        console.log(`[viga_protendida] Calculation successful. Rendering results...`);
 
         return {
             checks: {
