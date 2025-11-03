@@ -30,6 +30,7 @@ let masterBolts = {};
  * @returns {BABYLON.Mesh} The merged bolt mesh.
  */
 function createBoltMesh(name, options, scene) {
+    console.log(`[3D Draw] Creating bolt: ${name}`);
     // FIX: Ensure diameter and thickness are numbers before use.
     const diameter = parseFloat(options.diameter);
     const thickness = parseFloat(options.thickness);
@@ -85,6 +86,7 @@ function createBoltMesh(name, options, scene) {
  * Draws an interactive 3D visualization of the splice connection using Babylon.js.
  */
 function draw3dSpliceDiagram() {
+    console.log('[3D Draw] Drawing 3D diagram.');
     const canvas = document.getElementById("splice-3d-canvas");
     if (!canvas || typeof BABYLON === 'undefined') return;
 
@@ -445,6 +447,7 @@ let splice2dStartPoint = { x: 0, y: 0 };
  * Draws a 2D elevation view of the splice connection using SVG.
  */
 function draw2dSpliceDiagram() {
+    console.log('[2D Draw] Drawing 2D diagram.');
     const svg = document.getElementById('splice-2d-diagram');
     if (!svg) return;
     svg.innerHTML = ''; // Clear previous drawing

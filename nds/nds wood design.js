@@ -58,6 +58,9 @@ const woodChecker = (() => {
     }
 
     function run(inputs) {
+        console.group('--- NDS Wood Design Calculation ---');
+        console.log('1. Raw Inputs:', JSON.parse(JSON.stringify(inputs)));
+
         const processedInputs = {
             Fb: inputs.Fb_unadjusted, Fv: inputs.Fv_unadjusted, Fc_perp: inputs.Fc_perp_unadjusted,
             Fc: inputs.Fc_unadjusted, E: inputs.E_unadjusted, E_min: inputs.E_min_unadjusted,
@@ -74,14 +77,21 @@ const woodChecker = (() => {
             deflection_limit_divisor: inputs.deflection_limit,
             V: inputs.shear_load_V * 1000
         };
+        console.log('2. Processed Inputs (base units):', JSON.parse(JSON.stringify(processedInputs)));
+
 
         const results = {};
         const factors = calculate_all_factors(processedInputs);
+        console.log('3. Calculated Adjustment Factors:', JSON.parse(JSON.stringify(factors)));
 
+
+        console.group('--- Stability Factor Calculations ---');
         const E_min_prime = processedInputs.E_min * factors.CM_E_min * factors.Ct * factors.Ci;
         const Fc_star = processedInputs.Fc * factors.CD * factors.CM_Fc * factors.Ct * factors.CF * factors.Ci;
         results.Fc_star = Fc_star;
         results.E_min_prime = E_min_prime;
+        console.log('E_min_prime:', E_min_prime, 'Fc*:', Fc_star);
+
 
         const Le = processedInputs.Lu * processedInputs.K;
         const d_col = processedInputs.d;
@@ -95,10 +105,12 @@ const woodChecker = (() => {
             const ratio_cp = Fc_star > 0 ? Fce / Fc_star : 0;
             factors.Cp = ratio_cp > 0 ? ((1 + ratio_cp) / (2 * c)) - Math.sqrt(((1 + ratio_cp) / (2 * c)) ** 2 - (ratio_cp / c)) : 0;
             results.Fce = Fce;
+            console.log('Column Stability (Cp):', { Le_d, Fce, ratio_cp, Cp: factors.Cp });
         } else {
             factors.Cp = 0;
             results.Fce = 0;
             results.slenderness_fail_column = true;
+            console.warn('Column slenderness Le/d > 50. Fails.');
         }
 
         const [b_beam, d_beam] = processedInputs.is_weak_axis ? [processedInputs.d, processedInputs.b] : [processedInputs.b, processedInputs.d];
@@ -113,19 +125,25 @@ const woodChecker = (() => {
             const ratio_cl = Fb_star > 0 ? FbE / Fb_star : 0;
             factors.CL = ratio_cl > 0 ? Math.min(1.0, ((1 + ratio_cl) / 1.9) - Math.sqrt(((1 + ratio_cl) / 1.9) ** 2 - (ratio_cl / 0.95))) : 0;
             results.FbE = FbE;
+            console.log('Beam Stability (CL):', { Rb, Fb_star, FbE, ratio_cl, CL: factors.CL });
         } else {
             factors.CL = 0;
             results.FbE = 0;
             results.Fb_star = 0;
             results.slenderness_fail_beam = true;
+            console.warn('Beam slenderness Rb > 50. Fails.');
         }
+        console.groupEnd(); // End Stability Calcs
 
+        console.group('--- Adjusted Design Values & Actual Stresses ---');
         const adj = {};
         adj.Fb_prime = processedInputs.Fb * factors.CD * factors.CM_Fb * factors.Ct * factors.CL * factors.CF * factors.Cfu * factors.Ci * factors.Cr;
         adj.Fv_prime = processedInputs.Fv * factors.CD * factors.CM_Fv * factors.Ct * factors.Ci;
         adj.Fc_perp_prime = processedInputs.Fc_perp * factors.CM_Fc_perp * factors.Ct * factors.Ci * factors.Cb;
         adj.Fc_prime = Fc_star * factors.Cp;
         results.adjusted = adj;
+        console.log('Adjusted Design Values (F\'):', JSON.parse(JSON.stringify(adj)));
+
 
         const A = processedInputs.b * processedInputs.d;
         const Sx = (b_beam * d_beam ** 2) / 6;
@@ -136,6 +154,8 @@ const woodChecker = (() => {
         actual.A = A;
         actual.Sx = Sx;
         results.actuals = actual;
+        console.log('Actual Stresses (f):', JSON.parse(JSON.stringify(actual)));
+        console.groupEnd(); // End Stresses
 
         // --- Final Ratios ---
         results.ratios = {
@@ -167,9 +187,13 @@ const woodChecker = (() => {
         }
 
         // Return a single object with all necessary data for rendering
-        return {
+        const final_results = {
             inputs: processedInputs, // Return the processed inputs
-            ...results };
+            ...results
+        };
+        console.log('4. Final Results Object:', JSON.parse(JSON.stringify(final_results)));
+        console.groupEnd(); // End Main Group
+        return final_results;
     }
 
     return { run };

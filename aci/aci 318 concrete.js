@@ -9,6 +9,7 @@ const BAR_AREAS = { 3: 0.11, 4: 0.20, 5: 0.31, 6: 0.44, 7: 0.60, 8: 0.79, 9: 1.0
 
 const aciCalculator = (() => {
     function calculate(inputs) {
+        console.log('[ACI Calc] Starting calculation with inputs:', inputs);
         const i = { ...inputs };
         // Convert to base units (lbs, inches)
         i.Mu = i.Mu * 12000;
@@ -18,6 +19,7 @@ const aciCalculator = (() => {
         const Es = 29000000; // psi
 
         // --- Flexure Calculation (ACI 318-19 Ch. 9 & 22) ---
+        console.log('[ACI Calc] --- Flexure Calculation ---');
         const stirrup_dia = BAR_AREAS[i.stirrup_size] ? i.stirrup_size / 8 : 0;
         const bar_dia = BAR_AREAS[i.bar_size] ? i.bar_size / 8 : 0;
         const d = i.h - i.cover - stirrup_dia - (bar_dia / 2);
@@ -30,8 +32,10 @@ const aciCalculator = (() => {
         const Mn = As * i.fy * (d - a / 2);
         res.phiMn = phi_f * Mn;
         res.flexure_details = { d, As, a, c, strain_t, phi_f, Mn };
+        console.log('[ACI Calc] Flexure details:', res.flexure_details);
 
         // --- Shear Calculation (ACI 318-19 Ch. 22) ---
+        console.log('[ACI Calc] --- Shear Calculation ---');
         const Av = i.stirrup_legs * (BAR_AREAS[i.stirrup_size] || 0);
         const Vc = 2 * Math.sqrt(i.fc) * i.b * d;
         const Vs = (Av * i.fy * d) / i.stirrup_spacing;
@@ -39,8 +43,11 @@ const aciCalculator = (() => {
         const phi_v = 0.75;
         res.phiVn = phi_v * (Vc + Math.min(Vs, Vs_max));
         res.shear_details = { Vc, Vs, Vs_max, Av, phi_v };
+        console.log('[ACI Calc] Shear details:', res.shear_details);
 
-        return { inputs: i, results: res };
+        const final_results = { inputs: i, results: res };
+        console.log('[ACI Calc] Final results:', final_results);
+        return final_results;
     }
 
     return { calculate };

@@ -7,9 +7,8 @@ const nbr6118InputIds = [
 
 const nbr6118Calculator = (() => {
     function calculate(inputs) {
-        console.log(`[nbr6118] Calculation triggered.`);
-        console.log(`[nbr6118] Gathering inputs...`, inputs);
-        console.log(`[nbr6118] Performing calculation...`);
+        console.group('--- NBR 6118 Concrete Calculation ---');
+        console.log('1. Raw Inputs:', JSON.parse(JSON.stringify(inputs)));
 
         const i = { ...inputs };
         // Convert to base units (kN, cm)
@@ -19,8 +18,11 @@ const nbr6118Calculator = (() => {
         const gamma_c = 1.4, gamma_s = 1.15;
         const fcd = i.fck / gamma_c;
         const fyd = i.fyk / gamma_s;
+        console.log('2. Design Strengths:', { fcd, fyd });
+
 
         // Flexão
+        console.group('--- Flexure Calculation ---');
         const d = i.h - i.c - (i.diam_estribo / 10) - (i.diam_barra / 20);
         const As = i.num_barras * (Math.PI * (i.diam_barra / 10) ** 2 / 4);
         const x = (As * fyd) / (0.85 * fcd * 0.8 * i.bw);
@@ -28,8 +30,13 @@ const nbr6118Calculator = (() => {
         const dominio = x_d_ratio <= 0.45 ? '2 ou 3 (Dúctil)' : '4 ou 5 (Frágil)';
         const Mrd = As * fyd * (d - 0.4 * x);
         res.flexure_details = { Mrd, d, As, x, x_d_ratio, dominio };
+        console.log('Flexure Intermediate:', { d, As, x, x_d_ratio, dominio });
+        console.log('Flexure Result (Mrd):', Mrd / 100, 'kN.m');
+        console.groupEnd();
+
 
         // Cisalhamento
+        console.group('--- Shear Calculation ---');
         const Asw = i.pernas_estribo * (Math.PI * (i.diam_estribo / 10) ** 2 / 4);
         const fctd = (0.21 * Math.pow(i.fck, 2 / 3)) / gamma_c;
         const Vc = 0.6 * fctd * i.bw * d;
@@ -37,8 +44,13 @@ const nbr6118Calculator = (() => {
         const VRd2 = 0.27 * (1 - i.fck / 250) * fcd * i.bw * (0.9 * d);
         const VRd = Vc + Vsw;
         res.shear_details = { VRd, Vc, Vsw, VRd2 };
+        console.log('Shear Intermediate:', { Asw, fctd, Vc, Vsw, VRd2 });
+        console.log('Shear Result (VRd):', VRd, 'kN');
+        console.groupEnd();
 
-        console.log(`[nbr6118] Calculation successful. Rendering results...`);
+
+        console.log('3. Final Results Object:', JSON.parse(JSON.stringify(res)));
+        console.groupEnd();
 
         return { inputs: i, results: res };
     }

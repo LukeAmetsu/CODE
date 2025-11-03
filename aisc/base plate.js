@@ -5,6 +5,7 @@ console.log('base plate.js loaded');
  * @param {object} inputs - An object containing all necessary geometric inputs.
  */
 function drawBasePlateDiagram(inputs) {
+    console.log('[SVG Draw] Drawing 2D diagram with inputs:', inputs);
     const svg = document.getElementById('baseplate-diagram');
     if (!svg) return;
     svg.innerHTML = ''; // Clear previous drawing
@@ -145,6 +146,7 @@ let bjsEngine, bjsScene, bjsGuiTexture;
  * Draws an interactive 3D visualization of the base plate connection using Babylon.js.
  */
 function draw3dBasePlateDiagram() {
+    console.log('[3D Draw] Drawing 3D diagram.');
     const canvas = document.getElementById("baseplate-3d-canvas");
     if (!canvas || typeof BABYLON === 'undefined') return;
 
@@ -516,9 +518,11 @@ const basePlateCalculator = (() => {
      * @returns {object} An object with bearing check results.
      */
     function checkConcreteBearing(inputs) {
+        console.log('[Baseplate Calc] Checking concrete bearing...');
         const { design_method, base_plate_length_N: N, base_plate_width_B: B, concrete_fc: fc, axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, pedestal_N, pedestal_B } = inputs;
 
         if (Pu > 0) {
+            console.log('[Baseplate Calc] Uplift detected, skipping concrete bearing check.');
             return {
                 demand: 0,
                 check: { Rn: 0, phi: 0.65, omega: 2.31 },
@@ -635,12 +639,14 @@ const basePlateCalculator = (() => {
     }
 
     function checkPlateBending(inputs, bearing_results) {
+        console.log('[Baseplate Calc] Checking plate bending...');
         const { base_plate_length_N: N, base_plate_width_B: B, column_depth_d: d, column_flange_width_bf: bf, base_plate_Fy: Fy, provided_plate_thickness_tp: tp, column_type, design_method } = inputs;
         const f_p_max = bearing_results.details.f_p_max;
         const Pu_abs = Math.abs(bearing_results.details.Pu);
         const Pp = bearing_results.check.Rn; // Nominal bearing strength
         
         if (f_p_max <= 0) {
+            console.log('[Baseplate Calc] No bearing pressure, skipping plate bending check.');
             return null; // No bearing pressure, so no bending to check.
         }
 
@@ -979,6 +985,7 @@ const basePlateCalculator = (() => {
      * @returns {object} An object containing all anchor check results.
      */
     function performAnchorChecks(inputs, Tu_bolt, shear_on_bolts, bearing_results, tension_breakdown) {
+        console.log(`[Baseplate Calc] Performing anchor checks. Tu_bolt=${Tu_bolt.toFixed(2)}, shear_on_bolts=${shear_on_bolts.toFixed(2)}`);
         const { num_bolts_N, num_bolts_B, design_method } = inputs;
         const num_bolts_total = num_bolts_N * num_bolts_B;
         const num_bolts_tension_row = num_bolts_B;
@@ -1039,6 +1046,7 @@ const basePlateCalculator = (() => {
      * @returns {object|null} An object with the weld check results or null if not applicable.
      */
     function checkWeldStrength(inputs, bearing_results) {
+        console.log('[Baseplate Calc] Checking weld strength...');
         const { weld_type, weld_size, weld_effective_throat, column_type, column_depth_d: d, column_flange_width_bf: bf, column_web_tw: tw, column_flange_tf: tf, axial_load_P_in: Pu, moment_Mx_in: Mux, moment_My_in: Muy, shear_V_in: Vu, weld_Fexx: Fexx, base_plate_Fy: Fy, design_method } = inputs;
         if (weld_type === 'Fillet' && weld_size <= 0) return null;
         if (weld_type === 'PJP' && weld_effective_throat <= 0) return null;
@@ -1117,6 +1125,7 @@ const basePlateCalculator = (() => {
         return { ca1: ca1 >= 0 ? ca1 : 0, ca2: ca2 >= 0 ? ca2 : 0 };
     }
     function run(inputs, validation) {
+        console.log('[Baseplate Calc] Starting calculation with inputs:', inputs);
         // --- FIX: Call getBasePlateGeometryChecks ---
         // This function was defined but not called in the main run function.
         // It's now called to perform the ACI checks on every run.
@@ -1126,6 +1135,7 @@ const basePlateCalculator = (() => {
         console.log(`[baseplate] Gathering inputs...`, inputs);
 
         if (validation.errors.length > 0) {
+            console.error('[Baseplate Calc] Validation errors found:', validation.errors);
             return { errors: validation.errors, warnings: validation.warnings, checks: {}, geomChecks };
         }
 

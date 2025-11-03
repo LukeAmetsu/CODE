@@ -6,9 +6,8 @@ const nbr7190InputIds = [
 
 const nbr7190Calculator = (() => {
     function calculate(inputs) {
-        console.log(`[nbr7190] Calculation triggered.`);
-        console.log(`[nbr7190] Gathering inputs...`, inputs);
-        console.log(`[nbr7190] Performing calculation...`);
+        console.group('--- NBR 7190 Wood Calculation ---');
+        console.log('1. Raw Inputs:', JSON.parse(JSON.stringify(inputs)));
 
         const i = { ...inputs };
         // Convert to base units (kN, cm)
@@ -19,20 +18,29 @@ const nbr7190Calculator = (() => {
         const gamma_wv = 1.8;
 
         const kmod = i.kmod1 * i.kmod2 * 1.0; // kmod3 = 1.0
+        console.log('2. Intermediate Factors:', { kmod, gamma_wc, gamma_wv });
+
 
         // Resistências de Cálculo
         res.fcd = (kmod * i.fc0k) / gamma_wc; // MPa
         res.fvd = (kmod * i.fvk) / gamma_wv; // MPa
+        console.log('3. Design Strengths (MPa):', { fcd: res.fcd, fvd: res.fvd });
 
         // Solicitações (Stresses)
+        console.group('--- ELU Checks ---');
         res.sigma_md = (i.Msd * 6) / (i.b * i.h ** 2); // kN/cm²
         res.tau_vd = (i.Vsd * 1.5) / (i.b * i.h); // kN/cm²
+        console.log('Stresses (kN/cm²):', { sigma_md: res.sigma_md, tau_vd: res.tau_vd });
+
 
         // Ratios
         res.flexao_ratio = res.fcd > 0 ? res.sigma_md / (res.fcd / 10) : Infinity; // convert fcd to kN/cm²
         res.cisalhamento_ratio = res.fvd > 0 ? res.tau_vd / (res.fvd / 10) : Infinity;
+        console.log('Utilization Ratios (ELU):', { flexao_ratio: res.flexao_ratio, cisalhamento_ratio: res.cisalhamento_ratio });
+        console.groupEnd();
 
         // Deformação (ELS)
+        console.group('--- ELS Check (Deflection) ---');
         const I = (i.b * i.h ** 3) / 12; // cm^4
         const L_cm = i.L * 100;
         // Assuming a uniformly distributed load that generates the input moment Msd
@@ -40,9 +48,14 @@ const nbr7190Calculator = (() => {
         res.deformacao_imediata = (5 * w_d * L_cm ** 4) / (384 * (i.Ec0_ef / 10) * I); // Ec0_ef in kN/cm²
         res.limite_deformacao = L_cm / 350;
         res.deformacao_ratio = res.limite_deformacao > 0 ? res.deformacao_imediata / res.limite_deformacao : Infinity;
+        console.log('Deflection Intermediate:', { I, L_cm, w_d, limite_deformacao: res.limite_deformacao });
+        console.log('Deflection Result (cm):', { deformacao_imediata: res.deformacao_imediata });
+        console.log('Deflection Ratio:', res.deformacao_ratio);
+        console.groupEnd();
 
-        console.log(`[nbr7190] Calculation successful. Rendering results...`);
 
+        console.log('4. Final Results Object:', JSON.parse(JSON.stringify(res)));
+        console.groupEnd();
         return { inputs: i, results: res };
     }
 

@@ -374,9 +374,8 @@ const concreteBeamCalculator = (() => {
      * @returns {object} The results of the calculation.
      */
     function run(raw_inputs) {
-        console.log(`[viga_protendida] Calculation triggered.`);
-        console.log(`[viga_protendida] Gathering inputs...`, raw_inputs);
-        console.log(`[viga_protendida] Performing calculation...`);
+        console.group('--- Prestressed Beam Calculation ---');
+        console.log('1. Raw Inputs:', JSON.parse(JSON.stringify(raw_inputs)));
 
         const inputs = { ...raw_inputs }; // Make a mutable copy
 
@@ -387,15 +386,22 @@ const concreteBeamCalculator = (() => {
         const total_strands = cable_definitions.reduce((sum, cable) => sum + cable.num_strands, 0);
         const Ap_total_cm2 = Ap_single_cm2 * total_strands;
         const Ap_total_m2 = Ap_total_cm2 / 1e4;
+        console.log(`1a. Total Steel Area (Ap): ${Ap_total_cm2.toFixed(2)} cm²`);
+
 
         // --- 2. Validate Inputs & Section Properties ---
         if (!vertices || vertices.length < 3 || fck <= 0 || beam_length <= 0 || Ap_total_cm2 <= 0 || cable_definitions.length === 0) {
+            console.error("Validation failed. Check inputs.");
+            console.groupEnd();
             return { errors: ["Invalid inputs. Ensure all values (fck, length, Ap, N_cables) are positive and vertices are sufficient."] };
         }
         const props = calculateSectionProperties(vertices);
         if (!props) {
+            console.error("Section properties calculation failed.");
+            console.groupEnd();
             return { errors: ["Invalid beam cross-section vertices."] };
         }
+        console.log('2. Section Properties:', JSON.parse(JSON.stringify(props)));
         const A_m2 = props.area / 1e4; // Ac
         const Wi_m3 = props.W.i / 1e6;
         const Ws_m3 = props.W.s / 1e6;
@@ -403,16 +409,23 @@ const concreteBeamCalculator = (() => {
 
         // --- 3. Material Properties (NBR 6118 & PDF) ---
         const materials = calculateMaterialProperties(inputs);
+        console.log('3. Material Properties:', JSON.parse(JSON.stringify(materials)));
+
 
         // --- 4. Loads & Moments ---
         const { loads, moments } = calculateLoadsAndMoments(inputs);
+        console.log('4. Loads & Moments:', { loads, moments });
+
 
         // --- 5. Define Cable Path & Key Points ---
+        console.group('--- Cable Path & Losses ---');
         const y_cg = props.centroid.y / 100; // in m
         const y_min_beam_m = Math.min(...vertices.map(p => p[1])) / 100;
 
         const preliminary_key_points = [...new Set(cable_path.map(p => p.x))].sort((a,b) => a-b);
         const x_a_result = calculateAnchorageSlipDistance(inputs, materials, preliminary_key_points, cable_path.map(p => ({ ...p, y: p.y + y_min_beam_m })));
+        console.log('5a. Anchorage Slip Distance (x_a):', x_a_result.x_a);
+
 
         const cable_path_abs = cable_path.map(p => ({ ...p, y: p.y + y_min_beam_m }));
         let base_key_points = [...new Set([...preliminary_key_points, 0, beam_length, beam_length / 2, x_a_result.x_a])];
@@ -438,14 +451,21 @@ const concreteBeamCalculator = (() => {
             const e = y_cg - y;
             return { x, y, e };
         });
+        console.log('5b. Final Key Points for Analysis:', final_key_points.length);
+
 
         // --- 6. Initial Prestress and Stress Limit Checks (at mid-span) ---
         const mid_span_details = path_details.find(p => Math.abs(p.x - beam_length / 2) < 1e-9) || path_details[Math.floor(path_details.length/2)];
         const ecc_mid = mid_span_details.e;
         const prestress_checks = performInitialPrestressChecks({ ...inputs, Ap_total_m2, ecc_mid, materials, moments, A_m2, Ws_m3, Wi_m3 });
+        console.log('6. Initial Prestress Checks (P_i):', prestress_checks);
+
 
         // --- 7. Detailed Prestress Loss Calculation ---
         const loss_results = calculateSequentialLosses(inputs, props, materials, path_details, moments, prestress_checks.sigma_pi, cable_path_abs);
+        console.log('7. Detailed Loss Calculation Results:', loss_results);
+        console.groupEnd(); // End Cable Path & Losses
+
 
         // --- 8. Final Stress Profiles ---
         const P_eff_mid_val_result = loss_results.sigma_p_inf.find(p=>p.x === beam_length/2);
@@ -461,19 +481,23 @@ const concreteBeamCalculator = (() => {
                  bottom: (-P_eff_mid / A_m2) - (P_eff_mid * ecc_mid / Wi_m3) + (moments.M_CF / 1000 / Wi_m3) // Momento positivo comprime embaixo
              }
          };
+        console.log('8. Final Stress Profiles (Mid-span):', stress_profiles);
+
 
         // --- 9. Serviceability Limit State (SLS) Stress Checks ---
         const sls_checks = performSlsChecks(stress_profiles, materials);
+        console.log('9. SLS Checks:', sls_checks);
+
 
         // --- 9. Ultimate Limit State (ULS/ELU) Checks ---
         const uls_checks = performUlsChecks(inputs, props, loss_results, Ap_total_m2);
+        console.log('9a. ULS Checks:', uls_checks);
+
         
         // --- 10. Preliminary Prestress Estimation (for reporting only) ---
         const prestress_estimation = calculateInitialPrestressEstimate({ ...inputs, moments, materials, props, ecc_mid, cable_definitions });
 
-        console.log(`[viga_protendida] Calculation successful. Rendering results...`);
-
-        return {
+        const final_results = {
             checks: {
                 properties: props,
                 materials,
@@ -489,6 +513,10 @@ const concreteBeamCalculator = (() => {
             },
             inputs
         };
+
+        console.log('10. Final Results Object:', JSON.parse(JSON.stringify(final_results)));
+        console.groupEnd();
+        return final_results;
     }
 
     /**

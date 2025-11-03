@@ -308,6 +308,8 @@ saveBtn.addEventListener('click', () => {
 // This file will contain the translated calculation logic from the Java source files.
 
 function discretizeSection(pcalcData) {
+    console.group('--- Discretize Section ---');
+    console.log('Input Data:', JSON.parse(JSON.stringify(pcalcData.secao)));
     const { secao, config } = pcalcData;
     const { tipoSecao, hx, hy, xm, ym, areaAc } = secao;
     const { nSecao } = config;
@@ -373,6 +375,10 @@ function discretizeSection(pcalcData) {
         argSecaoS.push(secaoI);
     }
     pcalcData.resultados.secaoS = argSecaoS;
+
+    console.log('Concrete Discretization:', argSecaoC.length, 'elements');
+    console.log('Steel Discretization:', argSecaoS.length, 'bars');
+    console.groupEnd();
 }
 
 function fc(ec, fcd, tipoCurvaC, ec2, ecu, n) {
@@ -639,6 +645,8 @@ function calculaMomento1Ord(mdTopo, mdBase, pcalcData) {
 
 
 function calculateEsforcos(pcalcData) {
+    console.group('--- Calculate Design Forces ---');
+    console.log('Input Loads:', JSON.parse(JSON.stringify(pcalcData.esforcos.listaEsforcos)));
     const { config, esforcos, secao } = pcalcData;
     const gamaF = 1.4; // Fator de ponderação para ações
     const { tipoVinculacao } = secao;
@@ -690,7 +698,8 @@ function calculateEsforcos(pcalcData) {
         msyd2
     };
 
-    console.log('Esforcos calculated:', pcalcData.resultados.esforcos);
+    console.log('Calculated Forces (nsd, msxd2, msyd2):', nsd, msxd2, msyd2);
+    console.groupEnd();
 }
 
 function calculaMomento2OrdP1(nsd, h, md1, pcalcData) {

@@ -18,7 +18,9 @@ const handleRunComboCheck = createCalculationHandler({
     storageKey: 'combo-calculator-inputs',
     validationRuleKey: 'combo',
     calculatorFunction: (inputs, validation) => { // The validation object is now correctly passed in from createCalculationHandler
+        console.log('[Combos] Starting calculation with inputs:', inputs);
         const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
+        console.log(`[Combos] Using effective standard: ${effective_standard}`);
         const scenarios = buildScenarios(inputs);
 
         const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
@@ -46,10 +48,13 @@ const handleRunComboCheck = createCalculationHandler({
                 scenario_loads.S = 0; // Walls don't have direct snow load.
             }
             
+            console.log(`[Combos] Calculating scenario: ${key}`);
             scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
             scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
         }
-        return { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
+        const final_results = { inputs, scenarios_data, base_combos, success: true, warnings: validation.warnings };
+        console.log('[Combos] Final results:', final_results);
+        return final_results;
     },
     renderFunction: renderComboResults,
     resultsContainerId: 'combo-results-container',

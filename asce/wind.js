@@ -1264,6 +1264,9 @@ const windLoadCalculator = (() => {
      * @returns {object} The complete results object for rendering.
      */
     function run(inputs, validation) {
+        console.group('--- Wind Calculation Start ---');
+        console.log('1. Raw Inputs:', JSON.parse(JSON.stringify(inputs)));
+
         let effective_standard = inputs.asce_standard;
         let v_input = inputs.basic_wind_speed;
         let v_unreduced = inputs.basic_wind_speed;
@@ -1275,12 +1278,14 @@ const windLoadCalculator = (() => {
             v_input = risk_v_map[inputs.risk_category] || 117;
             v_unreduced = v_input;
             jurisdiction_note = `NYCBC 2022 wind speed of ${safeToFixed(v_input, 0)} mph for Risk Category ${inputs.risk_category} has been applied (Table 1609.3).`;
+            console.log(`Jurisdiction override (NYCBC 2022): V set to ${v_input} mph.`);
         }
 
         if (inputs.temporary_construction === "Yes") {
             v_input *= 0.8;
             const v_unit = inputs.unit_system === 'imperial' ? 'mph' : 'm/s';
             temporary_structure_note = `A 0.8 reduction factor has been applied for temporary construction (PROJECT-SPECIFIC ALLOWANCE, NOT ASCE 7). Calculation wind speed is ${safeToFixed(v_input, 1)} ${v_unit} (reduced from ${v_unreduced} ${v_unit}).`;
+            console.log(`Temporary structure reduction: V reduced to ${v_input}.`);
         }
 
         // --- Correctly determine GCpi based on structure type ---
@@ -1313,6 +1318,8 @@ const windLoadCalculator = (() => {
             jurisdiction_note, temporary_structure_note, directional_results: null,
             warnings: validation.warnings, errors: validation.errors
         };
+        console.log('2. Intermediate Parameters:', JSON.parse(JSON.stringify(windResults.intermediate)));
+
 
         const is_high_rise = inputs.mean_roof_height > 60 && inputs.unit_system === 'imperial';
         if (is_high_rise) {
@@ -1323,18 +1330,23 @@ const windLoadCalculator = (() => {
         }
 
         // --- Strategy Execution ---
+        console.log(`3. Executing Strategy for: ${inputs.structure_type}`);
         const intermediate_globals = { Kzt: inputs.topographic_factor_Kzt, Kd, Ke, V_in: v_input, effective_standard, abs_gcpi, G, qz };
         const strategy = structureStrategies[inputs.structure_type] || structureStrategies['Buildings (MWFRS, C&C)'];
         const strategyResults = strategy(inputs, intermediate_globals);
+        console.log('4. Strategy Results:', JSON.parse(JSON.stringify(strategyResults)));
+
 
         // Always calculate parapet pressures if applicable, regardless of main structure type
         if (inputs.has_parapet) {
             windResults.parapet_results = calculateParapetPressures(inputs, intermediate_globals);
+             console.log('5a. Parapet Results:', JSON.parse(JSON.stringify(windResults.parapet_results)));
         }
 
         // Always calculate overhang pressures if applicable
         if (inputs.has_overhang && strategyResults.directional_results) {
             windResults.overhang_results = calculateOverhangPressures(inputs, intermediate_globals, strategyResults.directional_results);
+            console.log('5b. Overhang Results:', JSON.parse(JSON.stringify(windResults.overhang_results)));
         }
 
         // Always calculate rooftop equipment pressures if applicable
@@ -1364,11 +1376,14 @@ const windLoadCalculator = (() => {
                 };
             }
             windResults.rooftop_results = rooftop_results;
+            console.log('5c. Rooftop Equipment Results:', JSON.parse(JSON.stringify(windResults.rooftop_results)));
         }
 
         // Merge the strategy results into the main results object
         Object.assign(windResults, strategyResults);
-
+        
+        console.log('6. Final Results Object:', JSON.parse(JSON.stringify(windResults)));
+        console.groupEnd();
         return windResults;
     }
 

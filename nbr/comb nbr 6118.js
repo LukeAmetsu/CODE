@@ -76,9 +76,15 @@ function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', v
 
 const nbrComboCalculator = (() => {
     function calculate(userLoads) {
+        console.group('--- NBR Combination Calculation ---');
+        console.log('1. User Loads Received:', JSON.parse(JSON.stringify(userLoads)));
+
         const permanentes = userLoads.filter(l => !LOAD_TYPES[l.type].isVariable);
         const variaveis = userLoads.filter(l => LOAD_TYPES[l.type].isVariable);
         const combinations = { elu: [], els_rara: [], els_freq: [], els_qp: [] };
+        
+        console.log('2. Sorted Loads:', { permanentes, variaveis });
+
 
         // --- 1. ELU - Combinações Normais ---
         if (variaveis.length > 0) {
@@ -173,6 +179,9 @@ const nbrComboCalculator = (() => {
                 });
             });
         }
+        
+        console.log('3. Final Combinations Object:', JSON.parse(JSON.stringify(combinations)));
+        console.groupEnd();
         return { combinations };
     }
     return { calculate };
