@@ -1,7 +1,5 @@
 // splice.js
 console.log('splice.js loaded');
-// --- Global variables for the 3D scene ---
-let bjsEngine, bjsScene, bjsGuiTexture;
 let dimensionElements = { meshes: [], labels: [] };
 let isFirstDraw = true; // Flag to control camera auto-fitting
 let areDimensionsVisible = true; // Flag to track dimension visibility state
@@ -95,10 +93,10 @@ function draw3dSpliceDiagram() {
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     // --- 2. Initialize Scene (if needed) ---
-    if (!bjsEngine) {
-        bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
-        bjsScene = new BABYLON.Scene(bjsEngine);
-        bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
+    if (!window.bjsEngine) {
+        window.bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        window.bjsScene = new BABYLON.Scene(window.bjsEngine);
+        window.bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, window.bjsScene);
         
         const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.5, Math.PI / 2.8, 60, BABYLON.Vector3.Zero(), bjsScene);
         camera.attachControl(canvas, true);
@@ -116,12 +114,12 @@ function draw3dSpliceDiagram() {
 		pipeline.ssaoEnabled = true;
 		pipeline.ssaoRatio = 0.1;
 
-        bjsEngine.runRenderLoop(() => {
+        window.bjsEngine.runRenderLoop(() => {
             if (bjsScene && bjsScene.isReady()) {
                 bjsScene.render();
             }
         });
-        window.addEventListener('resize', () => bjsEngine.resize());
+        window.addEventListener('resize', () => window.bjsEngine.resize());
     }
 
     // --- Robustly Clear Previous Scene Elements ---
@@ -130,8 +128,8 @@ function draw3dSpliceDiagram() {
     for (let i = bjsScene.meshes.length - 1; i >= 0; i--) {
         bjsScene.meshes[i].dispose();
     }
-    if (bjsGuiTexture) {
-        bjsGuiTexture.getChildren().forEach(control => control.dispose());
+    if (window.bjsGuiTexture) {
+        window.bjsGuiTexture.getChildren().forEach(control => control.dispose());
     }
     // Clear the dimension elements tracker
     dimensionElements.meshes = [];
@@ -147,9 +145,9 @@ function draw3dSpliceDiagram() {
 
 
     // --- 3. Lighting & Materials ---
-    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
-    bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
-    bjsScene.environmentIntensity = 1.2;
+    window.bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+    window.bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", window.bjsScene);
+    window.bjsScene.environmentIntensity = 1.2;
 
     const shadowGenerator = bjsScene.lights[0].getShadowGenerator();
 
@@ -179,7 +177,7 @@ function draw3dSpliceDiagram() {
         label.thickness = 1;
         label.background = isDarkMode ? "rgba(40, 40, 40, 0.7)" : "rgba(255, 255, 255, 0.7)";
         label.color = isDarkMode ? "#FFFFFF" : "#000000";
-        bjsGuiTexture.addControl(label);
+        window.bjsGuiTexture.addControl(label);
         dimensionElements.labels.push(label); // Track label
         const textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;

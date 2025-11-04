@@ -139,8 +139,7 @@ function getDimensionComponents(inputs, cx, cy, scale) {
 
 
 
-// --- Global variables for the 3D scene to avoid re-creation ---
-let bjsEngine, bjsScene, bjsGuiTexture;
+
 
 /**
  * Draws an interactive 3D visualization of the base plate connection using Babylon.js.
@@ -155,10 +154,10 @@ function draw3dBasePlateDiagram() {
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     // --- 2. Initialize Scene, Camera, Renderer, and GUI (only once) ---
-    if (!bjsEngine) {
-        bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
-        bjsScene = new BABYLON.Scene(bjsEngine);
-        bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
+    if (!window.bjsEngine) {
+        window.bjsEngine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        window.bjsScene = new BABYLON.Scene(window.bjsEngine);
+        window.bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, window.bjsScene);
 
         const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.2, Math.PI / 2.5, 50, BABYLON.Vector3.Zero(), bjsScene);
         camera.attachControl(canvas, true);
@@ -176,25 +175,25 @@ function draw3dBasePlateDiagram() {
             event.preventDefault();
         }, { passive: false }); // The { passive: false } is important for some browsers
 
-        bjsEngine.runRenderLoop(() => {
+        window.bjsEngine.runRenderLoop(() => {
             if (bjsScene.isReady()) {
                 bjsScene.render();
             }
         });
-        window.addEventListener('resize', () => bjsEngine.resize());
+        window.addEventListener('resize', () => window.bjsEngine.resize());
     }
 
     // --- FIX: Clear previous elements instead of disposing the entire scene ---
-    bjsScene.meshes.forEach(mesh => mesh.dispose());
-    bjsGuiTexture.getChildren().forEach(control => {
+    window.bjsScene.meshes.forEach(mesh => mesh.dispose());
+    window.bjsGuiTexture.getChildren().forEach(control => {
         if (control) control.dispose();
     });
 
     // --- 3. Lighting ---
-    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
-    if (!bjsScene.environmentTexture) {
-        bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
-        bjsScene.environmentIntensity = 1.2;
+    window.bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+    if (!window.bjsScene.environmentTexture) {
+        window.bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", window.bjsScene);
+        window.bjsScene.environmentIntensity = 1.2;
     }
     if (bjsScene.lights.length === 0) {
         const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
@@ -202,7 +201,7 @@ function draw3dBasePlateDiagram() {
         new BABYLON.ShadowGenerator(1024, light);
     }
 
-    const shadowGenerator = bjsScene.lights[0].getShadowGenerator();
+    const shadowGenerator = window.bjsScene.lights[0].getShadowGenerator();
     shadowGenerator.useBlurExponentialShadowMap = true;
     shadowGenerator.blurKernel = 32;
 
@@ -234,7 +233,7 @@ function draw3dBasePlateDiagram() {
 
     // --- Standardized Helper for creating GUI labels ---
     const createLabel = (text, anchorMesh) => {
-        if (!bjsGuiTexture) return;
+        if (!window.bjsGuiTexture) return;
         const label = new BABYLON.GUI.Rectangle(text + "_label");
         label.height = "18px";
         label.width = `${text.length * 7}px`;
@@ -242,7 +241,7 @@ function draw3dBasePlateDiagram() {
         label.thickness = 1;
         label.background = isDarkMode ? "rgba(40, 40, 40, 0.7)" : "rgba(255, 255, 255, 0.7)";
         label.color = isDarkMode ? "#FFFFFF" : "#000000";
-        bjsGuiTexture.addControl(label);
+        window.bjsGuiTexture.addControl(label);
 
         const textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
@@ -258,23 +257,23 @@ function draw3dBasePlateDiagram() {
     // --- Standardized Helper for creating Dimension Lines ---
     const createDimensionLine = (name, value, start, end, offset) => {
         if (!value || value <= 0) return;
-        const lineMat = new BABYLON.StandardMaterial(`${name}_mat`, bjsScene);
+        const lineMat = new BABYLON.StandardMaterial(`${name}_mat`, window.bjsScene);
         lineMat.emissiveColor = isDarkMode ? new BABYLON.Color3.White() : new BABYLON.Color3.Black();
         lineMat.disableLighting = true;
 
         const mainLinePoints = [start.add(offset), end.add(offset)];
-        const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: mainLinePoints }, bjsScene);
+        const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: mainLinePoints }, window.bjsScene);
         mainLine.material = lineMat;
 
         const extLine1Points = [start, start.add(offset.scale(1.1))];
-        const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: extLine1Points }, bjsScene);
+        const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: extLine1Points }, window.bjsScene);
         extLine1.material = lineMat;
 
         const extLine2Points = [end, end.add(offset.scale(1.1))];
-        const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: extLine2Points }, bjsScene);
+        const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: extLine2Points }, window.bjsScene);
         extLine2.material = lineMat;
 
-        const labelAnchor = new BABYLON.AbstractMesh(`${name}_label_anchor`, bjsScene);
+        const labelAnchor = new BABYLON.AbstractMesh(`${name}_label_anchor`, window.bjsScene);
         labelAnchor.position = BABYLON.Vector3.Center(start, end).add(offset.scale(1.2));
         createLabel(`${name}=${value}"`, labelAnchor);
     };
@@ -283,12 +282,12 @@ function draw3dBasePlateDiagram() {
     // --- Geometries (Pedestal, Plate, etc.) ---
     // This part remains mostly the same...
     const pedestalHeight = Math.max(12, inputs.anchor_embedment_hef * 1.5);
-    const pedestal = BABYLON.MeshBuilder.CreateBox("pedestal", { width: inputs.pedestal_B, height: pedestalHeight, depth: inputs.pedestal_N }, bjsScene);
+    const pedestal = BABYLON.MeshBuilder.CreateBox("pedestal", { width: inputs.pedestal_B, height: pedestalHeight, depth: inputs.pedestal_N }, window.bjsScene);
     pedestal.material = concreteMaterial;
     pedestal.receiveShadows = true;
     pedestal.position.y = -inputs.provided_plate_thickness_tp / 2 - (pedestalHeight / 2);
 
-    const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: inputs.base_plate_width_B, height: inputs.provided_plate_thickness_tp, depth: inputs.base_plate_length_N }, bjsScene);
+    const plate = BABYLON.MeshBuilder.CreateBox("plate", { width: inputs.base_plate_width_B, height: inputs.provided_plate_thickness_tp, depth: inputs.base_plate_length_N }, window.bjsScene);
     plate.material = plateMaterial;
     shadowGenerator.addShadowCaster(plate);
     plate.receiveShadows = true;
@@ -296,7 +295,7 @@ function draw3dBasePlateDiagram() {
     // --- Column & **FIXED WELD** Geometry ---
     const colHeight = 12;
     if (inputs.column_type === 'Round HSS' && inputs.column_depth_d > 0) {
-        const hss = BABYLON.MeshBuilder.CreateCylinder("hss", { diameter: inputs.column_depth_d, height: colHeight }, bjsScene);
+        const hss = BABYLON.MeshBuilder.CreateCylinder("hss", { diameter: inputs.column_depth_d, height: colHeight }, window.bjsScene);
         hss.material = columnMaterial;
         shadowGenerator.addShadowCaster(hss);
         hss.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
@@ -316,25 +315,25 @@ function draw3dBasePlateDiagram() {
             const weld = BABYLON.MeshBuilder.CreateLathe("weld", {
                 shape: weldProfile,
                 sideOrientation: BABYLON.Mesh.DOUBLESIDE
-            }, bjsScene);
+            }, window.bjsScene);
 
             weld.material = weldMaterial;
             shadowGenerator.addShadowCaster(weld);
             weld.position.y = inputs.provided_plate_thickness_tp / 2; // Position it on top of the base plate
 
             // Weld Label Anchor
-            const weldLabelAnchor = new BABYLON.TransformNode("weld_label_anchor", bjsScene);
+            const weldLabelAnchor = new BABYLON.TransformNode("weld_label_anchor", window.bjsScene);
             weldLabelAnchor.position = new BABYLON.Vector3(column_radius + w, inputs.provided_plate_thickness_tp / 2 + w / 2, 0);
             createLabel(`${w}" Weld`, weldLabelAnchor, isDarkMode);
         }
     } else if (inputs.column_type === 'Wide Flange' && inputs.column_depth_d > 0) {
         const { column_depth_d: d, column_flange_width_bf: bf, column_flange_tf: tf, column_web_tw: tw } = inputs;
 
-        const topFlange = BABYLON.MeshBuilder.CreateBox("tf", { width: bf, height: colHeight, depth: tf }, bjsScene);
+        const topFlange = BABYLON.MeshBuilder.CreateBox("tf", { width: bf, height: colHeight, depth: tf }, window.bjsScene);
         topFlange.position.z = (d - tf) / 2;
         const botFlange = topFlange.clone("bf");
         botFlange.position.z = -(d - tf) / 2;
-        const web = BABYLON.MeshBuilder.CreateBox("web", { width: tw, height: colHeight, depth: d - 2 * tf }, bjsScene);
+        const web = BABYLON.MeshBuilder.CreateBox("web", { width: tw, height: colHeight, depth: d - 2 * tf }, window.bjsScene);
         const column = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
         if (column) {
             column.material = columnMaterial;
@@ -348,7 +347,7 @@ function draw3dBasePlateDiagram() {
             const weldY = inputs.provided_plate_thickness_tp / 2;
             const createWeld = (name, length, rotation, position) => {
                 const weldShape = [ new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(weldSize, 0, 0), new BABYLON.Vector3(0, weldSize, 0) ];
-                const weld = BABYLON.MeshBuilder.ExtrudeShape(name, { shape: weldShape, path: [new BABYLON.Vector3(0, 0, -length/2), new BABYLON.Vector3(0, 0, length/2)] }, bjsScene);
+                const weld = BABYLON.MeshBuilder.ExtrudeShape(name, { shape: weldShape, path: [new BABYLON.Vector3(0, 0, -length/2), new BABYLON.Vector3(0, 0, length/2)] }, window.bjsScene);
                 weld.material = weldMaterial; weld.rotation = rotation; weld.position = position; shadowGenerator.addShadowCaster(weld); return weld;
             };
             createWeld("weld_tf1", bf, new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, weldY, (d - tf) / 2 + weldSize));
@@ -363,7 +362,7 @@ function draw3dBasePlateDiagram() {
     const startZ = -(inputs.num_bolts_N - 1) * inputs.bolt_spacing_N / 2;
     for (let r = 0; r < inputs.num_bolts_N; r++) {
         for (let c = 0; c < inputs.num_bolts_B; c++) {
-            const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${r}_${c}`, { diameter: inputs.anchor_bolt_diameter, height: inputs.anchor_embedment_hef }, bjsScene);
+            const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${r}_${c}`, { diameter: inputs.anchor_bolt_diameter, height: inputs.anchor_embedment_hef }, window.bjsScene);
             bolt.material = boltMaterial;
             shadowGenerator.addShadowCaster(bolt);
             bolt.position.set(startX + c * inputs.bolt_spacing_B, -inputs.anchor_embedment_hef / 2 + inputs.provided_plate_thickness_tp / 2, startZ + r * inputs.bolt_spacing_N);
@@ -396,11 +395,11 @@ function draw3dBasePlateDiagram() {
         createDimensionLine("s_N", inputs.bolt_spacing_N, start, end, new BABYLON.Vector3(-4, 0, 0));
     }
 
-    if (bjsScene.activeCamera && bjsScene.meshes.length > 0) {
+    if (window.bjsScene.activeCamera && window.bjsScene.meshes.length > 0) {
         // Focus specifically on the base plate for the initial zoom.
-        const plateMesh = bjsScene.getMeshByName("plate");
+        const plateMesh = window.bjsScene.getMeshByName("plate");
         if (plateMesh) {
-            const camera = bjsScene.activeCamera;
+            const camera = window.bjsScene.activeCamera;
             const boundingInfo = plateMesh.getBoundingInfo();
             camera.setTarget(boundingInfo.boundingSphere.center);
             // A multiplier is needed to frame the plate nicely.
@@ -1678,62 +1677,41 @@ if (themeToggleButton) {
     themeToggleButton.addEventListener('click', () => setTimeout(draw3dBasePlateDiagram, 50)); // Use a small timeout to ensure class has been updated
 }
 
+function updateColumnInputsUI() {
+    const columnType = document.getElementById('column_type').value;
+    const label1 = document.getElementById('label_column_dim1');
+    const dim2_container = document.getElementById('container_column_dim2');
+    const tf_container = document.getElementById('container_column_tf');
+    const tw_container = document.getElementById('container_column_tw');
 
-async function handleShapeSelection() {
-        const shapeName = document.getElementById('aisc_shape_select').value;
-        const geometryInputs = ['column_depth_d', 'column_flange_width_bf', 'column_flange_tf', 'column_web_tw'];
-
-
-        if (!shapeName) {
-            geometryInputs.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.readOnly = false;
-            });
-            return;
-        }
-
-        const shape = await AISC_SPEC.getShape(shapeName);
-        if (!shape) return;
-
-        const propertyMap = {
-            'column_depth_d': shape.d, 'column_flange_width_bf': shape.bf, 'column_flange_tf': shape.tf, 'column_web_tw': shape.tw
-        };
-
-        Object.keys(propertyMap).forEach(id => {
-            const el = document.getElementById(id);
-            if (el && propertyMap[id] !== undefined) {
-                el.value = propertyMap[id];
-                el.readOnly = true;
-            }
-        });
-    }function updateColumnInputsUI() {
-        const columnType = document.getElementById('column_type').value;
-        const label1 = document.getElementById('label_column_dim1');
-        const dim2_container = document.getElementById('container_column_dim2');
-        const tf_container = document.getElementById('container_column_tf');
-        const tw_container = document.getElementById('container_column_tw');
-
-        // Reset shape selection when type changes
-        document.getElementById('aisc_shape_select').value = '';
-        handleShapeSelection(); // This will unlock the inputs
- 
-        if (columnType === 'Round HSS' || columnType === 'Pipe') {
-            label1.textContent = 'Column Diameter (D)';
-            dim2_container.style.display = 'none';
-            tf_container.style.display = 'none';
-            tw_container.style.display = 'none';
-            document.getElementById('label_column_dim2').textContent = 'Column bf'; // Reset label
-        } else { // W-Shape
-            label1.textContent = 'Column Depth (d)';
-            dim2_container.style.display = 'block';
-            tf_container.style.display = 'block';
-            tw_container.style.display = 'block';
-        }
-        populateShapeDropdown();
-        drawBasePlateDiagram();
+    // This function now primarily handles UI visibility based on column type
+    // Shape selection and data population are handled by the new shared functions
+    if (columnType === 'Round HSS' || columnType === 'Pipe') {
+        label1.textContent = 'Column Diameter (D)';
+        dim2_container.style.display = 'none';
+        tf_container.style.display = 'none';
+        tw_container.style.display = 'none';
+    } else { // W-Shape
+        label1.textContent = 'Column Depth (d)';
+        dim2_container.style.display = 'block';
+        tf_container.style.display = 'block';
+        tw_container.style.display = 'block';
     }
+
+    // Trigger a change on the shape select to clear it and redraw diagram
+    document.getElementById('aisc_shape_select').value = '';
+    document.getElementById('aisc_shape_select').dispatchEvent(new Event('change'));
+
+    populateShapeDropdown('column_type', 'aisc_shape_select');
+    drawBasePlateDiagram(gatherInputsFromIds(basePlateInputIds));
+}
+
 // Attach listener for column type change
 document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
+
+// This function is now generalized and moved to shared-utils.js
+// async function populateShapeDropdown() { ... } 
+
 const handleRunBasePlateCheck = createCalculationHandler({
     inputIds: basePlateInputIds,
     storageKey: 'baseplate-inputs',
@@ -1769,8 +1747,17 @@ initializeApp({
                 }
 
                 // --- Attach listeners for shape/column selection (unique to base plate) ---
-                document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-                document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
+                const shapeSelectionHandler = createShapeSelectionHandler('aisc_shape_select', {
+                    'column_depth_d': 'd',
+                    'column_flange_width_bf': 'bf',
+                    'column_flange_tf': 'tf',
+                    'column_web_tw': 'tw'
+                });
+                document.getElementById('aisc_shape_select').addEventListener('change', shapeSelectionHandler);
+
+                // The 'change' event listener for 'column_type' is already set up outside this function,
+                // which calls updateColumnInputsUI (which in turn calls populateShapeDropdown).
+                // The listener here is redundant and has been removed.
                 updateColumnInputsUI();
 
                 // --- Attach listeners for diagrams (unique to base plate) ---
