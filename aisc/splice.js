@@ -2066,7 +2066,7 @@ function renderSpliceInputSummary(inputs) {
         {
             title: 'Web Splice Details',
             rows: [
-                { cells: ['Web Plate(s)', `${num_web_plates} &times; PL ${H_wp}" &times; ${L_wp * 2}" &times; ${t_wp}"`] },
+                { cells: ['Web Plate(s)', `${num_web_plates} &times; PL ${H_wp}" &times; ${L_wp}" &times; ${t_wp}"`] },
                 { cells: ['Web Plate Material', `F<sub>y</sub>=${web_plate_Fy} ksi, F<sub>u</sub>=${web_plate_Fu} ksi`] }
             ]
         },
