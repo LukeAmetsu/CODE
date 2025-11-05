@@ -295,7 +295,16 @@ function validateInputs(inputs, rules) {
             const value = inputs[key];
             const label = rule.label || key;
 
-            if (rule.required && (value === undefined || value === '' || (typeof value === 'number' && isNaN(value)))) {
+            // --- FIX: Evaluate conditional 'required' properties ---
+            // Check if 'required' is a function. If so, call it with the inputs to determine if the field is actually required.
+            let isRequired = false;
+            if (typeof rule.required === 'function') {
+                isRequired = rule.required(inputs);
+            } else {
+                isRequired = !!rule.required;
+            }
+
+            if (isRequired && (value === undefined || value === '' || (typeof value === 'number' && isNaN(value)))) {
                 errors.push(`${label} is required.`);
                 continue;
             }

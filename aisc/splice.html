@@ -50,6 +50,13 @@
                                         </select>
                                     </div>
                                     <div>
+                                        <label for="jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
+                                        <select id="jurisdiction">
+                                            <option value="AISC" selected>AISC</option>
+                                            <option value="OSHA">OSHA</option>
+                                        </select>
+                                    </div>
+                                    <div>
                                         <label for="connection_type" class="block text-sm font-medium mb-1">Conn. Type</label>
                                         <select id="connection_type" data-ui-toggle-controller data-ui-toggle-target="#faying-surface-container" data-ui-toggle-condition-value="Slip-Critical">
                                             <option value="Bearing">Bearing</option>
@@ -84,10 +91,9 @@
                                     </div>
                                     <div class="col-span-2">
                                         <label for="optimize_bolts_check" class="flex items-center text-sm font-medium">
-                                            <input type="checkbox" id="optimize_bolts_check" class="h-4 w-4 rounded mr-2"
-                                                   data-ui-toggle-controller data-ui-toggle-target="#Nc_fp, #Nr_fp, #Nc_wp, #Nr_wp"
-                                                   data-ui-toggle-target="#Nc_fp, #Nr_fp, #Nc_wp, #Nr_wp"
-                                                   data-ui-toggle-type="disable">
+                                                                                        <input type="checkbox" id="optimize_bolts_check" class="h-4 w-4 rounded mr-2"
+                                                                                               data-ui-toggle-controller data-ui-toggle-target="#Nc_fp, #Nr_fp, #Nc_wp, #Nr_wp"
+                                                                                               data-ui-toggle-type="disable">
                                             Optimize number of bolts?
                                         </label>
                                     </div>
