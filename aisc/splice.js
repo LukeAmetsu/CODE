@@ -936,6 +936,9 @@ function performBeamConnectionChecks(partName, inputs, config) {
 }
 
 function performFlangeChecks(inputs, demands) {
+    if (inputs.num_flange_plates == 0) {
+        return { checks: {}, geomChecks: {}, inputs };
+    }
     const { total_flange_demand_tension, demand_fp_outer, demand_fp_inner, demand_fp_outer_comp, demand_fp_inner_comp } = demands;
     const checks = {};
     const geomChecks = {};
@@ -2106,20 +2109,24 @@ function renderResults(results, rawInputs) {
         geomRows.push({ cells: [`${name} (${limit_label})`, data.actual.toFixed(3), limit_val.toFixed(3), status] });
     };
 
-    addGeomRow(getTranslation('flange_bolt_edge_dist_long'), geomChecks['Flange Bolts'].edge_dist_long);
-    addGeomRow(getTranslation('flange_bolt_edge_dist_tran'), geomChecks['Flange Bolts'].edge_dist_tran);
-    addGeomRow(getTranslation('flange_bolt_edge_dist_gap'), geomChecks['Flange Bolts'].edge_dist_gap);
-    addGeomRow(getTranslation('flange_bolt_spacing_pitch'), geomChecks['Flange Bolts'].spacing_col);
-    addGeomRow(getTranslation('flange_bolt_spacing_gage'), geomChecks['Flange Bolts'].spacing_gage);
-    addGeomRow(getTranslation('flange_bolt_spacing_pitch'), geomChecks['Flange Bolts'].max_spacing_col, true);
-    addGeomRow(getTranslation('flange_bolt_spacing_gage'), geomChecks['Flange Bolts'].max_spacing_row, true);
-    addGeomRow(getTranslation('web_bolt_edge_dist_long'), geomChecks['Web Bolts'].edge_dist_long);
-    addGeomRow(getTranslation('web_bolt_edge_dist_tran'), geomChecks['Web Bolts'].edge_dist_tran); // This line was already present, no change needed.
-    addGeomRow(getTranslation('web_bolt_edge_dist_gap'), geomChecks['Web Bolts'].edge_dist_gap);
-    addGeomRow(getTranslation('web_bolt_spacing_pitch'), geomChecks['Web Bolts'].spacing_col);
-    addGeomRow(getTranslation('web_bolt_spacing_gage'), geomChecks['Web Bolts'].spacing_row);
-    addGeomRow(getTranslation('web_bolt_spacing_pitch'), geomChecks['Web Bolts'].max_spacing_col, true);
-    addGeomRow(getTranslation('web_bolt_spacing_gage'), geomChecks['Web Bolts'].max_spacing_row, true);
+    if (geomChecks['Flange Bolts']) {
+        addGeomRow(getTranslation('flange_bolt_edge_dist_long'), geomChecks['Flange Bolts'].edge_dist_long);
+        addGeomRow(getTranslation('flange_bolt_edge_dist_tran'), geomChecks['Flange Bolts'].edge_dist_tran);
+        addGeomRow(getTranslation('flange_bolt_edge_dist_gap'), geomChecks['Flange Bolts'].edge_dist_gap);
+        addGeomRow(getTranslation('flange_bolt_spacing_pitch'), geomChecks['Flange Bolts'].spacing_col);
+        addGeomRow(getTranslation('flange_bolt_spacing_gage'), geomChecks['Flange Bolts'].spacing_gage);
+        addGeomRow(getTranslation('flange_bolt_spacing_pitch'), geomChecks['Flange Bolts'].max_spacing_col, true);
+        addGeomRow(getTranslation('flange_bolt_spacing_gage'), geomChecks['Flange Bolts'].max_spacing_row, true);
+    }
+    if (geomChecks['Web Bolts']) {
+        addGeomRow(getTranslation('web_bolt_edge_dist_long'), geomChecks['Web Bolts'].edge_dist_long);
+        addGeomRow(getTranslation('web_bolt_edge_dist_tran'), geomChecks['Web Bolts'].edge_dist_tran); // This line was already present, no change needed.
+        addGeomRow(getTranslation('web_bolt_edge_dist_gap'), geomChecks['Web Bolts'].edge_dist_gap);
+        addGeomRow(getTranslation('web_bolt_spacing_pitch'), geomChecks['Web Bolts'].spacing_col);
+        addGeomRow(getTranslation('web_bolt_spacing_gage'), geomChecks['Web Bolts'].spacing_row);
+        addGeomRow(getTranslation('web_bolt_spacing_pitch'), geomChecks['Web Bolts'].max_spacing_col, true);
+        addGeomRow(getTranslation('web_bolt_spacing_gage'), geomChecks['Web Bolts'].max_spacing_row, true);
+    }
     
     // --- 4. Strength & Serviceability Checks ---
     const checkCategories = [
