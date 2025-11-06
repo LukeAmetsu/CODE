@@ -1182,9 +1182,6 @@ async function initializeApp(config) { // This function is already async
     // 4. Load saved data from Local Storage
     loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
 
-    // 5. Auto-load the page-specific script after all shared setup is complete.
-    // This is the last step to ensure all dependencies are met.
-    autoLoadPageScript();
 }
 
 /**
@@ -1481,7 +1478,21 @@ function createCalculationHandler(config) { // This is the function being called
         console.log(`[${validationRuleKey}] Gathering inputs...`);
         const inputs = typeof gatherInputsFunction === 'function' 
             ? gatherInputsFunction() 
-            : gatherInputsFromIds(inputIds);
+            : gatherInputsFromIds(inputIds);            
+
+        // Log the gathered inputs for debugging
+        console.log(`[${validationRuleKey}] Gathered inputs:`, inputs);
+
+        // --- Validate Required Number Inputs for Diagram Function ---
+        const requiredDiagramInputs = ['H_plate', 'gage', 'Nr', 'S_row'];
+        for (const inputName of requiredDiagramInputs) {
+            if (inputs[inputName] !== undefined && isNaN(parseFloat(inputs[inputName]))) {
+                console.error(`[${validationRuleKey}] Input '${inputName}' is not a valid number:`, inputs[inputName]);
+                showFeedback(`Error: Input '${inputName}' must be a number.`, true, feedbackElId);
+                if (buttonId) setLoadingState(false, buttonId);
+                return; // Stop further execution if validation fails
+            }
+        }
         
         // --- 2. VALIDATE INPUTS ---
         showFeedback('Validating inputs...', false, feedbackElId);
@@ -1747,3 +1758,10 @@ async function populateShapeDropdown() {
         shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
     }
 }
+
+// --- Global Initialization Trigger ---
+// This ensures autoLoadPageScript runs once the DOM is ready,
+// which then loads the page-specific script that calls initializeApp.
+document.addEventListener('DOMContentLoaded', () => {
+    autoLoadPageScript();
+});

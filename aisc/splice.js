@@ -830,6 +830,7 @@ function getGeometryChecks({ db, s_col, s_row, gage, le_long, le_tran, t_thinner
 }
 
 function calculateBoltGroupGeometry({ L_plate, H_plate, Nc, Nr, S_col, S_row, S_end_gap, gage }) {
+    console.log(`calculateBoltGroupGeometry: H_plate=${H_plate}, gage=${gage}, Nr=${Nr}, S_row=${S_row}`);
     const edge_dist_gap = S_end_gap;
     const bolt_pattern_width = (Nc > 1 ? (Nc - 1) * S_col : 0);
     const le_long = L_plate - edge_dist_gap - bolt_pattern_width;
@@ -841,6 +842,17 @@ function calculateBoltGroupGeometry({ L_plate, H_plate, Nc, Nr, S_col, S_row, S_
     } else { // Web plate logic without a gage
         bolt_pattern_height = (Nr > 1 ? (Nr - 1) * S_row : 0);
         le_tran = (H_plate - bolt_pattern_height) / 2.0;
+    }
+    console.log(`calculateBoltGroupGeometry: bolt_pattern_height=${bolt_pattern_height}, le_tran (raw)=${le_tran}`);
+
+    // Validate Geometric Results
+    if (bolt_pattern_height > H_plate) {
+        console.error("Error: Bolt pattern height exceeds plate height.");
+        return { le_long: 0, le_tran: 0, edge_dist_gap: 0, bolt_pattern_width: 0, bolt_pattern_height: 0, error: "Bolt pattern height exceeds plate height." };
+    }
+    if (le_tran < 0) {
+        console.warn("Warning: Calculated transverse edge distance is negative.");
+        le_tran = 0; // Set to zero to avoid further calculation issues
     }
 
     return { 
@@ -2044,7 +2056,7 @@ function renderSpliceInputSummary(inputs) {
         {
             title: 'Flange Splice Details',
             rows: [
-                { cells: ['Outer Plate', `PL ${H_fp}" &times; ${L_fp * 2}" &times; ${t_fp}"`] },
+                { cells: ['Outer Plate', `PL ${H_fp}" &times; ${L_fp}" &times; ${t_fp}"`] },
                 { cells: ['Outer Plate Material', `F<sub>y</sub>=${flange_plate_Fy} ksi, F<sub>u</sub>=${flange_plate_Fu} ksi`] },
                 ...(num_flange_plates == 2 ? [
                     { cells: ['Inner Plate', `2 x PL ${H_fp_inner}" &times; ${L_fp_inner * 2}" &times; ${t_fp_inner}"`] },
@@ -2325,6 +2337,8 @@ const inputIds = [
     'aisc_shape_select' // Added shape select to the list
 ];
 
+console.log("splice.js: Script started.");
+
 const handleRunSpliceCheck = createCalculationHandler({
     inputIds: inputIds,
     storageKey: 'splice-inputs',
@@ -2346,11 +2360,13 @@ const handleRunSpliceCheck = createCalculationHandler({
     resultsContainerId: 'results-container',
     buttonId: 'run-check-btn'
 });
+console.log("splice.js: handleRunSpliceCheck created.");
 
 initializeApp({
     inputIds: inputIds,
     calculationHandler: handleRunSpliceCheck,
     onReady: () => {
+    console.log("splice.js: initializeApp onReady callback executed.");
     populateMaterialDropdowns();
     populateBoltGradeDropdowns();
     populateBoltDiameterDropdowns();
@@ -2391,3 +2407,4 @@ initializeApp({
         setTimeout(draw3dSpliceDiagram, 100);
     }
 });
+console.log("splice.js: initializeApp called.");
