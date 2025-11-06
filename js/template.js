@@ -185,4 +185,4 @@ function attachReportEventListeners(containerId, config) {
 // We assume initializeApp is defined in shared-utils.js, which is loaded before this script.
 // The individual calculator scripts will call initializeApp with their specific configs.
 // This call is a fallback for pages that might not have a specific script (like index.html).
-initializeApp({});
+// initializeApp({});

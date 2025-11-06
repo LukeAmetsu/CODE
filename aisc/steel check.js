@@ -2,7 +2,7 @@
 let lastSteelRunResults = null;
 
 const steelCheckInputIds = [
-    'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
+    'jurisdiction', 'fos', 'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
     'section_type', 'aisc_shape_select',
     'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
@@ -11,7 +11,10 @@ const steelCheckInputIds = [
 
 // --- Move steelChecker definition OUTSIDE DOMContentLoaded ---
 const steelChecker = (() => {
-    function getDesignFactor(design_method, phi, omega) {
+    function getDesignFactor(design_method, phi, omega, jurisdiction, fos) {
+        if (jurisdiction === 'OSHA') {
+            return 1 / (parseFloat(fos) || 2.0); // Use FOS for OSHA, with a default fallback
+        }
         if (design_method === 'LRFD') return phi;
         return 1 / omega; // ASD
     }
@@ -160,7 +163,7 @@ const steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
         const phiMn_or_Mn_omega = Mn * factor;
 
         return {
@@ -174,10 +177,9 @@ const steelChecker = (() => {
 
     function checkFlexure_HSS(props, inputs) {
         const { Fy, E } = inputs;
-        const { Zx, Sx, type } = props;
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
 
         let isCompact, Mn;
         let slenderness = {};
@@ -224,12 +226,9 @@ const steelChecker = (() => {
 
     function checkFlexure_Angle(props, inputs) {
         const { Fy, E, Cb, Lb_input } = inputs;
-        const { Zx, Sx, ry, d, bf, tf } = props;
-        const Lb = Lb_input * 12;
-
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
 
         // F10.1 Yielding
         const My = 1.5 * Fy * Sx;
@@ -257,7 +256,7 @@ const steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
 
         // Basic yielding capacity
         const Mpy = Math.min(Fy * Zy, 1.6 * Fy * Sy); // AISC F6.1
@@ -419,7 +418,7 @@ const steelChecker = (() => {
 
         const phi_c = 0.9;
         const omega_c = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_c, omega_c);
+        const factor = getDesignFactor(inputs.design_method, phi_c, omega_c, inputs.jurisdiction, inputs.fos);
 
         // --- 1. Slender Element Reduction Factor (Q) ---
         const Q_results = checkHSSLocalBuckling(props, inputs); // This function handles multiple types
@@ -473,7 +472,7 @@ const steelChecker = (() => {
         const Pn_yield = Fy * Ag;
         const phi_ty = 0.90;
         const omega_ty = 1.67;
-        const factor_yield = getDesignFactor(inputs.design_method, phi_ty, omega_ty);
+        const factor_yield = getDesignFactor(inputs.design_method, phi_ty, omega_ty, inputs.jurisdiction, inputs.fos);
         const cap_yield = Pn_yield * factor_yield;
 
         const An_net = Ag;
@@ -481,7 +480,7 @@ const steelChecker = (() => {
         const Pn_rupture = Fu * Ae;
         const phi_tr = 0.75;
         const omega_tr = 2.00;
-        const factor_rupture = getDesignFactor(inputs.design_method, phi_tr, omega_tr);
+        const factor_rupture = getDesignFactor(inputs.design_method, phi_tr, omega_tr, inputs.jurisdiction, inputs.fos);
         const cap_rupture = Pn_rupture * factor_rupture;
 
         const governing_capacity = Math.min(cap_yield, cap_rupture);
@@ -511,7 +510,7 @@ const steelChecker = (() => {
         const a = stiffener_spacing_a; // clear distance between transverse stiffeners
         const phi_v = 0.9;
         const omega_v = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
+        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v, inputs.jurisdiction, inputs.fos);
         const h_tw = h / tw;
         const kv = 5.34;
 
@@ -592,7 +591,7 @@ const steelChecker = (() => {
         const { Fy, E } = inputs;
         const phi_v = inputs.section_type === 'Rectangular HSS' ? 0.9 : 1.0;
         const omega_v = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
+        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v, inputs.jurisdiction, inputs.fos);
 
         let Vn, Cv = 1.0, h_tw = 0, Aw, governing_limit_state;
 
@@ -908,7 +907,7 @@ const steelChecker = (() => {
 
         const phi_T = 0.9;
         const omega_T = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_T, omega_T);
+        const factor = getDesignFactor(inputs.design_method, phi_T, omega_T, inputs.jurisdiction, inputs.fos);
 
         return {
             applicable: true,
@@ -932,7 +931,7 @@ const steelChecker = (() => {
 
         const phi_T = 0.90;
         const omega_T = 1.67;
-        const factor = getDesignFactor(design_method, phi_T, omega_T);
+        const factor = getDesignFactor(design_method, phi_T, omega_T, inputs.jurisdiction, inputs.fos);
 
         let Tn, governing_limit_state;
 
@@ -979,7 +978,7 @@ const steelChecker = (() => {
 
         const phi = 0.75;
         const omega = 2.00;
-        const factor = getDesignFactor(inputs.design_method, phi, omega);
+        const factor = getDesignFactor(inputs.design_method, phi, omega, inputs.jurisdiction, inputs.fos);
 
         // --- Web Local Yielding (AISC J10.2) ---
         const N_lb = lb_bearing;
@@ -1071,7 +1070,7 @@ const steelChecker = (() => {
         const Rn = (Cr * Aw * Fy) / (h_tw**2);
         const phi = 0.90;
         const omega = 1.67;
-        const factor = getDesignFactor(design_method, phi, omega);
+        const factor = getDesignFactor(design_method, phi, omega, inputs.jurisdiction, inputs.fos);
 
         return { 
             applicable: true, 
@@ -1368,10 +1367,16 @@ function generateSteelBreakdownHtml(name, data, results) {
     const { design_method } = inputs;
 
     const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
-    const factor_val = design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67);
-    const capacity_eq = design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`;
+    const factor_val = inputs.jurisdiction === 'OSHA' 
+        ? inputs.fos 
+        : (design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67));
+    const capacity_eq = inputs.jurisdiction === 'OSHA' 
+        ? `R<sub>n</sub> / FOS` 
+        : (design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`);
     const nominal_capacity = check?.Mn || check?.Rn || 0; // Use Mn for flexure, Rn for others
-    const final_capacity = design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val;
+    const final_capacity = inputs.jurisdiction === 'OSHA' 
+        ? nominal_capacity / factor_val 
+        : (design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val);
 
     const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
     const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
@@ -1622,13 +1627,17 @@ async function handleShapeSelection() {
 }
 
 function renderSteelInputSummary(inputs) {
-    const { design_method, aisc_standard, steel_material, Fy, Fu, Lb_input, K, Cb, Pu_or_Pa, Vu_or_Va, Mux_or_Max, Muy_or_May, Tu_or_Ta, deflection_span, deflection_limit, actual_deflection_input } = inputs;
+    const { jurisdiction, fos, design_method, aisc_standard, steel_material, Fy, Fu, Lb_input, K, Cb, Pu_or_Pa, Vu_or_Va, Mux_or_Max, Muy_or_May, Tu_or_Ta, deflection_span, deflection_limit, actual_deflection_input } = inputs;
+
+    const jurisdictionDetails = jurisdiction === 'OSHA'
+        ? `<tr><td>Jurisdiction</td><td>OSHA (FOS = ${fos})</td></tr>`
+        : `<tr><td>Design Method</td><td>${design_method} (${aisc_standard})</td></tr>`;
 
     return `
             <table class="w-full mt-2 summary-table">
                 <caption class="report-caption">General & Material Properties</caption>
                 <tbody>
-                    <tr><td>Design Method</td><td>${design_method} (${aisc_standard})</td></tr>
+                    ${jurisdictionDetails}
                     <tr><td>Material</td><td>${steel_material} (F<sub>y</sub>=${Fy} ksi, F<sub>u</sub>=${Fu} ksi)</td></tr>
                     <tr><td>Unbraced Length (L<sub>b</sub>)</td><td>${Lb_input} ft</td></tr>
                     <tr><td>Effective Length Factor (K)</td><td>${K}</td></tr>
@@ -1789,7 +1798,7 @@ function renderSteelResults(results) {
 
     const report = new ReportBuilder({
         reportId: 'steel-check-report-content',
-        title: `Steel Section Check Results (${inputs.design_method})`
+        title: `Steel Section Check Results (${inputs.jurisdiction === 'OSHA' ? 'OSHA' : inputs.design_method})`
     });
 
     if (errors && errors.length > 0) {
@@ -1804,6 +1813,23 @@ function renderSteelResults(results) {
     report.addSection(`Strength & Serviceability Checks (${inputs.design_method})`, renderSteelStrengthChecks(results), 'strength-checks-section');
 
     report.render(resultsContainer.id);
+}
+
+function handleJurisdictionChange() {
+    const jurisdiction = document.getElementById('jurisdiction').value;
+    const oshaOptions = document.getElementById('osha-options');
+    const designMethodContainer = document.getElementById('design-method-container');
+    const aiscStandardContainer = document.getElementById('aisc-standard-container');
+
+    if (jurisdiction === 'OSHA') {
+        oshaOptions.classList.remove('hidden');
+        designMethodContainer.classList.add('hidden');
+        aiscStandardContainer.classList.add('hidden');
+    } else { // AISC
+        oshaOptions.classList.add('hidden');
+        designMethodContainer.classList.remove('hidden');
+        aiscStandardContainer.classList.remove('hidden');
+    }
 }
 
 // --- DOMContentLoaded: Initialize UI ---
@@ -1822,6 +1848,8 @@ initializeApp({
         populateMaterialDropdowns();
         populateShapeDropdown();
         updateGeometryInputsUI();
+        handleJurisdictionChange(); // Call on initial load
+        document.getElementById('jurisdiction').addEventListener('change', handleJurisdictionChange);
         document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
         document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
         if (loadedInputs) {
