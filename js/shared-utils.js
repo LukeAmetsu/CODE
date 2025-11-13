@@ -424,46 +424,51 @@ async function convertSvgToPng(svg) {
     return new Promise(async (resolve, reject) => {
         try {
             const clone = svg.cloneNode(true);
-            const rect = svg.getBoundingClientRect();
+
+            // Define a high resolution for the output PNG for better quality
+            const targetWidth = 1200;
             const viewBox = svg.viewBox.baseVal;
+            const aspectRatio = (viewBox && viewBox.width > 0) ? (viewBox.height / viewBox.width) : (9 / 16); // Default aspect ratio
+            const targetHeight = Math.max(1, targetWidth * aspectRatio); // Ensure height is at least 1
 
-            // Prioritize dimensions: rendered size, viewBox, fallback. Ensure non-zero dimensions.
-            const width = rect.width || (viewBox && viewBox.width) || 500;
-            const height = rect.height || (viewBox && viewBox.height) || 300;
+            clone.setAttribute('width', targetWidth);
+            clone.setAttribute('height', targetHeight);
 
-            clone.setAttribute('width', width);
-            clone.setAttribute('height', height);
+            // Force a light theme for printing by injecting specific styles
+            // This overrides dark mode styles for text, strokes, and background
+            const printStyles = `
+                <style>
+                    svg { background-color: white !important; }
+                    text, .svg-label, .svg-dim-text { fill: black !important; }
+                    .svg-member, .svg-dim { stroke: black !important; }
+                    path, rect { stroke: black !important; }
+                </style>
+            `;
 
-            // Determine background color from theme
-            const isDarkMode = document.documentElement.classList.contains('dark');
-            const backgroundColor = isDarkMode ? '#1f2937' : '#f9fafb'; // Corresponds to .diagram bg colors
-            const backgroundRect = `<rect width="100%" height="100%" fill="${backgroundColor}"></rect>`;
-
-            // Embed all page styles into the SVG for correct rendering.
             const styles = getAllCssStyles();
             const defs = document.createElementNS("http://www.w3.org/2000/svg", 'defs');
-            defs.innerHTML = styles;
+            // Inject page styles first, then our override styles to ensure they take precedence
+            defs.innerHTML = styles + printStyles;
             clone.insertBefore(defs, clone.firstChild);
 
-            clone.setAttribute('width', width);
-            clone.setAttribute('height', height);
-            // Prepend the background rectangle to the cloned SVG's innerHTML
-            clone.innerHTML = backgroundRect + clone.innerHTML;
             const xml = new XMLSerializer().serializeToString(clone);
-            const svg64 = btoa(unescape(encodeURIComponent(xml)));
-            const dataUrl = `data:image/svg+xml;base64,${svg64}`;
+            const dataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(xml)))}`;
 
             const image = new Image();
             image.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');                
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
                 if (ctx) {
+                    // Draw a white background on the canvas itself as a final fallback
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(image, 0, 0);
+                    
                     const pngImage = new Image();
                     pngImage.src = canvas.toDataURL('image/png');
-                    pngImage.style.maxWidth = '100%';
+                    pngImage.style.maxWidth = '100%'; // For display in the Word doc
                     pngImage.style.height = 'auto';
                     resolve(pngImage);
                 } else {
@@ -547,6 +552,12 @@ function convertElementToPlainText(element) {
  * @param {string} containerId - The ID of the container with the report content.
  * @param {string} feedbackElId - The ID of the feedback element.
  */
+// Proxy function to maintain backward compatibility
+function handleCopyToClipboard(targetId, options) {
+    console.warn("The function 'handleCopyToClipboard' is deprecated. Please use 'handleCopy' instead.");
+    handleCopy(targetId, options);
+}
+
 async function handleCopy(targetId, options = {}) {
     const { feedbackElId = 'feedback-message', engine, scene } = options;
     try {
@@ -692,30 +703,60 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
     clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
     clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
     
-    // Remove empty table rows that might be left after removing buttons
     clone.querySelectorAll('tr').forEach(tr => {
         if (tr.innerText.trim() === '') {
             tr.remove();
         }
     });
-    // Convert SVGs to PNGs
-    const svgElements = Array.from(clone.querySelectorAll('svg'));
-    if (svgElements.length > 0) {
-        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
-        await Promise.all(svgElements.map(async (svg) => {
+
+    // Convert all diagrams (SVG and Canvas) to PNGs
+    const diagramElements = Array.from(clone.querySelectorAll('svg, canvas'));
+    if (diagramElements.length > 0) {
+        showFeedback(`Converting ${diagramElements.length} diagram(s)...`, false, feedbackElId);
+        await Promise.all(diagramElements.map(async (element) => {
             try {
-                const pngImage = await convertSvgToPng(svg);
-                if (pngImage && svg.parentNode) {
-                    svg.parentNode.replaceChild(pngImage, svg);
+                let pngImage;
+                if (element.tagName.toLowerCase() === 'svg') {
+                    pngImage = await convertSvgToPng(element);
+                } else { // It's a canvas
+                    const originalCanvas = element;
+                    const scale = 2; // Upscale for better quality
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = originalCanvas.width * scale;
+                    tempCanvas.height = originalCanvas.height * scale;
+                    const ctx = tempCanvas.getContext('2d');
+
+                    // Force white background
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    ctx.drawImage(originalCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                    const dataUrl = tempCanvas.toDataURL('image/png');
+                    if (dataUrl.length < 100) return; // Skip blank canvases
+
+                    pngImage = new Image();
+                    pngImage.src = dataUrl;
+                    // Set display size in the Word doc to be the original size
+                    pngImage.style.width = `${originalCanvas.width}px`;
+                    pngImage.style.height = `${originalCanvas.height}px`;
+                    pngImage.style.maxWidth = '100%';
+                }
+
+                if (pngImage && element.parentNode) {
+                    await new Promise(resolve => {
+                        if (pngImage.complete) resolve();
+                        else pngImage.onload = resolve;
+                    });
+                    element.parentNode.replaceChild(pngImage, element);
                 }
             } catch (error) {
-                console.warn("SVG to PNG conversion failed for Word export:", error);
+                console.warn("Diagram conversion failed for Word export:", error);
             }
         }));
     }
 
     const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
+    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle);
 
     const blob = new Blob([finalHtml], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
@@ -778,63 +819,6 @@ function convertReportToCsv(reportId) {
     });
 
     return csvContent;
-}
-
-/**
- * Downloads the content of a given container as a Microsoft Word (.doc) file.
- * It converts SVGs to PNGs and formats the HTML for Word compatibility.
- * @param {string} containerId - The ID of the container with the report content.
- * @param {string} filename - The desired filename for the downloaded Word file.
- * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
- */
-async function handleDownloadWord(containerId, filename, feedbackElId = 'feedback-message') {
-    const reportContainer = document.getElementById(containerId);
-    if (!reportContainer) {
-        showFeedback('Report container not found for Word export.', true, feedbackElId);
-        return;
-    }
-
-    showFeedback('Generating Word document...', false, feedbackElId);
-
-    const clone = reportContainer.cloneNode(true);
-    clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
-    clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
-    
-    // Remove empty table rows that might be left after removing buttons
-    clone.querySelectorAll('tr').forEach(tr => {
-        if (tr.innerText.trim() === '') {
-            tr.remove();
-        }
-    });
-    // Convert SVGs to PNGs
-    const svgElements = Array.from(clone.querySelectorAll('svg'));
-    if (svgElements.length > 0) {
-        showFeedback(`Converting ${svgElements.length} diagram(s)...`, false, feedbackElId);
-        await Promise.all(svgElements.map(async (svg) => {
-            try {
-                const pngImage = await convertSvgToPng(svg);
-                if (pngImage && svg.parentNode) {
-                    svg.parentNode.replaceChild(pngImage, svg);
-                }
-            } catch (error) {
-                console.warn("SVG to PNG conversion failed for Word export:", error);
-            }
-        }));
-    }
-
-    const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
-    const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Simplified call
-
-    const blob = new Blob([finalHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showFeedback('Word document download started.', false, feedbackElId);
 }
 
 /**
@@ -1390,6 +1374,12 @@ function attachReportEventListeners(containerId, config) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // FIX: Add a guard to prevent re-attaching the listener
+    if (container.dataset.reportListenersAttached === 'true') {
+        return; // Listeners are already attached
+    }
+    container.dataset.reportListenersAttached = 'true';
+
     // Use event delegation to handle clicks on dynamically added elements.
     container.addEventListener('click', (event) => {
         const target = event.target;
@@ -1408,7 +1398,7 @@ function attachReportEventListeners(containerId, config) {
         if (target.matches('.copy-section-btn')) {
             const copyTargetId = target.dataset.copyTargetId;
             if (copyTargetId) {
-                handleCopyToClipboard(copyTargetId);
+                handleCopy(copyTargetId);
             }
         }
 
@@ -1423,7 +1413,7 @@ function attachReportEventListeners(containerId, config) {
 
         // --- Copy Report ---
         if (target.id === 'copy-report-btn') {
-            handleCopyToClipboard(reportId);
+            handleCopy(reportId);
         }
 
         // --- Download PDF ---

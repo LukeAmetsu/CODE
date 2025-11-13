@@ -616,15 +616,67 @@ const windLoadCalculator = (() => {
     }
 
     function calculateSteepRoofCandC(A, h, theta) {
-        // ASCE 7-16 Figure 30.5-2 for Steep Roofs (theta > 7 deg)
-        const gcp_data = {
-            heights: [60, 100, 200, 300, 400, 500],
-            areas: [10, 100, 500],
-            'Zone 1\'': { pos: [0.7, 0.5, 0.3], neg: [-1.0, -0.9, -0.7] },
-            'Zone 2\'': { pos: [0.9, 0.7, 0.5], neg: [-1.8, -1.4, -1.0] },
-            'Zone 3\'': { pos: [1.3, 1.0, 0.7], neg: [-2.6, -2.0, -1.4] }
-        };
-        return interpolateHighRiseGcp(gcp_data, A, h);
+        // ASCE 7-16 Figure 30.5-2 for Steep Roofs (7 < theta <= 45 deg)
+        
+        const h_tan_theta = h * Math.tan(theta * Math.PI / 180);
+        const log_A = Math.log(A);
+        const log_areas = [Math.log(10), Math.log(100), Math.log(500)];
+    
+        let gcp_data;
+    
+        if (theta > 7 && theta <= 27) {
+            gcp_data = {
+                h_tan_theta_points: [20, 100, 500],
+                'Zone 1\'': {
+                    pos: [[0.7, 0.5, 0.3], [0.7, 0.5, 0.3], [0.7, 0.5, 0.3]], // Constant with h*tan(theta)
+                    neg: [[-1.0, -0.9, -0.7], [-1.1, -1.0, -0.8], [-1.3, -1.2, -1.1]]
+                },
+                'Zone 2\'': {
+                    pos: [[0.9, 0.7, 0.5], [1.1, 0.9, 0.7], [1.3, 1.1, 0.9]],
+                    neg: [[-1.8, -1.4, -1.0], [-2.1, -1.6, -1.2], [-2.5, -2.0, -1.6]]
+                },
+                'Zone 3\'': {
+                    pos: [[1.3, 1.0, 0.7], [1.6, 1.2, 0.9], [2.0, 1.6, 1.2]],
+                    neg: [[-2.6, -2.0, -1.4], [-3.0, -2.4, -1.8], [-3.6, -3.0, -2.4]]
+                }
+            };
+        } else { // 27 < theta <= 45
+            gcp_data = {
+                h_tan_theta_points: [20, 100, 500],
+                'Zone 1\'': {
+                    pos: [[0.7, 0.5, 0.3], [0.7, 0.5, 0.3], [0.7, 0.5, 0.3]],
+                    neg: [[-1.0, -0.9, -0.7], [-1.1, -1.0, -0.8], [-1.3, -1.2, -1.1]]
+                },
+                'Zone 2\'': {
+                    pos: [[1.3, 1.1, 0.9], [1.5, 1.3, 1.1], [1.8, 1.6, 1.4]],
+                    neg: [[-1.9, -1.5, -1.1], [-2.2, -1.7, -1.3], [-2.6, -2.1, -1.7]]
+                },
+                'Zone 3\'': {
+                    pos: [[1.8, 1.4, 1.0], [2.2, 1.7, 1.3], [2.7, 2.2, 1.7]],
+                    neg: [[-2.8, -2.2, -1.6], [-3.3, -2.6, -2.0], [-4.0, -3.3, -2.7]]
+                }
+            };
+        }
+    
+        const results = {};
+        for (const zone of Object.keys(gcp_data).filter(k => k !== 'h_tan_theta_points')) {
+            const zoneData = gcp_data[zone];
+            
+            // 1. For each h*tan(theta) point, interpolate GCp for the given Area A.
+            const pos_gcp_at_A_for_each_h_tan_theta = zoneData.pos.map(pos_values_for_area => interpolate(log_A, log_areas, pos_values_for_area));
+            const neg_gcp_at_A_for_each_h_tan_theta = zoneData.neg.map(neg_values_for_area => interpolate(log_A, log_areas, neg_values_for_area));
+    
+            // 2. Interpolate along h*tan(theta) using the results from step 1.
+            const final_pos_gcp = interpolate(h_tan_theta, gcp_data.h_tan_theta_points, pos_gcp_at_A_for_each_h_tan_theta);
+            const final_neg_gcp = interpolate(h_tan_theta, gcp_data.h_tan_theta_points, neg_gcp_at_A_for_each_h_tan_theta);
+    
+            results[zone] = {
+                positive: final_pos_gcp,
+                negative: final_neg_gcp
+            };
+        }
+        
+        return results;
     }
 
     function calculateLowSlopeRoofPressuresHighRise(A, h) {
@@ -805,10 +857,10 @@ const windLoadCalculator = (() => {
             }
         } else if (roof_type === 'monoslope') {
             // Monoslope C&C from Fig 30.3-5
-            gcp_map['Roof Zone 1 (Interior)'] = logInterpolate([-1.5, -1.4, -1.2, -1.0, -0.7, -0.5]);
-            gcp_map['Roof Zone 2 (Edges)'] = logInterpolate([-2.3, -2.1, -1.8, -1.5, -1.0, -0.7]);
-            gcp_map['Roof Zone 3 (Corners)'] = logInterpolate([-3.2, -2.9, -2.4, -2.0, -1.3, -0.9]);
-            gcp_map['Roof Positive Pressure'] = 0.2; // All zones
+            const pos_gcp = 0.2; // All zones have the same positive GCp
+            gcp_map['Roof Zone 1 (Interior)'] = { neg: logInterpolate([-1.5, -1.4, -1.2, -1.0, -0.7, -0.5]), pos: pos_gcp };
+            gcp_map['Roof Zone 2 (Edges)'] =    { neg: logInterpolate([-2.3, -2.1, -1.8, -1.5, -1.0, -0.7]), pos: pos_gcp };
+            gcp_map['Roof Zone 3 (Corners)'] =  { neg: logInterpolate([-3.2, -2.9, -2.4, -2.0, -1.3, -0.9]), pos: pos_gcp };
         }
 
         const final_pressures = {};
@@ -1231,6 +1283,26 @@ const windLoadCalculator = (() => {
             }
             return results;
         },
+        'Arched Roofs': (inputs, intermediate) => {
+            const { qz, G } = intermediate;
+            const { cnMap, ref } = getArchedRoofCn({
+                r: inputs.arched_roof_rise,
+                B: inputs.building_width_B,
+                h: inputs.mean_roof_height,
+                spring_point: inputs.arched_roof_spring_point
+            });
+
+            const pressures = {};
+            for (const [zone, CN] of Object.entries(cnMap)) {
+                const pressure = qz * G * CN;
+                pressures[zone] = {
+                    CN,
+                    pressure,
+                    pressure_asd: pressure * 0.6
+                };
+            }
+            return { arched_roof_results: { cnMap, ref, pressures } };
+        },
         'Parapets': (inputs, intermediate) => {
             return { parapet_results: calculateParapetPressures(inputs, intermediate) };
         },
@@ -1255,9 +1327,33 @@ const windLoadCalculator = (() => {
             const pressure = qz * G * Cf;
             return { is_truss_tower: true, truss_tower_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6, Kz_tower: intermediate.Kz, qz_tower: qz } };
         },
+        'Trussed Towers (All Other Cross Sections)': (inputs, intermediate) => {
+            const { qz, G } = intermediate;
+            const { Cf, ref } = getTrussedTowerCf(inputs);
+            const pressure = qz * G * Cf;
+            return { is_truss_tower: true, truss_tower_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6, Kz_tower: intermediate.Kz, qz_tower: qz } };
+        },
         'Chimneys, Tanks (Square)': (inputs, intermediate) => {
             const { qz, G } = intermediate;
             const { Cf, ref } = getChimneyCf({ shape: 'Square', h: inputs.chimney_height, D: inputs.chimney_diameter, qz: qz, r: inputs.corner_radius_r, unit_system: inputs.unit_system });
+            const pressure = qz * G * Cf;
+            return { is_chimney: true, chimney_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6, h_struct: inputs.chimney_height, Kz_struct: intermediate.Kz, qz_struct: qz } };
+        },
+        'Chimneys, Tanks (Round)': (inputs, intermediate) => {
+            const { qz, G } = intermediate;
+            const { Cf, ref } = getChimneyCf({ shape: 'Round', h: inputs.chimney_height, D: inputs.chimney_diameter, qz: qz, r: 0, unit_system: inputs.unit_system });
+            const pressure = qz * G * Cf;
+            return { is_chimney: true, chimney_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6, h_struct: inputs.chimney_height, Kz_struct: intermediate.Kz, qz_struct: qz } };
+        },
+        'Chimneys, Tanks (Hexagonal)': (inputs, intermediate) => {
+            const { qz, G } = intermediate;
+            const { Cf, ref } = getChimneyCf({ shape: 'Hexagonal', h: inputs.chimney_height, D: inputs.chimney_diameter, qz: qz, r: 0, unit_system: inputs.unit_system });
+            const pressure = qz * G * Cf;
+            return { is_chimney: true, chimney_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6, h_struct: inputs.chimney_height, Kz_struct: intermediate.Kz, qz_struct: qz } };
+        },
+        'Chimneys, Tanks (Octagonal)': (inputs, intermediate) => {
+            const { qz, G } = intermediate;
+            const { Cf, ref } = getChimneyCf({ shape: 'Octagonal', h: inputs.chimney_height, D: inputs.chimney_diameter, qz: qz, r: 0, unit_system: inputs.unit_system });
             const pressure = qz * G * Cf;
             return { is_chimney: true, chimney_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6, h_struct: inputs.chimney_height, Kz_struct: intermediate.Kz, qz_struct: qz } };
         }
@@ -1746,7 +1842,10 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${safeToFixed(inputs.mean_roof_height, 2)} / ${safeToFixed(intermediate.zg, 0)})<sup>(2 / ${intermediate.alpha})</sup> = ${safeToFixed(intermediate.Kz, 3)}</div>
                 </li>
                 <li><strong>Velocity Pressure (q<sub>h</sub>):</strong>
-                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">q<sub>h</sub> = 0.00256 &times; K<sub>z</sub> &times; K<sub>zt</sub> &times; K<sub>d</sub> &times; K<sub>e</sub> &times; V² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; I<sub>w</sub>` : ''} = ${safeToFixed(intermediate.qz, 2)} ${p_unit}</div>
+                    <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">
+                        q<sub>h</sub> = 0.00256 &times; K<sub>z</sub> &times; K<sub>zt</sub> &times; K<sub>d</sub> &times; K<sub>e</sub> &times; V² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; I<sub>w</sub>` : ''} <br>
+                        q<sub>h</sub> = 0.00256 &times; ${safeToFixed(intermediate.Kz, 3)} &times; ${safeToFixed(inputs.topographic_factor_Kzt, 2)} &times; ${safeToFixed(intermediate.Kd, 2)} &times; ${safeToFixed(intermediate.Ke, 3)} &times; ${safeToFixed(inputs.V_in, 1)}² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; ${safeToFixed(intermediate.Iw, 2)}` : ''} = <b>${safeToFixed(intermediate.qz, 2)} ${p_unit}</b>
+                    </div>
                 </li>
             </ul>`;
     }return `<div class="calc-breakdown">${breakdownContent}</div>`;
@@ -2344,9 +2443,7 @@ function renderWindResults(results) {
     const {
         inputs, intermediate, warnings, errors, jurisdiction_note,
         directional_results, candc, envelope_results, mwfrs_method,
-        open_building_ref, arched_roof_results, truss_tower_results,
-        chimney_results, solid_sign_results, open_sign_results,
-        parapet_results, overhang_results, rooftop_results,
+        open_building_ref, parapet_results, overhang_results, rooftop_results,
         torsional_case, heightVaryingResults_L,
         roofPressureDist_L, roofPressureDist_B
     } = results;
@@ -2377,6 +2474,7 @@ function renderWindResults(results) {
 
     // --- Special rendering path for Arched Roofs ---
     if (is_arched_roof) {
+        const { arched_roof_results } = results;
         const { cnMap, ref, pressures } = arched_roof_results;
     let archedRoofHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
@@ -2405,6 +2503,7 @@ function renderWindResults(results) {
 
     // --- Special rendering path for Trussed Towers ---
     if (is_truss_tower) {
+        const { truss_tower_results } = results;
         const { Cf, ref, pressure, pressure_asd, Kz_tower, qz_tower } = truss_tower_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
         // Custom breakdown for trussed towers
@@ -2427,6 +2526,7 @@ function renderWindResults(results) {
 
     // --- Special rendering path for Chimneys/Tanks ---
     if (is_chimney) {
+        const { chimney_results } = results;
         const { Cf, ref, pressure, pressure_asd, h_struct, Kz_struct, qz_struct } = chimney_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
         // Custom breakdown for chimneys/tanks
@@ -2449,6 +2549,7 @@ function renderWindResults(results) {
 
     // --- Special rendering path for Solid Signs ---
     if (is_solid_sign) {
+        const { solid_sign_results } = results;
         const { CN, ref, pressure, pressure_asd, h_sign, Kz_sign, qz_sign } = solid_sign_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
         // Custom breakdown for solid signs
@@ -2469,6 +2570,7 @@ function renderWindResults(results) {
     }
     // --- Special rendering path for Open Signs ---
     if (is_open_sign) {
+        const { open_sign_results } = results;
         const { Cf, ref, pressure, pressure_asd } = open_sign_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
     const openSignHtml = `
