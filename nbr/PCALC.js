@@ -48,10 +48,6 @@ const pcalcData = {
 };
 
 // --- DOM Element References ---
-const newBtn = document.getElementById('new-btn');
-const openBtn = document.getElementById('open-btn');
-const saveBtn = document.getElementById('save-btn');
-// ... add other element references as needed
 const geometryForm = document.getElementById('geometry-form');
 const sectionType = document.getElementById('section-type');
 const hxInput = document.getElementById('hx');
@@ -80,7 +76,10 @@ function renderChart(chartType = 'N-Mx') {
     }
 
     const { curvasMr } = pcalcData.resultados;
-    if (!curvasMr || curvasMr.length === 0) return;
+    if (!curvasMr || curvasMr.length === 0 || !curvasMr[0] || curvasMr[0].length < 4) {
+        console.warn("Chart rendering skipped: Invalid or incomplete curvasMr data.");
+        return; // Exit if data is not valid
+    }
 
     const datasets = [];
 

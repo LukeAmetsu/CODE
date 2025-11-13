@@ -135,5 +135,8 @@
     "leeward_roof_min_w": "Techo Sotavento Mín (W)",
     "lateral_loads_seismic": "Cargas Sísmicas",
     "seismic_load_e": "Carga Sísmica (E)",
-    "run_load_combinations": "Generar Combinaciones"
+    "run_load_combinations": "Generar Combinaciones",
+    "pcalc": "PCALC",
+    "pcalc_desc": "Calcular la capacidad de carga axial de una columna de concreto armado según NBR 6118.",
+    "go_to_pcalc": "Ir a PCALC"
 }

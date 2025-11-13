@@ -1095,7 +1095,9 @@ async function initializeApp(config) { // This function is already async
         calculationHandler,
         onReady,
         storageKey,
-        fileInputId = 'file-input' // Default file input ID
+        fileInputId = 'file-input', // Default file input ID
+        loadButtonId = 'load-inputs-btn', // Default load button ID
+        saveButtonId = 'save-inputs-btn'  // Default save button ID
     } = config;
 
     // --- 0. Initialize Internationalization (i18n) First ---
@@ -1146,8 +1148,8 @@ async function initializeApp(config) { // This function is already async
     }
 
     // --- FIX: Attach Save/Load button handlers ---
-    const saveButton = document.getElementById('save-inputs-btn');
-    const loadButton = document.getElementById('load-inputs-btn');
+    const saveButton = document.getElementById(saveButtonId);
+    const loadButton = document.getElementById(loadButtonId);
     const fileInput = document.getElementById(fileInputId);
 
     if (saveButton) {
@@ -1492,16 +1494,6 @@ function createCalculationHandler(config) { // This is the function being called
         // Log the gathered inputs for debugging
         console.log(`[${validationRuleKey}] Gathered inputs:`, inputs);
 
-        // --- Validate Required Number Inputs for Diagram Function ---
-        const requiredDiagramInputs = ['H_plate', 'gage', 'Nr', 'S_row'];
-        for (const inputName of requiredDiagramInputs) {
-            if (inputs[inputName] !== undefined && isNaN(parseFloat(inputs[inputName]))) {
-                console.error(`[${validationRuleKey}] Input '${inputName}' is not a valid number:`, inputs[inputName]);
-                showFeedback(`Error: Input '${inputName}' must be a number.`, true, feedbackElId);
-                if (buttonId) setLoadingState(false, buttonId);
-                return; // Stop further execution if validation fails
-            }
-        }
         
         // --- 2. VALIDATE INPUTS ---
         showFeedback('Validating inputs...', false, feedbackElId);

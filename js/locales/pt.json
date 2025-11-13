@@ -146,5 +146,8 @@
     "pcalc_add_load": "+ Adicionar Esforço",
     "pcalc_cross_section": "Seção Transversal",
     "pcalc_config": "Configurações de Cálculo",
-    "pcalc_calculate": "Calcular"
+    "pcalc_calculate": "Calcular",
+    "pcalc": "PCALC",
+    "pcalc_desc": "Calcular a capacidade de carga axial de um pilar de concreto armado de acordo com a NBR 6118.",
+    "go_to_pcalc": "Ir para PCALC"
 }

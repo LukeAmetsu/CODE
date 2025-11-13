@@ -82,8 +82,8 @@ class I18nManager {
         const translation = this.translations[this.currentLang]?.[key];
         if (translation === undefined) {
             console.warn(`Translation key not found for lang '${this.currentLang}': ${key}`);
-            // Fallback to English if available
-            return this.translations['en']?.[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            // Fallback to English if available, otherwise return the formatted key
+            return this.translations['en']?.[key] || key;
         }
         return translation;
     }

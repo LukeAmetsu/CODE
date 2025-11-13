@@ -164,7 +164,10 @@
         "leeward_roof_min_w": "Leeward Roof Min (W)",
         "lateral_loads_seismic": "Lateral Loads (Seismic)",
         "seismic_load_e": "Seismic Load (E)",
-        "run_load_combinations": "Run Load Combinations"
+        "run_load_combinations": "Run Load Combinations",
+        "pcalc": "PCALC",
+        "pcalc_desc": "Calculate the axial load capacity of a reinforced concrete column according to NBR 6118.",
+        "go_to_pcalc": "Go to PCALC"
     },
     "pt": {
         "geometry_spacing_checks_title": "Verificações de Geometria e Espaçamento",
@@ -331,7 +334,10 @@
         "leeward_roof_min_w": "Cobertura Sotavento Mín (W)",
         "lateral_loads_seismic": "Cargas Sísmicas",
         "seismic_load_e": "Carga Sísmica (E)",
-        "run_load_combinations": "Gerar Combinações"
+        "run_load_combinations": "Gerar Combinações",
+        "pcalc": "PCALC",
+        "pcalc_desc": "Calcular a capacidade de carga axial de um pilar de concreto armado de acordo com a NBR 6118.",
+        "go_to_pcalc": "Ir para PCALC"
     },
     "es": {
         "geometry_spacing_checks_title": "Verificaciones de Geometría y Espaciado",
@@ -498,6 +504,9 @@
         "leeward_roof_min_w": "Techo Sotavento Mín (W)",
         "lateral_loads_seismic": "Cargas Sísmicas",
         "seismic_load_e": "Carga Sísmica (E)",
-        "run_load_combinations": "Generar Combinaciones"
+        "run_load_combinations": "Generar Combinaciones",
+        "pcalc": "PCALC",
+        "pcalc_desc": "Calcular la capacidad de carga axial de una columna de concreto armado según NBR 6118.",
+        "go_to_pcalc": "Ir a PCALC"
     }
 }
