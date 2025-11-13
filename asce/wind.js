@@ -2338,19 +2338,29 @@ function sendWindToCombos(results) {
     }
 }
 
-initializeApp({
-    inputIds: windInputIds,
-    calculationHandler: handleRunWindCheck,
-    onReady: () => {
-        document.getElementById('mean_roof_height').addEventListener('input', (event) => {
-            const h = parseFloat(event.target.value) || 0;
-            const is_imp = document.getElementById('unit_system').value === 'imperial';
-            const limit = is_imp ? 60 : 18.3;
-            document.getElementById('tall-building-section')?.classList.toggle('hidden', h <= limit);
-            document.getElementById('mwfrs-method-container')?.classList.toggle('hidden', h > limit);
-        });
-    }
-});
+function renderWindResults(results) {
+    // This function is now correctly defined.
+    lastWindRunResults = results; // Save for sending to combos
+    const {
+        inputs, intermediate, warnings, errors, jurisdiction_note,
+        directional_results, candc, envelope_results, mwfrs_method,
+        open_building_ref, arched_roof_results, truss_tower_results,
+        chimney_results, solid_sign_results, open_sign_results,
+        parapet_results, overhang_results, rooftop_results,
+        torsional_case, heightVaryingResults_L,
+        roofPressureDist_L, roofPressureDist_B
+    } = results;
+
+    const units = getUnits(inputs.unit_system);
+    const { p_unit, h_unit } = units;
+
+    // Determine structure type for conditional rendering
+    const is_arched_roof = inputs.structure_type === 'Arched Roofs';
+    const is_truss_tower = inputs.structure_type.startsWith('Trussed Towers');
+    const is_chimney = inputs.structure_type.startsWith('Chimneys, Tanks');
+    const is_solid_sign = inputs.structure_type === 'Solid Freestanding Signs/Walls';
+    const is_open_sign = inputs.structure_type === 'Open Signs/Frames';
+
     const report = new ReportBuilder({
         reportId: 'wind-report-content',
         title: `WIND LOAD REPORT (${inputs.effective_standard})`,
@@ -2387,6 +2397,7 @@ initializeApp({
                         <td>${safeToFixed(final_pressure, 2)}</td>
                      </tr>`;
         }
+        archedRoofHtml += `</tbody></table>`;
         report.addSection('Arched Roof Net Pressures', archedRoofHtml, 'arched-roof-section');
         report.render('results-container');
         return;
@@ -2511,14 +2522,13 @@ initializeApp({
     report.render('results-container');
 
     // Render charts after the canvas elements are in the DOM
-    const { roofPressureDist_L, roofPressureDist_B, heightVaryingResults_L: heightVaryingData } = results;
     if (roofPressureDist_L && roofPressureDist_B && !results.heightVaryingResults_L) { // Only for low-rise
         renderRoofPressureChart('roofChartL', roofPressureDist_L, inputs.building_length_L, inputs.design_method, units);
         renderRoofPressureChart('roofChartB', roofPressureDist_B, inputs.building_width_B, inputs.design_method, units);
     }
     // Render the new height-varying chart
-    if (heightVaryingData && heightVaryingData.length > 0) {
-        renderHeightVaryingChart('height-varying-chart', heightVaryingData, inputs.design_method, units);
+    if (heightVaryingResults_L && heightVaryingResults_L.length > 0) {
+        renderHeightVaryingChart('height-varying-chart', heightVaryingResults_L, inputs.design_method, units);
     }
 }
 
@@ -2527,15 +2537,21 @@ initializeApp({
 //  UI INJECTION & INITIALIZATION
 // =================================================================================
 initializeApp({
-    // pageKey e pageTitle serão encontrados automaticamente
     inputIds: windInputIds,
-    calculationHandler: createCalculationHandler({ // This part is correct
-        inputIds: windInputIds, storageKey: 'wind-calculator-inputs',
-        validatorFunction: validateWindInputs, calculatorFunction: windLoadCalculator.run,
+    calculationHandler: createCalculationHandler({
+        inputIds: windInputIds,
+        storageKey: 'wind-calculator-inputs',
+        validatorFunction: validateWindInputs,
+        calculatorFunction: windLoadCalculator.run,
         validationRuleKey: 'wind',
-        renderFunction: renderWindResults, resultsContainerId: 'results-container',
-        feedbackElId: 'feedback-message', buttonId: 'run-calculation-btn'
-    }), // The onSendToCombos is attached via attachReportEventListeners
+        renderFunction: renderWindResults,
+        resultsContainerId: 'results-container',
+        feedbackElId: 'feedback-message',
+        buttonId: 'run-calculation-btn'
+    }),
+    buttonId: 'run-calculation-btn',
+    fileInputId: 'wind-file-input',
+    storageKey: 'wind-calculator-inputs',
     onReady: () => {
         // Attach report event listeners here, after the app is ready
         attachReportEventListeners('results-container', {

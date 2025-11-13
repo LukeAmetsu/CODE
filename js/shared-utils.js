@@ -1785,3 +1785,24 @@ async function populateShapeDropdown() {
 document.addEventListener('DOMContentLoaded', () => {
     autoLoadPageScript();
 });
+
+/**
+ * Returns an object with unit strings based on the selected unit system.
+ * @param {string} unit_system - The unit system ('imperial' or 'metric').
+ * @returns {{p_unit: string, h_unit: string, v_unit: string}}
+ */
+function getUnits(unit_system) {
+    if (unit_system === 'metric') {
+        return {
+            p_unit: 'Pa',
+            h_unit: 'm',
+            v_unit: 'm/s'
+        };
+    }
+    // Default to Imperial
+    return {
+        p_unit: 'psf',
+        h_unit: 'ft',
+        v_unit: 'mph'
+    };
+}
