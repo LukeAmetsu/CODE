@@ -198,40 +198,18 @@ const AISC_SPEC = (() => {
     };
 
     // --- AISC SHAPE DATABASE ---
-    let _shapeDatabaseCache = null;
-    let _databaseLoadingPromise = null;
 
     /**
-     * Asynchronously loads the AISC shape database from a JSON file.
-     * Uses a singleton pattern to ensure the database is fetched only once.
+     * Asynchronously loads the AISC shape database.
      * @returns {Promise<object>} A promise that resolves with the shape database object.
      */
     async function loadShapeDatabase() {
-        if (_shapeDatabaseCache) {
-            return _shapeDatabaseCache;
+        if (typeof AISC_SHAPES_DATABASE !== 'undefined') {
+            return Promise.resolve(AISC_SHAPES_DATABASE);
+        } else {
+            console.error("AISC_SHAPES_DATABASE is not defined. Make sure aisc-shapes-database-v16.0.js is loaded.");
+            return Promise.reject("AISC_SHAPES_DATABASE is not defined.");
         }
-        if (_databaseLoadingPromise) {
-            return _databaseLoadingPromise;
-        }
-
-        _databaseLoadingPromise = new Promise(async (resolve, reject) => {
-            try {
-                // Assumes aisc-shapes.json is in the same directory as the HTML file.
-                const response = await fetch('aisc-shapes.json');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                _shapeDatabaseCache = data;
-                resolve(data);
-            } catch (error) {
-                console.error("Could not load or parse aisc-shapes.json:", error);
-                _databaseLoadingPromise = null; // Reset promise on failure
-                reject(error);
-            }
-        });
-
-        return _databaseLoadingPromise;
     }
 
     /**

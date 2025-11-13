@@ -175,12 +175,12 @@ let bjsEngine, bjsScene, bjsGuiTexture;
 /**
  * Draws an interactive 3D visualization of the base plate connection using Babylon.js.
  */
-function draw3dBasePlateDiagram() {
+function draw3dBasePlateDiagram(currentInputs) {
     const canvas = document.getElementById("baseplate-3d-canvas");
     if (!canvas || typeof BABYLON === 'undefined') return;
 
     // --- 1. Gather Inputs ---
-    const inputs = gatherInputsFromIds(basePlateInputIds);
+    const inputs = currentInputs || gatherInputsFromIds(basePlateInputIds);
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     // --- 2. Initialize Scene, Camera, Renderer, and GUI (only once) ---
@@ -735,13 +735,14 @@ const basePlateCalculator = (() => {
      */
     function checkMinimumThickness(inputs, bearing_results) {
         const { base_plate_length_N: N, base_plate_width_B: B, column_depth_d: d, column_flange_width_bf: bf, base_plate_Fy: Fy, provided_plate_thickness_tp: tp, design_method } = inputs;
-        const Pu_abs = Math.abs(bearing_results.details.Pu);
+        const Pu = bearing_results.details.Pu;
 
-        if (Pu_abs <= 0) {
-            // If there's no compression, Thornton's formula doesn't apply. Fallback to a common minimum.
-            return { demand: tp, check: { Rn: 0.25, phi: 1.0, omega: 1.0 }, details: { l: 0, t_min: 0.25, reason: "No compression load." } };
+        if (Pu >= 0) {
+            // If load is tension or zero, Thornton's rigidity check for compression does not apply.
+            return { demand: tp, check: { Rn: 0, phi: 1.0, omega: 1.0 }, details: { l: 0, t_min: 0, reason: "Rigidity check is not applicable for tension loads." } };
         }
-
+        
+        const Pu_abs = Math.abs(Pu);
         const m = (N - 0.95 * d) / 2.0;
         const n = (B - 0.80 * bf) / 2.0;
         const l = Math.max(m, n);
@@ -904,7 +905,7 @@ const basePlateCalculator = (() => {
         const s_eff_B = bolt_spacing_B > s_max_N ? s_max_N : bolt_spacing_B; // Effective spacing
         const ANc = (ca1 + 1.5 * hef) * ((num_bolts_tension_row - 1) * s_eff_B + 2 * 1.5 * hef); // Projected area
 
-        const e_N = bearing_results.details.e;
+        const e_N = bearing_results.details.e_x;
         const e_prime_N = e_N > 0 ? (N / 2 - bearing_results.details.Y) / 2 : 0;
         const psi_ec_N = 1.0 / (1 + (2 * e_prime_N) / (3 * hef));
         const psi_ed_N = (ca1 < 1.5 * hef) ? (0.7 + 0.3 * ca1 / (1.5 * hef)) : 1.0;
@@ -1261,28 +1262,6 @@ const basePlateCalculator = (() => {
      * @param {object} inputs - The user inputs object.
      * @returns {object} An object containing the max tension value and the data for the breakdown.
      */
-    function calculateAnchorTension(inputs) {
-        const { axial_load_P_in: Pu, moment_Mx_in: Mux_kipft, moment_My_in: Muy_kipft } = inputs;
-        const Mux = Mux_kipft * 12; // kip-in
-        const Muy = Muy_kipft * 12; // kip-in
-        const bolt_coords = getBoltCoordinates(inputs);
-
-        if (bolt_coords.length === 0) {
-            return { value: 0, details: { breakdown_lines: ['No bolts defined.'] } };
-        }
-
-        // This is a simplified elastic analysis. A more rigorous approach would consider the bearing pressure block.
-        const tension_results = bolt_coords.map(bolt => {
-            const force_from_axial = Pu / bolt_coords.length;
-            const force_from_Mx = (Mux * bolt.z) / bolt_coords.reduce((sum, b) => sum + b.z ** 2, 0);
-            const force_from_My = (Muy * bolt.x) / bolt_coords.reduce((sum, b) => sum + b.x ** 2, 0);
-            return force_from_axial + force_from_Mx + force_from_My;
-        });
-
-        const max_tension = Math.max(0, ...tension_results);
-        return { value: max_tension, details: { Pu, Mux, Muy, num_bolts: bolt_coords.length, max_tension } };
-    }
-
     return { run };
 })();
 
@@ -1290,6 +1269,44 @@ function generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs) {
     if (bolt_coords.length === 0) {
         return { value: 0, breakdown: 'No bolts defined.' };
     }
+
+    const num_bolts = bolt_coords.length;
+    const Ix = bolt_coords.reduce((sum, b) => sum + b.z ** 2, 0);
+    const Iy = bolt_coords.reduce((sum, b) => sum + b.x ** 2, 0);
+
+    let max_tension = 0;
+    let max_bolt_calcs = { axial: 0, mx: 0, my: 0, x: 0, z: 0 };
+
+    bolt_coords.forEach(bolt => {
+        const force_from_axial = Pu / num_bolts;
+        const force_from_Mx = Ix > 0 ? (Mux * bolt.z) / Ix : 0;
+        const force_from_My = Iy > 0 ? (Muy * bolt.x) / Iy : 0;
+        const total_force = force_from_axial + force_from_Mx + force_from_My;
+        if (total_force > max_tension) {
+            max_tension = total_force;
+            max_bolt_calcs = {
+                axial: force_from_axial,
+                mx: force_from_Mx,
+                my: force_from_My,
+                z: bolt.z,
+                x: bolt.x
+            };
+        }
+    });
+
+    max_tension = Math.max(0, max_tension);
+
+    const breakdown = `
+        <ul class="list-disc list-inside text-xs">
+            <li>T<sub>u,bolt</sub> &approx; P/n + M<sub>x</sub>&middot;z/I<sub>x</sub> + M<sub>y</sub>&middot;x/I<sub>y</sub></li>
+            <li>P/n = ${Pu.toFixed(2)} / ${num_bolts} = ${max_bolt_calcs.axial.toFixed(2)} kips</li>
+            <li>M<sub>x</sub> term = (${Mux.toFixed(2)} kip-in * ${max_bolt_calcs.z.toFixed(2)} in) / ${Ix.toFixed(2)} in² = ${max_bolt_calcs.mx.toFixed(2)} kips</li>
+            <li>M<sub>y</sub> term = (${Muy.toFixed(2)} kip-in * ${max_bolt_calcs.x.toFixed(2)} in) / ${Iy.toFixed(2)} in² = ${max_bolt_calcs.my.toFixed(2)} kips</li>
+            <li><b>Resultant Max Tension = ${max_tension.toFixed(2)} kips</b></li>
+        </ul>
+    `;
+
+    return { value: max_tension, breakdown };
 }
 
 function generateBasePlateBreakdownHtml(name, data, inputs, results) {
@@ -1307,12 +1324,15 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
             `<li>Bearing Case: <b>${bearing_case}</b></li>`,
             `<li>Formula: ${breakdown_formula}</li>`,
             `<li>Result: f<sub>p,max</sub> = <b>${f_p_max.toFixed(2)} ksi</b></li>`,
+            `</ul>`,
+            `<hr class="my-2 dark:border-gray-600">`,
+            `<u>Nominal Bearing Strength (P<sub>p</sub>) per AISC J8</u>`,
+            `<ul>`,
+            `<li>Confinement Factor (&Psi;) = min(&radic;(A₂/A₁), 2.0) = min(&radic;(${details.A2.toFixed(2)}/${details.A1.toFixed(2)}), 2.0) = ${details.confinement_factor.toFixed(2)}</li>`,
+            `<li>P<sub>p</sub> = 0.85 &times; f'c &times; A₁ &times; &Psi;</li>`,
+            `<li>P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b></li>`,
             `</ul>`
         ];
-        // The rest of the breakdown for bearing capacity is handled by the generic logic below.
-        // This special handler just formats the pressure calculation part.
-        // We can now proceed to the generic capacity breakdown.
-        // For simplicity, we'll just return this part for now.
         return breakdown_items.join('');
     }
 
@@ -1325,12 +1345,17 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
         let breakdown_items = [];
 
         if (column_type === 'Wide Flange') {
+            if (m === undefined || n === undefined || n_prime === undefined || l === undefined) {
+                return 'Breakdown not available due to missing calculation details for Wide Flange column.';
+            }
+            const lambda_str = lambda !== undefined && lambda !== null ? lambda.toFixed(3) : 'N/A';
+            const X_str = X !== undefined && X !== null ? X.toFixed(3) : 'N/A';
             breakdown_items = [
                 `<u>Required Thickness (t<sub>req</sub>) per AISC DG 1 (Wide Flange)</u>`,
                 `<li>Cantilever distance (m) = (N - 0.95d)/2 = <b>${m.toFixed(3)} in</b></li>`,
                 `<li>Cantilever distance (n) = (B - 0.80b<sub>f</sub>)/2 = <b>${n.toFixed(3)} in</b></li>`,
                 `<li>Dimension (n') = &radic;(d&middot;b<sub>f</sub>)/4 = <b>${n_prime.toFixed(3)} in</b></li>`,
-                `<li>Effective cantilever length (l) = max(m, n, &lambda;n') = <b>${l.toFixed(3)} in</b> (where &lambda;=${lambda?.toFixed(3)}, X=${X?.toFixed(3)})</li>`,
+                `<li>Effective cantilever length (l) = max(m, n, &lambda;n') = <b>${l.toFixed(3)} in</b> (where &lambda;=${lambda_str}, X=${X_str})</li>`,
             ];
         } else { // Round HSS
             breakdown_items = [
@@ -1359,19 +1384,14 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
     }
 
     const { design_method } = inputs;
+    const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;'; // Moved here
 
     const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
     let content = '';
 
     switch (name) {
         case 'Concrete Bearing':
-            content = format_list([
-                `<u>Nominal Bearing Strength (P<sub>p</sub>) per AISC J8</u>`,
-                `Confinement Factor (&Psi;) = min(&radic;(A₂/A₁), 2.0) = min(&radic;(${details.A2.toFixed(2)}/${details.A1.toFixed(2)}), 2.0) = ${details.confinement_factor.toFixed(2)}`,
-                `P<sub>p</sub> = 0.85 &times; f'c &times; A₁ &times; &Psi;`,
-                `P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b> (This is total capacity, not a pressure)`,
-                `<u>Design Capacity</u>`,
-            ]);
+            // This case is now handled by the special handler above the switch statement.
             break;
         case 'Plate Bending':
             const phi_bending_val = getPhi('bending', design_method);
@@ -1423,22 +1443,15 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
                 `R<sub>n</sub> = &mu; &times; P<sub>u,compressive</sub>`,
                 `R<sub>n</sub> = ${details.mu} &times; ${details.Pu_compressive.toFixed(2)} kips = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${capacity_eq} = ${check.phi} &times; ${check.Rn.toFixed(2)} = <b>${final_capacity.toFixed(2)} kips</b>`,
                 `<em>${details.note || ''}</em>`
             ]);
             break;
         case 'Anchor Steel Tension':
-            const { Pu, Mux, Muy, num_bolts, max_tension } = details;
             const Ab_tension = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
             const Nsa = Ab_tension * (AISC_SPEC.getFnt(inputs.anchor_bolt_grade) || inputs.anchor_bolt_Fut);
             const phiNsa = (check?.phi || 0.75) * Nsa;
             content = format_list([
-                `<u>Maximum Anchor Tension (Simplified Elastic Method)</u>`,
-                `T<sub>u,bolt</sub> &approx; P/n + M<sub>x</sub>&middot;z/I<sub>x</sub> + M<sub>y</sub>&middot;x/I<sub>y</sub>`,
-                `P/n = ${Pu.toFixed(2)} / ${num_bolts} = ${(Pu / num_bolts).toFixed(2)} kips`,
-                `M<sub>x</sub> term = ... kips`,
-                `M<sub>y</sub> term = ... kips`,
-                `Resultant Max Tension = <b>${max_tension.toFixed(2)} kips</b>`,
+                details.breakdown, // Use the pre-generated HTML breakdown
                 `<hr class="my-2 dark:border-gray-600">`,
                 `<u>Nominal Steel Strength (N<sub>sa</sub>) per ACI 17.6.1</u>`,
                 `<u>Design Capacity (per bolt)</u>`,
@@ -1533,6 +1546,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
             ]);
             break;
         case 'Weld Strength':
+            const factor_val = getPhi('weld', design_method);
             let weld_cap_eq, weld_strength_calc;
             if (inputs.weld_type === 'Fillet') {
                 weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>exx</sub> * 0.707 * w` : `(0.6 * F<sub>exx</sub> * 0.707 * w) / &Omega;`;
@@ -1590,6 +1604,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
 }
 
 function renderResults(results) {
+    console.log("renderResults started.");
     const { checks, geomChecks, inputs, warnings } = results;
     const { design_method } = inputs;
 
@@ -1632,49 +1647,6 @@ function renderResults(results) {
             rows: geomCheckRows
         }, 'geometry-checks-section');
     }
-
-    report.addSection('Load Summary & Demands', renderBasePlateLoadSummary(inputs, checks), 'load-summary-section');
-
-    // --- Strength Checks ---
-    const strengthCheckRows = Object.entries(checks)
-        .filter(([name, data]) => data && data.check)
-        .map(([name, data]) => {
-            const { demand, check } = data;
-            const { Rn, phi, omega } = check;
-            const breakdownHtml = generateBasePlateBreakdownHtml(name, data, inputs, results);
-            const is_anchor_check = name.toLowerCase().includes('anchor');
-            const capacity = Rn || 0;
-            const design_capacity = design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
-
-            let ratio, demand_val, capacity_val;
-            if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
-                demand_val = design_capacity;
-                capacity_val = demand;
-                ratio = demand_val > 0 ? capacity_val / demand_val : (capacity_val > 0 ? Infinity : 0);
-            } else {
-                demand_val = is_anchor_check && design_method === 'ASD' ? demand * 1.6 : demand;
-                capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
-                ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
-            }
-
-            const status = ratio <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
-
-            return {
-                cells: [
-                    name,
-                    `${demand_val.toFixed(2)}${is_anchor_check && design_method === 'ASD' ? ' *' : ''}`,
-                    capacity_val.toFixed(2),
-                    ratio.toFixed(3),
-                    status
-                ],
-                details: breakdownHtml
-            };
-        });
-
-    report.addTableSection(`Strength Checks (${design_method})`, {
-        headers: ['Limit State', 'Demand', 'Capacity', 'Ratio', 'Status'],
-        rows: strengthCheckRows
-    }, 'strength-checks-section');
 
     // --- Load Summary & Demands ---
     const bearingDetails = checks['Concrete Bearing']?.details;
@@ -1725,6 +1697,47 @@ function renderResults(results) {
         rows: loadSummaryRows
     }, 'load-summary-section');
 
+    // --- Strength Checks ---
+    const strengthCheckRows = Object.entries(checks)
+        .filter(([name, data]) => data && data.check)
+        .map(([name, data]) => {
+            const { demand, check } = data;
+            const { Rn, phi, omega } = check;
+            const breakdownHtml = generateBasePlateBreakdownHtml(name, data, inputs, results);
+            const is_anchor_check = name.toLowerCase().includes('anchor');
+            const capacity = Rn || 0;
+            const design_capacity = design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00);
+
+            let ratio, demand_val, capacity_val;
+            if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
+                demand_val = design_capacity;
+                capacity_val = demand;
+                ratio = capacity_val > 0 ? demand_val / capacity_val : (demand_val > 0 ? Infinity : 0);
+            } else {
+                demand_val = is_anchor_check && design_method === 'ASD' ? demand * 1.6 : demand;
+                capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
+                ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
+            }
+
+            const status = ratio <= 1.0 ? '<span class="text-green-600 font-semibold">Pass</span>' : '<span class="text-red-600 font-semibold">Fail</span>';
+
+            return {
+                cells: [
+                    name,
+                    `${demand_val.toFixed(2)}${is_anchor_check && design_method === 'ASD' ? ' *' : ''}`,
+                    capacity_val.toFixed(2),
+                    ratio.toFixed(3),
+                    status
+                ],
+                details: breakdownHtml
+            };
+        });
+
+    report.addTableSection(`Strength Checks (${design_method})`, {
+        headers: ['Limit State', 'Demand', 'Capacity', 'Ratio', 'Status'],
+        rows: strengthCheckRows
+    }, 'strength-checks-section');
+
     // Add ASD note if applicable
     if (design_method === 'ASD') {
         const asdNoteHtml = `<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -1734,6 +1747,7 @@ function renderResults(results) {
     }
 
     report.render('steel-results-container');
+    console.log("renderResults finished.");
 }
 
 // Add a listener to the theme toggle to redraw the 3D diagram
@@ -1827,7 +1841,7 @@ async function handleShapeSelection() {
             tw_container.style.display = 'block';
         }
         populateShapeDropdown();
-        drawBasePlateDiagram();
+        drawBasePlateDiagram(gatherInputsFromIds(basePlateInputIds));
     }
 // Attach listener for column type change
 document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
@@ -1838,81 +1852,97 @@ const handleRunBasePlateCheck = createCalculationHandler({
     validatorFunction: basePlateCalculator.validateBasePlateInputs,
     calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
     renderFunction: renderResults,
+    resultsContainerId: 'steel-results-container', // FIX: Added missing results container ID
     buttonId: 'run-steel-check-btn',
     feedbackElId: 'feedback-message'
 });
 initializeApp({
     inputIds: basePlateInputIds,
-    calculationHandler: handleRunBasePlateCheck,
-    onReady: () => {
-                // These two functions from shared-utils.js now handle all material and bolt dropdowns
-                populateMaterialDropdowns();
-                populateBoltGradeDropdowns();
+    // The calculationHandler is now attached manually to the button in onReady
+    // to prevent automatic calculations on every input change.
+    // calculationHandler: handleRunBasePlateCheck, 
+    buttonId: 'run-steel-check-btn',
+    onReady: async () => {
+        // 1. FIRST: Wait for the AISC shape data to be fetched and processed
+        await AISC_SPEC.loadShapeDatabase();
 
-                // --- This logic is unique to base plate.js and should stay ---
-                // --- Populate Weld Electrode Dropdown ---
-                const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
-                const weldSelect = document.getElementById('weld_electrode');
-                if (weldSelect) {
-                    weldSelect.innerHTML = weldOptions;
-                    weldSelect.value = 'E70XX'; // Default
-                    weldSelect.addEventListener('change', (e) => {
-                        const electrode = AISC_SPEC.weldElectrodes[e.target.value];
-                        if (electrode) document.getElementById(e.target.dataset.fexxTarget).value = electrode.Fexx;
-                    });
-                    weldSelect.dispatchEvent(new Event('change'));
-                }
+        // 2. SECOND: Now that data is ready, populate dropdowns and set up UI
+        populateMaterialDropdowns();
+        populateBoltGradeDropdowns();
 
-                // --- Attach listeners for shape/column selection (unique to base plate) ---
-                document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-                document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
-                updateColumnInputsUI();
+        // --- This logic is unique to base plate.js and should stay ---
+        // --- Populate Weld Electrode Dropdown ---
+        const weldOptions = Object.keys(AISC_SPEC.weldElectrodes).map(grade => `<option value="${grade}">${grade}</option>`).join('');
+        const weldSelect = document.getElementById('weld_electrode');
+        if (weldSelect) {
+            weldSelect.innerHTML = weldOptions;
+            weldSelect.value = 'E70XX'; // Default
+            weldSelect.addEventListener('change', (e) => {
+                const electrode = AISC_SPEC.weldElectrodes[e.target.value];
+                if (electrode) document.getElementById(e.target.dataset.fexxTarget).value = electrode.Fexx;
+            });
+            // We dispatch the event, but the calculation won't run automatically anymore, which is fine for the initial load.
+            weldSelect.dispatchEvent(new Event('change'));
+        }
 
-                // --- Attach listeners for diagrams (unique to base plate) ---
-                const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
-                basePlateInputIds.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        const redraw = () => {
-                            drawBasePlateDiagram(gatherInputsFromIds(basePlateInputIds)); // Pass inputs directly
-                            debouncedRedraw3D(); 
-                        };
-                        el.addEventListener('input', redraw);
-                        el.addEventListener('change', redraw);
-                    }
-                });
+        // --- Manually attach calculation handler to the button ONLY ---
+        const runButton = document.getElementById('run-steel-check-btn');
+        if (runButton) {
+            runButton.addEventListener('click', handleRunBasePlateCheck);
+        }
 
-                // Initial drawing
-                drawBasePlateDiagram(gatherInputsFromIds(basePlateInputIds)); // Pass inputs directly
-                draw3dBasePlateDiagram();
+        // --- Attach listeners for shape/column selection (unique to base plate) ---
+        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
+        document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
+        updateColumnInputsUI();
 
-                // --- 2D Diagram Panning Logic ---
-                const svg2d = document.getElementById('baseplate-diagram');
-                if (svg2d) {
-                    svg2d.addEventListener('mousedown', (e) => {
-                        if (e.button !== 0) return; // Only pan with left-click
-                        baseplate2dIsPanning = true;
-                        baseplate2dStartPoint = { x: e.clientX, y: e.clientY };
-                        svg2d.classList.add('is-grabbing');
-                    });
-                    svg2d.addEventListener('mousemove', (e) => {
-                        if (!baseplate2dIsPanning) return;
-                        const dx = e.clientX - baseplate2dStartPoint.x;
-                        const dy = e.clientY - baseplate2dStartPoint.y;
-                        const group = svg2d.querySelector('g');
-                        if (group) {
-                            group.setAttribute('transform', `translate(${baseplate2dPan.x + dx}, ${baseplate2dPan.y + dy})`);
-                        }
-                    });
-                    const stopPanning = (e) => {
-                        if (!baseplate2dIsPanning) return;
-                        baseplate2dIsPanning = false;
-                        svg2d.classList.remove('is-grabbing');
-                        baseplate2dPan.x += e.clientX - baseplate2dStartPoint.x;
-                        baseplate2dPan.y += e.clientY - baseplate2dStartPoint.y;
-                    };
-                    svg2d.addEventListener('mouseup', stopPanning);
-                    svg2d.addEventListener('mouseleave', stopPanning);
-                }
+        // --- Attach listeners for LIVE diagram updates (calculation is separate) ---
+        const debouncedRedraw3D = debounce(draw3dBasePlateDiagram, 300);
+        basePlateInputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const redraw = () => {
+                    const currentInputs = gatherInputsFromIds(basePlateInputIds);
+                    drawBasePlateDiagram(currentInputs);
+                    debouncedRedraw3D(currentInputs);
+                };
+                // Redraw diagrams on every input keystroke for a responsive feel
+                el.addEventListener('input', redraw);
             }
+        });
+
+        // --- Initial drawing on page load ---
+        const initialInputs = gatherInputsFromIds(basePlateInputIds);
+        drawBasePlateDiagram(initialInputs);
+        draw3dBasePlateDiagram(initialInputs);
+
+        // --- 2D Diagram Panning Logic ---
+        const svg2d = document.getElementById('baseplate-diagram');
+        if (svg2d) {
+            svg2d.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return; // Only pan with left-click
+                baseplate2dIsPanning = true;
+                baseplate2dStartPoint = { x: e.clientX, y: e.clientY };
+                svg2d.classList.add('is-grabbing');
+            });
+            svg2d.addEventListener('mousemove', (e) => {
+                if (!baseplate2dIsPanning) return;
+                const dx = e.clientX - baseplate2dStartPoint.x;
+                const dy = e.clientY - baseplate2dStartPoint.y;
+                const group = svg2d.querySelector('g');
+                if (group) {
+                    group.setAttribute('transform', `translate(${baseplate2dPan.x + dx}, ${baseplate2dPan.y + dy})`);
+                }
+            });
+            const stopPanning = (e) => {
+                if (!baseplate2dIsPanning) return;
+                baseplate2dIsPanning = false;
+                svg2d.classList.remove('is-grabbing');
+                baseplate2dPan.x += e.clientX - baseplate2dStartPoint.x;
+                baseplate2dPan.y += e.clientY - baseplate2dStartPoint.y;
+            };
+            svg2d.addEventListener('mouseup', stopPanning);
+            svg2d.addEventListener('mouseleave', stopPanning);
+        }
+    }
 });

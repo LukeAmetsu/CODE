@@ -310,7 +310,7 @@ function draw3dSpliceDiagram() {
     };
 
     const createFlangeBoltGroup = () => {
-        const { D_fp, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, g_gage_fp: gage, S3_end_dist_fp: S_end, num_flange_plates, t_fp, member_tf, t_fp_inner, member_d } = inputs;
+        const { D_fp, Nc_fp: Nc, Nr_fp: Nr, S1_col_spacing_fp: S_col, S2_row_spacing_fp: S_row, g_gage_fp: gage, S3_end_dist_fp: S_end, num_flange_plates, t_fp, member_tf, t_fp_inner, member_d } = inputs;
         const D = parseFloat(D_fp); // Convert string from select to number
         if (!D || !Nc || !Nr) return;
 
@@ -329,10 +329,19 @@ function draw3dSpliceDiagram() {
         }
         const y_center_bot = -y_center_top;
 
-        for (let side = -1; side <= 1; side += 2) {
-            for (let i = 0; i < Nc; i++) {
+        for (let side = -1; side <= 1; side += 2) { // Loop for each side of the splice gap
+            for (let i = 0; i < Nc; i++) { // Loop for columns (along member length)
                 const z_pos = side * (inputs.gap / 2 + S_end + i * S_col);
-                const x_positions = gage > 0 ? [-gage / 2, gage / 2] : [0];
+                
+                // Generate all x positions for the rows of bolts
+                const x_positions = new Set(); // Use a Set to avoid duplicates
+                for (let j = 0; j < Nr; j++) {
+                    // Start with the gage and add row spacing for additional rows
+                    const x_offset = (gage / 2) + (j * S_row);
+                    x_positions.add(x_offset);
+                    // Add the corresponding bolt on the other side of the web
+                    x_positions.add(-x_offset);
+                }
 
                 for (const x_p of x_positions) {
                     // Top Flange Bolt
@@ -533,13 +542,13 @@ function checkFlangeNetSection({ bf, tf, Fu, num_bolts_in_cs, hole_dia_net_area,
     const factors = getDesignFactors(jurisdiction, 0.75, 2.00); // FIX: This was already correct, but confirming.
 
     if (An <= 0) {
-        return { Rn: 0, ...factors, An: 0, Ag, A_holes, Fu }; // Return Fu even on failure so breakdown can display it
+        return { Rn: 0, ...factors, An: 0, Ag, A_holes, Fu, hole_dia_net_area }; // Return Fu even on failure so breakdown can display it
     } 
 
     // Nominal Tensile Rupture Strength (Rn) per AISC J4-1(b), assuming U=1.0
     const Rn = Fu * An;
 
-    return { Rn, ...factors, An, Ag, A_holes, Fu };
+    return { Rn, ...factors, An, Ag, A_holes, Fu, hole_dia_net_area };
 }
 
 /**
@@ -651,12 +660,12 @@ function checkBeamFlexuralRupture(Sx, Fy, Fu, bf, tf, num_bolts_in_flange_cs, ho
     // Check if the limit state applies per F13.2(a)
     if (Fu * Afn >= Yt * Fy * Afg) {
         // Limit state does not apply, return a very high strength so it doesn't govern.
-        return { Rn: Infinity, ...factors, Mn_rupture: Infinity, Afg, Afn, Yt, Sx, Fu, Fy, applies: false };
+        return { Rn: Infinity, ...factors, Mn_rupture: Infinity, Afg, Afn, Yt, Sx, Fu, Fy, applies: false, hole_dia_net_area };
     }
 
     // Per F13.2(b), calculate the nominal flexural strength based on tensile rupture.
     const Mn_rupture_kip_in = (Fu * Afn / Afg) * Sx;
-    return { Rn: Mn_rupture_kip_in, ...factors, Mn_rupture: Mn_rupture_kip_in, Afg, Afn, Yt, Sx, Fu, Fy, applies: true };
+    return { Rn: Mn_rupture_kip_in, ...factors, Mn_rupture: Mn_rupture_kip_in, Afg, Afn, Yt, Sx, Fu, Fy, applies: true, hole_dia_net_area };
 }
 function checkBoltShearTensionInteraction(Tu, Vu, Fnv, grade, db, design_method, jurisdiction) {
     // AISC 360-22 Section J3.9

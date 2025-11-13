@@ -1026,52 +1026,53 @@ function saveInputsToLocalStorage(storageKey, inputs, appVersion = '1.0') {
  */
 function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion = '1.0') {
     const dataStr = localStorage.getItem(storageKey);
-    if (!dataStr) {
-        return; // No saved data found, do not proceed.
+    let loadedInputs = null;
+
+    if (dataStr) {
+        try {
+            const inputs = JSON.parse(dataStr);
+
+            // Version check: If the saved data has a matching version, apply it.
+            if (inputs._version === appVersion) {
+                loadedInputs = inputs; // Mark as valid
+                
+                inputIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+
+                    let valueToApply;
+                    if (inputs[id] !== undefined) {
+                        valueToApply = inputs[id];
+                    } else if (storageKey === 'buildingProjectData') {
+                        const genericKey = id.substring(id.indexOf('_') + 1);
+                        if (inputs[genericKey] !== undefined) {
+                            valueToApply = inputs[genericKey];
+                        }
+                    }
+
+                    if (valueToApply !== undefined) {
+                        if (el.type === 'checkbox') {
+                            el.checked = !!valueToApply;
+                        } else {
+                            el.value = valueToApply;
+                        }
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+            } else {
+                // If version is mismatched, discard the old data.
+                console.warn(`LocalStorage data for '${storageKey}' is outdated (v${inputs._version} vs current v${appVersion}). Discarding.`);
+                localStorage.removeItem(storageKey);
+            }
+        } catch (error) {
+            console.error('Could not parse inputs from local storage:', error);
+        }
     }
-    try {
-        const inputs = JSON.parse(dataStr);
 
-        // Version check: If the saved data has no version or a different version, discard it.
-        if (inputs._version !== appVersion) {
-            console.warn(`LocalStorage data for '${storageKey}' is outdated (v${inputs._version} vs current v${appVersion}). Discarding.`);
-            localStorage.removeItem(storageKey);
-            return;
-        }
-
-        inputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (!el) return;
-
-            // Try to find a value for the current element's ID.
-            // 1. Look for a direct match (e.g., inputs['snow_risk_category']).
-            // 2. If it's project data, look for a generic match (e.g., inputs['risk_category']).
-            let valueToApply;
-            if (inputs[id] !== undefined) {
-                valueToApply = inputs[id];
-            } else if (storageKey === 'buildingProjectData') {
-                const genericKey = id.substring(id.indexOf('_') + 1);
-                if (inputs[genericKey] !== undefined) {
-                    valueToApply = inputs[genericKey];
-                }
-            }
-
-            if (valueToApply !== undefined) {
-                if (el.type === 'checkbox') {
-                    el.checked = !!valueToApply;
-                } else {
-                    el.value = valueToApply;
-                }
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        });
-        // Only run the onComplete callback if data was actually found and loaded.
-        if (typeof onComplete === 'function') {
-            onComplete(inputs);
-        }
-    } catch (error) {
-        console.error('Could not load inputs from local storage:', error);
+    // Unconditionally call the onComplete callback, passing the loaded inputs (or null if none were loaded).
+    if (typeof onComplete === 'function') {
+        onComplete(loadedInputs);
     }
 }
 
@@ -1158,6 +1159,24 @@ async function initializeApp(config) { // This function is already async
     const runButton = document.getElementById(buttonId);
     if (runButton && typeof calculationHandler === 'function') {
         runButton.addEventListener('click', calculationHandler);
+    }
+
+    // --- FIX: Attach Save/Load button handlers ---
+    const saveButton = document.getElementById('save-inputs-btn');
+    const loadButton = document.getElementById('load-inputs-btn');
+    const fileInput = document.getElementById(fileInputId);
+
+    if (saveButton) {
+        const filename = `${effectiveStorageKey}.json`;
+        const saveHandler = createSaveInputsHandler(inputIds, filename, config.feedbackElId);
+        saveButton.addEventListener('click', saveHandler);
+    }
+
+    if (loadButton && fileInput) {
+        loadButton.addEventListener('click', () => initiateLoadInputsFromFile(fileInputId));
+        // When inputs are loaded from a file, re-run the calculation automatically.
+        const loadHandler = createLoadInputsHandler(inputIds, calculationHandler, config.feedbackElId);
+        fileInput.addEventListener('change', loadHandler);
     }
 
     // --- Automatic Save to Local Storage on Input Change ---
@@ -1546,6 +1565,7 @@ function createCalculationHandler(config) { // This is the function being called
             await Promise.resolve();
             
             saveInputsToLocalStorage(storageKey, inputs);
+            console.log(`[${validationRuleKey}] About to call renderFunction.`);
             renderFunction(calculationResult, inputs);
             
             console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
