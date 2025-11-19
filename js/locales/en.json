@@ -136,7 +136,7 @@
     "lateral_loads_seismic": "Lateral Loads (Seismic)",
     "seismic_load_e": "Seismic Load (E)",
     "run_load_combinations": "Run Load Combinations",
-    "pcalc": "PCALC",
-    "pcalc_desc": "Calculate the axial load capacity of a reinforced concrete column according to NBR 6118.",
-    "go_to_pcalc": "Go to PCALC"
-}
+"pcalc": "PCALC",
+    "mn_diagram": "M-N Interaction Diagram",
+    "geometry_spacing_checks_title": "Geometry & Spacing Checks"
+  }

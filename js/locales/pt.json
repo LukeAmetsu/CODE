@@ -149,5 +149,7 @@
     "pcalc_calculate": "Calcular",
     "pcalc": "PCALC",
     "pcalc_desc": "Calcular a capacidade de carga axial de um pilar de concreto armado de acordo com a NBR 6118.",
-    "go_to_pcalc": "Ir para PCALC"
-}
+    "pcalc": "PCALC",
+    "mn_diagram": "Diagrama de Interação M-N",
+    "geometry_spacing_checks_title": "Verificações de Geometria e Espaçamento"
+  }

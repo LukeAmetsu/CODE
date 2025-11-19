@@ -205,5 +205,16 @@ const validationRules = {
         'k': { min: 0, max: 0.1, required: true, label: 'Coef. de Ondulação (k)' },
         'anchorage_slip': { min: 0, max: 20, required: true, label: 'Acomodação da Ancoragem' },
         'exposed_perimeter': { min: 0.1, required: true, label: 'Perímetro Exposto' }
+    },
+    mn_diagram: {
+        'b': { min: 0.1, required: true, label: 'Largura (b)' },
+        'h': { min: 0.1, required: true, label: 'Altura (h)' },
+        'fck': { min: 1, required: true, label: 'Concreto (fck)' },
+        'fyk': { min: 1, required: true, label: 'Aço (fyk)' },
+        'd_linha': { min: 0.1, required: true, label: 'Cobrimento (d\')' },
+        'As': { min: 0, required: true, label: 'Arm. Inf. (As)' },
+        'As_linha': { min: 0, required: true, label: 'Arm. Sup. (As\')' },
+        'gamma_c': { min: 0.1, required: true, label: 'Coef. Concreto (γc)' },
+        'gamma_s': { min: 0.1, required: true, label: 'Coef. Aço (γs)' }
     }
 };

@@ -44,9 +44,9 @@ const AISC_SPEC = (() => {
     const nominalHoleTable = {
         // Bolt Dia: Standard Hole Dia
         0.25:   5/16,  // 1/4"
+        0.3125:  3/8,   // 5/16"
         0.375:  7/16,  // 3/8"
-        // Bolt Dia: Standard Hole Dia
-        0.5:    9/16,
+        0.5:    9/16, // 1/2"
         0.625:  11/16, // 5/8"
         0.75:   13/16, // 3/4"
         0.875:  15/16, // 7/8"
@@ -75,10 +75,11 @@ const AISC_SPEC = (() => {
         }
 
         if (method === 'table') {
-            const closestDb = Object.keys(nominalHoleTable).reduce((prev, curr) => {
-                // Compare the numeric value of the keys against the numeric input.
-                return (Math.abs(parseFloat(curr) - db_num) < Math.abs(parseFloat(prev) - db_num) ? curr : prev);
-            });
+            // Find the closest key in the table to the provided bolt diameter.
+            // This correctly handles floating point inaccuracies with sizes like 5/16".
+            const closestDb = Object.keys(nominalHoleTable).reduce((prev, curr) => 
+                (Math.abs(parseFloat(curr) - db_num) < Math.abs(parseFloat(prev) - db_num) ? curr : prev)
+            );
             return nominalHoleTable[closestDb] || (db_num + 1/8); // Fallback for unusual sizes
         } else { // 'rule'
             return (db_num < 1.0) ? (db_num + 1/16) : (db_num + 1/8);
@@ -90,7 +91,6 @@ const AISC_SPEC = (() => {
         // Bolt Dia: Min Edge Distance for Sheared Edge
         0.25:   0.5,   // 1/4" -> 1/2"
         0.375:  0.625, // 3/8" -> 5/8"
-        // Bolt Dia: Min Edge Distance for Sheared Edge
         0.5:    0.875,
         0.625:  1.125,
         0.75:   1.25,
@@ -152,7 +152,6 @@ const AISC_SPEC = (() => {
         // Dia (in): { Ab: area (in^2) }
         0.25:   { Ab: 0.0491 },
         0.375:  { Ab: 0.1104 },
-        // Dia (in): { Ab: area (in^2) }
         0.5:    { Ab: 0.1963 },
         0.625:  { Ab: 0.3068 },
         0.75:   { Ab: 0.4418 },

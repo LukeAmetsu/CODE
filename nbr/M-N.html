@@ -1,465 +1,91 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Envoltória de Resistência M-N (NBR 6118)</title>
-    <!-- Carrega o Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carrega a biblioteca Chart.js para o gráfico -->
+    <link rel="stylesheet" href="../styles.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        /* Define a fonte Inter como padrão */
-        body {
-            font-family: "Inter", sans-serif;
-        }
-        /* Estilo para garantir que o gráfico seja responsivo */
-        #chartContainer {
-            position: relative;
-            height: 40vh;
-            width: 100%;
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-
-    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-6xl">
-        <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">
-            Calculadora de Envoltória de Resistência M-N
-        </h1>
-        <p class="text-center text-gray-600 mb-8">
-            Para seções retangulares de concreto armado (NBR 6118)
-        </p>
-
-        <div class="grid md:grid-cols-2 gap-8">
-            
-            <!-- Coluna de Entradas -->
-            <div>
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Parâmetros de Entrada</h2>
-                <form id="calcForm" class="space-y-4">
-                    
-                    <!-- Dimensões -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="b" class="block text-sm font-medium text-gray-700">Largura $b$ (cm)</label>
-                            <input type="number" id="b" value="25" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div id="header-placeholder"></div>
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4 border-b pb-2">Parâmetros de Entrada</h2>
+                        <form id="calcForm" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="b" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Largura $b$ (cm)</label>
+                                    <input type="number" id="b" value="25" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="h" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Altura $h$ (cm)</label>
+                                    <input type="number" id="h" value="60" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="fck" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Concreto $f_{ck}$ (MPa)</label>
+                                    <input type="number" id="fck" value="25" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="fyk" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Aço $f_{yk}$ (MPa)</label>
+                                    <input type="number" id="fyk" value="500" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label for="d_linha" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cobrimento $d'$ (cm)</label>
+                                    <input type="number" id="d_linha" value="5" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="As" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Arm. Inf. $A_s$ (cm²)</label>
+                                    <input type="number" id="As" value="12.56" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="As_linha" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Arm. Sup. $A_s'$ (cm²)</label>
+                                    <input type="number" id="As_linha" value="4.02" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="gamma_c" class="block text-sm font-medium text-gray-700 dark:text-gray-300">$\gamma_c$ (concreto)</label>
+                                    <input type="number" id="gamma_c" value="1.4" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label for="gamma_s" class="block text-sm font-medium text-gray-700 dark:text-gray-300">$\gamma_s$ (aço)</label>
+                                    <input type="number" id="gamma_s" value="1.15" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <button type="submit" id="run-check-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out">
+                                Calcular Envoltória
+                            </button>
+                        </form>
+                    </div>
+                    <div id="results-container">
+                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4 border-b pb-2">Resultados</h2>
+                        <div id="chartContainer" class="mb-6" style="height: 40vh; width: 100%;">
+                            <canvas id="mnChart"></canvas>
                         </div>
-                        <div>
-                            <label for="h" class="block text-sm font-medium text-gray-700">Altura $h$ (cm)</label>
-                            <input type="number" id="h" value="60" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-3">Pontos Notáveis (Mrd, Nrd)</h3>
+                        <div id="resultsTableContainer" class="overflow-x-auto">
+                            <p id="resultsPlaceholder" class="text-gray-500 dark:text-gray-400">Insira os dados e clique em "Calcular" para ver os resultados.</p>
                         </div>
                     </div>
-
-                    <!-- Materiais -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="fck" class="block text-sm font-medium text-gray-700">Concreto $f_{ck}$ (MPa)</label>
-                            <input type="number" id="fck" value="25" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="fyk" class="block text-sm font-medium text-gray-700">Aço $f_{yk}$ (MPa)</label>
-                            <input type="number" id="fyk" value="500" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-
-                    <!-- Armaduras -->
-                    <div class="grid grid-cols-3 gap-4">
-                        <div>
-                            <label for="d_linha" class="block text-sm font-medium text-gray-700">Cobrimento $d'$ (cm)</label>
-                            <input type="number" id="d_linha" value="5" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="As" class="block text-sm font-medium text-gray-700">Arm. Inf. $A_s$ (cm²)</label>
-                            <input type="number" id="As" value="12.56" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="As_linha" class="block text-sm font-medium text-gray-700">Arm. Sup. $A_s'$ (cm²)</label>
-                            <input type="number" id="As_linha" value="4.02" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-
-                    <!-- Coeficientes de Ponderação -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="gamma_c" class="block text-sm font-medium text-gray-700">$\gamma_c$ (concreto)</label>
-                            <input type="number" id="gamma_c" value="1.4" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label for="gamma_s" class="block text-sm font-medium text-gray-700">$\gamma_s$ (aço)</label>
-                            <input type="number" id="gamma_s" value="1.15" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out">
-                        Calcular Envoltória
-                    </button>
-                </form>
-            </div>
-
-            <!-- Coluna de Resultados -->
-            <div>
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Resultados</h2>
-                
-                <!-- Gráfico -->
-                <div id="chartContainer" class="mb-6">
-                    <canvas id="mnChart"></canvas>
-                </div>
-
-                <!-- Tabela de Pontos -->
-                <h3 class="text-xl font-semibold text-gray-700 mb-3">Pontos Notáveis (Mrd, Nrd)</h3>
-                <div id="resultsTableContainer" class="overflow-x-auto">
-                    <!-- A tabela será inserida aqui via JS -->
-                    <p id="resultsPlaceholder" class="text-gray-500">Insira os dados e clique em "Calcular" para ver os resultados.</p>
                 </div>
             </div>
-
         </div>
-    </div>
+    </main>
+    <div id="footer-placeholder"></div>
 
-    <script>
-        let myMnChart = null; // Variável global para a instância do gráfico
-
-        document.getElementById('calcForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            calculateAndDraw();
-        });
-
-        // Função principal que orquestra os cálculos e a exibição
-        function calculateAndDraw() {
-            try {
-                // 1. Obter Entradas
-                const inputs = getInputs();
-
-                // 2. Calcular Parâmetros de Cálculo
-                const params = calculateDesignParameters(inputs);
-
-                // 3. Calcular Pontos Notáveis
-                const points = calculateKeyPoints(inputs, params);
-                
-                // 4. Desenhar Gráfico
-                drawChart(points);
-
-                // 5. Exibir Tabela
-                displayTable(points);
-
-                // A LINHA ABAIXO FOI REMOVIDA POIS CAUSAVA O ERRO.
-                // O 'resultsPlaceholder' é removido automaticamente quando
-                // a função displayTable() substitui o HTML do container.
-                // document.getElementById('resultsPlaceholder').style.display = 'none';
-
-            } catch (error) {
-                console.error("Erro no cálculo:", error);
-                alert("Ocorreu um erro. Verifique os valores de entrada.");
-            }
-        }
-
-        // Função para ler os valores do formulário
-        function getInputs() {
-            return {
-                b: parseFloat(document.getElementById('b').value),
-                h: parseFloat(document.getElementById('h').value),
-                fck: parseFloat(document.getElementById('fck').value),
-                fyk: parseFloat(document.getElementById('fyk').value),
-                d_linha: parseFloat(document.getElementById('d_linha').value),
-                As: parseFloat(document.getElementById('As').value),
-                As_linha: parseFloat(document.getElementById('As_linha').value),
-                gamma_c: parseFloat(document.getElementById('gamma_c').value),
-                gamma_s: parseFloat(document.getElementById('gamma_s').value),
-            };
-        }
-
-        // Função para calcular parâmetros de dimensionamento
-        function calculateDesignParameters(inputs) {
-            const { fck, fyk, gamma_c, gamma_s } = inputs;
-
-            // Fatores de conversão (MPa = 0.1 kN/cm²)
-            const fcd_kn_cm = (fck / gamma_c) * 0.1;
-            const fyd_kn_cm = (fyk / gamma_s) * 0.1;
-
-            // Módulo de elasticidade do aço (kN/cm²)
-            const Es = 21000; 
-
-            // Deformações
-            const eyd = fyd_kn_cm / Es; // Deformação de escoamento do aço
-            const ecu = 0.0035;       // Deformação última do concreto
-            const esu = 0.010;        // Deformação última do aço
-            const ec2 = 0.002;        // Deformação de compressão uniforme
-
-            // Parâmetros do diagrama parábola-retângulo
-            const lambda = (fck <= 50) ? 0.8 : (fck <= 90 ? 0.8 - (fck - 50) / 400 : 0.72);
-            const alphac = (fck <= 50) ? 0.85 : (fck <= 90 ? 0.85 * (1 - (fck - 50) / 200) : 0.7225);
-            
-            // Tensão de cálculo do concreto no bloco retangular
-            const fcd_design = alphac * fcd_kn_cm;
-
-            return { fcd_kn_cm, fyd_kn_cm, Es, eyd, ecu, esu, ec2, lambda, fcd_design };
-        }
-
-        /**
-         * Calcula os esforços (Nrd, Mrd) para uma dada posição da linha neutra (x)
-         * e uma deformação no topo (ecu_top).
-         * Momentos são calculados em relação ao centro da seção.
-         */
-        function getState(x, ecu_top, inputs, params) {
-            const { b, h, d_linha, As, As_linha } = inputs;
-            const { fcd_design, fyd_kn_cm, Es, eyd, lambda } = params;
-            
-            const d = h - d_linha; // Altura útil (assumindo simetria de cobrimento)
-            const d_prime = d_linha;
-
-            // Evita divisão por zero
-            if (x <= 1e-6) x = 1e-6; 
-
-            let y = lambda * x;
-            let y_pos = 0.4 * y; // Posição da resultante no bloco parábola-retângulo
-
-            // Domínio 5 (compressão uniforme ou parcial)
-            if (y > h) {
-                y = h;
-                y_pos = 0.5 * h; // Centroide de um retângulo
-            }
-
-            // 1. Forças no Concreto
-            const Nc = fcd_design * b * y;
-            const Mc = Nc * (h / 2 - y_pos);
-
-            // 2. Deformações no Aço (semelhança de triângulos)
-            let es_s = ecu_top * (d - x) / x;
-            let es_s_linha = ecu_top * (x - d_prime) / x;
-            
-            // Limita deformações
-            es_s = Math.max(-params.esu, Math.min(params.esu, es_s));
-            es_s_linha = Math.max(-params.esu, Math.min(params.esu, es_s_linha));
-
-            // 3. Tensões no Aço (Lei de Hooke, limitada por fyd)
-            const fs_s = Math.max(-fyd_kn_cm, Math.min(fyd_kn_cm, es_s * Es));
-            const fs_s_linha = Math.max(-fyd_kn_cm, Math.min(fyd_kn_cm, es_s_linha * Es));
-            
-            // 4. Forças no Aço
-            const Ns = As * fs_s;
-            const Ms = Ns * (h / 2 - d);
-
-            const Ns_linha = As_linha * fs_s_linha;
-            const Ms_linha = Ns_linha * (h / 2 - d_prime);
-
-            // 5. Esforços Totais
-            const Nrd = Nc + Ns + Ns_linha;     // kN
-            const Mrd = Mc + Ms + Ms_linha;     // kN-cm
-            
-            return { Nrd, Mrd: Mrd / 100 }; // Converte Mrd para kN·m
-        }
-
-        // Função para calcular os 5 pontos notáveis da envoltória
-        function calculateKeyPoints(inputs, params) {
-            const { b, h, d_linha, As, As_linha } = inputs;
-            const { fcd_kn_cm, fyd_kn_cm, Es, eyd, ecu, esu, ec2 } = params;
-
-            const d = h - d_linha;
-            const d_prime = d_linha;
-            const points = [];
-
-            // --- Ponto 1: Compressão Pura (Reta b, Domínio 5) ---
-            // Deformação uniforme de 2‰
-            const fs_s_p1 = Math.max(-fyd_kn_cm, -ec2 * Es);
-            const fs_s_linha_p1 = Math.max(-fyd_kn_cm, -ec2 * Es);
-            // NBR 6118, 17.2.2 - Tensão 0.85 * fcd
-            const Nc_p1 = (0.85 * fcd_kn_cm) * b * h; 
-            const Ns_p1 = As * fs_s_p1;
-            const Ns_linha_p1 = As_linha * fs_s_linha_p1;
-            
-            const Nrd_p1 = Nc_p1 + Ns_p1 + Ns_linha_p1;
-            // Momento residual (pode não ser zero se As != As')
-            const Mc_p1 = 0; // Resultante no centroide
-            const Ms_p1 = Ns_p1 * (h / 2 - d);
-            const Ms_linha_p1 = Ns_linha_p1 * (h / 2 - d_prime);
-            const Mrd_p1 = (Mc_p1 + Ms_p1 + Ms_linha_p1) / 100;
-            
-            points.push({ label: 'Compressão Pura', ...getState(h / params.lambda, ec2, inputs, params), Nrd: Nrd_p1, Mrd: Mrd_p1, x_val: Infinity });
-
-
-            // --- Ponto 2: Fronteira Domínio 5/4 ---
-            // $\epsilon_s = 0$ (aço inferior), $\epsilon_c = 3.5‰$
-            const x_p2 = d;
-            const res_p2 = getState(x_p2, ecu, inputs, params);
-            points.push({ label: 'Front. D5/D4', ...res_p2, x_val: x_p2 });
-
-            // --- Ponto 3: Fronteira Domínio 4/3 (Balançado) ---
-            // $\epsilon_s = \epsilon_{yd}$, $\epsilon_c = 3.5‰$
-            const x_p3 = d * ecu / (ecu + eyd);
-            const res_p3 = getState(x_p3, ecu, inputs, params);
-            points.push({ label: 'Front. D4/D3 (Bal.)', ...res_p3, x_val: x_p3 });
-
-            // --- Ponto 4: Fronteira Domínio 3/2 ---
-            // $\epsilon_s = 10‰$, $\epsilon_c = 3.5‰$
-            const x_p4 = d * ecu / (ecu + esu);
-            const res_p4 = getState(x_p4, ecu, inputs, params);
-            points.push({ label: 'Front. D3/D2', ...res_p4, x_val: x_p4 });
-
-            // --- Ponto Bônus: Flexão Pura ($N_{rd} = 0$) ---
-            // Encontra x por bisseção entre Ponto 4 e Ponto 2
-            let x_min = x_p4;
-            let x_max = x_p2;
-            let res_flexao_pura = res_p3; // Chute inicial
-
-            for (let i = 0; i < 30; i++) { // 30 iterações são suficientes
-                let x_mid = (x_min + x_max) / 2;
-                let res_mid = getState(x_mid, ecu, inputs, params);
-                res_flexao_pura = res_mid;
-                
-                if (Math.abs(res_mid.Nrd) < 1e-3) {
-                    break; // Encontrou
-                } else if (res_mid.Nrd > 0) {
-                    // Nrd positivo, $x$ precisa ser menor
-                    x_max = x_mid;
-                } else {
-                    // Nrd negativo, $x$ precisa ser maior
-                    x_min = x_mid;
-                }
-            }
-            points.push({ label: 'Flexão Pura (N=0)', ...res_flexao_pura, x_val: (x_min+x_max)/2 });
-
-            
-            // --- Ponto 5: Tração Pura (Reta a, Domínio 1) ---
-            // Deformação uniforme $\epsilon_{yd}$
-            const Nrd_p5 = -(As + As_linha) * fyd_kn_cm;
-            // Momento residual
-            const Ms_p5 = -(As * fyd_kn_cm) * (h / 2 - d);
-            const Ms_linha_p5 = -(As_linha * fyd_kn_cm) * (h / 2 - d_prime);
-            const Mrd_p5 = (Ms_p5 + Ms_linha_p5) / 100;
-            
-            points.push({ label: 'Tração Pura', Nrd: Nrd_p5, Mrd: Mrd_p5, x_val: -Infinity });
-
-            // Ordena os pontos por Nrd (decrescente) para o gráfico
-            points.sort((a, b) => b.Nrd - a.Nrd);
-
-            return points;
-        }
-
-        // Função para desenhar o gráfico com Chart.js
-        function drawChart(points) {
-            const chartData = points.map(p => ({
-                x: Math.abs(p.Mrd), // Plota apenas momento positivo
-                y: p.Nrd
-            }));
-
-            const ctx = document.getElementById('mnChart').getContext('2d');
-            
-            if (myMnChart) {
-                myMnChart.destroy(); // Destrói o gráfico anterior
-            }
-
-            myMnChart = new Chart(ctx, {
-                type: 'scatter',
-                data: {
-                    datasets: [{
-                        label: 'Envoltória M-N (Mrd, Nrd)',
-                        data: chartData,
-                        borderColor: 'rgb(37, 99, 235)',
-                        backgroundColor: 'rgba(37, 99, 235, 0.5)',
-                        showLine: true, // Conecta os pontos
-                        fill: false,
-                        tension: 0.1 // Suaviza a curva
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Diagrama de Interação M-N'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    const point = points[context.dataIndex];
-                                    label += `(${context.parsed.x.toFixed(2)} kNm, ${context.parsed.y.toFixed(2)} kN) - ${point.label}`;
-                                    return label;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'linear',
-                            position: 'bottom',
-                            title: {
-                                display: true,
-                                text: 'Momento Resistente de Cálculo |Mrd| (kNm)'
-                            },
-                            beginAtZero: true
-                        },
-                        y: {
-                            type: 'linear',
-                            title: {
-                                display: true,
-                                text: 'Esforço Normal Resistente de Cálculo Nrd (kN)'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Função para exibir a tabela de resultados
-        function displayTable(points) {
-            const container = document.getElementById('resultsTableContainer');
-            let tableHtml = `
-                <table class="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-md">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ponto Notável</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nrd (kN)</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mrd (kNm)</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-            `;
-
-            points.forEach(point => {
-                tableHtml += `
-                    <tr>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${point.label}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${point.Nrd.toFixed(2)}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${point.Mrd.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-
-            tableHtml += `
-                    </tbody>
-                </table>
-            `;
-            container.innerHTML = tableHtml;
-        }
-
-        // Adiciona MathJax para renderizar as fórmulas em LaTeX (opcional, mas melhora a visualização)
-        function loadMathJax() {
-            var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-            script.async = true;
-            document.head.appendChild(script);
-
-            window.MathJax = {
-                tex: {
-                    inlineMath: [['$', '$'], ['\\(', '\\)']],
-                    displayMath: [['$$', '$$'], ['\\[', '\\]']]
-                },
-                svg: {
-                    fontCache: 'global'
-                }
-            };
-        }
-        
-        loadMathJax();
-        
-        // Calcula ao carregar a página com os valores padrão
-        window.onload = calculateAndDraw;
-
-    </script>
+    <script src="../js/i18n.js"></script>
+    <script src="../js/shared-utils.js"></script>
+    <script src="../js/validation-rules.js"></script>
+    <script src="../js/template.js"></script>
+    <script src="M-N.js"></script>
 </body>
 </html>

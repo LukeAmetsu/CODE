@@ -85,6 +85,8 @@ function draw3dSpliceDiagram() {
 
     // --- 1. Gather All Relevant Inputs ---
     const inputs = gatherInputsFromIds(diagramInputIds);
+    inputs.num_flange_plates = parseInt(inputs.num_flange_plates, 10);
+    inputs.num_web_plates = parseInt(inputs.num_web_plates, 10);
     const isDarkMode = document.documentElement.classList.contains('dark');
 
     // --- 2. Initialize Scene (if needed) ---
@@ -254,7 +256,7 @@ function draw3dSpliceDiagram() {
         outerFlangePlateBot.position.y = -(inputs.member_d / 2 + inputs.t_fp / 2);
     }
 
-    if (inputs.num_flange_plates == 2 && inputs.L_fp_inner > 0 && inputs.H_fp_inner > 0 && inputs.t_fp_inner > 0) {
+    if (inputs.num_flange_plates === 2 && inputs.L_fp_inner > 0 && inputs.H_fp_inner > 0 && inputs.t_fp_inner > 0) {
         const innerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("inner_fp_top", { width: inputs.H_fp_inner, height: inputs.t_fp_inner, depth: inputs.L_fp_inner }, bjsScene);
         innerFlangePlateTop.material = plateMaterial;
         innerFlangePlateTop.position.y = inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2;
@@ -316,7 +318,7 @@ function draw3dSpliceDiagram() {
 
         let clamped_thickness, y_center_top;
 
-        if (num_flange_plates == 2) {
+        if (num_flange_plates === 2) {
             // Total thickness of the 3-layer stack (outer plate + flange + inner plate)
             clamped_thickness = t_fp + member_tf + t_fp_inner;
             // Geometric center of the 3-layer stack
@@ -1419,7 +1421,12 @@ function performMemberChecks(inputs, demands, calculated_holes) {
     const { M_load, V_load, Axial_load } = demands;    
     const { hole_for_net_area_fp, hole_for_net_area_wp } = calculated_holes;
     const checks = {};
+    // FIX: Ensure hole_for_net_area_fp is valid, otherwise use a calculated default.
+    // This prevents using the web bolt hole size for the flange check if flange plates are not used.
+    const effective_hole_for_net_area_fp = hole_for_net_area_fp || (AISC_SPEC.getNominalHoleDiameter(inputs.D_fp) + 1.0 / 16.0);
+    const effective_hole_for_net_area_wp = hole_for_net_area_wp || (AISC_SPEC.getNominalHoleDiameter(inputs.D_wp) + 1.0 / 16.0);
 
+    
     // --- Beam Flexural Yielding (Gross Section) ---
     const Mn_yield = inputs.member_Fy * inputs.member_Zx;
     checks['Beam Flexural Yielding'] = {
@@ -1436,20 +1443,50 @@ function performMemberChecks(inputs, demands, calculated_holes) {
     
     // The number of bolts in the critical section of one flange is 2 * Nr_fp (one for each bolt line on the gage).
     const num_bolts_in_flange_cs = 2 * inputs.Nr_fp;
-    checks['Beam Flexural Rupture'] = { demand: M_load * 12, check: checkBeamFlexuralRupture(inputs.member_Sx, inputs.member_Fy, inputs.member_Fu, inputs.member_bf, inputs.member_tf, num_bolts_in_flange_cs, hole_for_net_area_fp, inputs.jurisdiction) };
+    checks['Beam Flexural Rupture'] = { demand: M_load * 12, check: checkBeamFlexuralRupture(inputs.member_Sx, inputs.member_Fy, inputs.member_Fu, inputs.member_bf, inputs.member_tf, num_bolts_in_flange_cs, effective_hole_for_net_area_fp, inputs.jurisdiction) };
 
-    const Anv_beam_web = (inputs.member_d - 2*inputs.member_tf - inputs.Nr_wp * hole_for_net_area_wp) * inputs.member_tw;
+    const Anv_beam_web = (inputs.member_d - 2*inputs.member_tf - inputs.Nr_wp * effective_hole_for_net_area_wp) * inputs.member_tw;
     checks['Beam Web Shear Rupture'] = { 
         demand: V_load,
         check: checkShearRupture(Anv_beam_web, inputs.member_Fu, inputs.jurisdiction),
-        details: { d: inputs.member_d, tf: inputs.member_tf, Nr_wp: inputs.Nr_wp, hole_dia: hole_for_net_area_wp, tw: inputs.member_tw }
+        details: { d: inputs.member_d, tf: inputs.member_tf, Nr_wp: inputs.Nr_wp, hole_dia: effective_hole_for_net_area_wp, tw: inputs.member_tw }
     };
+
+    if (Axial_load !== 0) {
+        const flange_net_section_check = checkFlangeNetSection({
+            bf: inputs.member_bf,
+            tf: inputs.member_tf,
+            Fu: inputs.member_Fu,
+            num_bolts_in_cs: num_bolts_in_flange_cs,
+            hole_dia_net_area: effective_hole_for_net_area_fp,
+            jurisdiction: inputs.jurisdiction
+        });
+        const moment_arm = inputs.member_d - inputs.member_tf;
+        const moment_capacity = flange_net_section_check.Rn * moment_arm;
+        checks['Spliced Member Moment Capacity'] = {
+            demand: M_load * 12,
+            check: { ...flange_net_section_check, Rn: moment_capacity },
+            details: { ...flange_net_section_check, moment_arm }
+        };
+    } else {
+        const flexural_yielding = checks['Beam Flexural Yielding'].check;
+        const flexural_rupture = checks['Beam Flexural Rupture'].check;
+        const moment_capacity = Math.min(flexural_yielding.Rn, flexural_rupture.Rn);
+        checks['Spliced Member Moment Capacity'] = {
+            demand: M_load * 12,
+            check: { Rn: moment_capacity, phi: 0.90, omega: 1.67 },
+            details: {
+                yielding: flexural_yielding,
+                rupture: flexural_rupture
+            }
+        };
+    }
 
     // --- Beam Section Tensile Rupture Check (with Shear Lag) ---
     if (Axial_load > 0) {
         const A_gross_approx = 2 * inputs.member_bf * inputs.member_tf + (inputs.member_d - 2 * inputs.member_tf) * inputs.member_tw; 
-        const A_holes_flange = (2 * inputs.Nr_fp) * hole_for_net_area_fp * inputs.member_tf;
-        const A_holes_web = inputs.Nr_wp * hole_for_net_area_wp * inputs.member_tw; // Holes in one line
+        const A_holes_flange = (2 * inputs.Nr_fp) * effective_hole_for_net_area_fp * inputs.member_tf;
+        const A_holes_web = inputs.Nr_wp * effective_hole_for_net_area_wp * inputs.member_tw; // Holes in one line
         const An = A_gross_approx - 2 * A_holes_flange - A_holes_web; // Holes in both flanges
 
         // --- Shear Lag Factor U per AISC Table D3.1 ---
@@ -1684,6 +1721,8 @@ function run(rawInputs) {
     inputs.L_wp = (rawInputs.L_wp || 0) / 2.0;
 
     // Convert string properties from DOM to numbers for calculations
+    inputs.num_flange_plates = parseInt(inputs.num_flange_plates, 10);
+    inputs.num_web_plates = parseInt(inputs.num_web_plates, 10);
     inputs.member_Fy = parseFloat(inputs.member_Fy);
     inputs.member_Fu = parseFloat(inputs.member_Fu);
     inputs.flange_plate_Fy = parseFloat(inputs.flange_plate_Fy);
@@ -1895,6 +1934,30 @@ const baseBreakdownGenerators = {
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
     },
+    'Spliced Member Moment Capacity': ({ check, details, demand }, common) => {
+        if (common.inputs.Axial_load !== 0) {
+            return common.format_list([
+                `<u>Moment Capacity based on Flange Net Section (ASD)</u>`,
+                `R<sub>n,flange</sub> = F<sub>u</sub> &times; A<sub>n</sub> = ${common.fmt(details.Fu)} ksi &times; ${common.fmt(details.An, 3)} in² = ${common.fmt(details.Rn)} kips`,
+                `Moment Arm (d - t<sub>f</sub>) = ${common.fmt(details.moment_arm, 2)} in`,
+                `<u>Nominal Moment Strength (M<sub>n</sub>)</u>`,
+                `M<sub>n</sub> = R<sub>n,flange</sub> &times; Moment Arm = ${common.fmt(details.Rn)} kips &times; ${common.fmt(details.moment_arm, 2)} in = <b>${common.fmt(check.Rn)} kip-in</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq.replace('R','M')} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kip-in</b>`
+            ]);
+        } else {
+            return common.format_list([
+                `<u>Flexural Yielding (M<sub>n,y</sub>)</u>`,
+                `M<sub>n,y</sub> = F<sub>y</sub> &times; Z<sub>x</sub> = ${common.fmt(details.yielding.Fy)} ksi &times; ${common.fmt(details.yielding.Zx)} in³ = ${common.fmt(details.yielding.Rn)} kip-in`,
+                `<u>Flexural Rupture (M<sub>n,r</sub>)</u>`,
+                `M<sub>n,r</sub> = (F<sub>u</sub> &times; A<sub>fn</sub> / A<sub>fg</sub>) &times; S<sub>x</sub> = ${common.fmt(details.rupture.Rn)} kip-in`,
+                `<u>Nominal Moment Strength (M<sub>n</sub>)</u>`,
+                `M<sub>n</sub> = min(M<sub>n,y</sub>, M<sub>n,r</sub>) = <b>${common.fmt(check.Rn)} kip-in</b>`,
+                `<u>Design Capacity</u>`,
+                `Capacity = ${common.capacity_eq.replace('R','M')} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kip-in</b>`
+            ]);
+        }
+    },
 };
 
 function getBreakdownGenerator(name) {
@@ -1917,6 +1980,7 @@ function getBreakdownGenerator(name) {
     if (name.includes('Web Bolt Tension with Prying')) return baseBreakdownGenerators['Web Bolt Tension with Prying'];
     if (name.includes('Beam Flange Tensile Rupture')) return baseBreakdownGenerators['NSF']; // Reuse the plate NSF breakdown
     if (name.includes('Plate Thickness for Prying')) return baseBreakdownGenerators['Plate Thickness for Prying'];
+    if (name.includes('Spliced Member Moment Capacity')) return baseBreakdownGenerators['Spliced Member Moment Capacity'];
 
     // Fallback
     return () => 'Breakdown not available for this check.';
