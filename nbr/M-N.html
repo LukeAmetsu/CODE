@@ -4,88 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Envoltória de Resistência M-N (NBR 6118)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Lógica de Tema Imediata para evitar o "flash"
+        (function() {
+            if (localStorage.getItem('theme') === 'dark' || 
+               (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="../styles.min.css">
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-    <div id="header-placeholder"></div>
-    <main class="container mx-auto px-4 py-8">
-        <div class="max-w-6xl mx-auto">
-            <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl">
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4 border-b pb-2">Parâmetros de Entrada</h2>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main id="mn-calculator-form">
+            <div class="space-y-8">
+                <div>
+                    <div class="form-section">
+                        <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Parâmetros de Entrada</h2>
                         <form id="calcForm" class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label for="b" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Largura $b$ (cm)</label>
-                                    <input type="number" id="b" value="25" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="b" class="block text-sm font-medium">Largura $b$ (cm)</label>
+                                    <input type="number" id="b" value="25">
                                 </div>
                                 <div>
-                                    <label for="h" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Altura $h$ (cm)</label>
-                                    <input type="number" id="h" value="60" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="fck" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Concreto $f_{ck}$ (MPa)</label>
-                                    <input type="number" id="fck" value="25" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="h" class="block text-sm font-medium">Altura $h$ (cm)</label>
+                                    <input type="number" id="h" value="60">
                                 </div>
                                 <div>
-                                    <label for="fyk" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Aço $f_{yk}$ (MPa)</label>
-                                    <input type="number" id="fyk" value="500" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-3 gap-4">
-                                <div>
-                                    <label for="d_linha" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cobrimento $d'$ (cm)</label>
-                                    <input type="number" id="d_linha" value="5" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="d" class="block text-sm font-medium">Altura Útil $d$ (cm)</label>
+                                    <input type="number" id="d" value="55">
                                 </div>
                                 <div>
-                                    <label for="As" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Arm. Inf. $A_s$ (cm²)</label>
-                                    <input type="number" id="As" value="12.56" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="fck" class="block text-sm font-medium">Concreto $f_{ck}$ (MPa)</label>
+                                    <input type="number" id="fck" value="25">
                                 </div>
                                 <div>
-                                    <label for="As_linha" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Arm. Sup. $A_s'$ (cm²)</label>
-                                    <input type="number" id="As_linha" value="4.02" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="fyk" class="block text-sm font-medium">Aço $f_{yk}$ (MPa)</label>
+                                    <input type="number" id="fyk" value="500">
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label for="gamma_c" class="block text-sm font-medium text-gray-700 dark:text-gray-300">$\gamma_c$ (concreto)</label>
-                                    <input type="number" id="gamma_c" value="1.4" step="0.1" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="d_linha" class="block text-sm font-medium">Cobrimento $d'$ (cm)</label>
+                                    <input type="number" id="d_linha" value="5">
                                 </div>
                                 <div>
-                                    <label for="gamma_s" class="block text-sm font-medium text-gray-700 dark:text-gray-300">$\gamma_s$ (aço)</label>
-                                    <input type="number" id="gamma_s" value="1.15" step="0.01" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <label for="As" class="block text-sm font-medium">Arm. Inf. $A_s$ (cm²)</label>
+                                    <input type="number" id="As" value="12.56">
+                                </div>
+                                <div>
+                                    <label for="As_linha" class="block text-sm font-medium">Arm. Sup. $A_s'$ (cm²)</label>
+                                    <input type="number" id="As_linha" value="4.02">
                                 </div>
                             </div>
-                            <button type="submit" id="run-check-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out">
-                                Calcular Envoltória
-                            </button>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="gamma_c" class="block text-sm font-medium">$\gamma_c$ (concreto)</label>
+                                    <input type="number" id="gamma_c" value="1.4" step="0.1">
+                                </div>
+                                <div>
+                                    <label for="gamma_s" class="block text-sm font-medium">$\gamma_s$ (aço)</label>
+                                    <input type="number" id="gamma_s" value="1.15" step="0.01">
+                                </div>
+                            </div>
                         </form>
                     </div>
-                    <div id="results-container">
-                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4 border-b pb-2">Resultados</h2>
-                        <div id="chartContainer" class="mb-6" style="height: 40vh; width: 100%;">
+                     <div class="mt-8 flex justify-center">
+                        <button type="submit" form="calcForm" id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700">
+                            Calcular Envoltória
+                        </button>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Resultados</h2>
+                    <div class="flex justify-center">
+                        <div id="chartContainer" class="mb-6" style="height: 50vh; width: 80%;">
                             <canvas id="mnChart"></canvas>
                         </div>
-                        <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-3">Pontos Notáveis (Mrd, Nrd)</h3>
-                        <div id="resultsTableContainer" class="overflow-x-auto">
-                            <p id="resultsPlaceholder" class="text-gray-500 dark:text-gray-400">Insira os dados e clique em "Calcular" para ver os resultados.</p>
-                        </div>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 mt-6 text-center">Pontos Notáveis (Mrd, Nrd)</h3>
+                    <div id="resultsTableContainer" class="overflow-x-auto max-w-3xl mx-auto">
+                        <p id="resultsPlaceholder" class="text-[var(--color-text-secondary)] text-center">Insira os dados e clique em "Calcular" para ver os resultados.</p>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
-    <div id="footer-placeholder"></div>
+        </main>
 
-    <script src="../js/i18n.js"></script>
-    <script src="../js/shared-utils.js"></script>
-    <script src="../js/validation-rules.js"></script>
-    <script src="../js/template.js"></script>
+        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
+        <div id="results-container" class="mt-10 results-container"></div>
+        <div id="footer-placeholder"></div>
+    </div>
+
     <script src="M-N.js"></script>
 </body>
 </html>

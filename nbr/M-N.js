@@ -1,4 +1,4 @@
-const INPUT_IDS = ['b', 'h', 'fck', 'fyk', 'd_linha', 'As', 'As_linha', 'gamma_c', 'gamma_s'];
+const INPUT_IDS = ['b', 'h', 'd', 'fck', 'fyk', 'd_linha', 'As', 'As_linha', 'gamma_c', 'gamma_s'];
 let myMnChart = null;
 
 function calculateAndDraw(inputs) {
@@ -25,10 +25,9 @@ function calculateDesignParameters(inputs) {
 }
 
 function getState(x, ecu_top, inputs, params) {
-    const { b, h, d_linha, As, As_linha } = inputs;
+    const { b, h, d, d_linha, As, As_linha } = inputs;
     const { fcd_design, fyd_kn_cm, Es, lambda } = params;
     
-    const d = h - d_linha;
     const d_prime = d_linha;
 
     if (x <= 1e-6) x = 1e-6; 
@@ -164,23 +163,22 @@ function drawChart(points) {
     });
 }
 
-function renderResults(points) {
-    const resultsContainer = document.getElementById('resultsTableContainer');
+function renderResults(points, inputs, resultsContainerId) {
     const report = new ReportBuilder({
         reportId: 'mn-report',
         title: 'Resultados da Envoltória M-N',
     });
 
     const headers = ["Ponto Notável", "Nrd (kN)", "Mrd (kNm)"];
-    const rows = points.map(point => ({
+    const rows = (points || []).map(point => ({
         cells: [point.label, point.Nrd.toFixed(2), point.Mrd.toFixed(2)]
     }));
 
     report.addTableSection('Pontos Notáveis', { headers, rows });
-    
-    const container = document.getElementById('resultsTableContainer');
-    container.innerHTML = ''; // Clear previous content
-    report.render('resultsTableContainer');
+
+    const container = document.getElementById(resultsContainerId);
+    if (container) container.innerHTML = ''; // Clear previous content
+    report.render(resultsContainerId);
     
     drawChart(points);
 }
@@ -193,9 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const params = calculateDesignParameters(inputs);
             return calculateKeyPoints(inputs, params);
         },
-        renderFunction: (points) => {
-            renderResults(points);
-        },
+        renderFunction: (points, inputs) => renderResults(points, inputs, 'results-container'),
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'
     });
