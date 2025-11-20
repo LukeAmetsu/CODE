@@ -13,63 +13,6 @@ const LOAD_TYPES = {
     'Outras Ações Variáveis (Q)': { isVariable: true, psi0: 0.8, psi1: 0.6, psi2: 0.4, gamma_q: 1.4 },
 };
 
-initializeApp({
-    calculationHandler: createCalculationHandler({
-        gatherInputsFunction: gatherNbrLoads,
-        calculatorFunction: nbrComboCalculator.calculate,
-        renderFunction: renderNbrComboResults,
-        resultsContainerId: 'report-output',
-        buttonId: 'generate-report-btn', // Corrected button ID
-        validationRuleKey: 'nbr_combos', // Added for consistency
-        feedbackElId: 'feedback-message'
-    }),
-    onReady: () => {
-        const loadsContainer = document.getElementById('loads-container');
-        const addLoadBtn = document.getElementById('add-load-btn');
-        addLoadBtn.addEventListener('click', () => addLoadRow(loadsContainer));
-        addLoadRow(loadsContainer); // Add initial row
-    }
-});
-
-function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {
-        const rowId = `row-${Date.now()}`;
-        const row = document.createElement('div');
-        row.id = rowId;
-        row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center load-row';
-
-        const loadName = document.createElement('input');
-        loadName.type = 'text';
-        loadName.placeholder = 'Ex: Vento X+, Sobrecarga 1';
-        loadName.className = 'load-name';
-
-        const loadType = document.createElement('select');
-        loadType.className = 'load-type';
-        Object.keys(LOAD_TYPES).forEach(key => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = key;
-            loadType.appendChild(option);
-        });
-
-        const loadValue = document.createElement('input');
-        loadValue.type = 'number';
-        loadValue.placeholder = 'Valor (ex: 10)';
-        loadValue.className = 'load-value w-full';
-        loadValue.value = load.value;
-
-        const removeButton = document.createElement('button');
-        removeButton.textContent = "Remover";
-        removeButton.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 text-sm';
-        removeButton.onclick = () => document.getElementById(rowId).remove();
-        
-        row.appendChild(loadName);
-        row.appendChild(loadType);
-        row.appendChild(loadValue);
-        row.appendChild(removeButton);
-
-    container.appendChild(row);
-}
-
 const nbrComboCalculator = (() => {
     function calculate(userLoads) {
         const permanentes = userLoads.filter(l => !LOAD_TYPES[l.type].isVariable);
@@ -173,6 +116,63 @@ const nbrComboCalculator = (() => {
     }
     return { calculate };
 })();
+
+initializeApp({
+    calculationHandler: createCalculationHandler({
+        gatherInputsFunction: gatherNbrLoads,
+        calculatorFunction: nbrComboCalculator.calculate,
+        renderFunction: renderNbrComboResults,
+        resultsContainerId: 'report-output',
+        buttonId: 'generate-report-btn', // Corrected button ID
+        validationRuleKey: 'nbr_combos', // Added for consistency
+        feedbackElId: 'feedback-message'
+    }),
+    onReady: () => {
+        const loadsContainer = document.getElementById('loads-container');
+        const addLoadBtn = document.getElementById('add-load-btn');
+        addLoadBtn.addEventListener('click', () => addLoadRow(loadsContainer));
+        addLoadRow(loadsContainer); // Add initial row
+    }
+});
+
+function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {
+        const rowId = `row-${Date.now()}`;
+        const row = document.createElement('div');
+        row.id = rowId;
+        row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center load-row';
+
+        const loadName = document.createElement('input');
+        loadName.type = 'text';
+        loadName.placeholder = 'Ex: Vento X+, Sobrecarga 1';
+        loadName.className = 'load-name';
+
+        const loadType = document.createElement('select');
+        loadType.className = 'load-type';
+        Object.keys(LOAD_TYPES).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            loadType.appendChild(option);
+        });
+
+        const loadValue = document.createElement('input');
+        loadValue.type = 'number';
+        loadValue.placeholder = 'Valor (ex: 10)';
+        loadValue.className = 'load-value w-full';
+        loadValue.value = load.value;
+
+        const removeButton = document.createElement('button');
+        removeButton.textContent = "Remover";
+        removeButton.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 text-sm';
+        removeButton.onclick = () => document.getElementById(rowId).remove();
+        
+        row.appendChild(loadName);
+        row.appendChild(loadType);
+        row.appendChild(loadValue);
+        row.appendChild(removeButton);
+
+    container.appendChild(row);
+};
 
 function gatherNbrLoads() {
     return Array.from(document.querySelectorAll('.load-row')).map(row => {
