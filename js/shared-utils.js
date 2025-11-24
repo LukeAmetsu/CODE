@@ -6,8 +6,17 @@ function updateThemeIcons(newTheme) {
     const darkIcon = document.getElementById('theme-toggle-dark-icon');
     const lightIcon = document.getElementById('theme-toggle-light-icon');
     if (darkIcon && lightIcon) {
-        darkIcon.classList.toggle('hidden', newTheme !== 'dark');
-        lightIcon.classList.toggle('hidden', newTheme === 'dark');
+        // Se o tema é escuro, mostramos o ícone de SOL (para mudar para claro)
+        // Se o tema é claro, mostramos o ícone de LUA (para mudar para escuro)
+        
+        // Lógica corrigida para visibilidade:
+        if (newTheme === 'dark') {
+            darkIcon.classList.remove('hidden');
+            lightIcon.classList.add('hidden');
+        } else {
+            lightIcon.classList.remove('hidden');
+            darkIcon.classList.add('hidden');
+        }
     }
 }
 
@@ -15,10 +24,19 @@ function updateThemeIcons(newTheme) {
  * Toggles the color theme, saves the preference, and updates the icons.
  */
 function toggleTheme() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    const newTheme = isDark ? 'dark' : 'light';
-    localStorage.setItem('color-theme', newTheme);
-    updateThemeIcons(newTheme);
+    // Verifica se tem a classe 'dark' atualmente
+    const isDark = document.documentElement.classList.contains('dark');
+    
+    // Inverte o estado
+    if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        updateThemeIcons('light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        updateThemeIcons('dark');
+    }
 }
 
 /**
@@ -27,19 +45,39 @@ function toggleTheme() {
 function initializeThemeToggle() {
     const themeToggleButton = document.getElementById('theme-toggle');
     if (themeToggleButton) {
-        themeToggleButton.addEventListener('click', toggleTheme);
-        // Initial icon state
-        updateThemeIcons(localStorage.getItem('color-theme') || 'light');
+        // Remove event listeners antigos para evitar duplicação (embora cloneNode seja melhor, aqui simplificamos)
+        const newBtn = themeToggleButton.cloneNode(true);
+        themeToggleButton.parentNode.replaceChild(newBtn, themeToggleButton);
+        
+        newBtn.addEventListener('click', toggleTheme);
+        
+        // Determina o estado atual para setar o ícone correto
+        const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        updateThemeIcons(currentTheme);
     }
 }
 
 /**
  * Checks the local storage for a theme and applies it.
+ * This is a fallback/initialization if the inline script didn't run or for dynamic loads.
  */
 function applyThemeFromLocalStorage() {
-    const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList.toggle('dark', isDark);
+    // Verifica localStorage 'theme' (mesma chave do script inline)
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    const isDark = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
+    
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    
+    // Atualiza ícones se o botão já existir
+    updateThemeIcons(isDark ? 'dark' : 'light');
 }
+
 /**
  * Adds a visual indicator (e.g., a red asterisk) to the labels of required input fields.
  * It reads the validation rules and applies a specific CSS class to the corresponding labels.
@@ -64,10 +102,11 @@ function highlightRequiredFields(validationRuleKey) {
  * A single initialization function for all shared UI components.
  */
 function initializeSharedUI() {
-    applyThemeFromLocalStorage();
-    initializeThemeToggle();
+    applyThemeFromLocalStorage(); // Garante estado correto ao carregar JS
+    initializeThemeToggle();      // Configura botão e ícones
     initializeBackToTopButton();
     initializeUiToggles();
+    initializeGlobalInputSteps(); 
 }
 
 /**
@@ -1787,4 +1826,20 @@ function getUnits(unit_system) {
         h_unit: 'ft',
         v_unit: 'mph'
     };
+}
+
+/**
+ * Define um 'step' padrão como 'any' para todos os inputs numéricos que não têm um especificado.
+ * Isso resolve problemas de validação com decimais (ex: 10.00, 12.56) em todas as calculadoras.
+ */
+function initializeGlobalInputSteps() {
+    // Seleciona todos os inputs do tipo número na página
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    
+    numberInputs.forEach(input => {
+        // Só aplica se o input ainda não tiver um atributo 'step' definido manualmente
+        if (!input.hasAttribute('step')) {
+            input.setAttribute('step', 'any');
+        }
+    });
 }

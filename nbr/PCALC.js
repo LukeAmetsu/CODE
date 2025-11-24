@@ -67,6 +67,10 @@ const chartCanvas = document.getElementById('myChart');
 const nmxmyBtn = document.getElementById('nmxmy-btn');
 const nmxBtn = document.getElementById('nmx-btn');
 const nmyBtn = document.getElementById('nmy-btn');
+const pdfBtn = document.getElementById('pdf-btn');
+const newBtn = document.getElementById('new-btn');
+const openBtn = document.getElementById('open-btn');
+const saveBtn = document.getElementById('save-btn');
 let myChart;
 
 // --- Functions ---
@@ -248,6 +252,21 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMaterials();
     renderReinforcement();
     renderLoads();
+
+    newBtn.addEventListener('click', () => {
+        console.log('New button clicked');
+        // Logic to reset the pcalcData object and UI
+    });
+
+    openBtn.addEventListener('click', () => {
+        console.log('Open button clicked');
+        // Logic to open a saved file
+    });
+
+    saveBtn.addEventListener('click', () => {
+        console.log('Save button clicked');
+        // Logic to save the current state
+    });
 });
 
 geometryForm.addEventListener('input', updateGeometry);
@@ -286,22 +305,6 @@ function generatePdf() {
 }
 
 pdfBtn.addEventListener('click', generatePdf);
-
-
-newBtn.addEventListener('click', () => {
-    console.log('New button clicked');
-    // Logic to reset the pcalcData object and UI
-});
-
-openBtn.addEventListener('click', () => {
-    console.log('Open button clicked');
-    // Logic to open a saved file
-});
-
-saveBtn.addEventListener('click', () => {
-    console.log('Save button clicked');
-    // Logic to save the current state
-});
 
 // ... add other event listeners for graph toggles, etc.
 // This file will contain the translated calculation logic from the Java source files.

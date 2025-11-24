@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
-        // Lógica de Tema Imediata para evitar o "flash"
         (function() {
             if (localStorage.getItem('theme') === 'dark' || 
                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -22,90 +21,242 @@
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    
+    <style>
+        canvas {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .input-group { display: none; }
+        .input-group.active { display: block; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
-        <main id="mn-calculator-form">
-            <div class="space-y-8">
+        <main id="mn-calculator-form" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <div class="lg:col-span-8 space-y-8">
                 <div>
                     <div class="form-section">
-                        <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Parâmetros de Entrada</h2>
-                        <form id="calcForm" class="space-y-4">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-2 mb-4 gap-4">
+                            <h2 class="text-2xl font-semibold">Parâmetros de Entrada</h2>
+                            <div class="flex items-center gap-2">
+                                <label for="section_type" class="text-sm font-medium whitespace-nowrap">Tipo de Seção:</label>
+                                <select id="section_type" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-1 text-sm">
+                                    <option value="rect">Retangular</option>
+                                    <option value="section_t">Seção T</option>
+                                    <option value="section_i">Seção I</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <form id="calcForm" class="space-y-4" onsubmit="return false;">
+                            <!-- Dimensões Geométricas -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                                <div>
+                                    <label for="h" class="block text-sm font-medium">Altura Total h (cm)</label>
+                                    <input type="number" id="h" value="60" class="trigger-draw">
+                                </div>
+
+                                <div class="rect-field input-group active">
+                                    <label for="b" class="block text-sm font-medium">Largura b (cm)</label>
+                                    <input type="number" id="b" value="25" class="trigger-draw">
+                                </div>
+
+                                <div class="t-i-field input-group">
+                                    <label for="bw" class="block text-sm font-medium">Largura da Alma b<sub>w</sub> (cm)</label>
+                                    <input type="number" id="bw" value="20" class="trigger-draw">
+                                </div>
+                                <div class="t-i-field input-group">
+                                    <label for="bf_sup" class="block text-sm font-medium">Larg. Mesa Sup. b<sub>f</sub> (cm)</label>
+                                    <input type="number" id="bf_sup" value="60" class="trigger-draw">
+                                </div>
+                                <div class="t-i-field input-group">
+                                    <label for="hf_sup" class="block text-sm font-medium">Alt. Mesa Sup. h<sub>f</sub> (cm)</label>
+                                    <input type="number" id="hf_sup" value="10" class="trigger-draw">
+                                </div>
+
+                                <div class="i-field input-group">
+                                    <label for="bf_inf" class="block text-sm font-medium">Larg. Mesa Inf. b<sub>inf</sub> (cm)</label>
+                                    <input type="number" id="bf_inf" value="60" class="trigger-draw">
+                                </div>
+                                <div class="i-field input-group">
+                                    <label for="hf_inf" class="block text-sm font-medium">Alt. Mesa Inf. h<sub>inf</sub> (cm)</label>
+                                    <input type="number" id="hf_inf" value="10" class="trigger-draw">
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label for="b" class="block text-sm font-medium">Largura $b$ (cm)</label>
-                                    <input type="number" id="b" value="25">
+                                    <label for="d" class="block text-sm font-medium">Altura Útil d (cm)</label>
+                                    <input type="number" id="d" value="55" class="trigger-draw">
                                 </div>
                                 <div>
-                                    <label for="h" class="block text-sm font-medium">Altura $h$ (cm)</label>
-                                    <input type="number" id="h" value="60">
+                                    <label for="d_linha" class="block text-sm font-medium">Cobrimento d' (cm)</label>
+                                    <input type="number" id="d_linha" value="5" class="trigger-draw">
                                 </div>
                                 <div>
-                                    <label for="d" class="block text-sm font-medium">Altura Útil $d$ (cm)</label>
-                                    <input type="number" id="d" value="55">
-                                </div>
-                                <div>
-                                    <label for="fck" class="block text-sm font-medium">Concreto $f_{ck}$ (MPa)</label>
+                                    <label for="fck" class="block text-sm font-medium">Concreto f<sub>ck</sub> (MPa)</label>
                                     <input type="number" id="fck" value="25">
                                 </div>
-                                <div>
-                                    <label for="fyk" class="block text-sm font-medium">Aço $f_{yk}$ (MPa)</label>
-                                    <input type="number" id="fyk" value="500">
-                                </div>
                             </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label for="d_linha" class="block text-sm font-medium">Cobrimento $d'$ (cm)</label>
-                                    <input type="number" id="d_linha" value="5">
+                                    <label for="fyk" class="block text-sm font-medium">Aço Passivo f<sub>yk</sub> (MPa)</label>
+                                    <input type="number" id="fyk" value="500">
                                 </div>
                                 <div>
-                                    <label for="As" class="block text-sm font-medium">Arm. Inf. $A_s$ (cm²)</label>
-                                    <input type="number" id="As" value="12.56">
+                                    <label for="As" class="block text-sm font-medium">Arm. Inf. A<sub>s</sub> (cm²)</label>
+                                    <input type="number" id="As" value="12.56" step="0.01" class="trigger-draw">
                                 </div>
                                 <div>
-                                    <label for="As_linha" class="block text-sm font-medium">Arm. Sup. $A_s'$ (cm²)</label>
-                                    <input type="number" id="As_linha" value="4.02">
+                                    <label for="As_linha" class="block text-sm font-medium">Arm. Sup. A<sub>s</sub>' (cm²)</label>
+                                    <input type="number" id="As_linha" value="4.02" step="0.01" class="trigger-draw">
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                            <div class="mt-4 border-t pt-4 dark:border-gray-700">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <input type="checkbox" id="has_prestress" class="trigger-draw w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    <label for="has_prestress" class="font-semibold text-gray-700 dark:text-gray-300 select-none cursor-pointer">Considerar Armadura de Protensão (Ativa)</label>
+                                </div>
+                                
+                                <div id="prestress-fields" class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 hidden">
+                                    <div class="md:col-span-3 mb-2">
+                                        <p class="text-xs text-blue-600 dark:text-blue-300 italic">Considera-se aderência perfeita posterior (pós-tração com injeção ou pré-tração).</p>
+                                    </div>
+                                    <div>
+                                        <label for="Ap" class="block text-sm font-medium">Área Protensão A<sub>p</sub> (cm²)</label>
+                                        <input type="number" id="Ap" value="0" step="0.01" class="trigger-draw">
+                                    </div>
+                                    <div>
+                                        <label for="dp" class="block text-sm font-medium">Altura Útil d<sub>p</sub> (cm)</label>
+                                        <input type="number" id="dp" value="50" step="0.1" class="trigger-draw">
+                                    </div>
+                                    <div>
+                                        <label for="sigma_pi" class="block text-sm font-medium">Tensão Inicial &sigma;<sub>pi</sub> (MPa)</label>
+                                        <input type="number" id="sigma_pi" value="1400" step="10">
+                                    </div>
+                                    <div>
+                                        <label for="loss_pct" class="block text-sm font-medium">Perdas Totais (%)</label>
+                                        <input type="number" id="loss_pct" value="20" step="1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label for="fptk" class="block text-sm font-medium">Resistência f<sub>ptk</sub> (MPa)</label>
+                                        <input type="number" id="fptk" value="1900">
+                                    </div>
+                                    <div>
+                                        <label for="Ep" class="block text-sm font-medium">Módulo E<sub>p</sub> (MPa)</label>
+                                        <input type="number" id="Ep" value="200000">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                 <div>
-                                    <label for="gamma_c" class="block text-sm font-medium">$\gamma_c$ (concreto)</label>
+                                    <label for="gamma_c" class="block text-sm font-medium">&gamma;<sub>c</sub> (concreto)</label>
                                     <input type="number" id="gamma_c" value="1.4" step="0.1">
                                 </div>
                                 <div>
-                                    <label for="gamma_s" class="block text-sm font-medium">$\gamma_s$ (aço)</label>
+                                    <label for="gamma_s" class="block text-sm font-medium">&gamma;<sub>s</sub> (aço)</label>
                                     <input type="number" id="gamma_s" value="1.15" step="0.01">
                                 </div>
                             </div>
                         </form>
                     </div>
+
+                    <!-- NOVA SEÇÃO: Verificação de Esforços -->
+                    <div class="form-section mt-8">
+                        <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Verificação de Esforços (N<sub>sd</sub>, M<sub>sd</sub>)</h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Adicione pares de esforços solicitantes para verificar se estão dentro da envoltória de resistência.</p>
+                        
+                        <div class="flex flex-col md:flex-row gap-4 items-end mb-4">
+                            <div>
+                                <label for="check_nsd" class="block text-sm font-medium">Normal N<sub>sd</sub> (kN)</label>
+                                <input type="number" id="check_nsd" placeholder="-2000 (Comp)" class="w-full">
+                            </div>
+                            <div>
+                                <label for="check_msd" class="block text-sm font-medium">Momento M<sub>sd</sub> (kNm)</label>
+                                <input type="number" id="check_msd" placeholder="150" class="w-full">
+                            </div>
+                            <button type="button" id="add-point-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded hover:bg-green-700 transition-colors">
+                                Adicionar Ponto
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 border-collapse">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th scope="col" class="px-4 py-2">#</th>
+                                        <th scope="col" class="px-4 py-2">N<sub>sd</sub> (kN)</th>
+                                        <th scope="col" class="px-4 py-2">M<sub>sd</sub> (kNm)</th>
+                                        <th scope="col" class="px-4 py-2">Status</th>
+                                        <th scope="col" class="px-4 py-2">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="check-points-table-body">
+                                    <!-- Linhas adicionadas via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                      <div class="mt-8 flex justify-center">
-                        <button type="submit" form="calcForm" id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700">
-                            Calcular Envoltória
+                        <button type="button" id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors">
+                            Calcular Envoltória e Verificar
                         </button>
                     </div>
                 </div>
                 <div class="form-section">
                     <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Resultados</h2>
                     <div class="flex justify-center">
-                        <div id="chartContainer" class="mb-6" style="height: 50vh; width: 80%;">
+                        <div id="chartContainer" class="mb-6 relative cursor-move" style="height: 60vh; width: 100%;">
                             <canvas id="mnChart"></canvas>
                         </div>
                     </div>
+                    
                     <h3 class="text-xl font-semibold mb-3 mt-6 text-center">Pontos Notáveis (Mrd, Nrd)</h3>
-                    <div id="resultsTableContainer" class="overflow-x-auto max-w-3xl mx-auto">
+                    <div id="results-container">
                         <p id="resultsPlaceholder" class="text-[var(--color-text-secondary)] text-center">Insira os dados e clique em "Calcular" para ver os resultados.</p>
                     </div>
                 </div>
             </div>
+
+            <div class="lg:col-span-4 h-full">
+                <div class="sticky top-8 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4 text-center text-gray-700 dark:text-gray-300">Visualização da Seção</h3>
+                    <div class="flex justify-center bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 p-2">
+                        <canvas id="sectionCanvas" width="300" height="400" class="max-w-full h-auto"></canvas>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                            <span>Aço Superior (A's)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+                            <span>Aço Inferior (As)</span>
+                        </div>
+                        <div id="legend-prestress" class="flex items-center gap-2 hidden">
+                            <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                            <span>Aço Protensão (Ap)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
-        <div id="results-container" class="mt-10 results-container"></div>
         <div id="footer-placeholder"></div>
     </div>
 
