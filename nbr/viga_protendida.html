@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificador de Viga Protendida (Multi-Cabo)</title>
+    <title>Verificador de Viga Protendida (NBR 6118)</title>
     
+    <!-- Dependências Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -12,6 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Configuração de Tema -->
     <script>
         (function() {
             const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -19,12 +21,14 @@
         })();
     </script>
 
+    <!-- Arquivos Base do Projeto -->
     <link rel="stylesheet" href="../styles.min.css">
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
     
+    <!-- Lógica da Página -->
     <script src="viga_protendida.js" defer></script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -37,6 +41,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
+                <!-- Coluna 1: Parâmetros Gerais e Materiais -->
                 <div class="space-y-6">
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
                         <h2 class="font-bold mb-3 border-b pb-1">Parâmetros Gerais</h2>
@@ -100,12 +105,14 @@
                                 <label class="block text-xs font-medium mb-1">Perímetro (m)</label>
                                 <input type="number" id="exposed_perimeter" value="2.0" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
+                             <!-- Inputs ocultos para compatibilidade com lógica antiga se necessário -->
                              <input type="hidden" id="cement_alpha_factor" value="1">
                              <input type="hidden" id="Kperdas" value="0.85">
                          </div>
                     </div>
                 </div>
 
+                <!-- Coluna 2: Geometria e Cabos -->
                 <div class="space-y-6">
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
                          <h2 class="font-bold mb-3 border-b pb-1">Geometria da Viga</h2>
@@ -136,10 +143,12 @@
                             <button id="add-cable-group-btn" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">+ Grupo</button>
                         </div>
                         <div id="cables-list-container" class="max-h-[500px] overflow-y-auto pr-1">
-                            </div>
+                            <!-- JS irá injetar os cartões de cabos aqui -->
+                        </div>
                     </div>
                 </div>
 
+                <!-- Coluna 3: Cargas e Gráficos -->
                 <div class="space-y-6">
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
                         <h2 class="font-bold mb-3 border-b pb-1">Cargas (kN/m)</h2>
@@ -159,6 +168,7 @@
                 </div>
             </div>
 
+            <!-- Vista Longitudinal -->
             <div class="mt-6 bg-white dark:bg-gray-800 p-4 rounded shadow h-[350px]">
                 <h2 class="font-bold mb-2 text-center">Vista Longitudinal (Traçado dos Cabos)</h2>
                 <div class="relative h-full pb-6">
