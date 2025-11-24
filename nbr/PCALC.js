@@ -20,11 +20,11 @@ const pcalcData = {
     },
     esforcos: {
         listaEsforcos: [
-            // { n: -1000, mx: 150, my: 75 }
+            { n: -1000, mx: 150, my: 75 }
         ]
     },
     config: {
-        nSecao: 1000,
+        nSecao: 100,
         gamaS: 1.15,
         gamaC: 1.4,
         fyk: 500, // MPa
@@ -279,38 +279,42 @@ loadsTable.addEventListener('input', updateLoads);
 loadsTable.addEventListener('click', removeLoad);
 
 calculateBtn.addEventListener('click', () => {
-    console.log('Calculate button clicked');
+    // --- VALIDATION: Ensure at least one load case is present ---
+    if (pcalcData.esforcos.listaEsforcos.length === 0) {
+        const feedbackEl = document.getElementById('feedback-message');
+        if (feedbackEl) {
+            feedbackEl.textContent = 'Please add at least one load case before calculating.';
+            feedbackEl.className = 'text-center mt-2 text-sm h-5 text-red-600 dark:text-red-400';
+            // Clear the message after a few seconds
+            setTimeout(() => {
+                feedbackEl.textContent = '';
+            }, 4000);
+        }
+        console.error('Calculation stopped: No loads provided.');
+        return; // Stop the function
+    }
+
+    console.log('Calculate button clicked, validation passed.');
     discretizeSection(pcalcData);
     calculateMomentCurvature(pcalcData);
     calculateEsforcos(pcalcData);
     renderResults();
     renderChart();
 });
-
 nmxmyBtn.addEventListener('click', () => renderChart('N-Mx-My'));
 nmxBtn.addEventListener('click', () => renderChart('N-Mx'));
 nmyBtn.addEventListener('click', () => renderChart('N-My'));
 
-const pdfBtn = document.getElementById('pdf-btn');
-
-function generatePdf() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.text("PCalc Web Report", 10, 10);
-
-    // ... (add input data and results to the PDF)
-
-    doc.save("pcalc-report.pdf");
-}
-
-pdfBtn.addEventListener('click', generatePdf);
-
-// ... add other event listeners for graph toggles, etc.
-// This file will contain the translated calculation logic from the Java source files.
 
 function discretizeSection(pcalcData) {
     const { secao, config } = pcalcData;
+
+    // --- FIX: Calculate and store gross area and buckling length ---
+    // These are required for second-order moment calculations.
+    secao.areaAc = secao.hx * secao.hy; // Gross concrete area in cm^2
+    // Assuming a bi-supported column for buckling length calculation (le = l)
+    secao.lFlamb = secao.hy / 100; // Buckling length in meters (simplified, assuming it's related to hy)
+
     const { tipoSecao, hx, hy, xm, ym, areaAc } = secao;
     const { nSecao } = config;
     const argSecaoC = [];
