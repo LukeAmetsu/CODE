@@ -1358,7 +1358,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 container.innerHTML = ''; // Clear default path rows
                 if (cableDefContainer) cableDefContainer.innerHTML = ''; // Clear default cable def rows
                 loadedInputs.cable_path.forEach(point => addCablePointRow('cable-path-container', point));
-                loadedInputs.cable_definitions.forEach(cable => addCableDefinitionRow('cables-definition-container', cable));
+                if (loadedInputs.cable_definitions) {
+                    loadedInputs.cable_definitions.forEach(cable => addCableDefinitionRow('cables-definition-container', cable));
+                }
             }
         } else {
             // Default initial state if no saved data
@@ -1397,15 +1399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    const handleRunCheck = createCalculationHandler({
-        gatherInputsFunction: gatherAllInputs,
-        storageKey: 'prestressed-beam-inputs-v2',
-        validationRuleKey: 'prestressed-beam-inputs-v2',
-        calculatorFunction: (inputs) => concreteBeamCalculator.run(inputs),
-        renderFunction: renderResults,
-        resultsContainerId: 'results-container',
-        buttonId: 'run-check-btn'
-    });
+
 
     initializeApp({
         inputIds: allInputAndTextareaIds,
