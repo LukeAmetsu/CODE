@@ -23,7 +23,6 @@
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
-    <script src="../js/validation-rules.js" defer></script>
 </head>
 <body>
 
@@ -408,12 +407,10 @@
                         <defs>
                             <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/></marker>
                         </defs>
-                        <!-- Building Isometric -->
                         <polygon points="100,150 200,200 350,125 250,75" class="svg-plate" style="fill:#dbeafe; stroke: #60a5fa;"/>
                         <polygon points="100,50 100,150 250,75 250, -25" class="svg-member" style="fill: #e5e7eb; stroke: #9ca3af;"/>
                         <polygon points="250,75 350,125 350,25 250,-25" class="svg-member" style="fill: #f3f4f6; stroke: #9ca3af;"/>
 
-                        <!-- Dimension Lines -->
                         <path d="M100,45 L250,-30" class="svg-dim" stroke-dasharray="2,2"/>
                         <path d="M255,-20 L255,85" class="svg-dim" stroke-dasharray="2,2"/>
                         <path d="M100,155 L100,200 M200,205 L200,220" class="svg-dim"/>
@@ -425,7 +422,6 @@
                         <path d="M80,50 L80,150" class="svg-dim" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
                         <text x="70" y="100" class="svg-dim-text" transform="rotate(-90 70,100)">h (Height)</text>
 
-                        <!-- Wind Arrow -->
                         <path d="M50,100 L95,100" stroke="#4b5563" stroke-width="2" marker-end="url(#arrow)"/>
                         <text x="55" y="95" class="svg-label">WIND</text>
                         <text x="150" y="100" class="svg-label">Windward Face</text>
@@ -449,6 +445,7 @@
         
         <div id="footer-placeholder"></div>
     </div>
-<script src="wind.js"></script>
+<script src="../js/validation-rules.js" defer></script>
+<script src="wind.js" defer></script>
 </body>
 </html>

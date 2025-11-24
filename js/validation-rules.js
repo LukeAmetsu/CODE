@@ -218,3 +218,80 @@ const validationRules = {
         'gamma_s': { min: 0.1, required: true, label: 'Coef. Aço (γs)' }
     }
 };
+// ===================================================================================
+// Input Validation Rules
+// This file contains functions to validate input fields across the application.
+// ===================================================================================
+
+// Global state to track validation status across the page
+let validationStatus = true;
+
+/**
+ * Validates a single input field based on its required status and type (numeric).
+ * @param {string} id The ID of the input element.
+ * @param {boolean} isRequired Whether the field is mandatory.
+ * @returns {boolean} True if the input is valid, false otherwise.
+ */
+function validateField(id, isRequired = true) {
+    const input = document.getElementById(id);
+    if (!input) {
+        console.error(`Validation failed: Input field with ID '${id}' not found.`);
+        return false;
+    }
+
+    const value = input.value.trim();
+    let isValid = true;
+
+    // Check 1: Required status
+    if (isRequired && value === "") {
+        isValid = false;
+    }
+
+    // Check 2: Numeric value (assuming most inputs are numeric for engineering calcs)
+    if (isValid && value !== "" && isNaN(parseFloat(value))) {
+        isValid = false;
+    }
+
+    // Apply visual feedback (assuming a common error class)
+    if (isValid) {
+        input.classList.remove('input-error'); // Remove error style
+    } else {
+        input.classList.add('input-error'); // Add error style
+        validationStatus = false; // Mark overall validation as failed
+    }
+
+    return isValid;
+}
+
+
+/**
+ * Orchestrates the validation of all required input fields on the page.
+ * This definition is added to resolve the "validateInputs is not defined" error.
+ *
+ * @param {Array<string>} inputIds An array of IDs for the input fields to validate.
+ * @returns {boolean} True if all specified inputs are valid, false otherwise.
+ */
+function validateInputs(inputIds) {
+    // Reset global status for a new validation run
+    validationStatus = true; 
+
+    // Assume inputIds is an array of strings, where each string is an element ID.
+    if (!Array.isArray(inputIds)) {
+        console.error("validateInputs requires an array of input IDs.");
+        return false;
+    }
+
+    // Apply validation to each required input
+    inputIds.forEach(id => {
+        // Assuming all inputs passed to this function are required for calculation
+        validateField(id, true);
+    });
+
+    // Provide a centralized message if validation failed
+    const messageArea = document.getElementById('messageArea'); // Assuming a common message ID
+    if (!validationStatus && messageArea) {
+        messageArea.textContent = "Please fill out all required fields with valid numeric data.";
+    }
+
+    return validationStatus;
+}

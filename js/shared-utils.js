@@ -1,3 +1,44 @@
+// ===================================================================================
+// Shared Utility Functions
+// This file contains functions and utilities used across multiple calculation pages.
+// ===================================================================================
+
+// Global function definitions (Ensuring global access as per standard JS practices in HTML pages)
+
+/**
+ * Retrieves the numeric value of an input element by its ID.
+ * If the value is empty or non-numeric, it returns 0 or null as appropriate.
+ * @param {string} id The ID of the input element.
+ * @returns {number|null} The numeric value, or null if conversion fails.
+ */
+function getInputValue(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        const value = parseFloat(element.value);
+        return isNaN(value) ? null : value;
+    }
+    return null;
+}
+
+/**
+ * Sets the value and optional visibility of an output element.
+ * @param {string} id The ID of the output element (usually a span or div).
+ * @param {string|number} value The value to display.
+ * @param {boolean} [show=true] Whether to show the element's parent container (if it exists).
+ */
+function setOutputValue(id, value, show = true) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+
+        // Optionally show the container/result block
+        const container = element.closest('.result-block'); // Assuming a common container class
+        if (container) {
+            container.style.display = show ? 'block' : 'none';
+        }
+    }
+}
+
 /**
  * Updates the theme toggle icons based on the current theme.
  * @param {string} newTheme - The theme being set ('light' or 'dark').
@@ -8,7 +49,7 @@ function updateThemeIcons(newTheme) {
     if (darkIcon && lightIcon) {
         // Se o tema é escuro, mostramos o ícone de SOL (para mudar para claro)
         // Se o tema é claro, mostramos o ícone de LUA (para mudar para escuro)
-        
+
         // Lógica corrigida para visibilidade:
         if (newTheme === 'dark') {
             darkIcon.classList.remove('hidden');
@@ -26,7 +67,7 @@ function updateThemeIcons(newTheme) {
 function toggleTheme() {
     // Verifica se tem a classe 'dark' atualmente
     const isDark = document.documentElement.classList.contains('dark');
-    
+
     // Inverte o estado
     if (isDark) {
         document.documentElement.classList.remove('dark');
@@ -48,9 +89,9 @@ function initializeThemeToggle() {
         // Remove event listeners antigos para evitar duplicação (embora cloneNode seja melhor, aqui simplificamos)
         const newBtn = themeToggleButton.cloneNode(true);
         themeToggleButton.parentNode.replaceChild(newBtn, themeToggleButton);
-        
+
         newBtn.addEventListener('click', toggleTheme);
-        
+
         // Determina o estado atual para setar o ícone correto
         const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
         updateThemeIcons(currentTheme);
@@ -65,15 +106,15 @@ function applyThemeFromLocalStorage() {
     // Verifica localStorage 'theme' (mesma chave do script inline)
     const savedTheme = localStorage.getItem('theme');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     const isDark = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
-    
+
     if (isDark) {
         document.documentElement.classList.add('dark');
     } else {
         document.documentElement.classList.remove('dark');
     }
-    
+
     // Atualiza ícones se o botão já existir
     updateThemeIcons(isDark ? 'dark' : 'light');
 }
@@ -84,15 +125,31 @@ function applyThemeFromLocalStorage() {
  * @param {string} validationRuleKey - The key for the calculator in the `validationRules` object (e.g., 'wind', 'aci_concrete').
  */
 function highlightRequiredFields(validationRuleKey) {
+    // Check if the validationRules object is available globally (provided by validation-rules.js)
     if (!window.validationRules || !validationRules[validationRuleKey]) {
         return;
     }
     const rules = validationRules[validationRuleKey];
     for (const inputId in rules) {
-        if (rules[inputId].required) {
+        // Skip crossField rules
+        if (inputId === 'crossField') continue;
+
+        const rule = rules[inputId];
+        
+        let isRequired = false;
+        if (typeof rule.required === 'function') {
+             // We can't fully evaluate conditional required here without all inputs,
+             // so we assume it might be required if it's a function or explicitly true.
+             isRequired = true; 
+        } else {
+             isRequired = !!rule.required;
+        }
+
+        if (isRequired) {
             const label = document.querySelector(`label[for="${inputId}"]`);
             if (label) {
-                label.classList.add('label-required');
+                // Use a class to style the required indicator (e.g., adding a red asterisk in CSS)
+                label.classList.add('label-required'); 
             }
         }
     }
@@ -103,26 +160,15 @@ function highlightRequiredFields(validationRuleKey) {
  */
 function initializeSharedUI() {
     applyThemeFromLocalStorage(); // Garante estado correto ao carregar JS
-    initializeThemeToggle();      // Configura botão e ícones
+    initializeThemeToggle();       // Configura botão e ícones
     initializeBackToTopButton();
     initializeUiToggles();
-    initializeGlobalInputSteps(); 
+    initializeGlobalInputSteps();
 }
 
 /**
  * Initializes UI toggles based on data attributes for declarative UI logic.
  * Looks for `data-ui-toggle-controller` and attaches event listeners.
- *
- * Attributes:
- * - `data-ui-toggle-controller`: Marks the element as a controller.
- * - `data-ui-toggle-target`: A CSS selector for the target element(s).
- * - `data-ui-toggle-type`: 'visibility' (default) or 'disable'.
- * - `data-ui-toggle-condition-value`: The value the controller must have to trigger the action.
- * - `data-ui-toggle-condition-value`: The value(s) the controller must have to trigger the action (comma-separated for multiple values).
- * - `data-ui-toggle-condition-checked`: 'true' or 'false' for checkboxes.
- * - `data-ui-toggle-target-for`: The ID of the controller. Used on the target element.
- * - `data-ui-toggle-class`: The class to toggle for visibility (default: 'hidden').
- * - `data-ui-toggle-invert`: 'true' to invert the condition's result.
  */
 function initializeUiToggles() {
     const controllers = document.querySelectorAll('[data-ui-toggle-controller], [data-ui-toggle-target-for]');
@@ -167,13 +213,13 @@ function initializeUiToggles() {
                     const isChecked = controller.checked;
                     conditionMet = conditionChecked ? String(isChecked) === conditionChecked : isChecked;
                 } else { // Handles select, text, number inputs
-                if (conditionValue === 'all') {
-                    conditionMet = true; // Always show for 'all'
-                } else if (conditionValue) {
-                    const conditionValues = conditionValue.split(',').map(v => v.trim());
-                    conditionMet = conditionValues.includes(controller.value);
+                    if (conditionValue === 'all') {
+                        conditionMet = true; // Always show for 'all'
+                    } else if (conditionValue) {
+                        const conditionValues = conditionValue.split(',').map(v => v.trim());
+                        conditionMet = conditionValues.includes(controller.value);
+                    }
                 }
-            }
                 const finalCondition = invert ? !conditionMet : conditionMet;
 
                 if (toggleType === 'visibility') target.classList.toggle(toggleClass, !finalCondition);
@@ -294,69 +340,6 @@ function setLoadingState(isLoading, buttonId) {
 }
 
 /**
- * Performs linear interpolation for a given value within a dataset.
- * This is commonly used for looking up values in normative tables.
- * @param {number} x - The point at which to evaluate the interpolated value.
- * @param {number[]} xp - The array of x-coordinates of the data points.
- * @param {number[]} fp - The array of y-coordinates of the data points.
- * @returns {number} The interpolated y-value.
- */
-function interpolate(x, xp, fp) {
-    // Ensure inputs are valid arrays
-    if (!Array.isArray(xp) || !Array.isArray(fp) || xp.length !== fp.length || xp.length === 0) {
-        console.error("Invalid input for interpolate function.");
-        return 0;
-    }
-    if (x <= xp[0]) return fp[0];
-    if (x >= xp[xp.length - 1]) return fp[fp.length - 1];
-    let i = 0;
-    while (x > xp[i + 1]) i++;
-    const x1 = xp[i], y1 = fp[i];
-    const x2 = xp[i + 1], y2 = fp[i + 1];
-    // Avoid division by zero if x-points are identical
-    const dx = x2 - x1;
-    if (Math.abs(dx) < 1e-9) return y1;
-    return y1 + ((x - x1) * (y2 - y1)) / dx;
-}
-
-/**
- * Validates a set of inputs against a predefined set of rules.
- * @param {object} inputs - The input values to validate.
- * @param {object} rules - The validation rules object.
- * @returns {{errors: string[], warnings: string[]}} - An object containing arrays of error and warning messages.
- */
-function validateInputs(inputs, rules) {
-    const errors = [];
-    const warnings = [];
-
-    if (rules) {
-        for (const [key, rule] of Object.entries(rules)) {
-            const value = inputs[key];
-            const label = rule.label || key;
-
-            // --- FIX: Evaluate conditional 'required' properties ---
-            // Check if 'required' is a function. If so, call it with the inputs to determine if the field is actually required.
-            let isRequired = false;
-            if (typeof rule.required === 'function') {
-                isRequired = rule.required(inputs);
-            } else {
-                isRequired = !!rule.required;
-            }
-
-            if (isRequired && (value === undefined || value === '' || (typeof value === 'number' && isNaN(value)))) {
-                errors.push(`${label} is required.`);
-                continue;
-            }
-            if (typeof value === 'number' && !isNaN(value)) {
-                if (rule.min !== undefined && value < rule.min) errors.push(`${label} must be at least ${rule.min}.`);
-                if (rule.max !== undefined && value > rule.max) errors.push(`${label} must be no more than ${rule.max}.`);
-            }
-        }
-    }
-    return { errors, warnings };
-}
-
-/**
  * Renders validation errors and warnings into an HTML string.
  * @param {{errors?: string[], warnings?: string[]}} validation - The validation result object.
  * @param {HTMLElement} [container] - Optional. The container element to set the innerHTML of.
@@ -436,7 +419,6 @@ function getAllCssStyles() {
     let cssText = "";
     for (const styleSheet of document.styleSheets) {
         // Skip external stylesheets (like Google Fonts) to avoid CORS security errors.
-        // We can only access cssRules for stylesheets on the same domain.
         if (styleSheet.href) {
             continue;
         }
@@ -474,7 +456,6 @@ async function convertSvgToPng(svg) {
             clone.setAttribute('height', targetHeight);
 
             // Force a light theme for printing by injecting specific styles
-            // This overrides dark mode styles for text, strokes, and background
             const printStyles = `
                 <style>
                     svg { background-color: white !important; }
@@ -504,7 +485,7 @@ async function convertSvgToPng(svg) {
                     ctx.fillStyle = 'white';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(image, 0, 0);
-                    
+
                     const pngImage = new Image();
                     pngImage.src = canvas.toDataURL('image/png');
                     pngImage.style.maxWidth = '100%'; // For display in the Word doc
@@ -634,11 +615,11 @@ async function handleCopy(targetId, options = {}) {
                 } catch (error) {
                     console.warn("SVG to PNG conversion failed:", error);
                     conversionFailures++;
-                    if (svg.parentNode) svg.parentNode.remove(); // Remove SVG if conversion fails to avoid broken images.
+                    if (diagram.parentNode) diagram.parentNode.remove(); // Remove SVG if conversion fails to avoid broken images.
                 }
             }));
         }
-        
+
         // Remove empty table rows that might be left after removing buttons
         clone.querySelectorAll('tr').forEach(tr => {
             if (tr.innerText.trim() === '') {
@@ -647,7 +628,7 @@ async function handleCopy(targetId, options = {}) {
         });
 
         showFeedback('Copiando para a área de transferência...', false, feedbackElId);
-        
+
         // Generate final HTML and Text content, consistent with handleDownloadWord
         const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
         const htmlContent = createWordCompatibleHTML(clone.innerHTML, reportTitle); // Use the simpler HTML structure
@@ -686,7 +667,7 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
         showFeedback('PDF generation library is not loaded.', true, feedbackElId);
         return;
     }
-    
+
     showFeedback('Generating PDF...', false, feedbackElId);
 
     // --- Get Header Info ---
@@ -695,12 +676,12 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
 
     // --- Configure PDF Options ---
     const opt = {
-        margin:       0.5,
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+        margin:        0.5,
+        filename:      filename,
+        image:         { type: 'jpeg', quality: 0.98 },
+        html2canvas:   { scale: 2, useCORS: true },
+        jsPDF:         { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak:     { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     // --- Generate PDF with Custom Header ---
@@ -922,7 +903,7 @@ function saveInputsToFile(data, filename, appVersion = '1.0') {
     const dataStr = JSON.stringify(dataToSave, null, 2);
     const blob = new Blob([dataStr], {type: "text/plain;charset=utf-8"});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); 
+    const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
@@ -947,7 +928,7 @@ function initiateLoadInputsFromFile(fileInputId = 'file-input') {
  * @returns {function} An event handler function.
  */
 function createSaveInputsHandler(inputIds, filename, feedbackElId = 'feedback-message') {
-    return function() { 
+    return function() {
         const inputs = gatherInputsFromIds(inputIds);
         // Pass a version number when saving
         saveInputsToFile(inputs, filename, '1.1');
@@ -983,7 +964,7 @@ function applyInputsToDOM(inputs, inputIds) {
  * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
  * @param {string} [appVersion='1.1'] - The current application version to check against.
  * @returns {function} An event handler function that takes the file input event.
- */ 
+ */
 function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-message', appVersion = '1.1') {
     return function(event) {
         const displayEl = document.getElementById('file-name-display');
@@ -1013,7 +994,7 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
                 console.error("Error parsing saved data:", err);
             } finally {
                 // Reset file input to allow loading the same file again
-                event.target.value = ''; 
+                event.target.value = '';
                 if (displayEl) displayEl.textContent = ''; // Clear filename display after processing
                 localStorage.removeItem('temp-loaded-inputs'); // Clean up temp storage
             }
@@ -1047,7 +1028,7 @@ function saveInputsToLocalStorage(storageKey, inputs, appVersion = '1.0') {
  * @param {function} [onComplete] - An optional callback to run after inputs are loaded.
  * @param {string} [appVersion='1.0'] - The current version of the application's data structure.
  */
-function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion = '1.0') {
+function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion = '1.1') { // Updated default version to 1.1
     const dataStr = localStorage.getItem(storageKey);
     let loadedInputs = null;
 
@@ -1058,7 +1039,7 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
             // Version check: If the saved data has a matching version, apply it.
             if (inputs._version === appVersion) {
                 loadedInputs = inputs; // Mark as valid
-                
+
                 inputIds.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
@@ -1136,45 +1117,85 @@ async function initializeApp(config) { // This function is already async
         storageKey,
         fileInputId = 'file-input', // Default file input ID
         loadButtonId = 'load-inputs-btn', // Default load button ID
-        saveButtonId = 'save-inputs-btn'  // Default save button ID
+        saveButtonId = 'save-inputs-btn', // Default save button ID
+        pageKey, // We use this to find config
     } = config;
 
     // --- 0. Initialize Internationalization (i18n) First ---
-    await i18n.initialize();
+    // i18n is defined in i18n.js and should be available globally.
+    if (typeof i18n !== 'undefined' && typeof i18n.initialize === 'function') {
+        await i18n.initialize();
+    }
 
-    // --- 1. Discover Page and Inject Header/Footer ---
+    // --- 1. Discover Page and Inject Header/Footer (CORREÇÃO DE PATH AQUI) ---
     const path = window.location.pathname;
-    // Decode the page name to handle spaces and other special characters (e.g., "steel%20check.html" -> "steel check.html")
     const pageName = decodeURIComponent(path.substring(path.lastIndexOf('/') + 1));
-    const isRoot = path.endsWith('/') || path.endsWith('/index.html');
-    const pathPrefix = isRoot ? './' : '../';
+    
+    // Determine the path prefix based on the number of directories to step up.
+    const dirPath = path.substring(0, path.lastIndexOf('/') + 1); // e.g., /BASE/CODE-2/asce/
+    const pathSegments = dirPath.split('/').filter(s => s.length > 0);
+    
+    // We assume the 'js' folder is located in the CODE-2/ root.
+    let depthFromCode2 = 0;
+    const projectRootMarker = 'CODE-2';
+    const rootIndex = pathSegments.findIndex(s => s.toLowerCase() === projectRootMarker.toLowerCase());
+    
+    if (rootIndex !== -1) {
+        // Number of levels to step up is the count of directories *after* the CODE-2 folder.
+        // e.g., ['BASE', 'CODE-2', 'asce'] -> rootIndex=1. depth = 3 - 2 = 1. (Need '../')
+        depthFromCode2 = pathSegments.length - (rootIndex + 1);
+    } 
+
+    let pathPrefix = '';
+    if (depthFromCode2 > 0) {
+        // Construct '../' path components (e.g., '../', '../../')
+        pathPrefix = Array(depthFromCode2).fill('..').join('/') + '/';
+    } else {
+        pathPrefix = './'; // Root level (index.html, or if CODE-2 is the base path)
+    }
+
+    const navConfigPath = `${pathPrefix}js/nav-config.json`;
 
     let navConfig;
     try {
-        const response = await fetch(`${pathPrefix}js/nav-config.json`);
+        const response = await fetch(navConfigPath);
+        // Check if response is okay before attempting to parse JSON
+        if (!response.ok) {
+             throw new Error(`HTTP error! status: ${response.status} while fetching ${navConfigPath}`);
+        }
         navConfig = await response.json();
         window.NAV_CONFIG = navConfig; // Make it globally available
     } catch (error) {
-        console.error("Failed to load nav-config.json for initialization:", error);
-        return; // Stop initialization if nav config fails
+        console.error(`Failed to load nav-config.json from path: ${navConfigPath}`, error);
+        // Fallback or stop initialization if nav config fails
+        return; 
     }
 
     const pageConfig = navConfig.mainNav.flatMap(item => item.subNav.length > 0 ? item.subNav : [item]).find(link => link.href.endsWith(pageName))
-        || (isRoot ? navConfig.mainNav.find(link => link.key === 'home') : null);
+        || (pageName === 'index.html' || pageName === '') ? navConfig.mainNav.find(link => link.key === 'home') : null;
 
-    const pageKey = pageConfig?.key;
-    const pageTitle = pageConfig?.textKey;
+    const activePageKey = pageConfig?.key || pageKey || 'default';
+    const pageTitleKey = pageConfig?.textKey || 'engineering_hub';
 
-    if (!pageConfig) {
-        console.error(`Could not find page configuration for "${pageName}" in nav-config.json.`);
-        // Fallback to a generic header if config is not found but we need to continue
-        await injectHeader({ activePage: '', pageTitle: 'engineering_hub', headerPlaceholderId: 'header-placeholder' });
+
+    // Inject Header and Footer (Assuming injectHeader/injectFooter are available from template.js)
+    if (typeof injectHeader === 'function' && typeof injectFooter === 'function') {
+        // Pass the calculated pathPrefix to the template functions if they need it for static assets
+        await injectHeader({ 
+            activePage: activePageKey, 
+            pageTitle: pageTitleKey, 
+            headerPlaceholderId: 'header-placeholder',
+            pathPrefix: pathPrefix // Explicitly pass the prefix
+        });
+        await injectFooter({ 
+            footerPlaceholderId: 'footer-placeholder',
+            pathPrefix: pathPrefix // Explicitly pass the prefix
+        });
     } else {
-        await injectHeader({ activePage: pageKey, pageTitle: pageTitle, headerPlaceholderId: 'header-placeholder' });
+         console.warn("Template injection functions (injectHeader/injectFooter) are missing. Navigation will not load.");
     }
-    await injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-
-    const effectiveStorageKey = storageKey || `${pageConfig?.key || 'default'}-inputs`;
+    
+    const effectiveStorageKey = storageKey || `${activePageKey}-inputs`;
 
     // 2. Initialize Shared UI Components
     initializeSharedUI(); // This is correct
@@ -1186,7 +1207,7 @@ async function initializeApp(config) { // This function is already async
         runButton.addEventListener('click', calculationHandler);
     }
 
-    // --- FIX: Attach Save/Load button handlers ---
+    // --- Attach Save/Load button handlers ---
     const saveButton = document.getElementById(saveButtonId);
     const loadButton = document.getElementById(loadButtonId);
     const fileInput = document.getElementById(fileInputId);
@@ -1205,11 +1226,9 @@ async function initializeApp(config) { // This function is already async
     }
 
     // --- Automatic Save to Local Storage on Input Change ---
-    // This function runs automatically whenever an input changes.
     const debouncedSave = debounce(() => {
         const currentInputs = gatherInputsFromIds(inputIds);
-        saveInputsToLocalStorage(effectiveStorageKey, currentInputs);
-        // Do not show feedback on auto-save to avoid being intrusive.
+        saveInputsToLocalStorage(effectiveStorageKey, currentInputs, '1.1');
     }, 500); // Debounce to avoid excessive writes on rapid changes.
 
     if (inputIds.length > 0) {
@@ -1224,7 +1243,7 @@ async function initializeApp(config) { // This function is already async
     }
 
     // 4. Load saved data from Local Storage
-    loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady);
+    loadInputsFromLocalStorage(effectiveStorageKey, inputIds, onReady, '1.1');
 
 }
 
@@ -1236,7 +1255,7 @@ async function initializeApp(config) { // This function is already async
 class ReportBuilder {
     /**
      * @param {object} options - Configuration for the report.
-     * @param {string} options.reportId - The ID for the main report container.
+     * @param {string} options.reportId - The ID for the main report container (e.g., 'wind-report-content').
      * @param {string} options.title - The main title of the report.
      * @param {Array<object>} [options.actionButtons] - Optional array of custom action buttons.
      * @param {string[]} [options.warnings] - Optional array of warning messages to display at the top.
@@ -1344,8 +1363,8 @@ class ReportBuilder {
             if (section.type === 'table') {
                 const { headers, rows } = section.tableConfig;
                 const table = createDOMElement('table', { className: 'w-full mt-2 results-table' });
-                
-                // --- FIX: Apply a distinct grey background to the table header row ---
+
+                // Apply a distinct grey background to the table header row
                 const headerRow = createDOMElement('tr', {});
                 headers.forEach(h => headerRow.appendChild(createDOMElement('th', { className: 'bg-gray-100 dark:bg-gray-700' }, [h])));
                 const thead = createDOMElement('thead', {}, [headerRow]);
@@ -1356,8 +1375,7 @@ class ReportBuilder {
                     if (row.type === 'subheader') {
                         tbody.appendChild(createDOMElement('tr', { className: 'bg-gray-100 dark:bg-gray-700 font-semibold' }, [createDOMElement('td', { colspan: headers.length }, [row.content])]));
                     } else {
-                        // --- FIX: Ensure the first data row always has a top border ---
-                        // Add a top border to all data rows EXCEPT the very first one.
+                        // Add a top border to all data rows
                         const trClasses = [];
                         if (rowIndex > 0) trClasses.push('border-t', 'dark:border-gray-700');
                         
@@ -1511,7 +1529,7 @@ function createCalculationHandler(config) { // This is the function being called
     } = config;
 
     // Automatically highlight required fields for this calculator when it's created.
-    if (validationRuleKey) { // This was already correct
+    if (validationRuleKey) {
         highlightRequiredFields(validationRuleKey);
     } else {
         // Add a console warning if the key is missing, as it's crucial for validation and report functionality.
@@ -1526,14 +1544,14 @@ function createCalculationHandler(config) { // This is the function being called
 
         // Use the provided gather function or the default one.
         console.log(`[${validationRuleKey}] Gathering inputs...`);
-        const inputs = typeof gatherInputsFunction === 'function' 
-            ? gatherInputsFunction() 
-            : gatherInputsFromIds(inputIds);            
+        const inputs = typeof gatherInputsFunction === 'function'
+            ? gatherInputsFunction()
+            : gatherInputsFromIds(inputIds);
 
         // Log the gathered inputs for debugging
         console.log(`[${validationRuleKey}] Gathered inputs:`, inputs);
 
-        
+
         // --- 2. VALIDATE INPUTS ---
         showFeedback('Validating inputs...', false, feedbackElId);
         // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
@@ -1545,8 +1563,15 @@ function createCalculationHandler(config) { // This is the function being called
         if (typeof validatorFunction === 'function') {
             validation = validatorFunction(inputs);
         } else {
+            // Access validationRules from the global scope (provided by validation-rules.js)
             const rules = window.validationRules ? validationRules[validationRuleKey] : {};
-            validation = validateInputs(inputs, rules);
+            // Assuming validateInputs is available globally (from validation-rules.js)
+            if (typeof validateInputs === 'function') {
+                validation = validateInputs(inputs, rules);
+            } else {
+                console.error("The function 'validateInputs' is not available. Check script loading order.");
+                validation = { errors: ["Validation function is missing."], warnings: [] };
+            }
         }
 
         const resultsContainer = document.getElementById(resultsContainerId);
@@ -1584,27 +1609,30 @@ function createCalculationHandler(config) { // This is the function being called
             console.log(`[${validationRuleKey}] Calculation successful. Rendering results...`);
             showFeedback('Rendering results...', false, feedbackElId);
             await Promise.resolve();
-            
-            saveInputsToLocalStorage(storageKey, inputs);
+
+            saveInputsToLocalStorage(storageKey, inputs, '1.1');
             console.log(`[${validationRuleKey}] About to call renderFunction.`);
             renderFunction(calculationResult, inputs);
-            
+
             console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
-            // Re-attach event listeners for the newly rendered report content.
-            // FIX: Ensure this runs for all calculators that use this handler.
-            // The reportId is now derived from the renderFunction's implementation details.
-            const reportContentElement = resultsContainer.querySelector('[id$="-report-content"]');
-            if (reportContentElement) {
-                 attachReportEventListeners(resultsContainerId, {
-                    reportId: reportContentElement.id,
-                    filenamePrefix: `${validationRuleKey || 'report'}-Report`,
-                    onSendToCombos: config.onSendToCombos,
-                    toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
-                });
-                console.log(`[${validationRuleKey}] Event listeners attached to #${reportContentElement.id}.`);
-            } else {
-                console.warn(`[${validationRuleKey}] Could not find a report content element (e.g., #splice-report-content) inside #${resultsContainerId} to attach event listeners.`);
-            }
+            // Find the report content element ID, assuming it follows the pattern `${pageKey}-report-content`
+            // or is the first element inside the results container with a specific ID.
+            const reportContentElement = resultsContainer.querySelector('[id$="-report-content"], .report-section-copyable');
+            let reportContentId = reportContentElement ? reportContentElement.id : resultsContainerId;
+            
+            // If the render function uses the ReportBuilder, the ID should be passed in.
+            // For safety, we use the container ID if the internal report ID can't be found, 
+            // but this relies on the render function correctly outputting the element.
+
+            attachReportEventListeners(resultsContainerId, {
+                // Pass the containerId (where the ReportBuilder renders) for delegation, and the internal reportId for copy/download
+                reportId: reportContentId, 
+                filenamePrefix: `${validationRuleKey || 'report'}-Report`,
+                onSendToCombos: config.onSendToCombos,
+                toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+            });
+            
+            console.log(`[${validationRuleKey}] Event listeners attached to container #${resultsContainerId}. Targetting report content ID: #${reportContentId}`);
             showFeedback('Calculation complete!', false, feedbackElId);
         }
 
@@ -1752,7 +1780,6 @@ function autoLoadPageScript() {
     const scriptFileName = decodeURIComponent(pageFileName).replace('.html', '.js');
 
     // Check if a script with this name is already in the document to prevent re-declaration errors.
-    // This is crucial because initializeApp might be called multiple times (e.g., by template.js and a page-specific script).
     const scriptAlreadyExists = document.querySelector(`script[src$="${encodeURIComponent(scriptFileName)}"]`);
     if (scriptAlreadyExists) {
         return; // Don't load the script again
