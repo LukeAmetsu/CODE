@@ -1,21 +1,24 @@
-// PCalc Web application logic will go here.
-
-// Main data object to hold the application state
+// --- DATA STRUCTURE ---
 const pcalcData = {
     secao: {
         tipoSecao: 'Retangular',
         hx: 30,
         hy: 50,
-        // ... other geometry properties
+        xm: 15, // Calculated later
+        ym: 25, // Calculated later
+        areaAc: 0,
+        lFlamb: 0,
+        tipoVinculacao: 1 // 1: bi-supported (standard)
     },
     materiais: {
         fck: 25,
-        // ... other material properties
     },
     armacao: {
         barras: [
-            // { x: 5, y: 5, diametro: 20 },
-            // { x: 25, y: 5, diametro: 20 },
+            { x: 5, y: 5, diametro: 20 },
+            { x: 25, y: 5, diametro: 20 },
+            { x: 5, y: 45, diametro: 20 },
+            { x: 25, y: 45, diametro: 20 },
         ]
     },
     esforcos: {
@@ -38,7 +41,10 @@ const pcalcData = {
         calcular2ord: 1 // 1: Sim
     },
     resultados: {
-        // ... calculation results
+        secaoC: [],
+        secaoS: [],
+        curvasMr: [],
+        esforcos: {}
     },
     unidades: {
         forca: 'kN',
@@ -47,7 +53,7 @@ const pcalcData = {
     }
 };
 
-// --- DOM Element References ---
+// --- DOM REFERENCES ---
 const geometryForm = document.getElementById('geometry-form');
 const sectionType = document.getElementById('section-type');
 const hxInput = document.getElementById('hx');
@@ -64,128 +70,39 @@ const addLoadBtn = document.getElementById('add-load-btn');
 const calculateBtn = document.getElementById('calculate-btn');
 const resultsTable = document.getElementById('results-table').getElementsByTagName('tbody')[0];
 const chartCanvas = document.getElementById('myChart');
+const sectionCanvas = document.getElementById('sectionCanvas');
+
 const nmxmyBtn = document.getElementById('nmxmy-btn');
 const nmxBtn = document.getElementById('nmx-btn');
 const nmyBtn = document.getElementById('nmy-btn');
-const pdfBtn = document.getElementById('pdf-btn');
-const newBtn = document.getElementById('new-btn');
-const openBtn = document.getElementById('open-btn');
-const saveBtn = document.getElementById('save-btn');
+
 let myChart;
 
-// --- Functions ---
-function renderChart(chartType = 'N-Mx') {
-    if (myChart) {
-        myChart.destroy();
-    }
+// --- CORE FUNCTIONS ---
 
-    const { curvasMr } = pcalcData.resultados;
-    if (!curvasMr || curvasMr.length === 0 || !curvasMr[0] || curvasMr[0].length < 4) {
-        console.warn("Chart rendering skipped: Invalid or incomplete curvasMr data.");
-        return; // Exit if data is not valid
-    }
-
-    const datasets = [];
-
-    if (chartType === 'N-Mx' || chartType === 'N-Mx-My') {
-        datasets.push({
-            label: 'N-Mx',
-            data: curvasMr[0][2].map((mx, i) => ({ x: mx, y: curvasMr[0][0][i] })),
-            borderColor: 'red',
-            backgroundColor: 'red',
-            showLine: true
-        });
-    }
-
-    if (chartType === 'N-My' || chartType === 'N-Mx-My') {
-        datasets.push({
-            label: 'N-My',
-            data: curvasMr[0][3].map((my, i) => ({ x: my, y: curvasMr[0][0][i] })),
-            borderColor: 'blue',
-            backgroundColor: 'blue',
-            showLine: true
-        });
-    }
-
-    const data = { datasets };
-
-    const config = {
-        type: 'scatter',
-        data: data,
-        options: {
-            scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: 'Mx (kNm)'
-                    }
-                },
-                y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: 'N (kN)'
-                    }
-                }
-            }
-        }
-    };
-
-    // Ensure Chart.js is loaded
-    if (typeof Chart !== 'undefined') {
-        myChart = new Chart(chartCanvas, config);
-    } else {
-        console.error('Chart.js library is not loaded.');
-    }
-}
-
-function renderResults() {
-    resultsTable.innerHTML = '';
-    const { esforcos } = pcalcData.resultados;
-    if (!esforcos) return;
-
-    const nComb = esforcos.nsd.length;
-    if (nComb === 0) return;
-
-    const nRows = esforcos.msxd2[0].length;
-
-    for (let i = 0; i < nRows; i++) {
-        for (let j = 0; j < nComb; j++) {
-            const row = resultsTable.insertRow();
-            row.innerHTML = `
-                <td>Comb ${j + 1}</td>
-                <td>${esforcos.nsd[j].toFixed(2)}</td>
-                <td>${esforcos.msxd2[j][i].toFixed(2)}</td>
-                <td>${esforcos.msyd2[j][i].toFixed(2)}</td>
-                <td>-</td>
-            `;
-        }
-    }
-}
 function updateGeometry() {
     pcalcData.secao.tipoSecao = sectionType.value;
-    pcalcData.secao.hx = parseFloat(hxInput.value);
-    pcalcData.secao.hy = parseFloat(hyInput.value);
-    console.log('Geometry updated:', pcalcData.secao);
+    pcalcData.secao.hx = parseFloat(hxInput.value) || 0;
+    pcalcData.secao.hy = parseFloat(hyInput.value) || 0;
+    // Update center of mass for Rectangular (simplified)
+    pcalcData.secao.xm = pcalcData.secao.hx / 2;
+    pcalcData.secao.ym = pcalcData.secao.hy / 2;
 }
 
 function updateMaterials() {
-    pcalcData.materiais.fck = parseFloat(fckInput.value);
-    console.log('Materials updated:', pcalcData.materiais);
+    pcalcData.materiais.fck = parseFloat(fckInput.value) || 0;
 }
 
 function renderReinforcement() {
     reinforcementTable.innerHTML = '';
     pcalcData.armacao.barras.forEach((barra, index) => {
         const row = reinforcementTable.insertRow();
+        row.className = "border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700";
         row.innerHTML = `
-            <td><input type="number" value="${barra.x}" data-index="${index}" data-prop="x"></td>
-            <td><input type="number" value="${barra.y}" data-index="${index}" data-prop="y"></td>
-            <td><input type="number" value="${barra.diametro}" data-index="${index}" data-prop="diametro"></td>
-            <td><button class="remove-bar-btn" data-index="${index}">Remove</button></td>
+            <td class="p-2"><input type="number" value="${barra.x}" data-index="${index}" data-prop="x" class="w-20 p-1 border rounded text-center dark:bg-gray-600 dark:text-white dark:border-gray-500"></td>
+            <td class="p-2"><input type="number" value="${barra.y}" data-index="${index}" data-prop="y" class="w-20 p-1 border rounded text-center dark:bg-gray-600 dark:text-white dark:border-gray-500"></td>
+            <td class="p-2"><input type="number" value="${barra.diametro}" data-index="${index}" data-prop="diametro" class="w-20 p-1 border rounded text-center dark:bg-gray-600 dark:text-white dark:border-gray-500"></td>
+            <td class="p-2"><button class="remove-bar-btn text-red-500 hover:text-red-700 font-bold px-2" data-index="${index}">&times;</button></td>
         `;
     });
 }
@@ -196,12 +113,14 @@ function updateReinforcement(event) {
         const index = parseInt(target.dataset.index);
         const prop = target.dataset.prop;
         pcalcData.armacao.barras[index][prop] = parseFloat(target.value);
-        console.log('Reinforcement updated:', pcalcData.armacao.barras);
     }
 }
 
 function addBar() {
-    pcalcData.armacao.barras.push({ x: 5, y: 5, diametro: 20 });
+    const hx = pcalcData.secao.hx;
+    const hy = pcalcData.secao.hy;
+    // Default new bar in center
+    pcalcData.armacao.barras.push({ x: hx/2, y: hy/2, diametro: 16 });
     renderReinforcement();
 }
 
@@ -217,11 +136,12 @@ function renderLoads() {
     loadsTable.innerHTML = '';
     pcalcData.esforcos.listaEsforcos.forEach((esforco, index) => {
         const row = loadsTable.insertRow();
+        row.className = "border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700";
         row.innerHTML = `
-            <td><input type="number" value="${esforco.n}" data-index="${index}" data-prop="n"></td>
-            <td><input type="number" value="${esforco.mx}" data-index="${index}" data-prop="mx"></td>
-            <td><input type="number" value="${esforco.my}" data-index="${index}" data-prop="my"></td>
-            <td><button class="remove-load-btn" data-index="${index}">Remove</button></td>
+            <td class="p-2"><input type="number" value="${esforco.n}" data-index="${index}" data-prop="n" class="w-24 p-1 border rounded text-center dark:bg-gray-600 dark:text-white dark:border-gray-500"></td>
+            <td class="p-2"><input type="number" value="${esforco.mx}" data-index="${index}" data-prop="mx" class="w-24 p-1 border rounded text-center dark:bg-gray-600 dark:text-white dark:border-gray-500"></td>
+            <td class="p-2"><input type="number" value="${esforco.my}" data-index="${index}" data-prop="my" class="w-24 p-1 border rounded text-center dark:bg-gray-600 dark:text-white dark:border-gray-500"></td>
+            <td class="p-2"><button class="remove-load-btn text-red-500 hover:text-red-700 font-bold px-2" data-index="${index}">&times;</button></td>
         `;
     });
 }
@@ -232,12 +152,11 @@ function updateLoads(event) {
         const index = parseInt(target.dataset.index);
         const prop = target.dataset.prop;
         pcalcData.esforcos.listaEsforcos[index][prop] = parseFloat(target.value);
-        console.log('Loads updated:', pcalcData.esforcos.listaEsforcos);
     }
 }
 
 function addLoad() {
-    pcalcData.esforcos.listaEsforcos.push({ n: -1000, mx: 150, my: 75 });
+    pcalcData.esforcos.listaEsforcos.push({ n: -500, mx: 100, my: 50 });
     renderLoads();
 }
 
@@ -249,151 +168,74 @@ function removeLoad(event) {
     }
 }
 
-// --- Event Listeners ---
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('PCalc Web App Initialized');
-    
-    // --- INJECT HEADER & FOOTER ---
-    // This loads the navigation bar from template-loader.js
-    if (window.injectHeader) {
-        window.injectHeader({
-            activePage: 'pcalc', // Highlight this page in nav
-            pageTitle: 'pcalc_title',
-            headerPlaceholderId: 'header-placeholder',
-            pathPrefix: '../' // Go up one level to find js/ folder
-        });
-    } else {
-        console.error('injectHeader function not found. Check template.js loading.');
-    }
+// --- CALCULATION LOGIC ---
 
-    if (window.injectFooter) {
-        window.injectFooter({
-            footerPlaceholderId: 'footer-placeholder'
-        });
-    }
-
-    // Initial UI update
-    updateGeometry();
-    updateMaterials();
-    renderReinforcement();
-    renderLoads();
-
-    newBtn.addEventListener('click', () => {
-        console.log('New button clicked');
-        // Logic to reset the pcalcData object and UI
-    });
-
-    openBtn.addEventListener('click', () => {
-        console.log('Open button clicked');
-        // Logic to open a saved file
-    });
-
-    saveBtn.addEventListener('click', () => {
-        console.log('Save button clicked');
-        // Logic to save the current state
-    });
-});
-
-geometryForm.addEventListener('input', updateGeometry);
-materialsForm.addEventListener('input', updateMaterials);
-addBarBtn.addEventListener('click', addBar);
-reinforcementTable.addEventListener('input', updateReinforcement);
-reinforcementTable.addEventListener('click', removeBar);
-addLoadBtn.addEventListener('click', addLoad);
-loadsTable.addEventListener('input', updateLoads);
-loadsTable.addEventListener('click', removeLoad);
-
-calculateBtn.addEventListener('click', () => {
-    // --- VALIDATION: Ensure at least one load case is present ---
-    if (pcalcData.esforcos.listaEsforcos.length === 0) {
-        const feedbackEl = document.getElementById('feedback-message');
-        if (feedbackEl) {
-            feedbackEl.textContent = 'Please add at least one load case before calculating.';
-            feedbackEl.className = 'text-center mt-2 text-sm h-5 text-red-600 dark:text-red-400';
-            // Clear the message after a few seconds
-            setTimeout(() => {
-                feedbackEl.textContent = '';
-            }, 4000);
-        }
-        console.error('Calculation stopped: No loads provided.');
-        return; // Stop the function
-    }
-
-    console.log('Calculate button clicked, validation passed.');
-    discretizeSection(pcalcData);
-    calculateMomentCurvature(pcalcData);
-    calculateEsforcos(pcalcData);
-    renderResults();
-    renderChart();
-});
-nmxmyBtn.addEventListener('click', () => renderChart('N-Mx-My'));
-nmxBtn.addEventListener('click', () => renderChart('N-Mx'));
-nmyBtn.addEventListener('click', () => renderChart('N-My'));
-
-
-function discretizeSection(pcalcData) {
-    const { secao, config } = pcalcData;
-
-    // --- FIX: Calculate and store gross area and buckling length ---
-    // These are required for second-order moment calculations.
-    secao.areaAc = secao.hx * secao.hy; // Gross concrete area in cm^2
-    // Assuming a bi-supported column for buckling length calculation (le = l)
-    secao.lFlamb = secao.hy / 100; // Buckling length in meters (simplified, assuming it's related to hy)
-
-    const { tipoSecao, hx, hy, xm, ym, areaAc } = secao;
+function discretizeSection(data) {
+    const { secao, config, armacao } = data;
+    const { tipoSecao, hx, hy, xm, ym } = secao;
     const { nSecao } = config;
+    
+    // Calc gross properties
+    data.secao.areaAc = hx * hy;
+    data.secao.lFlamb = hy / 100; // simplified
+    
     const argSecaoC = [];
-
+    
     if (tipoSecao === 'Retangular') {
         const nHx = Math.max(10, Math.floor(Math.sqrt((hx * nSecao) / hy)));
         const nHy = Math.max(10, Math.floor(nSecao / nHx));
+        
         for (let iy = 0; iy < nHy; iy++) {
             for (let ix = 0; ix < nHx; ix++) {
+                // Global coords relative to geometric center
+                const xGlobal = (((0.5 + ix) * hx) / nHx);
+                const yGlobal = (((0.5 + iy) * hy) / nHy);
+                
                 const secaoI = [
-                    (((0.5 + ix) * hx) / nHx) - xm,
-                    (((0.5 + iy) * hy) / nHy) - ym,
-                    ((hx * hy) / nHx) / nHy,
-                    hx / nHx,
-                    hy / nHy
+                    xGlobal - xm, // x relative to centroid
+                    yGlobal - ym, // y relative to centroid
+                    ((hx * hy) / nHx) / nHy, // Area
+                    hx / nHx, // dx (width)
+                    hy / nHy  // dy (height)
                 ];
                 argSecaoC.push(secaoI);
             }
         }
-        argSecaoC.push([-xm, -ym, 0, 0, 0]);
-        argSecaoC.push([hx - xm, -ym, 0, 0, 0]);
-        argSecaoC.push([hx - xm, hy - ym, 0, 0, 0]);
-        argSecaoC.push([-xm, hy - ym, 0, 0, 0]);
     } else if (tipoSecao === 'Circular') {
+        // Simplified Circular Discretization logic
         const rExt = hx / 2;
-        const delta = Math.sqrt(areaAc / nSecao);
-        const nR = Math.max(10, Math.floor(rExt / delta));
-        const rInt = (rExt / nR) / 2;
-        for (let i = 0; i < nR; i++) {
-            const rI = rExt - (((i + 0.5) * (rExt - rInt)) / nR);
-            const nAlpha = Math.floor(Math.max(8, (2 * Math.PI * rI) / delta) / 4) * 4;
-            for (let j = 0; j < nAlpha; j++) {
-                const alphaJ = (j * 2 * Math.PI) / nAlpha;
-                const secaoI = [
-                    rI * Math.cos(alphaJ),
-                    rI * Math.sin(alphaJ),
-                    (Math.PI / nAlpha) * (Math.pow(rI + (0.5 * (rExt - rInt)) / nR, 2) - Math.pow(rI - (0.5 * (rExt - rInt)) / nR, 2)),
-                    (rExt - rInt) / nR,
-                    (2 * Math.PI * rI) / nAlpha
-                ];
-                argSecaoC.push(secaoI);
-            }
-        }
-        argSecaoC.push([0, 0, Math.PI * rInt * rInt, rInt, 2 * Math.PI]);
-        const nAlpha2 = Math.floor(Math.max(8, (2 * Math.PI * rExt) / delta) / 4) * 4;
-        for (let j = 0; j < nAlpha2; j++) {
-            const alphaJ = (j * 2 * Math.PI) / nAlpha2;
-            argSecaoC.push([rExt * Math.cos(alphaJ), rExt * Math.sin(alphaJ), 0, 0, 0]);
+        const delta = Math.sqrt((Math.PI * rExt * rExt) / nSecao);
+        const nR = Math.max(5, Math.floor(rExt / delta));
+        
+        // Add center circle
+        const rInt0 = rExt/nR;
+        argSecaoC.push([0, 0, Math.PI * rInt0 * rInt0, rInt0*2, rInt0*2]);
+        
+        // Rings
+        for(let i=1; i<nR; i++) {
+             const rInner = (i * rExt) / nR;
+             const rOuter = ((i+1) * rExt) / nR;
+             const rMid = (rInner + rOuter) / 2;
+             const circum = 2 * Math.PI * rMid;
+             const nSlices = Math.max(8, Math.floor(circum / delta));
+             
+             for(let j=0; j<nSlices; j++) {
+                 const angle = (j * 2 * Math.PI) / nSlices;
+                 const areaSlice = (Math.PI * (rOuter*rOuter - rInner*rInner)) / nSlices;
+                 argSecaoC.push([
+                     rMid * Math.cos(angle),
+                     rMid * Math.sin(angle),
+                     areaSlice,
+                     (rOuter-rInner), // approx dx
+                     (rOuter-rInner)  // approx dy
+                 ]);
+             }
         }
     }
 
-    pcalcData.resultados.secaoC = argSecaoC;
+    data.resultados.secaoC = argSecaoC;
 
-    const { armacao } = pcalcData;
+    // Steel
     const argSecaoS = [];
     for (const barra of armacao.barras) {
         const secaoI = [
@@ -403,54 +245,46 @@ function discretizeSection(pcalcData) {
         ];
         argSecaoS.push(secaoI);
     }
-    pcalcData.resultados.secaoS = argSecaoS;
+    data.resultados.secaoS = argSecaoS;
 }
 
+// Stress-Strain functions
 function fc(ec, fcd, tipoCurvaC, ec2, ecu, n) {
-    let fc = 0;
-    if (tipoCurvaC === 0) { // Parábola-retângulo
+    if (tipoCurvaC === 0) { // Parabola-Rectangle
         if ((-ec2 < ec) && (ec < 0)) {
-            fc = -0.85 * fcd * (1 - Math.pow(1 + (ec / ec2), n));
+            return -0.85 * fcd * (1 - Math.pow(1 + (ec / ec2), n));
         }
         if ((-ecu * 1.0001 <= ec) && (ec <= -ec2)) {
-            fc = -0.85 * fcd;
+            return -0.85 * fcd;
         }
     }
-    return fc;
+    return 0;
 }
 
 function fs(es, fyd, moduloS, esu) {
-    let fs = 0;
     const eyd = (fyd / moduloS) * 1000;
     if (Math.abs(es) < eyd) {
-        fs = moduloS * (es / 1000);
+        return moduloS * (es / 1000);
     }
     if ((eyd <= Math.abs(es)) && (Math.abs(es) <= esu)) {
-        fs = fyd * (es / Math.abs(es));
+        return fyd * (es / Math.abs(es));
     }
-    return fs;
+    return 0;
 }
 
-
 function rotacionaXY(coordenadas, teta) {
-    const coordenadaRot = [];
-    for (const coord of coordenadas) {
+    return coordenadas.map(coord => {
         const x = coord[0];
         const y = coord[1];
         const xRot = Math.cos(teta) * x + Math.sin(teta) * y;
         const yRot = -Math.sin(teta) * x + Math.cos(teta) * y;
-        coordenadaRot.push([xRot, yRot, ...coord.slice(2)]);
-    }
-    return coordenadaRot;
+        return [xRot, yRot, ...coord.slice(2)];
+    });
 }
-
 
 function funcX(xLn, d, yCMin, yCMax, xyCRot, xyAsRot, nd, params) {
     const { n, ec2, ecu, fyd, fcd, modEs, tipoCurvaC } = params;
-
-    let somaNd = 0;
-    let fi = 0;
-    let ecg = 0;
+    let somaNd = 0, fi = 0, ecg = 0;
 
     if (xLn / d < ecu / (ecu + 10.0)) {
         const ec = (-10.0 * xLn) / (d - xLn);
@@ -467,276 +301,392 @@ function funcX(xLn, d, yCMin, yCMax, xyCRot, xyAsRot, nd, params) {
     }
 
     for (const secao of xyCRot) {
-        const aci = secao[2];
-        const yci = secao[1];
-        const eci = ecg + (yci * fi);
-        somaNd += fc(eci, fcd, tipoCurvaC, ec2, ecu, n) * aci;
+        const eci = ecg + (secao[1] * fi);
+        somaNd += fc(eci, fcd, tipoCurvaC, ec2, ecu, n) * secao[2];
     }
 
     for (const secao of xyAsRot) {
-        const asi = secao[2];
-        const ysi = secao[1];
-        const esi = ecg + (ysi * fi);
-        somaNd += fs(esi, fyd, modEs, 10.0) * asi;
+        const esi = ecg + (secao[1] * fi);
+        somaNd += fs(esi, fyd, modEs, 10.0) * secao[2];
     }
 
     return [somaNd - nd, fi, ecg];
 }
 
-function calculaMr(nd, tetaLN, pcalcData, params) {
-    const { resultados, config } = pcalcData;
-    const { secaoC, secaoS } = resultados;
-    const { tolVarLn, tolSomaN, tolIt } = config;
-    const { n, ec2, ecu, fyd, fcd, modEs, tipoCurvaC } = params;
-
+function calculaMr(nd, tetaLN, data, params) {
+    const { secaoC, secaoS } = data.resultados;
+    const { tolSomaN, tolIt } = data.config;
     const xyCRot = rotacionaXY(secaoC, tetaLN);
     const xyAsRot = rotacionaXY(secaoS, tetaLN);
 
-    let yCMin = 1e11;
-    let yCMax = -1e11;
-    let yAsMax = -1e11;
-
-    for (const secao of xyCRot) {
-        yCMin = Math.min(secao[1], yCMin);
-        yCMax = Math.max(secao[1], yCMax);
-    }
-    for (const secao of xyAsRot) {
-        yAsMax = Math.max(secao[1], yAsMax);
-    }
+    let yCMin = Infinity, yCMax = -Infinity, yAsMax = -Infinity;
+    for (const s of xyCRot) { yCMin = Math.min(s[1], yCMin); yCMax = Math.max(s[1], yCMax); }
+    for (const s of xyAsRot) { yAsMax = Math.max(s[1], yAsMax); }
 
     const d = yAsMax - yCMin;
-    let x0 = -d;
-    let xu = 2 * d;
-    let f0 = 0;
-    let fu = 0;
+    let x0 = -d, xu = 2 * d, xLn = 0, fi = 0, ecg = 0;
 
-    // ... (bisection method to find neutral axis)
-
-    let xLn = 0;
-    let fi = 0;
-    let ecg = 0;
-
-    // This is a simplified version of the bisection/secant method from the Java code
-    // A more robust implementation would be needed for a real application
     for (let i = 0; i < tolIt; i++) {
+        xLn = (x0 + xu) / 2;
         const res = funcX(xLn, d, yCMin, yCMax, xyCRot, xyAsRot, nd, params);
         const somaNd = res[0];
         fi = res[1];
         ecg = res[2];
 
-        if (Math.abs(somaNd) < tolSomaN) {
-            break;
-        }
-
-        if (somaNd < 0) {
-            xu = xLn;
-        } else {
-            x0 = xLn;
-        }
-        xLn = (x0 + xu) / 2;
+        if (Math.abs(somaNd) < tolSomaN) break;
+        if (somaNd < 0) xu = xLn;
+        else x0 = xLn;
     }
 
-    let mrx = 0;
-    let mry = 0;
-
+    let mrx = 0, mry = 0;
+    // Concrete moments
     for (let i = 0; i < secaoC.length; i++) {
-        const aci = secaoC[i][2];
-        const xci = secaoC[i][0];
-        const yci = secaoC[i][1];
-        const ycRot = xyCRot[i][1];
-        const eci = ecg + (ycRot * fi);
-        mrx += (fc(eci, fcd, tipoCurvaC, ec2, ecu, n) * aci * yci) / 100;
-        mry += (fc(eci, fcd, tipoCurvaC, ec2, ecu, n) * aci * xci) / 100;
+        const eci = ecg + (xyCRot[i][1] * fi);
+        const sigC = fc(eci, params.fcd, params.tipoCurvaC, params.ec2, params.ecu, params.n);
+        mrx += (sigC * secaoC[i][2] * secaoC[i][1]) / 100;
+        mry += (sigC * secaoC[i][2] * secaoC[i][0]) / 100;
     }
-
+    // Steel moments
     for (let i = 0; i < secaoS.length; i++) {
-        const asi = secaoS[i][2];
-        const xsi = secaoS[i][0];
-        const ysi = secaoS[i][1];
-        const ysRot = xyAsRot[i][1];
-        const esi = ecg + (ysRot * fi);
-        mrx += (fs(esi, fyd, modEs, 10.0) * asi * ysi) / 100;
-        mry += (fs(esi, fyd, modEs, 10.0) * asi * xsi) / 100;
+        const esi = ecg + (xyAsRot[i][1] * fi);
+        const sigS = fs(esi, params.fyd, params.modEs, 10.0);
+        mrx += (sigS * secaoS[i][2] * secaoS[i][1]) / 100;
+        mry += (sigS * secaoS[i][2] * secaoS[i][0]) / 100;
     }
 
-    return [-mry, mrx];
+    return [-mry, mrx]; // Adjusted signs
 }
 
-
-function calculateMomentCurvature(pcalcData) {
-    const { config, esforcos, resultados, secao } = pcalcData;
+function calculateMomentCurvature(data) {
+    const { config, esforcos, resultados } = data;
     const { fck, fyk, gamaS, gamaC, modEs, tipoCurvaC, nGraficoMr } = config;
 
-    let n = 2.0;
-    let ec2 = 2.0;
-    let ecu = 3.5;
-    if (fck > 0.5) {
-        n = 1.4 + 23.4 * Math.pow(0.9 - fck, 4.0);
-        ec2 = Math.min(2.0 + 0.085 * Math.pow((100 * fck) - 50, 0.53), 2.6);
-        ecu = 2.6 + 35.0 * Math.pow(0.9 - fck, 4.0);
+    let n = 2.0, ec2 = 2.0, ecu = 3.5;
+    if (fck > 50) { // High strength concrete correction
+        const fck_eff = fck/100; 
+    }
+    // Using standard EC2/NBR params for <= C50
+    if (fck > 50) {
+            n = 1.4 + 23.4 * Math.pow((90 - fck) / 100, 4); 
+            ec2 = 2.0 + 0.085 * Math.pow(fck - 50, 0.53);
+            ecu = 2.6 + 35.0 * Math.pow((90 - fck) / 100, 4);
     }
 
     const fyd = fyk / gamaS;
     const fcd = fck / gamaC;
-    const { secaoC, secaoS } = resultados;
+    const params = { n, ec2, ecu, fyd, fcd, modEs, tipoCurvaC };
 
     const curvasMr = [];
-
     for (const esforco of esforcos.listaEsforcos) {
         const nd = esforco.n;
         const curvaMrI = [[], [], [], [], []];
-        const nGrafico = nGraficoMr + 1;
+        const nPoints = nGraficoMr; 
 
-        for (let j = 0; j < nGrafico; j++) {
-            const tetaLN = (j * 2 * Math.PI) / (nGrafico - 1);
+        for (let j = 0; j <= nPoints; j++) {
+            const tetaLN = (j * 2 * Math.PI) / nPoints;
+            const mr = calculaMr(nd, tetaLN, data, params);
             curvaMrI[0].push(nd);
             curvaMrI[1].push(tetaLN);
-
-            const mr = calculaMr(nd, tetaLN, pcalcData, { n, ec2, ecu, fyd, fcd, modEs, tipoCurvaC });
-            curvaMrI[2].push(mr[0]);
-            curvaMrI[3].push(mr[1]);
+            curvaMrI[2].push(mr[0]); // Mx capacity
+            curvaMrI[3].push(mr[1]); // My capacity
         }
         curvasMr.push(curvaMrI);
     }
-    pcalcData.resultados.curvasMr = curvasMr;
-    console.log('Moment-curvature curves calculated:', curvasMr);
+    data.resultados.curvasMr = curvasMr;
 }
 
-/**
- * Calcula os momentos de 2ª ordem pelo método do pilar-padrão com curvatura aproximada.
- * NBR 6118:2014 - Item 15.8.3.3.4
- * @param {number} nsd - Força normal de cálculo (compressão é negativa, em kN).
- * @param {number} h - Dimensão do pilar na direção considerada (em cm).
- * @param {Array<number>} md1 - Momentos de 1ª ordem [base, meio, topo] (em kNm).
- * @param {object} pcalcData - Objeto de dados principal.
- * @returns {Array<number>} Momentos totais (1ª + 2ª ordem) [base, meio, topo].
- */
-function calculateSecondOrderMoments(nsd, h, md1, pcalcData) {
-    const { config, secao, materiais } = pcalcData;
-    const { fck } = materiais;
-    const { gamaC } = config;
+function calculateSecondOrderMoments(nsd, h, md1, data) {
+    const { secao, materiais, config } = data;
     const { areaAc, lFlamb } = secao;
-
-    const md2 = [...md1]; // Inicia com os momentos de 1ª ordem
-
-    // 1. Cálculo da excentricidade de 2ª ordem (e2)
-    // e2 = (le^2 / 10) * (1/r)
-    const le = lFlamb * 100; // Comprimento de flambagem em cm
-
-    // 2. Cálculo da curvatura (1/r) - Eq. 15.20
-    // (1/r) = (ε_c / x)
-    // Para o método aproximado, a curvatura é estimada pela Eq. 15.23
-    const fcd = fck / gamaC;
-    const ni = Math.abs(nsd) / (areaAc * (fcd * 10)); // Adimensional (nsd em kN, areaAc em cm², fcd em MPa -> kN/cm²)
+    const fcd = materiais.fck / config.gamaC;
     
-    // Curvatura (1/r) conforme Eq. 15.23
-    // O fator 0.005/h é o valor máximo para a curvatura.
-    // O termo (ni + 0.5) reduz a curvatura para pilares com baixa compressão.
-    const invR = Math.min((0.005 / h) / (ni + 0.5), 0.005 / h);
+    // md1 = [Base, Mid, Top]
+    const md2 = [...md1];
+    const le = lFlamb * 100; 
 
-    // 3. Cálculo do momento de 2ª ordem (M2d)
-    // M2d = Nd * e2 = Nd * (le^2 / 10) * (1/r)
-    const m2d = Math.abs(nsd) * (le * le / 10) * invR; // Em kNm
+    // Adimensional normal force (ni)
+    // nsd is kN, areaAc cm2, fcd MPa -> need consistency.
+    // fcd MPa = fcd/10 kN/cm2
+    const ni = Math.abs(nsd) / (areaAc * (fcd/10));
+    
+    // Curvature 1/r
+    // 0.005/h (h in cm)
+    let invR = 0.005 / h;
+    const kr = Math.min(1, (ni + 0.5)); // Correction factor?
+    // Simplified standard method usually: 1/r = K * (0.005/h)
+    // Using provided logic:
+    invR = Math.min((0.005 / h) / (ni + 0.5), 0.005 / h);
 
-    // 4. Adiciona o momento de 2ª ordem ao momento de 1ª ordem no meio do pilar
-    // O sinal é adicionado para aumentar o momento de 1ª ordem.
+    // e2 = (le^2 / 10) * (1/r)
+    const m2d = Math.abs(nsd) * (le * le / 10) * invR; // kNm
+
+    // Add to middle moment
     if (md2[1] !== 0) {
         md2[1] += m2d * (md2[1] / Math.abs(md2[1]));
     } else {
-        // Se o momento no meio for zero, o momento de 2ª ordem é simplesmente adicionado.
-        // A norma não é explícita sobre o sinal, mas assume-se que ele age na direção mais desfavorável.
-        // Para um pilar birotulado com carga centrada, o momento de 1ª ordem é zero, mas o de 2ª não.
-        // Adotamos o valor absoluto.
         md2[1] = m2d;
     }
 
-    // 5. Verificação do momento mínimo (M1d,min) - Item 17.2.4.7.1
-    // M1d,min = Nd * (1.5 + 0.03 * h) em cm
-    const m1d_min = Math.abs(nsd) * (1.5 + 0.03 * h) / 100; // em kNm
+    // Min moment check
+    const m1d_min = Math.abs(nsd) * (1.5 + 0.03 * h) / 100; 
+    const final_mid = Math.max(Math.abs(md2[1]), m1d_min);
 
-    // O momento total deve ser, no mínimo, o momento de 1ª ordem acrescido do de 2ª,
-    // e também no mínimo o momento mínimo.
-    const momento_final_meio = Math.max(Math.abs(md2[1]), m1d_min);
-
-    // Retorna os momentos finais, ajustando o sinal do momento no meio
-    return [md1[0], momento_final_meio * (md1[1] !== 0 ? md1[1]/Math.abs(md1[1]) : 1), md1[2]];
+    return [md1[0], final_mid * (md1[1] !== 0 ? Math.sign(md1[1]) : 1), md1[2]];
 }
 
-
-function calculaMomento1Ord(mdTopo, mdBase, pcalcData) {
-    // ...
-    return [mdBase, (mdTopo+mdBase)/2, mdTopo]
+function calculaMomento1Ord(mdTopo, mdBase, data) {
+        // Simple linear interpolation / envelope
+        return [mdBase, (mdTopo + mdBase)/2, mdTopo];
 }
 
-
-function calculateEsforcos(pcalcData) {
-    const { config, esforcos, secao } = pcalcData;
-    const gamaF = 1.4; // Fator de ponderação para ações
-    const { tipoVinculacao } = secao;
-
-    const nsd = [];
-    const msxd = [];
-    const msyd = [];
-    const msxd2 = [];
-    const msyd2 = [];
-    const msdMin = [];
-
+function calculateEsforcos(data) {
+    const { config, esforcos, secao } = data;
+    const gamaF = 1.4;
+    
+    const nsd = [], msxd = [], msyd = [], msxd2 = [], msyd2 = [];
+    
     for (const esforco of esforcos.listaEsforcos) {
         const nsdI = gamaF * esforco.n;
         nsd.push(nsdI);
-
-        if (tipoVinculacao === 0) {
-            msxd.push([gamaF * esforco.mx]);
-            msyd.push([gamaF * esforco.my]);
-            msxd2.push(msxd[msxd.length - 1]);
-            msyd2.push(msyd[msyd.length - 1]);
+        
+        // Mx
+        const mxd1 = [gamaF * esforco.mx, gamaF * esforco.mx, gamaF * esforco.mx]; // Flat profile
+        msxd.push(mxd1);
+        
+        // My
+        const myd1 = [gamaF * esforco.my, gamaF * esforco.my, gamaF * esforco.my];
+        msyd.push(myd1);
+        
+        // 2nd Order
+        if (config.calcular2ord === 1 && nsdI < 0) {
+                msxd2.push(calculateSecondOrderMoments(nsdI, secao.hy, mxd1, data));
+                msyd2.push(calculateSecondOrderMoments(nsdI, secao.hx, myd1, data));
         } else {
-            const msxdTopoI = gamaF * esforco.mx;
-            const msxdBaseI = gamaF * esforco.mx; // Assuming same moment at base for now
-            msxd.push(calculaMomento1Ord(msxdTopoI, msxdBaseI, pcalcData));
-
-            if (config.calcular2ord === 1 && nsdI < 0 && config.metodoSegOrd === 1) {
-                msxd2.push(calculateSecondOrderMoments(nsdI, secao.hy, msxd[msxd.length - 1], pcalcData));
-            } else {
-                msxd2.push(msxd[msxd.length - 1]);
-            }
-
-            const msydTopoI = gamaF * -esforco.my;
-            const msydBaseI = gamaF * -esforco.my; // Assuming same moment at base for now
-            msyd.push(calculaMomento1Ord(msydTopoI, msydBaseI, pcalcData));
-
-            if (config.calcular2ord === 1 && nsdI < 0 && config.metodoSegOrd === 1) {
-                msyd2.push(calculateSecondOrderMoments(nsdI, secao.hx, msyd[msyd.length - 1], pcalcData));
-            } else {
-                msyd2.push(msyd[msyd.length - 1]);
-            }
+                msxd2.push(mxd1);
+                msyd2.push(myd1);
         }
     }
-
-    pcalcData.resultados.esforcos = {
-        nsd,
-        msxd,
-        msyd,
-        msxd2,
-        msyd2
-    };
-
-    console.log('Esforcos calculated:', pcalcData.resultados.esforcos);
+    
+    data.resultados.esforcos = { nsd, msxd, msyd, msxd2, msyd2 };
 }
 
-function calculaMomento2OrdP1(nsd, h, md1, pcalcData) {
-    const { config, secao } = pcalcData;
-    const { fcd } = config;
-    const { areaAc, lFlamb } = secao;
+// --- RENDERING ---
 
-    const md2 = [...md1];
-    const ni = Math.abs((nsd / areaAc) / fcd);
-    const invR = Math.min((0.005 / h) / (ni + 0.5), 0.005 / h);
-    if (md2[1] !== 0) {
-        md2[1] = md2[1] - (((((nsd * lFlamb) / 100) * lFlamb) / 100) / 10) * invR * (md2[1] / Math.abs(md2[1]));
+function renderChart(chartType = 'N-Mx') {
+    if (myChart) myChart.destroy();
+    const { curvasMr } = pcalcData.resultados;
+    if (!curvasMr || curvasMr.length === 0) return;
+
+    const datasets = [];
+    const dataSetIx = 0; // First load case for curve
+    const curve = curvasMr[dataSetIx];
+
+    // Safety check for calculation failures
+    if(!curve || !curve[2]) return;
+
+    // Interaction Curve (Capacity)
+    const capacityColor = chartType === 'N-Mx' ? 'rgba(239, 68, 68, 0.8)' : 'rgba(59, 130, 246, 0.8)';
+    const dataKeyX = chartType === 'N-Mx' ? 2 : 3; // Index in curve array
+    
+    const scatterData = curve[dataKeyX].map((val, i) => ({ x: val, y: curve[0][i] }));
+    // Close the loop
+    scatterData.push(scatterData[0]);
+
+    datasets.push({
+        label: `Capacity (${chartType})`,
+        data: scatterData,
+        borderColor: capacityColor,
+        backgroundColor: capacityColor.replace('0.8', '0.1'),
+        showLine: true,
+        pointRadius: 0,
+        borderWidth: 2,
+        fill: true
+    });
+
+    // Applied Load Point (Demand)
+    const { esforcos } = pcalcData.resultados;
+    const nsd = esforcos.nsd[0];
+    const msd = chartType === 'N-Mx' ? esforcos.msxd2[0][1] : esforcos.msyd2[0][1]; // Use mid-height moment (includes 2nd order)
+
+    datasets.push({
+        label: 'Applied Load (Md,tot)',
+        data: [{x: msd, y: nsd}],
+        backgroundColor: 'black',
+        borderColor: 'black',
+        pointRadius: 6,
+        pointStyle: 'crossRot'
+    });
+
+    myChart = new Chart(chartCanvas, {
+        type: 'scatter',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'Moment (kNm)' } },
+                y: { type: 'linear', title: { display: true, text: 'Axial Force (kN)' } }
+            },
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+function renderResultsTable() {
+    resultsTable.innerHTML = '';
+    const { esforcos } = pcalcData.resultados;
+    if(!esforcos || !esforcos.nsd) return;
+
+    for(let i=0; i<esforcos.nsd.length; i++) {
+        const row = resultsTable.insertRow();
+        row.className = "border-b border-gray-100 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700";
+        
+        row.innerHTML = `
+            <td class="p-2 text-center text-gray-700 dark:text-gray-300">Comb ${i+1}</td>
+            <td class="p-2 text-center font-mono text-gray-700 dark:text-gray-300">${esforcos.nsd[i].toFixed(1)}</td>
+            <td class="p-2 text-center font-mono text-gray-700 dark:text-gray-300">${esforcos.msxd2[i][1].toFixed(1)}</td>
+            <td class="p-2 text-center font-mono text-gray-700 dark:text-gray-300">${esforcos.msyd2[i][1].toFixed(1)}</td>
+            <td class="p-2 text-center"><span class="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs text-gray-700 dark:text-gray-300">View Graph</span></td>
+        `;
     }
-    return md2;
+}
+
+function renderCrossSection() {
+    const ctx = sectionCanvas.getContext('2d');
+    const container = document.getElementById('cross-section-container');
+    sectionCanvas.width = container.clientWidth;
+    sectionCanvas.height = container.clientHeight;
+    
+    const w = sectionCanvas.width;
+    const h = sectionCanvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    const { hx, hy } = pcalcData.secao;
+    const margin = 40;
+    
+    // Scale to fit
+    const scaleX = (w - margin*2) / hx;
+    const scaleY = (h - margin*2) / hy;
+    const scale = Math.min(scaleX, scaleY);
+    
+    const cx = w/2;
+    const cy = h/2;
+
+    // Draw Concrete Elements (Discretized)
+    const { secaoC } = pcalcData.resultados;
+    if (secaoC && secaoC.length > 0) {
+        ctx.fillStyle = '#e5e7eb'; // gray-200
+        ctx.strokeStyle = '#d1d5db'; // gray-300
+        
+        // Draw outline first (simplified box for rect)
+        ctx.beginPath();
+        ctx.rect(cx - (hx*scale)/2, cy - (hy*scale)/2, hx*scale, hy*scale);
+        ctx.stroke();
+
+    } else {
+            // Draw simple outline if not calculated yet
+            ctx.strokeStyle = '#9ca3af';
+            ctx.strokeRect(cx - (hx*scale)/2, cy - (hy*scale)/2, hx*scale, hy*scale);
+    }
+
+    // Draw Rebar
+    const { barras } = pcalcData.armacao;
+    if (barras) {
+        ctx.fillStyle = '#ef4444'; // red-500
+        for (let b of barras) {
+            // bar coords are from bottom-left (0,0) usually in engineering
+            // Screen coords: x goes right, y goes down.
+            // Let's assume input x,y is from bottom-left of section.
+            
+            const bx = (b.x - hx/2) * scale + cx;
+            const by = cy - (b.y - hy/2) * scale; // Flip Y
+            
+            // Diameter in mm, converted to canvas pixels (scale is px/cm)
+            const radius = (b.diametro / 10 / 2) * scale; 
+            
+            ctx.beginPath();
+            ctx.arc(bx, by, Math.max(radius, 3), 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#7f1d1d';
+            ctx.stroke();
+        }
+    }
+    
+    // Hide placeholder
+    document.getElementById('canvas-placeholder').style.display = 'none';
 }
 
 
-// ... (other calculation functions will be added here)
+// --- EVENT HANDLERS ---
+
+document.addEventListener('DOMContentLoaded', () => {
+    // --- TEMPLATE INJECTION (Header/Footer) ---
+    if (window.injectHeader) {
+        window.injectHeader({
+            activePage: 'pcalc', 
+            pageTitle: 'pcalc_title',
+            headerPlaceholderId: 'header-placeholder',
+            pathPrefix: '../' 
+        });
+    }
+    if (window.injectFooter) {
+        window.injectFooter({
+            footerPlaceholderId: 'footer-placeholder'
+        });
+    }
+
+    updateGeometry();
+    updateMaterials();
+    renderReinforcement();
+    renderLoads();
+    
+    // Initial simplistic render of section
+    renderCrossSection();
+
+    calculateBtn.addEventListener('click', () => {
+        const msg = document.getElementById('feedback-message');
+        if (pcalcData.esforcos.listaEsforcos.length === 0) {
+            msg.textContent = 'Please add a load case.';
+            msg.className = 'text-center h-5 text-red-600 dark:text-red-400';
+            return;
+        }
+        msg.textContent = 'Calculating...';
+        msg.className = 'text-center h-5 text-blue-600 dark:text-blue-400';
+
+        // Allow UI to update
+        setTimeout(() => {
+            try {
+                updateGeometry();
+                discretizeSection(pcalcData);
+                renderCrossSection(); // Update visual with scale
+                calculateMomentCurvature(pcalcData);
+                calculateEsforcos(pcalcData);
+                renderChart('N-Mx');
+                renderResultsTable();
+                msg.textContent = 'Calculation Complete.';
+                msg.className = 'text-center h-5 text-green-600 dark:text-green-400';
+            } catch (e) {
+                console.error(e);
+                msg.textContent = 'Error in calculation. Check console.';
+                msg.className = 'text-center h-5 text-red-600 dark:text-red-400';
+            }
+        }, 50);
+    });
+
+    nmxBtn.addEventListener('click', () => renderChart('N-Mx'));
+    nmyBtn.addEventListener('click', () => renderChart('N-My'));
+    nmxmyBtn.addEventListener('click', () => renderChart('N-Mx')); 
+
+    // Inputs
+    geometryForm.addEventListener('input', () => { updateGeometry(); renderCrossSection(); });
+    addBarBtn.addEventListener('click', () => { addBar(); renderCrossSection(); });
+    reinforcementTable.addEventListener('input', (e) => { updateReinforcement(e); renderCrossSection(); });
+    reinforcementTable.addEventListener('click', (e) => { removeBar(e); renderCrossSection(); });
+    
+    addLoadBtn.addEventListener('click', addLoad);
+    loadsTable.addEventListener('input', updateLoads);
+    loadsTable.addEventListener('click', removeLoad);
+});
