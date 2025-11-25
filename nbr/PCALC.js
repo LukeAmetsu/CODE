@@ -134,7 +134,12 @@ function renderChart(chartType = 'N-Mx') {
         }
     };
 
-    myChart = new Chart(chartCanvas, config);
+    // Ensure Chart.js is loaded
+    if (typeof Chart !== 'undefined') {
+        myChart = new Chart(chartCanvas, config);
+    } else {
+        console.error('Chart.js library is not loaded.');
+    }
 }
 
 function renderResults() {
@@ -247,7 +252,27 @@ function removeLoad(event) {
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
     console.log('PCalc Web App Initialized');
-    // Initial UI update can go here
+    
+    // --- INJECT HEADER & FOOTER ---
+    // This loads the navigation bar from template-loader.js
+    if (window.injectHeader) {
+        window.injectHeader({
+            activePage: 'pcalc', // Highlight this page in nav
+            pageTitle: 'pcalc_title',
+            headerPlaceholderId: 'header-placeholder',
+            pathPrefix: '../' // Go up one level to find js/ folder
+        });
+    } else {
+        console.error('injectHeader function not found. Check template.js loading.');
+    }
+
+    if (window.injectFooter) {
+        window.injectFooter({
+            footerPlaceholderId: 'footer-placeholder'
+        });
+    }
+
+    // Initial UI update
     updateGeometry();
     updateMaterials();
     renderReinforcement();

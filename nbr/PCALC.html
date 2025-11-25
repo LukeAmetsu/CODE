@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="pcalc_title">PCalc - Concrete Column Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
-        // Immediate theme application
         (function() {
             if (localStorage.getItem('theme') === 'dark' || 
                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -22,11 +21,14 @@
     <link rel="stylesheet" href="../styles.min.css">
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
+    <!-- CORRIGIDO: Aponta para template.js conforme confirmado -->
     <script src="../js/template.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300">
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <!-- Placeholder para o Header -->
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
         <main id="pcalc-app" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -37,20 +39,29 @@
                     <form id="geometry-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label for="section-type" class="block text-sm font-medium mb-1" data-i18n="pcalc_section_type">Section Type</label>
-                            <select id="section-type" name="section-type">
+                            <select id="section-type" name="section-type" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600">
                                 <option value="Retangular">Rectangular</option>
                                 <option value="Circular">Circular</option>
                             </select>
                         </div>
-                        <div><label for="hx" class="block text-sm font-medium mb-1">hx (cm)</label><input type="number" id="hx" name="hx" value="30"></div>
-                        <div><label for="hy" class="block text-sm font-medium mb-1">hy (cm)</label><input type="number" id="hy" name="hy" value="50"></div>
+                        <div>
+                            <label for="hx" class="block text-sm font-medium mb-1">hx (cm)</label>
+                            <input type="number" id="hx" name="hx" value="30" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600">
+                        </div>
+                        <div>
+                            <label for="hy" class="block text-sm font-medium mb-1">hy (cm)</label>
+                            <input type="number" id="hy" name="hy" value="50" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600">
+                        </div>
                     </form>
                 </div>
 
                 <div class="form-section">
                     <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_materials">Materials</h2>
                     <form id="materials-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><label for="fck" class="block text-sm font-medium mb-1">fck (MPa)</label><input type="number" id="fck" name="fck" value="25"></div>
+                        <div>
+                            <label for="fck" class="block text-sm font-medium mb-1">fck (MPa)</label>
+                            <input type="number" id="fck" name="fck" value="25" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:border-gray-600">
+                        </div>
                     </form>
                 </div>
 
@@ -59,18 +70,18 @@
                     <form id="reinforcement-form">
                         <div class="overflow-x-auto">
                             <table id="reinforcement-table" class="w-full text-sm text-left">
-                                <thead>
+                                <thead class="bg-gray-100 dark:bg-gray-700">
                                     <tr>
-                                        <th class="px-4 py-2">x (cm)</th>
+                                        <th class="px-4 py-2 rounded-tl-lg">x (cm)</th>
                                         <th class="px-4 py-2">y (cm)</th>
                                         <th class="px-4 py-2">Diameter (mm)</th>
-                                        <th class="px-4 py-2"></th>
+                                        <th class="px-4 py-2 rounded-tr-lg"></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
-                        <button type="button" id="add-bar-btn" class="mt-4" data-i18n="pcalc_add_bar">+ Add Bar</button>
+                        <button type="button" id="add-bar-btn" class="mt-4 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium" data-i18n="pcalc_add_bar">+ Add Bar</button>
                     </form>
                 </div>
 
@@ -79,59 +90,64 @@
                     <form id="loads-form">
                         <div class="overflow-x-auto">
                             <table id="loads-table" class="w-full text-sm text-left">
-                                <thead>
+                                <thead class="bg-gray-100 dark:bg-gray-700">
                                     <tr>
-                                        <th class="px-4 py-2">N (kN)</th>
+                                        <th class="px-4 py-2 rounded-tl-lg">N (kN)</th>
                                         <th class="px-4 py-2">Mx (kNm)</th>
                                         <th class="px-4 py-2">My (kNm)</th>
-                                        <th class="px-4 py-2"></th>
+                                        <th class="px-4 py-2 rounded-tr-lg"></th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
                             </table>
                         </div>
-                        <button type="button" id="add-load-btn" class="mt-4" data-i18n="pcalc_add_load">+ Add Load</button>
+                        <button type="button" id="add-load-btn" class="mt-4 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium" data-i18n="pcalc_add_load">+ Add Load</button>
                     </form>
                 </div>
-                 <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_config">Calculation Settings</h2>
-                    <!-- Add settings inputs here if needed -->
-                </div>
 
-                <div class="flex justify-center items-center gap-4 mt-4">
-                    <button id="new-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">New</button>
-                    <button id="open-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Open</button>
-                    <button id="save-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Save</button>
-                    <button id="calculate-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700" data-i18n="pcalc_calculate">Calculate</button>
-                    <button id="pdf-btn" class="bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700">Generate PDF</button>
+                <!-- Feedback Message Container -->
+                <div id="feedback-message" class="text-center h-5"></div>
+
+                <div class="flex flex-wrap justify-center items-center gap-4 mt-4">
+                    <button id="new-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">New</button>
+                    <button id="open-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">Open</button>
+                    <button id="save-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">Save</button>
+                    <button id="calculate-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg" data-i18n="pcalc_calculate">Calculate</button>
+                    <button id="pdf-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">PDF</button>
                 </div>
             </div>
 
             <!-- Right Panel: Results -->
             <div class="flex flex-col gap-6">
-                <div class="form-section">
+                <!-- Seção de Canvas para desenho da seção transversal (Placeholder) -->
+                <div class="form-section hidden">
                     <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_cross_section">Cross Section</h2>
-                    <div id="cross-section-canvas" class="min-h-[300px] bg-gray-100 dark:bg-gray-800 rounded-md"></div>
-                </div>
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4">Results</h2>
-                    <div class="flex flex-wrap items-center gap-4 mb-4">
-                        <button id="nmxmy-btn" class="text-sm font-medium">N-Mx-My</button>
-                        <button id="nmx-btn" class="text-sm font-medium">N-Mx</button>
-                        <button id="nmy-btn" class="text-sm font-medium">N-My</button>
+                    <div id="cross-section-canvas" class="min-h-[300px] bg-gray-100 dark:bg-gray-800 rounded-md flex items-center justify-center text-gray-400">
+                        Cross Section View (Coming Soon)
                     </div>
-                    <div class="relative h-96">
+                </div>
+
+                <div class="form-section">
+                    <h2 class="text-xl font-bold mb-4">Interaction Diagram</h2>
+                    <div class="flex flex-wrap items-center gap-2 mb-4">
+                        <button id="nmxmy-btn" class="px-3 py-1 text-sm font-medium bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600">N-Mx-My</button>
+                        <button id="nmx-btn" class="px-3 py-1 text-sm font-medium bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600">N-Mx</button>
+                        <button id="nmy-btn" class="px-3 py-1 text-sm font-medium bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600">N-My</button>
+                    </div>
+                    <div class="relative h-96 w-full">
                         <canvas id="myChart"></canvas>
                     </div>
-                    <div class="mt-6 overflow-x-auto">
+                    
+                    <h3 class="text-lg font-bold mt-6 mb-2">Calculation Results</h3>
+                    <div class="overflow-x-auto">
                         <table id="results-table" class="w-full text-sm text-left">
-                            <thead>
+                            <thead class="bg-gray-100 dark:bg-gray-700">
                                 <tr>
-                                    <th class="px-4 py-2">Comb.</th>
+                                    <th class="px-4 py-2 rounded-tl-lg">Comb.</th>
                                     <th class="px-4 py-2">Nsd (kN)</th>
                                     <th class="px-4 py-2">Msd,x (kNm)</th>
                                     <th class="px-4 py-2">Msd,y (kNm)</th>
-                                    <th class="px-4 py-2">F.S.</th>
+                                    <th class="px-4 py-2 rounded-tr-lg">F.S.</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -143,6 +159,7 @@
 
         <div id="footer-placeholder"></div>
     </div>
-<script src="PCALC.js"></script>
+    <!-- Script principal da aplicação -->
+    <script src="PCALC.js"></script>
 </body>
 </html>

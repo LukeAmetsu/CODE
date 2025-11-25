@@ -26,7 +26,6 @@
                 { "key": "viga-concreto", "href": "nbr/nbr 6118 concreto.html", "textKey": "concrete_beam" },
                 { "key": "viga-protendida", "href": "nbr/viga_protendida.html", "textKey": "prestressed_beam" },
                 { "key": "nbr-aco", "href": "nbr/nbr 8080 estruturas de aço.html", "textKey": "steel" },
-                { "key": "nbr-madeira", "href": "nbr/nbr 7190 madeira.html", "textKey": "wood" },
                 { "key": "pcalc", "href": "nbr/PCALC.html", "textKey": "pcalc" },
                 { "key": "mn-diagram", "href": "nbr/M-N.html", "textKey": "mn_diagram" }
             ]
