@@ -1,9 +1,339 @@
-// ===================================================================================
-// Shared Utility Functions
-// This file contains functions and utilities used across multiple calculation pages.
-// ===================================================================================
+/**
+ * Shared Utilities for Engineering Calculators
+ * Contains the core logic for handling calculator state, events, and reporting.
+ */
 
-// Global function definitions (Ensuring global access as per standard JS practices in HTML pages)
+// --- USER PROVIDED HANDLER ---
+
+function createCalculationHandler(config) { // This is the function being called
+    const {
+        inputIds,
+        gatherInputsFunction,
+        storageKey,
+        validationRuleKey,
+        calculatorFunction,
+        renderFunction,
+        resultsContainerId,
+        validatorFunction,
+        feedbackElId = 'feedback-message',
+        buttonId
+    } = config;
+
+    // Automatically highlight required fields for this calculator when it's created.
+    if (validationRuleKey) {
+        highlightRequiredFields(validationRuleKey);
+    } else {
+        // Add a console warning if the key is missing, as it's crucial for validation and report functionality.
+        console.warn(`[createCalculationHandler] A 'validationRuleKey' não foi fornecida na configuração. A validação de entrada e os botões de relatório (Copiar, PDF, etc.) não funcionarão.`);
+    }
+
+    return async function() { // This function is already async, which is good.
+        console.log(`[${validationRuleKey}] Calculation triggered.`);
+        // --- 1. SETUP & GATHER INPUTS ---
+        if (buttonId) setLoadingState(true, buttonId);
+        showFeedback('Gathering inputs...', false, feedbackElId);
+
+        // Use the provided gather function or the default one.
+        console.log(`[${validationRuleKey}] Gathering inputs...`);
+        const inputs = typeof gatherInputsFunction === 'function'
+            ? gatherInputsFunction()
+            : gatherInputsFromIds(inputIds);
+
+        // Log the gathered inputs for debugging
+        console.log(`[${validationRuleKey}] Gathered inputs:`, inputs);
+
+
+        // --- 2. VALIDATE INPUTS ---
+        showFeedback('Validating inputs...', false, feedbackElId);
+        // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
+        console.log(`[${validationRuleKey}] Validating inputs...`);
+        await Promise.resolve();
+
+        // Use the custom validator if provided, otherwise use the default.
+        let validation;
+        if (typeof validatorFunction === 'function') {
+            validation = validatorFunction(inputs);
+        } else {
+            // Access validationRules from the global scope (provided by validation-rules.js)
+            const rules = window.validationRules ? validationRules[validationRuleKey] : {};
+            // Assuming validateInputs is available globally (from validation-rules.js)
+            if (typeof validateInputs === 'function') {
+                // Fix: validateInputs expects an array of input IDs, not the inputs object.
+                // We use Object.keys(inputs) to pass the list of field IDs.
+                validation = validateInputs(Object.keys(inputs), rules);
+            } else {
+                console.error("The function 'validateInputs' is not available. Check script loading order.");
+                validation = { errors: ["Validation function is missing."], warnings: [] };
+            }
+        }
+
+        const resultsContainer = document.getElementById(resultsContainerId);
+        // Gracefully exit if the results container doesn't exist.
+        if (!resultsContainer) {
+            console.error(`Results container with ID "${resultsContainerId}" not found.`);
+            if (buttonId) setLoadingState(false, buttonId);
+            return;
+        }
+
+        if (validation.errors && validation.errors.length > 0) {
+            renderValidationResults(validation, resultsContainer);
+            console.error(`[${validationRuleKey}] Validation failed. Errors:`, validation.errors);
+            showFeedback('Validation failed. Please correct the errors.', true, feedbackElId);
+            if (buttonId) setLoadingState(false, buttonId);
+            return;
+        }
+
+        // --- 3. PERFORM CALCULATION ---
+        showFeedback('Running calculation...', false, feedbackElId);
+        console.log(`[${validationRuleKey}] Performing calculation...`);
+        await Promise.resolve();
+
+        const calculationResult = safeCalculation(
+            () => calculatorFunction(inputs, validation),
+            'An unexpected error occurred during calculation'
+        );
+
+        // --- 4. RENDER RESULTS ---
+        if (calculationResult.error) {
+            console.error(`[${validationRuleKey}] Calculation error:`, calculationResult.error);
+            renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
+            showFeedback('Calculation failed.', true, feedbackElId);
+        } else {
+            console.log(`[${validationRuleKey}] Calculation successful. Rendering results...`);
+            showFeedback('Rendering results...', false, feedbackElId);
+            await Promise.resolve();
+
+            saveInputsToLocalStorage(storageKey, inputs, '1.1');
+            console.log(`[${validationRuleKey}] About to call renderFunction.`);
+            renderFunction(calculationResult, inputs);
+
+            console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
+            // Find the report content element ID, assuming it follows the pattern `${pageKey}-report-content`
+            // or is the first element inside the results container with a specific ID.
+            const reportContentElement = resultsContainer.querySelector('[id$="-report-content"], .report-section-copyable');
+            let reportContentId = reportContentElement ? reportContentElement.id : resultsContainerId;
+            
+            // If the render function uses the ReportBuilder, the ID should be passed in.
+            // For safety, we use the container ID if the internal report ID can't be found, 
+            // but this relies on the render function correctly outputting the element.
+
+            attachReportEventListeners(resultsContainerId, {
+                // Pass the containerId (where the ReportBuilder renders) for delegation, and the internal reportId for copy/download
+                reportId: reportContentId, 
+                filenamePrefix: `${validationRuleKey || 'report'}-Report`,
+                onSendToCombos: config.onSendToCombos,
+                toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
+            });
+            
+            console.log(`[${validationRuleKey}] Event listeners attached to container #${resultsContainerId}. Targetting report content ID: #${reportContentId}`);
+            showFeedback('Calculation complete!', false, feedbackElId);
+        }
+
+        if (buttonId) setLoadingState(false, buttonId);
+    };
+}
+
+// --- HELPER FUNCTIONS REQUIRED BY HANDLER ---
+
+/**
+ * Gathers values from a list of input IDs.
+ */
+function gatherInputsFromIds(ids) {
+    const inputs = {};
+    if (!ids || !Array.isArray(ids)) return inputs;
+
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.type === 'checkbox') {
+                inputs[id] = el.checked;
+            } else if (el.type === 'number') {
+                inputs[id] = parseFloat(el.value);
+            } else {
+                inputs[id] = el.value;
+            }
+        }
+    });
+    return inputs;
+}
+
+/**
+ * Highlights required fields in the UI based on validation rules.
+ */
+function highlightRequiredFields(key) {
+    if (!window.validationRules || !window.validationRules[key]) return;
+    const rules = window.validationRules[key];
+    
+    // Simple implementation: find labels for required fields and add a class or marker
+    Object.keys(rules).forEach(fieldId => {
+        if (rules[fieldId].required) {
+            const input = document.getElementById(fieldId);
+            if (input) {
+                // Find associated label (assuming standard label + input structure)
+                const label = document.querySelector(`label[for="${fieldId}"]`);
+                if (label) {
+                    label.classList.add('required-field');
+                    if (!label.innerHTML.includes('*')) {
+                        label.innerHTML += ' <span style="color:red">*</span>';
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Updates the loading state of the calculation button.
+ */
+function setLoadingState(isLoading, buttonId) {
+    const btn = document.getElementById(buttonId);
+    if (!btn) return;
+    
+    if (isLoading) {
+        btn.disabled = true;
+        btn.dataset.originalText = btn.textContent;
+        btn.textContent = 'Calculating...';
+        btn.classList.add('loading');
+    } else {
+        btn.disabled = false;
+        if (btn.dataset.originalText) {
+            btn.textContent = btn.dataset.originalText;
+        }
+        btn.classList.remove('loading');
+    }
+}
+
+/**
+ * Shows a feedback message to the user.
+ */
+function showFeedback(message, isError, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    el.textContent = message;
+    el.className = isError ? 'feedback-error' : 'feedback-success';
+    el.style.display = 'block';
+    
+    // Auto-hide success messages after 3 seconds
+    if (!isError) {
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => { 
+                el.style.display = 'none'; 
+                el.style.opacity = '1'; 
+            }, 500);
+        }, 3000);
+    }
+}
+
+/**
+ * Renders validation errors into the results container.
+ */
+function renderValidationResults(validation, container) {
+    if (!container) return;
+    
+    let html = '<div class="validation-summary error-box">';
+    html += '<h4>Please correct the following errors:</h4><ul>';
+    
+    if (validation.errors) {
+        validation.errors.forEach(err => {
+            html += `<li>${err}</li>`;
+        });
+    }
+    
+    html += '</ul></div>';
+    container.innerHTML = html;
+}
+
+/**
+ * Safely executes the calculation function.
+ */
+function safeCalculation(func, errorMessage) {
+    try {
+        return func();
+    } catch (e) {
+        console.error(e);
+        return { error: errorMessage + ': ' + e.message };
+    }
+}
+
+/**
+ * Saves input values to localStorage.
+ */
+function saveInputsToLocalStorage(key, inputs, version) {
+    if (!key) return;
+    try {
+        const data = {
+            version: version,
+            timestamp: new Date().toISOString(),
+            inputs: inputs
+        };
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Failed to save to localStorage:', e);
+    }
+}
+
+/**
+ * Attaches event listeners for report actions (Copy, PDF, etc.).
+ * Assumes buttons might exist within the rendered report or outside it.
+ */
+function attachReportEventListeners(containerId, options) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Delegate click events for report actions
+    container.addEventListener('click', (e) => {
+        if (e.target.matches('.btn-copy-report')) {
+            copyReportToClipboard(options.reportId);
+        } else if (e.target.matches('.btn-print-report')) {
+            printReport(options.reportId);
+        } else if (e.target.matches('.toggle-details')) {
+            // Handle show/hide details logic if implemented
+            const details = e.target.nextElementSibling;
+            if (details && details.classList.contains('details-content')) {
+                details.style.display = details.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+    });
+}
+
+// Stub for clipboard copying
+function copyReportToClipboard(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) {
+        console.warn('Report element not found for copying.');
+        return;
+    }
+    
+    // Create a temporary textarea to copy text
+    const textarea = document.createElement('textarea');
+    textarea.value = el.innerText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        alert('Report copied to clipboard!');
+    } catch (err) {
+        console.error('Failed to copy report:', err);
+    }
+    document.body.removeChild(textarea);
+}
+
+// Stub for printing
+function printReport(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write('<html><head><title>Print Report</title>');
+    // Include styles if necessary
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(el.innerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+}
 
 /**
  * Retrieves the numeric value of an input element by its ID.
@@ -117,42 +447,6 @@ function applyThemeFromLocalStorage() {
 
     // Atualiza ícones se o botão já existir
     updateThemeIcons(isDark ? 'dark' : 'light');
-}
-
-/**
- * Adds a visual indicator (e.g., a red asterisk) to the labels of required input fields.
- * It reads the validation rules and applies a specific CSS class to the corresponding labels.
- * @param {string} validationRuleKey - The key for the calculator in the `validationRules` object (e.g., 'wind', 'aci_concrete').
- */
-function highlightRequiredFields(validationRuleKey) {
-    // Check if the validationRules object is available globally (provided by validation-rules.js)
-    if (!window.validationRules || !validationRules[validationRuleKey]) {
-        return;
-    }
-    const rules = validationRules[validationRuleKey];
-    for (const inputId in rules) {
-        // Skip crossField rules
-        if (inputId === 'crossField') continue;
-
-        const rule = rules[inputId];
-        
-        let isRequired = false;
-        if (typeof rule.required === 'function') {
-             // We can't fully evaluate conditional required here without all inputs,
-             // so we assume it might be required if it's a function or explicitly true.
-             isRequired = true; 
-        } else {
-             isRequired = !!rule.required;
-        }
-
-        if (isRequired) {
-            const label = document.querySelector(`label[for="${inputId}"]`);
-            if (label) {
-                // Use a class to style the required indicator (e.g., adding a red asterisk in CSS)
-                label.classList.add('label-required'); 
-            }
-        }
-    }
 }
 
 /**
@@ -288,21 +582,6 @@ function initializeBackToTopButton() {
 }
 
 /**
- * Wraps a calculation function in a try-catch block to prevent crashes.
- * @param {function} calcFunction - The function to execute.
- * @param {string} errorMessage - A user-friendly error message.
- * @returns The result of the function or an error object.
- */
-function safeCalculation(calcFunction, errorMessage) {
-    try {
-        return calcFunction();
-    } catch (error) {
-        console.error(errorMessage, error);
-        return { error: errorMessage, success: false };
-    }
-}
-
-/**
  * Creates a debounced function that delays invoking `func` until after `wait` milliseconds have elapsed.
  * @param {function} func - The function to debounce.
  * @param {number} wait - The number of milliseconds to delay.
@@ -318,62 +597,6 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
-}
-
-/**
- * Toggles the loading state of a button, showing a spinner and disabling it.
- * @param {boolean} isLoading - Whether to show the loading state.
- * @param {string} buttonId - The ID of the button to update.
- */
-function setLoadingState(isLoading, buttonId) {
-    const button = document.getElementById(buttonId);
-    if (!button) return;
-
-    if (isLoading) {
-        if (!button.dataset.originalText) button.dataset.originalText = button.innerHTML;
-        button.disabled = true;
-        button.innerHTML = `<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Calculating...</span>`;
-    } else {
-        if (button.dataset.originalText) button.innerHTML = button.dataset.originalText;
-        button.disabled = false;
-    }
-}
-
-/**
- * Renders validation errors and warnings into an HTML string.
- * @param {{errors?: string[], warnings?: string[]}} validation - The validation result object.
- * @param {HTMLElement} [container] - Optional. The container element to set the innerHTML of.
- * @returns {string} - The generated HTML string.
- */
-function renderValidationResults(validation, container) {
-    let html = '';
-    if (validation.errors && validation.errors.length > 0) {
-        html += `
-            <div class="validation-message error">
-                <div class="flex">
-                    <div class="flex-shrink-0"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg></div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-bold">Input Errors Found:</h3>
-                        <div class="mt-2 text-sm"><ul class="list-disc list-inside space-y-1">${validation.errors.map(e => `<li>${e}</li>`).join('')}</ul></div>
-                        <p class="mt-2 text-sm">Please correct the errors and run the check again.</p>
-                    </div>
-                </div>
-            </div>`;
-    }
-    if (validation.warnings && validation.warnings.length > 0) {
-        html += `
-            <div class="validation-message warning">
-                <div class="flex">
-                    <div class="flex-shrink-0"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.257 3.099c.636-1.026 2.287-1.026 2.923 0l5.625 9.075A1.75 1.75 0 0115.25 15H4.75a1.75 1.75 0 01-1.555-2.826l5.625-9.075zM9 9a1 1 0 011-1h.01a1 1 0 010 2H10a1 1 0 01-1-1zm1 2a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" /></svg></div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-bold">Warnings:</h3>
-                        <div class="mt-2 text-sm"><ul class="list-disc list-inside space-y-1">${validation.warnings.map(w => `<li>${w}</li>`).join('')}</ul></div>
-                    </div>
-                </div>
-            </div>`;
-    }
-    if (container) container.innerHTML = html;
-    return html;
 }
 
 /**
@@ -394,20 +617,6 @@ function sanitizeHTML(str) {
         "'": '&#039;'
     };
     return str.replace(/[&<>"']/g, (m) => map[m]);
-}
-
-/**
- * Displays a temporary feedback message to the user.
- * @param {string} message - The message to display.
- * @param {boolean} [isError=false] - If true, displays the message as an error.
- * @param {string} [feedbackElId='feedback-message'] - The ID of the feedback element.
- */
-function showFeedback(message, isError = false, feedbackElId = 'feedback-message') {
-    const feedbackEl = document.getElementById(feedbackElId);
-    if (!feedbackEl) return;
-    feedbackEl.textContent = message;
-    feedbackEl.className = `text-center mt-2 text-sm h-5 ${isError ? 'text-red-600' : 'text-green-600'}`;
-    setTimeout(() => { feedbackEl.textContent = ''; }, 3000);
 }
 
 /**
@@ -863,32 +1072,6 @@ function handleDownloadCsv(reportId, filename, feedbackElId = 'feedback-message'
     link.setAttribute("download", filename);
     link.click();
 }
-/**
- * Gathers values from a list of input IDs.
- * @param {string[]} inputIds - An array of input element IDs.
- * @returns {Object} An object with keys as input IDs and values as their values.
- */
-function gatherInputsFromIds(inputIds) { // Updated for better validation
-    const inputs = {};
-    inputIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            let value;
-            if (el.type === 'number') {
-                value = parseFloat(el.value) || 0; // Default to 0 if parsing fails
-                inputs[id] = value;
-            } else if (el.type === 'checkbox') {
-                inputs[id] = el.checked;
-            } else {
-                inputs[id] = el.value || ''; // Ensure we don't get undefined
-            }
-        } else {
-            // Provide default for missing elements
-            inputs[id] = '';
-        }
-    });
-    return inputs;
-}
 
 /**
  * Saves a given data object to a text file.
@@ -1004,24 +1187,6 @@ function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-
 }
 
 /**
- * Saves a key-value pair to the browser's local storage.
- * @param {string} storageKey - The key to use for storing the data.
- * @param {object} inputs - The input data object to be stringified and saved.
- */
-function saveInputsToLocalStorage(storageKey, inputs, appVersion = '1.0') {
-    try {
-        const dataToSave = {
-            _version: appVersion,
-            ...inputs
-        };
-        const dataStr = JSON.stringify(dataToSave);
-        localStorage.setItem(storageKey, dataStr);
-    } catch (error) {
-        console.error('Could not save inputs to local storage:', error);
-    }
-}
-
-/**
  * Loads and applies saved inputs from local storage.
  * @param {string} storageKey - The key to retrieve data from.
  * @param {string[]} inputIds - An array of input element IDs to populate.
@@ -1127,33 +1292,27 @@ async function initializeApp(config) { // This function is already async
         await i18n.initialize();
     }
 
-    // --- 1. Discover Page and Inject Header/Footer (CORREÇÃO DE PATH AQUI) ---
-    const path = window.location.pathname;
-    const pageName = decodeURIComponent(path.substring(path.lastIndexOf('/') + 1));
-    
-    // Determine the path prefix based on the number of directories to step up.
-    const dirPath = path.substring(0, path.lastIndexOf('/') + 1); // e.g., /BASE/CODE-2/asce/
-    const pathSegments = dirPath.split('/').filter(s => s.length > 0);
-    
-    // We assume the 'js' folder is located in the CODE-2/ root.
-    let depthFromCode2 = 0;
-    const projectRootMarker = 'CODE-2';
-    const rootIndex = pathSegments.findIndex(s => s.toLowerCase() === projectRootMarker.toLowerCase());
-    
-    if (rootIndex !== -1) {
-        // Number of levels to step up is the count of directories *after* the CODE-2 folder.
-        // e.g., ['BASE', 'CODE-2', 'asce'] -> rootIndex=1. depth = 3 - 2 = 1. (Need '../')
-        depthFromCode2 = pathSegments.length - (rootIndex + 1);
-    } 
-
-    let pathPrefix = '';
-    if (depthFromCode2 > 0) {
-        // Construct '../' path components (e.g., '../', '../../')
-        pathPrefix = Array(depthFromCode2).fill('..').join('/') + '/';
-    } else {
-        pathPrefix = './'; // Root level (index.html, or if CODE-2 is the base path)
+    // --- 1. Discover Page and Inject Header/Footer ---
+    // ROBUST PATH PREFIX DETECTION
+    // We derive the path prefix by looking at how shared-utils.js itself was loaded.
+    // This avoids complex directory counting and works for any nesting level or folder name.
+    let pathPrefix = './'; // Default fallback
+    const scriptEl = document.querySelector('script[src*="shared-utils.js"]');
+    if (scriptEl) {
+        const src = scriptEl.getAttribute('src'); // e.g., "../js/shared-utils.js"
+        // We assume the structure is always [prefix]js/shared-utils.js
+        const match = src.match(/(.*)js\/shared-utils\.js/);
+        if (match && match[1]) {
+            pathPrefix = match[1]; // e.g., "../" or "./" or ""
+        } else if (src.includes('shared-utils.js')) {
+             // Fallback if 'js/' isn't explicitly in the src (e.g. flat structure)
+             // We just strip the filename
+             pathPrefix = src.replace('shared-utils.js', '');
+        }
     }
 
+    const path = window.location.pathname;
+    const pageName = decodeURIComponent(path.substring(path.lastIndexOf('/') + 1));
     const navConfigPath = `${pathPrefix}js/nav-config.json`;
 
     let navConfig;
@@ -1161,7 +1320,7 @@ async function initializeApp(config) { // This function is already async
         const response = await fetch(navConfigPath);
         // Check if response is okay before attempting to parse JSON
         if (!response.ok) {
-             throw new Error(`HTTP error! status: ${response.status} while fetching ${navConfigPath}`);
+              throw new Error(`HTTP error! status: ${response.status} while fetching ${navConfigPath}`);
         }
         navConfig = await response.json();
         window.NAV_CONFIG = navConfig; // Make it globally available
@@ -1192,7 +1351,7 @@ async function initializeApp(config) { // This function is already async
             pathPrefix: pathPrefix // Explicitly pass the prefix
         });
     } else {
-         console.warn("Template injection functions (injectHeader/injectFooter) are missing. Navigation will not load.");
+          console.warn("Template injection functions (injectHeader/injectFooter) are missing. Navigation will not load.");
     }
     
     const effectiveStorageKey = storageKey || `${activePageKey}-inputs`;
@@ -1497,148 +1656,6 @@ function attachReportEventListeners(containerId, config) {
     });
 }
 
-
-/**
- * Creates a standardized calculation handler to reduce boilerplate code.
- * This function encapsulates the common pattern: gather, validate, calculate, render.
- * @param {object} config - The configuration object for the handler.
- * @param {string[]} [config.inputIds] - Array of input element IDs. Used if gatherInputsFunction is not provided.
- * @param {function} [config.gatherInputsFunction] - A function that returns the inputs object. Overrides inputIds.
- * @param {string} config.storageKey - Local storage key for saving inputs.
- * @param {string} config.validationRuleKey - Key for the validationRules object.
- * @param {function} config.calculatorFunction - The function that performs the calculation.
- * @param {function} config.renderFunction - The function that renders the results.
- * @param {string} config.resultsContainerId - The ID of the DOM element to render results into.
- * @param {function} [config.validatorFunction] - Optional. A custom function to perform validation. If not provided, a default validator is used.
- * @param {string} [config.feedbackElId='feedback-message'] - Optional. The ID of the feedback element.
- * @param {string} [config.buttonId] - Optional ID of the run button for loading state.
- * @returns {function} The generated event handler function.
- */
-function createCalculationHandler(config) { // This is the function being called
-    const {
-        inputIds,
-        gatherInputsFunction,
-        storageKey,
-        validationRuleKey,
-        calculatorFunction,
-        renderFunction,
-        resultsContainerId,
-        validatorFunction,
-        feedbackElId = 'feedback-message',
-        buttonId
-    } = config;
-
-    // Automatically highlight required fields for this calculator when it's created.
-    if (validationRuleKey) {
-        highlightRequiredFields(validationRuleKey);
-    } else {
-        // Add a console warning if the key is missing, as it's crucial for validation and report functionality.
-        console.warn(`[createCalculationHandler] A 'validationRuleKey' não foi fornecida na configuração. A validação de entrada e os botões de relatório (Copiar, PDF, etc.) não funcionarão.`);
-    }
-
-    return async function() { // This function is already async, which is good.
-        console.log(`[${validationRuleKey}] Calculation triggered.`);
-        // --- 1. SETUP & GATHER INPUTS ---
-        if (buttonId) setLoadingState(true, buttonId);
-        showFeedback('Gathering inputs...', false, feedbackElId);
-
-        // Use the provided gather function or the default one.
-        console.log(`[${validationRuleKey}] Gathering inputs...`);
-        const inputs = typeof gatherInputsFunction === 'function'
-            ? gatherInputsFunction()
-            : gatherInputsFromIds(inputIds);
-
-        // Log the gathered inputs for debugging
-        console.log(`[${validationRuleKey}] Gathered inputs:`, inputs);
-
-
-        // --- 2. VALIDATE INPUTS ---
-        showFeedback('Validating inputs...', false, feedbackElId);
-        // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
-        console.log(`[${validationRuleKey}] Validating inputs...`);
-        await Promise.resolve();
-
-        // Use the custom validator if provided, otherwise use the default.
-        let validation;
-        if (typeof validatorFunction === 'function') {
-            validation = validatorFunction(inputs);
-        } else {
-            // Access validationRules from the global scope (provided by validation-rules.js)
-            const rules = window.validationRules ? validationRules[validationRuleKey] : {};
-            // Assuming validateInputs is available globally (from validation-rules.js)
-            if (typeof validateInputs === 'function') {
-                validation = validateInputs(inputs, rules);
-            } else {
-                console.error("The function 'validateInputs' is not available. Check script loading order.");
-                validation = { errors: ["Validation function is missing."], warnings: [] };
-            }
-        }
-
-        const resultsContainer = document.getElementById(resultsContainerId);
-        // Gracefully exit if the results container doesn't exist.
-        if (!resultsContainer) {
-            console.error(`Results container with ID "${resultsContainerId}" not found.`);
-            if (buttonId) setLoadingState(false, buttonId);
-            return;
-        }
-
-        if (validation.errors && validation.errors.length > 0) {
-            renderValidationResults(validation, resultsContainer);
-            console.error(`[${validationRuleKey}] Validation failed. Errors:`, validation.errors);
-            showFeedback('Validation failed. Please correct the errors.', true, feedbackElId);
-            if (buttonId) setLoadingState(false, buttonId);
-            return;
-        }
-
-        // --- 3. PERFORM CALCULATION ---
-        showFeedback('Running calculation...', false, feedbackElId);
-        console.log(`[${validationRuleKey}] Performing calculation...`);
-        await Promise.resolve();
-
-        const calculationResult = safeCalculation(
-            () => calculatorFunction(inputs, validation),
-            'An unexpected error occurred during calculation'
-        );
-
-        // --- 4. RENDER RESULTS ---
-        if (calculationResult.error) {
-            console.error(`[${validationRuleKey}] Calculation error:`, calculationResult.error);
-            renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
-            showFeedback('Calculation failed.', true, feedbackElId);
-        } else {
-            console.log(`[${validationRuleKey}] Calculation successful. Rendering results...`);
-            showFeedback('Rendering results...', false, feedbackElId);
-            await Promise.resolve();
-
-            saveInputsToLocalStorage(storageKey, inputs, '1.1');
-            console.log(`[${validationRuleKey}] About to call renderFunction.`);
-            renderFunction(calculationResult, inputs);
-
-            console.log(`[${validationRuleKey}] Re-attaching report event listeners.`);
-            // Find the report content element ID, assuming it follows the pattern `${pageKey}-report-content`
-            // or is the first element inside the results container with a specific ID.
-            const reportContentElement = resultsContainer.querySelector('[id$="-report-content"], .report-section-copyable');
-            let reportContentId = reportContentElement ? reportContentElement.id : resultsContainerId;
-            
-            // If the render function uses the ReportBuilder, the ID should be passed in.
-            // For safety, we use the container ID if the internal report ID can't be found, 
-            // but this relies on the render function correctly outputting the element.
-
-            attachReportEventListeners(resultsContainerId, {
-                // Pass the containerId (where the ReportBuilder renders) for delegation, and the internal reportId for copy/download
-                reportId: reportContentId, 
-                filenamePrefix: `${validationRuleKey || 'report'}-Report`,
-                onSendToCombos: config.onSendToCombos,
-                toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
-            });
-            
-            console.log(`[${validationRuleKey}] Event listeners attached to container #${resultsContainerId}. Targetting report content ID: #${reportContentId}`);
-            showFeedback('Calculation complete!', false, feedbackElId);
-        }
-
-        if (buttonId) setLoadingState(false, buttonId);
-    };
-}
 
 /**
  * Sends calculated loads from a source calculator to the Load Combinator page.
