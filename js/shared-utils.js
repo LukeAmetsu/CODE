@@ -1871,7 +1871,54 @@ function getUnits(unit_system) {
         v_unit: 'mph'
     };
 }
+/**
+ * Checks the local storage for a theme and applies it.
+ * This is a fallback/initialization if the inline script didn't run or for dynamic loads.
+ */
+function applyThemeFromLocalStorage() {
+    // Verifica localStorage 'theme' (mesma chave do script inline)
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+    const isDark = savedTheme === 'dark' || (!savedTheme && systemPrefersDark);
+
+    if (isDark) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+
+    // Atualiza ícones se o botão já existir
+    updateThemeIcons(isDark ? 'dark' : 'light');
+}
+
+// --- NOVO: Lógica Global de Tema ---
+
+/**
+ * Retorna verdadeiro se o tema atual for escuro.
+ * Disponível globalmente para qualquer script.
+ */
+function isThemeDark() {
+    return document.documentElement.classList.contains('dark');
+}
+
+/**
+ * Inicializa um observador no elemento <html> para detectar mudanças de classe (tema).
+ * Dispara um evento customizado 'theme-changed' na window que outros scripts podem escutar.
+ */
+function initializeGlobalThemeObserver() {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === 'class') {
+                const event = new CustomEvent('theme-changed', {
+                    detail: { isDark: isThemeDark() }
+                });
+                window.dispatchEvent(event);
+            }
+        });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+}
 /**
  * Define um 'step' padrão como 'any' para todos os inputs numéricos que não têm um especificado.
  * Isso resolve problemas de validação com decimais (ex: 10.00, 12.56) em todas as calculadoras.
