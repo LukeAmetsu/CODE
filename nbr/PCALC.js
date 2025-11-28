@@ -894,25 +894,26 @@ function calculateLoadCase(load, index) {
     }
     
     const safetyFactor = calculateSafetyFactor(Nsd, Mtot_x, Mtot_y);
-    const signX = (Math.abs(M1d_x_top) > Math.abs(M1d_x_bot)) ? Math.sign(M1d_x_top) : Math.sign(M1d_x_bot);
-    const signY = (Math.abs(M1d_y_top) > Math.abs(M1d_y_bot)) ? Math.sign(M1d_y_top) : Math.sign(M1d_y_bot);
 
     console.groupEnd();
 
+    console.groupEnd()
     return {
         id: index,
-        originalIndex: index + 1, 
+        originalIndex: index + 1,
         Nsd: Nsd,
-        Mx1Top: M1d_x_top, Mx1Bot: M1d_x_bot,
-        My1Top: M1d_y_top, My1Bot: M1d_y_bot,
-        MxTot: Mtot_x * (signX || 1), 
-        MyTot: Mtot_y * (signY || 1),
-        M2d_x: M2d_x, 
-        M2d_y: M2d_y,
+        Mx1Top: M1d_x_top,
+        Mx1Bot: M1d_x_bot,
+        My1Top: M1d_y_top,
+        My1Bot: M1d_y_bot,
+        MxTot: Mtot_x,  // ✅ Já vem com sinal correto dos métodos
+        MyTot: Mtot_y,  // ✅ Já vem com sinal correto dos métodos
+        M2dx: M2d_x,
+        M2dy: M2d_y,
         safetyFactor: safetyFactor,
         info: info,
         status: "Calc"
-    };
+    }
 }
 
 // --- IMPLEMENTAÇÃO DOS MÉTODOS DE 2ª ORDEM ---
@@ -946,52 +947,65 @@ function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     const Ac = pcalcData.secao.areaAc;
     const fcd = (pcalcData.materiais.fck/10) / pcalcData.config.gamaC;
     
-    // Eixo X
-    const Max = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xt : M1xb;
-    const Mbx = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xb : M1xt;
-    const pX = calcAlphaAndLambda(Nsd, Max, Mbx, hy, "Eixo X"); // X gira em torno de Y (h=hy)
+    const Max = Math.abs(M1xt) > Math.abs(M1xb) ? M1xt : M1xb
+    const Mbx = Math.abs(M1xt) > Math.abs(M1xb) ? M1xb : M1xt
+    const pX = calcAlphaAndLambda(Nsd, Max, Mbx, hy, "Eixo X")
     
-    let Mtot_x = pX.alphaB * Math.abs(Max);
-    let M2d_x = 0;
+    // Calcular M1d_eq COM SINAL
+    let M1deqX = pX.alphaB * Max  // ✅ Preserva o sinal de Ma
+    let Mtotx = Math.abs(M1deqX)  // Magnitude para cálculo
+    let M2dx = 0
     
     if (!checkSlender || pX.lambda > pX.lambda1) {
-        const nu = Math.abs(Nsd) / (Ac * fcd);
-        let curvCalc = (0.005 / hy) / (nu + 0.5);
-        let limit = 0.005 / hy;
-        let curv = Math.min(curvCalc, limit);
-        M2d_x = Math.abs(Nsd) * (pX.Le*pX.Le/10) * curv / 100;
-        Mtot_x += M2d_x;
-        console.log(`[Eixo X] 2ª Ordem necessária. Nu=${nu.toFixed(3)}, Curv=${curv.toFixed(5)}`);
-        console.log(`[Eixo X] M2d=${M2d_x.toFixed(2)}, Mtot=${(Mtot_x).toFixed(2)}`);
+        const nu = Math.abs(Nsd) / (Ac * fcd)
+        let curvCalc = 0.005 / (hy * (nu + 0.5))
+        let limit = 0.005 / hy
+        let curv = Math.min(curvCalc, limit)
+        M2dx = Math.abs(Nsd) * (pX.Le * pX.Le / 10) * curv / 100
+        Mtotx += M2dx
+        console.log(`[Eixo X] 2ª Ordem necessária. Nu=${nu.toFixed(3)}, Curv=${curv.toFixed(5)}`)
+        console.log(`[Eixo X] M2d=${M2dx.toFixed(2)}, Mtot=${Mtotx.toFixed(2)}`)
     } else {
-        console.log(`[Eixo X] 2ª Ordem dispensada.`);
+        console.log("[Eixo X] 2ª Ordem dispensada.")
     }
-    Mtot_x = Math.max(Mtot_x, Math.abs(Max), MinX);
-
-    // Eixo Y
-    const May = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yt : M1yb;
-    const Mby = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yb : M1yt;
-    const pY = calcAlphaAndLambda(Nsd, May, Mby, hx, "Eixo Y"); // Y gira em torno de X (h=hx)
     
-    let Mtot_y = pY.alphaB * Math.abs(May);
-    let M2d_y = 0;
+    Mtotx = Math.max(Mtotx, Math.abs(Max), MinX)
+    
+    // ✅ APLICAR O SINAL DO M1deq ao Mtotx final
+    const signX = Math.sign(M1deqX) || 1
+    Mtotx = Mtotx * signX
+    
+    // Eixo Y - mesma lógica
+    const May = Math.abs(M1yt) > Math.abs(M1yb) ? M1yt : M1yb
+    const Mby = Math.abs(M1yt) > Math.abs(M1yb) ? M1yb : M1yt
+    const pY = calcAlphaAndLambda(Nsd, May, Mby, hx, "Eixo Y")
+    
+    let M1deqY = pY.alphaB * May  // ✅ Preserva o sinal
+    let Mtoty = Math.abs(M1deqY)
+    let M2dy = 0
     
     if (!checkSlender || pY.lambda > pY.lambda1) {
-        const nu = Math.abs(Nsd) / (Ac * fcd);
-        let curvCalc = (0.005 / hx) / (nu + 0.5);
-        let limit = 0.005 / hx;
-        let curv = Math.min(curvCalc, limit);
-        M2d_y = Math.abs(Nsd) * (pY.Le*pY.Le/10) * curv / 100;
-        Mtot_y += M2d_y;
-        console.log(`[Eixo Y] 2ª Ordem necessária. Nu=${nu.toFixed(3)}, Curv=${curv.toFixed(5)}`);
-        console.log(`[Eixo Y] M2d=${M2d_y.toFixed(2)}, Mtot=${(Mtot_y).toFixed(2)}`);
+        const nu = Math.abs(Nsd) / (Ac * fcd)
+        let curvCalc = 0.005 / (hx * (nu + 0.5))
+        let limit = 0.005 / hx
+        let curv = Math.min(curvCalc, limit)
+        M2dy = Math.abs(Nsd) * (pY.Le * pY.Le / 10) * curv / 100
+        Mtoty += M2dy
+        console.log(`[Eixo Y] 2ª Ordem necessária. Nu=${nu.toFixed(3)}, Curv=${curv.toFixed(5)}`)
+        console.log(`[Eixo Y] M2d=${M2dy.toFixed(2)}, Mtot=${Mtoty.toFixed(2)}`)
     } else {
-        console.log(`[Eixo Y] 2ª Ordem dispensada.`);
+        console.log("[Eixo Y] 2ª Ordem dispensada.")
     }
-    Mtot_y = Math.max(Mtot_y, Math.abs(May), MinY);
-
-    return { Mtot_x, Mtot_y, M2d_x, M2d_y, info: "Curvatura Aprox." };
+    
+    Mtoty = Math.max(Mtoty, Math.abs(May), MinY)
+    
+    // ✅ APLICAR O SINAL DO M1deq ao Mtoty final
+    const signY = Math.sign(M1deqY) || 1
+    Mtoty = Mtoty * signY
+    
+    return { Mtotx, Mtoty, M2dx, M2dy, info: "Curvatura Aprox." }
 }
+
 
 function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
     // Implementação Kappa Aproximado conforme CalculaEsforcos.java (calculaMomento2OrdP2)
@@ -1484,13 +1498,11 @@ function renderElevation(caseIndex) {
     const mx1 = []; // Array para momento de 1ª ordem X
     const my1 = []; // Array para momento de 1ª ordem Y
     
-    const M1x_top = loadCase.Mx1Top;
-    const M1x_bot = loadCase.Mx1Bot;
-    const Mtot_x_final = Math.abs(loadCase.MxTot);
+    const M1xtop = loadCase.Mx1Top
+    const M1xbot = loadCase.Mx1Bot
     
-    const M1y_top = loadCase.My1Top;
-    const M1y_bot = loadCase.My1Bot;
-    const Mtot_y_final = Math.abs(loadCase.MyTot);
+    const M1ytop = loadCase.My1Top
+    const M1ybot = loadCase.My1Bot
     
     const isPinned = pcalcData.secao.boundary === 'pinned';
     const N_val = loadCase.Nsd; 
@@ -1502,40 +1514,48 @@ function renderElevation(caseIndex) {
         
         normal.push(N_val); 
         
-        const m1x_curr = M1x_bot + (M1x_top - M1x_bot) * pos;
-        const m1y_curr = M1y_bot + (M1y_top - M1y_bot) * pos;
+        const m1x_curr = M1xbot + (M1xtop - M1xbot) * pos;
+        const m1y_curr = M1ybot + (M1ytop - M1ybot) * pos;
         
         mx1.push(m1x_curr);
         my1.push(m1y_curr);
         
-        // Visualização ajustada para garantir que a barriga mostre o valor de Mtot calculado
+        // Correção de Visualização: Usar amplitude de 2ª ordem calculada (M2d)
+        // em vez de forçar o meio a ser igual a Mtot (que pode ser o momento da extremidade)
         if (isPinned) {
-            const midM1x = (M1x_top + M1x_bot) / 2;
-            const signX = (Math.abs(M1x_top) >= Math.abs(M1x_bot)) ? Math.sign(M1x_top) : Math.sign(M1x_bot);
+            const m2x_mag = loadCase.M2dx || 0; // Magnitude
+            const m2y_mag = loadCase.M2dy || 0;
             
-            // Força a "barriga" a atingir o valor de Mtot com o sinal correto no meio do vão
-            const targetMidX = signX * Mtot_x_final;
-            // Diferença necessária para que (linear + diff) = target no meio
-            const diffX = targetMidX - midM1x;
+            // Heurística de sinal para a curvatura de 2ª ordem:
+            // Geralmente na direção do momento equivalente (M1d_eq) ou da soma dos momentos
+            let signX = 1;
+            if (Math.abs(M1xtop + M1xbot) > 0.01) {
+                signX = Math.sign(M1xtop + M1xbot);
+            } else {
+                // Caso antissimétrico (-M, +M): Curvatura segue o maior momento em módulo
+                signX = Math.sign(Math.abs(M1xtop) >= Math.abs(M1xbot) ? M1xtop : M1xbot);
+            }
+
+            let signY = 1;
+            if (Math.abs(M1ytop + M1ybot) > 0.01) {
+                signY = Math.sign(M1ytop + M1ybot);
+            } else {
+                signY = Math.sign(Math.abs(M1ytop) >= Math.abs(M1ybot) ? M1ytop : M1ybot);
+            }
             
-            mxTot.push(m1x_curr + diffX * Math.sin(Math.PI * pos));
-            
-            const midM1y = (M1y_top + M1y_bot) / 2;
-            const signY = (Math.abs(M1y_top) >= Math.abs(M1y_bot)) ? Math.sign(M1y_top) : Math.sign(M1y_bot);
-            const targetMidY = signY * Mtot_y_final;
-            const diffY = targetMidY - midM1y;
-            
-            myTot.push(m1y_curr + diffY * Math.sin(Math.PI * pos));
+            mxTot.push(m1x_curr + (signX * m2x_mag) * Math.sin(Math.PI * pos));
+            myTot.push(m1y_curr + (signY * m2y_mag) * Math.sin(Math.PI * pos));
         } else {
-            // Balanço
+            // Balanço: curva quadrática simples
             const factor = Math.pow(1 - pos, 2); 
-            const diffX = Math.max(0, Mtot_x_final - Math.abs(M1x_bot));
-            const signX = Math.sign(m1x_curr) || 1;
-            mxTot.push(m1x_curr + signX * diffX * factor);
-            
-            const diffY = Math.max(0, Mtot_y_final - Math.abs(M1y_bot));
-            const signY = Math.sign(m1y_curr) || 1;
-            myTot.push(m1y_curr + signY * diffY * factor);
+            // Amplitude approximation using M2d
+            const m2x_mag = loadCase.M2dx || 0;
+            const m2y_mag = loadCase.M2dy || 0;
+            const signX = Math.sign(loadCase.MxTot) || 1;
+            const signY = Math.sign(loadCase.MyTot) || 1;
+
+            mxTot.push(m1x_curr + signX * m2x_mag * (1 - factor)); // simplified shape
+            myTot.push(m1y_curr + signY * m2y_mag * (1 - factor));
         }
     }
     
