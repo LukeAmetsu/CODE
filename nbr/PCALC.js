@@ -35,7 +35,7 @@ const pcalcData = {
         gamaS: 1.15,
         gamaF: 1.4,
         calc2ndOrder: true,
-        method2ndOrder: 'curvature', 
+        method2ndOrder: 'curvature_approx', // Default to method 1
         gammaF3: 1.1,
         nFibers: 40, 
         checkMinMoment: true,
@@ -48,6 +48,7 @@ const pcalcData = {
     resultados: {
         secaoC: [], 
         surfacePoints: { x: [], y: [], z: [] }, 
+        minMomentSurface: { x: [], y: [], z: [] }, // Nova estrutura para superfície min
         loadCases: [] 
     }
 };
@@ -105,28 +106,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const isDark = () => document.documentElement.classList.contains('dark');
 
-// --- INJEÇÃO DE UI DINÂMICA ---
+// --- INJEÇÃO DE UI DINÂMICA (ATUALIZADA COM 5 MÉTODOS) ---
 function injectDynamicUI() {
     const criteriaContainer = document.getElementById('criteria-container');
     if (criteriaContainer) {
         criteriaContainer.innerHTML = `
             <div class="space-y-4">
-                <!-- Método de 2ª Ordem -->
                 <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded border dark:border-gray-700">
                     <label class="block text-xs font-bold mb-3 text-gray-700 dark:text-gray-300">Método de Cálculo de 2ª Ordem:</label>
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
-                            <input type="radio" name="method-2nd" value="stiffness" class="text-blue-600 focus:ring-blue-500">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">Rigidez Nominal (κ)</span>
+                            <input type="radio" name="method-2nd" value="curvature_approx" checked class="text-blue-600 focus:ring-blue-500">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">1. Pilar-Padrão (Curvatura 1/r Aprox.)</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
-                            <input type="radio" name="method-2nd" value="curvature" checked class="text-blue-600 focus:ring-blue-500">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">Curvatura Nominal (1/r) - Padrão</span>
+                            <input type="radio" name="method-2nd" value="stiffness_approx" class="text-blue-600 focus:ring-blue-500">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">2. Pilar-Padrão (Rigidez κ Aprox.)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
+                            <input type="radio" name="method-2nd" value="standard_diagram" class="text-blue-600 focus:ring-blue-500">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">3. Pilar-Padrão Acoplado (Diag. N, M, 1/r)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
+                            <input type="radio" name="method-2nd" value="general_diagram" class="text-blue-600 focus:ring-blue-500">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">4. Método Geral (Diag. N, M, 1/r)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
+                            <input type="radio" name="method-2nd" value="general_biaxial" class="text-blue-600 focus:ring-blue-500">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">5. Método Geral Biaxial (N, Mx, My, 1/r)</span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Verificações -->
                 <div class="bg-gray-50 dark:bg-gray-900 p-3 rounded border dark:border-gray-700 space-y-3">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="check-min-moment" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
@@ -241,7 +252,7 @@ function fitViewToSection() {
     
     const w = canvas.width;
     const h = canvas.height;
-    const margin = 40; 
+    const margin = 80; // Margem aumentada para caber cotas
     const { hx, hy } = pcalcData.secao;
     const safeHx = hx || 10;
     const safeHy = hy || 10;
@@ -380,7 +391,7 @@ function updateDataFromInputs() {
     pcalcData.config.calc2ndOrder = getChk('check-2nd-order');
     
     const methodEl = document.querySelector('input[name="method-2nd"]:checked');
-    pcalcData.config.method2ndOrder = methodEl ? methodEl.value : 'stiffness';
+    pcalcData.config.method2ndOrder = methodEl ? methodEl.value : 'curvature_approx';
     
     pcalcData.config.gammaF3 = getVal('gammaf3') || 1.1;
     pcalcData.config.checkMinMoment = getChk('check-min-moment');
@@ -478,11 +489,9 @@ function generateRectPattern() {
 
 // --- LÓGICA DE ENGENHARIA REAL (Método das Fibras) ---
 
-// 1. Discretização da Seção (Alta Resolução)
 function discretizeSection() {
     pcalcData.resultados.secaoC = [];
     const { hx, hy, tipoSecao } = pcalcData.secao;
-    // Aumentar resolução para 40x40 para garantir contorno suave e preciso
     const nX = 40; 
     const nY = 40;
     
@@ -490,7 +499,6 @@ function discretizeSection() {
     const dy = hy / nY;
     const dA = dx * dy;
     
-    // Origem no centróide da seção (0,0)
     if (tipoSecao === 'Retangular') {
         for (let i = 0; i < nX; i++) {
             for (let j = 0; j < nY; j++) {
@@ -501,7 +509,6 @@ function discretizeSection() {
         }
     } else if (tipoSecao === 'Circular') {
         const R = hx / 2;
-        // Varredura retangular filtrada é mais robusta que polar simples para integração
         for (let i = 0; i < nX; i++) {
             for (let j = 0; j < nY; j++) {
                 const x = (i * dx) + (dx / 2) - (hx / 2);
@@ -514,44 +521,38 @@ function discretizeSection() {
     }
 }
 
-// 2. Lei Constitutiva do Concreto (NBR 6118 - Parábola-Retângulo)
 function getConcreteStress(epsilon, fcd) {
-    // Epsilon negativo = compressão
     if (epsilon >= 0) return 0;
     
     const ec = Math.abs(epsilon);
     const ec2 = 0.002;
-    const ecu = 0.0035; // Considerando fck <= 50MPa
+    const ecu = 0.0035; 
     
     if (ec <= ec2) {
-        return -0.85 * fcd * (1 - Math.pow(1 - ec/ec2, 2)); // Tensão negativa
+        return -0.85 * fcd * (1 - Math.pow(1 - ec/ec2, 2)); 
     } else if (ec <= ecu) {
         return -0.85 * fcd;
     }
-    return 0; // Ruptura (0 tensão)
+    return 0; 
 }
 
-// 3. Lei Constitutiva do Aço (Elasto-Plástico Perfeito)
 function getSteelStress(epsilon, fyd, Es) {
-    const sigma = epsilon * Es; // MPa
-    if (sigma > fyd) return fyd;     // Tração máxima
-    if (sigma < -fyd) return -fyd;   // Compressão máxima
+    const sigma = epsilon * Es; 
+    if (sigma > fyd) return fyd;     
+    if (sigma < -fyd) return -fyd;   
     return sigma;
 }
 
-// 4. Integração de Esforços na Seção
 function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
-    const fcd = (pcalcData.materiais.fck / 10) / pcalcData.config.gamaC; // kN/cm²
-    const fyd = (pcalcData.materiais.fyk / 10) / pcalcData.config.gamaS; // kN/cm²
-    const Es = pcalcData.materiais.es * 100; // kN/cm²
+    const fcd = (pcalcData.materiais.fck / 10) / pcalcData.config.gamaC; 
+    const fyd = (pcalcData.materiais.fyk / 10) / pcalcData.config.gamaS; 
+    const Es = pcalcData.materiais.es * 100; 
     
-    let N_int = 0;  // kN
-    let Mx_int = 0; // kNm 
-    let My_int = 0; // kNm 
+    let N_int = 0;  
+    let Mx_int = 0; 
+    let My_int = 0; 
     
-    // Concreto
     for (const fiber of pcalcData.resultados.secaoC) {
-        // e = e0 + kx*y + ky*x
         const strain = epsilon0 + curvatureX * fiber.y + curvatureY * fiber.x;
         const sigma = getConcreteStress(strain, fcd); 
         if (sigma !== 0) {
@@ -562,7 +563,6 @@ function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
         }
     }
     
-    // Aço
     for (const bar of pcalcData.armacao.barras) {
         const bx = bar.x - pcalcData.secao.xm;
         const by = bar.y - pcalcData.secao.ym;
@@ -580,22 +580,17 @@ function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
     return { N: N_int, Mx: Mx_int, My: My_int };
 }
 
-// 5. Geração da Superfície de Interação (Varredura Radial REAL)
 function generateInteractionSurface() {
     const points = { x: [], y: [], z: [] };
-    
-    const ecu = -0.0035; // Compressão max concreto
-    const es_yield_tension = 0.010; // Limite alongamento aço (D2)
-    
-    // AUMENTAR RESOLUÇÃO PARA MELHORAR CÁLCULO DO FS
-    const numAngles = 72; // Antes 36
+    const ecu = -0.0035; 
+    const es_yield_tension = 0.010; 
+    const numAngles = 72; 
     
     for (let i = 0; i < numAngles; i++) {
         const theta = (i / numAngles) * 2 * Math.PI;
         const cosT = Math.cos(theta);
         const sinT = Math.sin(theta);
         
-        // 1. Encontrar os extremos da seção na direção theta
         let u_min = Infinity;
         let u_max = -Infinity;
         
@@ -621,9 +616,7 @@ function generateInteractionSurface() {
         });
         
         const deformationStates = [];
-        
-        // AUMENTAR NÚMERO DE PASSOS NOS DOMÍNIOS
-        const stepsD2 = 15; // Antes 8
+        const stepsD2 = 15; 
         deformationStates.push({ k: 0, e0: es_yield_tension });
         
         for (let k = 1; k <= stepsD2; k++) {
@@ -634,7 +627,7 @@ function generateInteractionSurface() {
             deformationStates.push({ k: K, e0: e0 });
         }
         
-        const stepsD34 = 20; // Antes 12
+        const stepsD34 = 20; 
         for (let k = 1; k <= stepsD34; k++) {
             const eps_c = ecu;
             const eps_t = es_yield_tension + (k/stepsD34) * (ecu - es_yield_tension);
@@ -649,9 +642,7 @@ function generateInteractionSurface() {
         for (const state of deformationStates) {
             const Kx = state.k * sinT; 
             const Ky = state.k * cosT; 
-            
             const res = calculateSectionResistance(state.e0, Kx, Ky);
-            
             points.x.push(res.Mx);
             points.y.push(res.My);
             points.z.push(res.N);
@@ -661,11 +652,65 @@ function generateInteractionSurface() {
     return points;
 }
 
+// --- NOVA FUNÇÃO: GERAR SUPERFÍCIE DE MOMENTO MÍNIMO ---
+function generateMinMomentSurface() {
+    const hx = pcalcData.secao.hx; // cm
+    const hy = pcalcData.secao.hy; // cm
+    
+    // Fatores de excentricidade mínima
+    const e_min_x = (1.5 + 0.03 * hy) / 100; // metros (para Mx, braço é y)
+    const e_min_y = (1.5 + 0.03 * hx) / 100; // metros (para My, braço é x)
+
+    // Encontrar N máximo (compressão)
+    let maxN = 0;
+    if (pcalcData.resultados.surfacePoints.z.length > 0) {
+        maxN = Math.min(...pcalcData.resultados.surfacePoints.z); // N é negativo
+    }
+    if (maxN === 0) maxN = -10000; // Fallback
+    
+    const points = { x: [], y: [], z: [] };
+    const stepsN = 20;
+    const stepsTheta = 36;
+    
+    for(let i=0; i<=stepsN; i++) {
+        const N = maxN * (i / stepsN); // Vai de 0 a maxN (negativo)
+        const absN = Math.abs(N);
+        
+        // Limites retangulares do momento mínimo para este N
+        const Mx_lim = absN * e_min_x;
+        const My_lim = absN * e_min_y;
+        
+        // Gerar anel
+        for(let j=0; j<=stepsTheta; j++) {
+            const theta = (j / stepsTheta) * 2 * Math.PI;
+            const cosT = Math.cos(theta);
+            const sinT = Math.sin(theta);
+            
+            // Raio para atingir a caixa retangular (Mx_lim, My_lim)
+            // |x| <= Mx_lim, |y| <= My_lim
+            // x = r*cos, y = r*sin
+            // r <= Mx_lim / |cos|, r <= My_lim / |sin|
+            
+            let r = 0;
+            if (Mx_lim > 0 && My_lim > 0) {
+                 const r_x = Math.abs(cosT) > 1e-6 ? Mx_lim / Math.abs(cosT) : Infinity;
+                 const r_y = Math.abs(sinT) > 1e-6 ? My_lim / Math.abs(sinT) : Infinity;
+                 r = Math.min(r_x, r_y);
+            }
+            
+            points.x.push(r * cosT); // Mx
+            points.y.push(r * sinT); // My
+            points.z.push(N);
+        }
+    }
+    return points;
+}
+
 function performCalculation() {
     const btn = document.getElementById('calculate-btn');
     const msg = document.getElementById('feedback-message');
     
-    console.log("--- Iniciando Cálculo ---"); // Log start
+    console.log("--- Iniciando Cálculo ---"); 
 
     btn.disabled = true;
     msg.textContent = 'Calculando...';
@@ -674,22 +719,25 @@ function performCalculation() {
     setTimeout(() => {
         try {
             discretizeSection();
-            console.log("Seção discretizada com sucesso."); // Log
+            console.log("Seção discretizada com sucesso."); 
 
             const surface = generateInteractionSurface();
-            console.log("Superfície de interação gerada."); // Log
+            console.log("Superfície de interação gerada."); 
             pcalcData.resultados.surfacePoints = surface;
+            
+            // GERAR SUPERFÍCIE MÍNIMA
+            const minSurf = generateMinMomentSurface();
+            pcalcData.resultados.minMomentSurface = minSurf;
             
             const results = [];
             pcalcData.esforcos.listaEsforcos.forEach((load, i) => {
-                console.log(`Calculando caso de carga ${i+1}...`); // Log per case
+                console.log(`Calculando caso de carga ${i+1}...`); 
                 results.push(calculateLoadCase(load, i));
             });
-            pcalcData.resultados.loadCases = results.sort((a, b) => a.safetyFactor - b.safetyFactor); // Ordenar por FS (crescente - pior caso primeiro)
+            pcalcData.resultados.loadCases = results.sort((a, b) => a.safetyFactor - b.safetyFactor); 
 
             render3DChart();
             renderResultsTable();
-            // Renderizar o primeiro caso (pior FS) por padrão
             canvasView.selectedCaseIndex = 0;
             renderElevation(0);
 
@@ -705,40 +753,28 @@ function performCalculation() {
     }, 100);
 }
 
-// --- NOVA FUNÇÃO: Calcular Fator de Segurança Aproximado (MELHORADA) ---
 function calculateSafetyFactor(N, Mx, My) {
-    // 1. Casos triviais (Cargas muito baixas)
-    // Se N for pequeno E momentos pequenos, FS alto
-    // Mas se N for grande (compressão pura), FS pode ser baixo.
     if (Math.abs(Mx) < 0.1 && Math.abs(My) < 0.1) {
-        // Verificar compressão pura
         const surface = pcalcData.resultados.surfacePoints;
         if (surface.z.length === 0) return 0;
         
-        // Encontrar N_rd_max (compressão máxima na superfície)
-        // Assumindo que o menor N (mais negativo) na superfície é a resistência máxima à compressão
         let minN = 0;
         for(let z of surface.z) {
             if (z < minN) minN = z;
         }
         
         if (N === 0) return 99.99;
-        
-        // FS = N_rd / N_sd. (Ambos negativos)
         return Math.abs(minN) / Math.abs(N);
     }
 
     const R_load = Math.sqrt(Mx * Mx + My * My);
-    // Normalizar ângulo para [0, 2PI]
     let angleLoad = Math.atan2(My, Mx); 
     if (angleLoad < 0) angleLoad += 2 * Math.PI;
 
     const surface = pcalcData.resultados.surfacePoints;
     if (surface.x.length === 0) return 0; 
 
-    // 2. Filtrar pontos numa "fatia" de N
-    // Tolerância relativa ao N ou fixa mínima
-    const toleranceN = Math.max(20, Math.abs(N) * 0.10); // 10% de tolerância ou 20kN
+    const toleranceN = Math.max(20, Math.abs(N) * 0.10); 
     
     const slicePoints = [];
 
@@ -757,11 +793,7 @@ function calculateSafetyFactor(N, Mx, My) {
 
     if (slicePoints.length < 2) return 0;
 
-    // 3. Ordenar por ângulo
     slicePoints.sort((a, b) => a.ang - b.ang);
-
-    // 4. Encontrar pontos que envelopam o ângulo da carga
-    // Adicionar o primeiro ponto ao final para fechar o ciclo (360 graus)
     slicePoints.push({ r: slicePoints[0].r, ang: slicePoints[0].ang + 2 * Math.PI });
 
     let R_res = 0;
@@ -771,19 +803,16 @@ function calculateSafetyFactor(N, Mx, My) {
         const p2 = slicePoints[i+1];
         
         if (angleLoad >= p1.ang && angleLoad <= p2.ang) {
-            // Interpolação Linear do Raio
             const ratio = (angleLoad - p1.ang) / (p2.ang - p1.ang);
             R_res = p1.r + ratio * (p2.r - p1.r);
             break;
         }
     }
     
-    // Fallback: se não achou (ex: buracos na malha angular), pega o mais próximo
     if (R_res === 0) {
         let minDiff = Infinity;
         for (let p of slicePoints) {
             let diff = Math.abs(p.ang - angleLoad);
-            // Ajuste circular
             if (diff > Math.PI) diff = 2*Math.PI - diff;
             if (diff < minDiff) {
                 minDiff = diff;
@@ -793,196 +822,78 @@ function calculateSafetyFactor(N, Mx, My) {
     }
 
     if (R_res === 0) return 0;
-    
     return R_res / R_load;
 }
 
-
+// --- FUNÇÃO DE CÁLCULO DE CASO DE CARGA (ATUALIZADA) ---
 function calculateLoadCase(load, index) {
-    console.group(`Detalhes do Caso ${index + 1}`); // Group logs
+    console.group(`Detalhes do Caso ${index + 1}`); 
     const gf = pcalcData.config.gamaF;
     let Nsd = load.n * gf;
     
     console.log(`Cargas de Entrada: N=${load.n}, MxTop=${load.mxTop}, MxBot=${load.mxBot}, MyTop=${load.myTop}, MyBot=${load.myBot}`);
-    console.log(`Cargas de Cálculo (x${gf}): Nsd=${Nsd}`);
-
+    console.log(`Cargas de Cálculo (x${gf}): Nsd=${Nsd.toFixed(2)}`);
+    
     const M1d_x_top = load.mxTop * gf;
     const M1d_x_bot = load.mxBot * gf;
     const M1d_y_top = load.myTop * gf;
     const M1d_y_bot = load.myBot * gf;
     
-    const L = pcalcData.secao.length;
     const hx = pcalcData.secao.hx;
     const hy = pcalcData.secao.hy;
-    const isPinned = pcalcData.secao.boundary === 'pinned';
     const method = pcalcData.config.method2ndOrder;
+    const checkSlenderness = pcalcData.config.checkSlenderness;
     
     // Momento Mínimo (NBR 6118)
     const e_min_x = 1.5 + 0.03 * hy; 
     const e_min_y = 1.5 + 0.03 * hx; 
-    
     const M1d_min_x = Math.abs(Nsd) * (e_min_x / 100); 
     const M1d_min_y = Math.abs(Nsd) * (e_min_y / 100); 
-    
-    console.log(`Excentricidade Mínima: ex_min=${e_min_x}cm, ey_min=${e_min_y}cm`);
+
+    console.log(`Excentricidade Mínima: ex_min=${e_min_x.toFixed(2)}cm, ey_min=${e_min_y.toFixed(2)}cm`);
     console.log(`Momentos Mínimos: M1d_min_x=${M1d_min_x.toFixed(2)}, M1d_min_y=${M1d_min_y.toFixed(2)}`);
 
-    // Cálculo do Alpha B (NBR 6118)
-    // alpha_b = 0.6 + 0.4 * (Mb / Ma), sendo |Ma| >= |Mb|
-    
-    // Para X
-    let Ma_x = (Math.abs(M1d_x_top) >= Math.abs(M1d_x_bot)) ? M1d_x_top : M1d_x_bot;
-    let Mb_x = (Math.abs(M1d_x_top) >= Math.abs(M1d_x_bot)) ? M1d_x_bot : M1d_x_top;
-    
-    let alphaB_x = 0.6 + 0.4 * (Mb_x / Ma_x);
-    if (alphaB_x < 0.4) alphaB_x = 0.4;
-    
-    // Momento Equivalente X
-    let M1d_eq_x = alphaB_x * Math.abs(Ma_x);
-    
-    console.log(`AlphaB X: Ma=${Ma_x}, Mb=${Mb_x}, ratio=${Mb_x/Ma_x}, alpha=${alphaB_x.toFixed(2)}. Meq_x=${M1d_eq_x.toFixed(2)}`);
-
-    // Para Y
-    let Ma_y = (Math.abs(M1d_y_top) >= Math.abs(M1d_y_bot)) ? M1d_y_top : M1d_y_bot;
-    let Mb_y = (Math.abs(M1d_y_top) >= Math.abs(M1d_y_bot)) ? M1d_y_bot : M1d_y_top;
-    
-    let alphaB_y = 0.6 + 0.4 * (Mb_y / Ma_y);
-    if (alphaB_y < 0.4) alphaB_y = 0.4;
-
-    let M1d_eq_y = alphaB_y * Math.abs(Ma_y);
-
-    console.log(`AlphaB Y: Ma=${Ma_y}, Mb=${Mb_y}, ratio=${Mb_y/Ma_y}, alpha=${alphaB_y.toFixed(2)}. Meq_y=${M1d_eq_y.toFixed(2)}`);
-
-    // Momentos de 1ª ordem máximos (envoltória simples) para comparação
-    const M1d_x_max_abs = Math.max(Math.abs(M1d_x_top), Math.abs(M1d_x_bot));
-    const M1d_y_max_abs = Math.max(Math.abs(M1d_y_top), Math.abs(M1d_y_bot));
-
-    let Mtot_x = M1d_x_max_abs;
-    let Mtot_y = M1d_y_max_abs;
-    let info = "1ª Ordem";
-    
-    // Variáveis para plotagem do gráfico (momento de 2ª ordem calculado)
+    // Variáveis de Saída
+    let Mtot_x = 0;
+    let Mtot_y = 0;
     let M2d_x = 0;
     let M2d_y = 0;
+    let info = "";
 
-    // Cálculo de 2ª Ordem
+    // SELEÇÃO DO MÉTODO DE 2ª ORDEM
     if (pcalcData.config.calc2ndOrder && Nsd < 0) { 
-        const Le = isPinned ? L : 2.0 * L;
-        const lambdaX = 3.46 * Le / hy; 
-        const lambdaY = 3.46 * Le / hx; 
-        
-        // Lambda 1 (Limite de esbeltez para dispensa)
-        // lambda_1 = (25 + 12.5 * e1/h) / alpha_b
-        let e1_h_x = Math.abs(Ma_x) / Math.abs(Nsd) / (hy/100); 
-        let lam1_x = (25 + 12.5 * e1_h_x) / alphaB_x;
-        if (lam1_x > 90) lam1_x = 90;
-        if (lam1_x < 35) lam1_x = 35;
-
-        let e1_h_y = Math.abs(Ma_y) / Math.abs(Nsd) / (hx/100);
-        let lam1_y = (25 + 12.5 * e1_h_y) / alphaB_y;
-        if (lam1_y > 90) lam1_y = 90;
-        if (lam1_y < 35) lam1_y = 35;
-        
-        console.log(`Esbeltez Limite Lambda1: X=${lam1_x.toFixed(1)} (Lambda=${lambdaX.toFixed(1)}), Y=${lam1_y.toFixed(1)} (Lambda=${lambdaY.toFixed(1)})`);
-        
-        // Verifica se deve considerar a esbeltez limite para dispensa
-        const checkSlenderness = pcalcData.config.checkSlenderness;
-
-        if (method === 'stiffness') {
-             const fck = pcalcData.materiais.fck;
-            const Eci = 5600 * Math.sqrt(fck); 
-            const Ecs = 0.85 * Eci; 
-            const Ecd = Ecs / 1.4; 
-            
-            const Ic_x = pcalcData.secao.ix;
-            const Ic_y = pcalcData.secao.iy;
-            
-            let Is_x = 0; let Is_y = 0;
-            pcalcData.armacao.barras.forEach(b => {
-                const as = Math.PI * Math.pow(b.diametro/10/2, 2);
-                const dy = b.y - pcalcData.secao.ym;
-                const dx = b.x - pcalcData.secao.xm;
-                Is_x += as * dy * dy;
-                Is_y += as * dx * dx;
-            });
-            
-            const EI_x = 0.3 * (Ecd/10) * Ic_x + (21000) * Is_x;
-            const EI_y = 0.3 * (Ecd/10) * Ic_y + (21000) * Is_y;
-            
-            const Nb_x = (Math.PI * Math.PI * EI_x) / (Le * Le); 
-            const Nb_y = (Math.PI * Math.PI * EI_y) / (Le * Le);
-            
-            if (!checkSlenderness || lambdaX > lam1_x) {
-                const ratio = Math.abs(Nsd) / Nb_x;
-                if (ratio < 1) {
-                    let M_amplified = M1d_eq_x / (1 - ratio);
-                    Mtot_x = Math.max(Mtot_x, M_amplified);
-                    // Estimar M2d reverso para plotagem
-                    M2d_x = M_amplified - M1d_eq_x;
-                } else {
-                    Mtot_x = 9999; info = "Instável";
-                }
-            }
-            if (!checkSlenderness || lambdaY > lam1_y) {
-                const ratio = Math.abs(Nsd) / Nb_y;
-                if (ratio < 1) {
-                    let M_amplified = M1d_eq_y / (1 - ratio);
-                    Mtot_y = Math.max(Mtot_y, M_amplified);
-                    M2d_y = M_amplified - M1d_eq_y;
-                } else {
-                    Mtot_y = 9999; info = "Instável";
-                }
-            }
-            if(info !== "Instável") info = "2ª Ordem (κ)";
-
-        } else {
-            // Método da Curvatura Nominal (1/r)
-            const Ac = pcalcData.secao.areaAc;
-            const fcd = (pcalcData.materiais.fck/10) / pcalcData.config.gamaC;
-            const nu = Math.abs(Nsd) / (Ac * fcd);
-            
-            console.log(`Método Curvatura Nominal. Nu = ${nu.toFixed(3)}`);
-
-            if (!checkSlenderness || lambdaX > lam1_x) {
-                let curvCalc = (0.005 / hy) / (nu + 0.5);
-                let limit = 0.005 / hy;
-                let curv = Math.min(curvCalc, limit);
+        switch(method) {
+            case 'curvature_approx': // Método 1 (Padrão)
+                const res1 = calculateMethod1_CurvatureApprox(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, checkSlenderness);
+                Mtot_x = res1.Mtot_x; Mtot_y = res1.Mtot_y; M2d_x = res1.M2d_x; M2d_y = res1.M2d_y; info = res1.info;
+                break;
                 
-                M2d_x = Math.abs(Nsd) * (Le*Le/10) * curv / 100;
-                let Mtot_calc = M1d_eq_x + M2d_x;
-                Mtot_x = Math.max(Mtot_x, Mtot_calc);
+            case 'stiffness_approx': // Método 2
+                const res2 = calculateMethod2_StiffnessApprox(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, checkSlenderness);
+                Mtot_x = res2.Mtot_x; Mtot_y = res2.Mtot_y; M2d_x = res2.M2d_x; M2d_y = res2.M2d_y; info = res2.info;
+                break;
                 
-                console.log(`Eixo X: 2ª Ordem necessária. M2d=${M2d_x.toFixed(2)}, Mtot_calc=${Mtot_calc.toFixed(2)}`);
-            } else {
-                console.log(`Eixo X: 2ª Ordem dispensada (Lambda < Lambda1). Mantém M1d=${Mtot_x.toFixed(2)}`);
-            }
-            
-            if (!checkSlenderness || lambdaY > lam1_y) {
-                let curvCalc = (0.005 / hx) / (nu + 0.5);
-                let limit = 0.005 / hx;
-                let curv = Math.min(curvCalc, limit);
-
-                M2d_y = Math.abs(Nsd) * (Le*Le/10) * curv / 100;
-                let Mtot_calc = M1d_eq_y + M2d_y;
-                Mtot_y = Math.max(Mtot_y, Mtot_calc); 
-
-                console.log(`Eixo Y: 2ª Ordem necessária. M2d=${M2d_y.toFixed(2)}, Mtot_calc=${Mtot_calc.toFixed(2)}`);
-            } else {
-                console.log(`Eixo Y: 2ª Ordem dispensada. Mantém M1d=${Mtot_y.toFixed(2)}`);
-            }
-            info = "2ª Ordem (1/r)";
+            case 'standard_diagram': // Método 3
+                const res3 = calculateMethod3_StandardDiagram(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, checkSlenderness);
+                Mtot_x = res3.Mtot_x; Mtot_y = res3.Mtot_y; M2d_x = res3.M2d_x; M2d_y = res3.M2d_y; info = res3.info;
+                break;
+                
+            case 'general_diagram': // Método 4 (Simplificado Uniaxial)
+            case 'general_biaxial': // Método 5 (Biaxial)
+                const isBiaxial = (method === 'general_biaxial');
+                const resG = calculateMethodGeneral(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, isBiaxial);
+                Mtot_x = resG.Mtot_x; Mtot_y = resG.Mtot_y; M2d_x = resG.M2d_x; M2d_y = resG.M2d_y; info = resG.info;
+                break;
         }
     } else {
-        console.log("Cálculo de 2ª ordem não necessário.");
+        // Sem 2ª Ordem
+        console.log("Cálculo de 2ª ordem não necessário (N >= 0 ou desativado).");
+        Mtot_x = Math.max(Math.abs(M1d_x_top), Math.abs(M1d_x_bot), M1d_min_x);
+        Mtot_y = Math.max(Math.abs(M1d_y_top), Math.abs(M1d_y_bot), M1d_min_y);
+        info = "1ª Ordem";
     }
     
-    // Aplica verificação final do momento mínimo apenas no resultado final
-    Mtot_x = Math.max(Mtot_x, M1d_min_x);
-    Mtot_y = Math.max(Mtot_y, M1d_min_y);
-    
-    // Calcular Fator de Segurança (FS)
     const safetyFactor = calculateSafetyFactor(Nsd, Mtot_x, Mtot_y);
-
     const signX = (Math.abs(M1d_x_top) > Math.abs(M1d_x_bot)) ? Math.sign(M1d_x_top) : Math.sign(M1d_x_bot);
     const signY = (Math.abs(M1d_y_top) > Math.abs(M1d_y_bot)) ? Math.sign(M1d_y_top) : Math.sign(M1d_y_bot);
 
@@ -990,7 +901,7 @@ function calculateLoadCase(load, index) {
 
     return {
         id: index,
-        originalIndex: index + 1, // Para exibir na tabela
+        originalIndex: index + 1, 
         Nsd: Nsd,
         Mx1Top: M1d_x_top, Mx1Bot: M1d_x_bot,
         My1Top: M1d_y_top, My1Bot: M1d_y_bot,
@@ -998,10 +909,410 @@ function calculateLoadCase(load, index) {
         MyTot: Mtot_y * (signY || 1),
         M2d_x: M2d_x, 
         M2d_y: M2d_y,
-        safetyFactor: safetyFactor, // Guardar FS
+        safetyFactor: safetyFactor,
         info: info,
         status: "Calc"
     };
+}
+
+// --- IMPLEMENTAÇÃO DOS MÉTODOS DE 2ª ORDEM ---
+
+// Auxiliar: Cálculo de Alpha B e Esbeltez Limite
+function calcAlphaAndLambda(Nsd, Ma, Mb, h, axisName) {
+    const L = pcalcData.secao.length;
+    const isPinned = pcalcData.secao.boundary === 'pinned';
+    const Le = isPinned ? L : 2.0 * L;
+    
+    const lambda = 3.46 * Le / h;
+    
+    let alphaB = 0.6 + 0.4 * (Mb / Ma);
+    if (alphaB < 0.4) alphaB = 0.4;
+    
+    // lambda1 = (25 + 12.5 * e1/h) / alphaB
+    let e1_h = Math.abs(Ma) / Math.abs(Nsd) / (h/100); 
+    let lambda1 = (25 + 12.5 * e1_h) / alphaB;
+    if (lambda1 > 90) lambda1 = 90;
+    if (lambda1 < 35) lambda1 = 35;
+    
+    console.log(`[${axisName}] AlphaB: Ma=${Ma.toFixed(2)}, Mb=${Mb.toFixed(2)}, alpha=${alphaB.toFixed(2)}`);
+    console.log(`[${axisName}] Esbeltez: Lambda=${lambda.toFixed(2)}, Lambda1=${lambda1.toFixed(2)} (Le=${Le.toFixed(0)})`);
+    
+    return { alphaB, lambda, lambda1, Le };
+}
+
+function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
+    const hx = pcalcData.secao.hx;
+    const hy = pcalcData.secao.hy;
+    const Ac = pcalcData.secao.areaAc;
+    const fcd = (pcalcData.materiais.fck/10) / pcalcData.config.gamaC;
+    
+    // Eixo X
+    const Max = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xt : M1xb;
+    const Mbx = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xb : M1xt;
+    const pX = calcAlphaAndLambda(Nsd, Max, Mbx, hy, "Eixo X"); // X gira em torno de Y (h=hy)
+    
+    let Mtot_x = pX.alphaB * Math.abs(Max);
+    let M2d_x = 0;
+    
+    if (!checkSlender || pX.lambda > pX.lambda1) {
+        const nu = Math.abs(Nsd) / (Ac * fcd);
+        let curvCalc = (0.005 / hy) / (nu + 0.5);
+        let limit = 0.005 / hy;
+        let curv = Math.min(curvCalc, limit);
+        M2d_x = Math.abs(Nsd) * (pX.Le*pX.Le/10) * curv / 100;
+        Mtot_x += M2d_x;
+        console.log(`[Eixo X] 2ª Ordem necessária. Nu=${nu.toFixed(3)}, Curv=${curv.toFixed(5)}`);
+        console.log(`[Eixo X] M2d=${M2d_x.toFixed(2)}, Mtot=${(Mtot_x).toFixed(2)}`);
+    } else {
+        console.log(`[Eixo X] 2ª Ordem dispensada.`);
+    }
+    Mtot_x = Math.max(Mtot_x, Math.abs(Max), MinX);
+
+    // Eixo Y
+    const May = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yt : M1yb;
+    const Mby = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yb : M1yt;
+    const pY = calcAlphaAndLambda(Nsd, May, Mby, hx, "Eixo Y"); // Y gira em torno de X (h=hx)
+    
+    let Mtot_y = pY.alphaB * Math.abs(May);
+    let M2d_y = 0;
+    
+    if (!checkSlender || pY.lambda > pY.lambda1) {
+        const nu = Math.abs(Nsd) / (Ac * fcd);
+        let curvCalc = (0.005 / hx) / (nu + 0.5);
+        let limit = 0.005 / hx;
+        let curv = Math.min(curvCalc, limit);
+        M2d_y = Math.abs(Nsd) * (pY.Le*pY.Le/10) * curv / 100;
+        Mtot_y += M2d_y;
+        console.log(`[Eixo Y] 2ª Ordem necessária. Nu=${nu.toFixed(3)}, Curv=${curv.toFixed(5)}`);
+        console.log(`[Eixo Y] M2d=${M2d_y.toFixed(2)}, Mtot=${(Mtot_y).toFixed(2)}`);
+    } else {
+        console.log(`[Eixo Y] 2ª Ordem dispensada.`);
+    }
+    Mtot_y = Math.max(Mtot_y, Math.abs(May), MinY);
+
+    return { Mtot_x, Mtot_y, M2d_x, M2d_y, info: "Curvatura Aprox." };
+}
+
+function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
+    // Implementação Kappa Aproximado conforme CalculaEsforcos.java (calculaMomento2OrdP2)
+    // Usando fórmula quadrática aproximada
+    // CORRECTION: Convert cm to m for formula consistency
+    const hx_m = pcalcData.secao.hx / 100;
+    const hy_m = pcalcData.secao.hy / 100;
+    
+    // Eixo X
+    const Max = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xt : M1xb;
+    const Mbx = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xb : M1xt;
+    const pX = calcAlphaAndLambda(Nsd, Max, Mbx, pcalcData.secao.hy, "Eixo X");
+    
+    let Mtot_x = Math.abs(Max);
+    let M2d_x = 0;
+    
+    if (!checkSlender || pX.lambda > pX.lambda1) {
+        // Kappa Aprox (Simplified formula equivalent from Java)
+        // Correction: Use alphaB for M1d_eq instead of manual recalculation which ignores signs
+        const M1d_eq = pX.alphaB * Math.abs(Max);
+        const h = hy_m; // meters
+        const L = pX.Le / 100; // meters
+        
+        // Coeficientes da equacao quadratica derivada da aproximacao de rigidez (unidades SI base: kN, m)
+        const a = 5 * h;
+        // b = -h^2*N + N*L^2/320 - 5*h*M1d
+        const b = -h*h*Nsd + (Nsd*L*L/320) - 5*h*M1d_eq; 
+        const c = Nsd * h * h * M1d_eq;
+        
+        const delta = b*b - 4*a*c;
+        if (delta >= 0) {
+            Mtot_x = (-b + Math.sqrt(delta)) / (2*a);
+            M2d_x = Mtot_x - M1d_eq;
+            console.log(`[Eixo X] 2ª Ordem necessária. M1d_eq=${M1d_eq.toFixed(2)}, M2d=${M2d_x.toFixed(2)}`);
+        } else {
+            Mtot_x = 9999; // Instabilidade
+            console.log(`[Eixo X] Instabilidade detectada (Delta < 0)`);
+        }
+    } else { console.log(`[Eixo X] 2ª Ordem dispensada.`); }
+    // CORRECTION: Ensure Mtot is not less than the end moment or Min moment
+    Mtot_x = Math.max(Mtot_x, Math.abs(Max), MinX);
+
+    // Eixo Y
+    const May = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yt : M1yb;
+    const Mby = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yb : M1yt;
+    const pY = calcAlphaAndLambda(Nsd, May, Mby, pcalcData.secao.hx, "Eixo Y");
+    
+    let Mtot_y = Math.abs(May);
+    let M2d_y = 0;
+    
+    if (!checkSlender || pY.lambda > pY.lambda1) {
+        // Correction: Use alphaB for M1d_eq
+        const M1d_eq = pY.alphaB * Math.abs(May);
+        const h = hx_m; // meters
+        const L = pY.Le / 100; // meters
+        const a = 5 * h;
+        const b = -h*h*Nsd + (Nsd*L*L/320) - 5*h*M1d_eq; 
+        const c = Nsd * h * h * M1d_eq;
+        const delta = b*b - 4*a*c;
+        if (delta >= 0) {
+            Mtot_y = (-b + Math.sqrt(delta)) / (2*a);
+            M2d_y = Mtot_y - M1d_eq;
+            console.log(`[Eixo Y] 2ª Ordem necessária. M1d_eq=${M1d_eq.toFixed(2)}, M2d=${M2d_y.toFixed(2)}`);
+        } else {
+            Mtot_y = 9999;
+            console.log(`[Eixo Y] Instabilidade detectada (Delta < 0)`);
+        }
+    } else { console.log(`[Eixo Y] 2ª Ordem dispensada.`); }
+    // CORRECTION: Ensure Mtot is not less than the end moment or Min moment
+    Mtot_y = Math.max(Mtot_y, Math.abs(May), MinY);
+
+    return { Mtot_x, Mtot_y, M2d_x, M2d_y, info: "Rigidez Aprox." };
+}
+
+function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
+    const Ac = pcalcData.secao.areaAc;
+    const fcd = (pcalcData.materiais.fck/10) / pcalcData.config.gamaC;
+    const hx = pcalcData.secao.hx;
+    const hy = pcalcData.secao.hy;
+
+    const solveAxis = (M1t, M1b, h, minM, axisName) => {
+        const Ma = Math.abs(M1t) >= Math.abs(M1b) ? M1t : M1b;
+        const Mb = Math.abs(M1t) >= Math.abs(M1b) ? M1b : M1t;
+        const p = calcAlphaAndLambda(Nsd, Ma, Mb, h, axisName);
+        
+        let Mtot = Math.max(0.6 * Math.abs(Ma) + 0.4 * Math.abs(Mb), 0.4 * Math.abs(Ma));
+        if (!checkSlender || p.lambda > p.lambda1) {
+            console.log(`[${axisName}] Iniciando iteração de rigidez real...`);
+            // Iteração para encontrar rigidez secante no diagrama
+            let M_curr = Mtot;
+            for(let i=0; i<5; i++) {
+                // Encontrar curvatura k para o par (Nsd, M_curr)
+                // Assumindo eixo desacoplado para método padrão
+                let k = 0;
+                if (h === hy) k = solveCurvature(Nsd, M_curr, 0).kx; // Eixo X (M gira em torno de X)
+                else k = solveCurvature(Nsd, 0, M_curr).ky; // Eixo Y
+                
+                if (Math.abs(k) < 1e-6) k = 1e-6;
+                const EIsec = Math.abs(M_curr / k); // kNm²
+                
+                // Mtot = M1d / (1 - Nsd/Nb)
+                const Nb = (Math.PI*Math.PI * EIsec) / (p.Le*p.Le);
+                if (Math.abs(Nsd) >= Nb) { M_curr = 9999; console.log(`[${axisName}] Instabilidade na iteração ${i+1}`); break; }
+                
+                const factor = 1 / (1 - Math.abs(Nsd)/Nb);
+                const M_new = Math.max(0.6 * Math.abs(Ma) + 0.4 * Math.abs(Mb), 0.4 * Math.abs(Ma)) * factor;
+                
+                console.log(`[${axisName}] Iter ${i}: M=${M_curr.toFixed(2)}, k=${k.toFixed(6)}, EI=${EIsec.toFixed(0)}, Nb=${Nb.toFixed(0)}, M_new=${M_new.toFixed(2)}`);
+                M_curr = M_new;
+            }
+            return { M: M_curr, M2: M_curr - Math.abs(Ma) };
+        }
+        return { M: Math.max(Math.abs(Ma), minM), M2: 0 };
+    };
+
+    const rx = solveAxis(M1xt, M1xb, hy, MinX, "Eixo X");
+    const ry = solveAxis(M1yt, M1yb, hx, MinY, "Eixo Y");
+
+    return { Mtot_x: rx.M, Mtot_y: ry.M, M2d_x: rx.M2, M2d_y: ry.M2, info: "Pilar-Padrão Real" };
+}
+
+function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxial) {
+    const L = pcalcData.secao.length;
+    const isPinned = pcalcData.secao.boundary === 'pinned';
+    const numNodes = 7; // Discretização do pilar
+    const dz = L / (numNodes - 1);
+    
+    console.log(`[Geral] Iniciando iteração numérica (${isBiaxial ? "Biaxial" : "Uniaxial"}). L=${L}, Nos=${numNodes}`);
+    
+    // Arrays de estado
+    let w_x = new Array(numNodes).fill(0); // Deslocamento na direção Y (gera Mx)
+    let w_y = new Array(numNodes).fill(0); // Deslocamento na direção X (gera My)
+    
+    let Mtot_x = 0, Mtot_y = 0;
+    
+    // Loop Iterativo
+    for (let iter = 0; iter < 10; iter++) {
+        let max_w_diff = 0;
+        let w_x_new = new Array(numNodes).fill(0);
+        let w_y_new = new Array(numNodes).fill(0);
+        let kx_vals = [], ky_vals = [];
+
+        // 1. Calcular Momentos Totais e Curvaturas
+        for (let i = 0; i < numNodes; i++) {
+            const z = i * dz;
+            // Momento de 1ª ordem interpolado
+            let M1x = 0, M1y = 0;
+            if (isPinned) {
+                M1x = M1xb + (M1xt - M1xb) * (z/L);
+                M1y = M1yb + (M1yt - M1yb) * (z/L);
+            } else { // Balanço (Base engastada em z=0)
+                M1x = M1xb * (1 - z/L); // Simplificado linear
+                M1y = M1yb * (1 - z/L);
+            }
+            
+            // Momento Total (N é negativo para compressão, mas gera momento P-Delta positivo se w oposto)
+            // Convenção: M2 = N * w. Se N compressão (-), w positivo, M2 negativo?
+            // Vamos usar valor absoluto para magnitude de 2ª ordem adicionada
+            let M_curr_x = M1x + Math.abs(Nsd) * w_x[i];
+            let M_curr_y = M1y + Math.abs(Nsd) * w_y[i];
+            
+            // Limite mínimo
+            if (Math.abs(M_curr_x) < MinX) M_curr_x = Math.sign(M_curr_x||1) * MinX;
+            if (Math.abs(M_curr_y) < MinY) M_curr_y = Math.sign(M_curr_y||1) * MinY;
+
+            // Obter curvatura
+            let k;
+            if (isBiaxial) {
+                k = solveCurvature(Nsd, M_curr_x, M_curr_y);
+            } else {
+                // Desacoplado: chama 2 vezes considerando o outro zero
+                const kx = solveCurvature(Nsd, M_curr_x, 0).kx;
+                const ky = solveCurvature(Nsd, 0, M_curr_y).ky;
+                k = { kx, ky };
+            }
+            kx_vals.push(k.kx);
+            ky_vals.push(k.ky);
+        }
+
+        // 2. Integrar Curvatura para achar deflexão w (Método das Diferenças Finitas ou Newmark)
+        // Simplificado: dupla integração trapezoidal
+        // w'' = -k
+        // theta' = -k => theta = int(-k)
+        // w' = theta => w = int(theta)
+        
+        // Integração para w_x (usando kx) e w_y (usando ky)
+        // Assumindo biapoiado simétrico w(0)=0, w(L)=0
+        
+        const integrate = (k_vals) => {
+            let deflections = new Array(numNodes).fill(0);
+            if (isPinned) {
+                // Método do Momento-Area simplificado
+                // Passo 1: Calcular rotação no início (theta_0) assumindo w(L)=0
+                // w(z) = theta_0 * z - double_int(k)
+                // w(L) = 0 => theta_0 = double_int(k)_L / L
+                let d_int = 0; // integral dupla
+                let s_int = 0; // integral simples
+                for (let i = 0; i < numNodes; i++) {
+                    const k_avg = (i==0) ? 0 : (k_vals[i] + k_vals[i-1])/2; // Trapezio (simplif)
+                    if (i>0) {
+                        s_int += k_avg * dz;
+                        d_int += s_int * dz - (k_avg * dz * dz / 2); // Aproximado
+                    }
+                }
+                const theta_0 = d_int / L;
+                
+                s_int = 0; d_int = 0;
+                for (let i = 0; i < numNodes; i++) {
+                    if (i > 0) {
+                        const k_avg = (k_vals[i] + k_vals[i-1])/2;
+                        s_int += k_avg * dz;
+                        d_int += s_int * dz; // Simplificado
+                    }
+                    deflections[i] = theta_0 * (i*dz) - d_int;
+                }
+            } else {
+                // Balanço: Engaste na base (z=0) => w(0)=0, w'(0)=0
+                // w(z) = double_int(k)
+                let s_int = 0; let d_int = 0;
+                for (let i = 0; i < numNodes; i++) {
+                    if (i > 0) {
+                        const k_avg = (k_vals[i] + k_vals[i-1])/2;
+                        s_int += k_avg * dz;
+                        d_int += s_int * dz;
+                    }
+                    deflections[i] = d_int;
+                }
+            }
+            return deflections;
+        };
+
+        w_x_new = integrate(kx_vals); // Curvatura X gera deflexão no plano YZ (w_x no código, visualmente dy)
+        w_y_new = integrate(ky_vals);
+
+        // Check convergence
+        for(let i=0; i<numNodes; i++) {
+            max_w_diff = Math.max(max_w_diff, Math.abs(w_x_new[i] - w_x[i]), Math.abs(w_y_new[i] - w_y[i]));
+        }
+        w_x = w_x_new;
+        w_y = w_y_new;
+        
+        if (iter === 0 || iter === 9 || max_w_diff < 0.01) {
+             console.log(`[Geral] Iter ${iter+1}: Max Diff=${max_w_diff.toFixed(4)} cm`);
+        }
+        
+        if (max_w_diff < 0.01) break; // Convergiu (1mm)
+    }
+    
+    // Calcular momentos finais máximos
+    Mtot_x = 0; Mtot_y = 0;
+    for (let i = 0; i < numNodes; i++) {
+        const z = i * dz;
+        let M1x = isPinned ? M1xb + (M1xt - M1xb) * (z/L) : M1xb * (1 - z/L);
+        let M1y = isPinned ? M1yb + (M1yt - M1yb) * (z/L) : M1yb * (1 - z/L);
+        
+        let Mx = Math.abs(M1x) + Math.abs(Nsd * w_x[i]);
+        let My = Math.abs(M1y) + Math.abs(Nsd * w_y[i]);
+        
+        if (Mx > Mtot_x) Mtot_x = Mx;
+        if (My > Mtot_y) Mtot_y = My;
+    }
+    Mtot_x = Math.max(Mtot_x, MinX);
+    Mtot_y = Math.max(Mtot_y, MinY);
+
+    return { Mtot_x, Mtot_y, M2d_x: Mtot_x - Math.max(Math.abs(M1xt), Math.abs(M1xb)), M2d_y: Mtot_y - Math.max(Math.abs(M1yt), Math.abs(M1yb)), info: isBiaxial ? "Geral Biaxial" : "Geral" };
+}
+
+// Auxiliar: Encontrar curvatura para (N, Mx, My)
+// Usa Newton-Raphson simplificado ou busca direta
+function solveCurvature(targetN, targetMx, targetMy) {
+    // 1. Estimar deformação média (eps0) baseada em N
+    // N = Ac * fcd * eps0 (linear approx inicial)
+    let e0 = -0.001; // Chute inicial compressão
+    let kx = 0;
+    let ky = 0;
+    
+    // Loop simples para ajustar e0 para equilibrar N (mantendo k=0)
+    for(let i=0; i<5; i++) {
+        const res = calculateSectionResistance(e0, 0, 0);
+        const dN = res.N - targetN;
+        // Rigidez axial aprox: Ac * Ecs
+        const EA = pcalcData.secao.areaAc * (5600 * Math.sqrt(pcalcData.materiais.fck) * 0.85 / 10); 
+        e0 = e0 - dN / EA;
+    }
+    
+    // Agora ajustar kx e ky para equilibrar Momentos (assumindo linearidade local)
+    // M = EI * k
+    // EI estimado bruto
+    const Ecs = 5600 * Math.sqrt(pcalcData.materiais.fck) * 0.85 / 10;
+    const EIx = Ecs * pcalcData.secao.ix;
+    const EIy = Ecs * pcalcData.secao.iy;
+    
+    kx = targetMx / (0.4 * EIx); // Chute secante 0.4 EI
+    ky = targetMy / (0.4 * EIy);
+    
+    // Refinamento iterativo (Método da Secante 2D simplificado)
+    for (let i = 0; i < 8; i++) {
+        const res = calculateSectionResistance(e0, kx, ky);
+        
+        // Ajustar e0
+        const dN = res.N - targetN;
+        // Recalcula rigidez axial tangente (aprox)
+        const EA = Math.abs(dN/0.0001) || (pcalcData.secao.areaAc * Ecs);
+        e0 = e0 - dN / EA;
+        
+        // Ajustar kx
+        const dMx = res.Mx - targetMx;
+        // Rigidez flexão tangente aprox
+        // Se momento aumentou muito com pouco k, rigidez alta.
+        // k_new = k_old - dM / EI_tang
+        // Usar EI secante atual como estimador
+        const EIx_sec = (Math.abs(kx) > 1e-7) ? res.Mx / kx : EIx;
+        kx = kx - dMx / (Math.abs(EIx_sec) || EIx);
+        
+        // Ajustar ky
+        const dMy = res.My - targetMy;
+        const EIy_sec = (Math.abs(ky) > 1e-7) ? res.My / ky : EIy;
+        ky = ky - dMy / (Math.abs(EIy_sec) || EIy);
+    }
+    
+    return { kx, ky, e0 };
 }
 
 function renderResultsTable() {
@@ -1056,10 +1367,11 @@ function render3DChart() {
     
     const { x, y, z } = pcalcData.resultados.surfacePoints;
     const loadCases = pcalcData.resultados.loadCases;
+    const minSurf = pcalcData.resultados.minMomentSurface; // Dados do momento mínimo
     
     // Cores dinâmicas
     const dark = isDark();
-    const meshColor = dark ? '#475569' : '#94a3b8'; 
+    const meshColor = dark ? '#3462a3ff' : '#94a3b8'; 
     const axisColor = dark ? '#94a3b8' : '#475569';
     const gridColor = dark ? '#334155' : '#e2e8f0';
     const bgColor = 'rgba(0,0,0,0)';
@@ -1067,11 +1379,22 @@ function render3DChart() {
     const surfaceTrace = {
         type: 'mesh3d',
         x: x, y: y, z: z,
-        opacity: 0.15,
+        opacity: 0.5,
         color: meshColor,
         name: 'Diagrama de Interação',
         alphahull: 0,
-        lighting: { ambient: 0.6, diffuse: 0.9 }
+        lighting: { ambient: 0.5, diffuse: 0.6 }
+    };
+    
+    // --- NOVA TRACE: Superfície de Momento Mínimo ---
+    const minSurfTrace = {
+        type: 'mesh3d',
+        x: minSurf.x, y: minSurf.y, z: minSurf.z,
+        opacity: 0.15,
+        color: '#facc15', // Amarelo
+        name: 'Momento Mínimo',
+        alphahull: 0,
+        lighting: { ambient: 0.5, diffuse: 0.6 }
     };
     
     // Separar o caso selecionado dos outros para destaque
@@ -1115,7 +1438,7 @@ function render3DChart() {
         name: 'Selecionado'
     };
     
-    const data = [surfaceTrace, loadsTraceOther];
+    const data = [surfaceTrace, minSurfTrace, loadsTraceOther];
     if (x_sel.length > 0) data.push(loadsTraceSelected);
     
     const layout = {
@@ -1128,7 +1451,8 @@ function render3DChart() {
             aspectmode: 'manual', 
             aspectratio: { x: 1, y: 1, z: 1.5 }
         },
-        showlegend: false,
+        showlegend: true,
+        legend: { x: 0, y: 1, font: { size: 10, color: axisColor } },
         hovermode: 'closest'
     };
     
@@ -1157,6 +1481,8 @@ function renderElevation(caseIndex) {
     const normal = [];
     const mxTot = [];
     const myTot = [];
+    const mx1 = []; // Array para momento de 1ª ordem X
+    const my1 = []; // Array para momento de 1ª ordem Y
     
     const M1x_top = loadCase.Mx1Top;
     const M1x_bot = loadCase.Mx1Bot;
@@ -1168,10 +1494,6 @@ function renderElevation(caseIndex) {
     
     const isPinned = pcalcData.secao.boundary === 'pinned';
     const N_val = loadCase.Nsd; 
-    
-    // Momentos de 2ª ordem calculados
-    const M2d_x = loadCase.M2d_x || 0;
-    const M2d_y = loadCase.M2d_y || 0;
 
     for(let i=0; i<=points; i++) {
         const pos = i / points; 
@@ -1182,6 +1504,9 @@ function renderElevation(caseIndex) {
         
         const m1x_curr = M1x_bot + (M1x_top - M1x_bot) * pos;
         const m1y_curr = M1y_bot + (M1y_top - M1y_bot) * pos;
+        
+        mx1.push(m1x_curr);
+        my1.push(m1y_curr);
         
         // Visualização ajustada para garantir que a barriga mostre o valor de Mtot calculado
         if (isPinned) {
@@ -1218,6 +1543,7 @@ function renderElevation(caseIndex) {
     const dark = typeof isThemeDark === 'function' ? isThemeDark() : false;
     const plotBgColor = dark ? '#1f2937' : '#f3f4f6'; // Gray-800 : Gray-100
     const lineColor = dark ? '#e5e7eb' : '#000000';
+    const dashedLineColor = dark ? '#9ca3af' : '#6b7280'; // Cor para linha tracejada
     const fontColor = dark ? '#9ca3af' : '#374151';
     const fillColor = dark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.25)'; // Red
     const zerolineColor = dark ? '#6b7280' : '#9ca3af';
@@ -1285,28 +1611,46 @@ function renderElevation(caseIndex) {
         annotations: createAnnotations(normal, z)
     };
     
-    // 2. Plot Mx
+    // 2. Plot Mx (com linha tracejada de 1ª ordem)
     const traceMx = { 
         x: mxTot, y: z, 
         type: 'scatter', mode: 'lines', fill: 'tozerox', 
         line: { color: lineColor, width: 2 },
         fillcolor: fillColor,
-        hoverinfo: 'x+y'
+        hoverinfo: 'x+y',
+        name: 'Total'
     };
+    const traceMx1 = { 
+        x: mx1, y: z, 
+        type: 'scatter', mode: 'lines',
+        line: { color: dashedLineColor, width: 1, dash: 'dash' },
+        hoverinfo: 'x+y',
+        name: '1ª Ordem'
+    };
+
     const layoutMx = { 
         ...commonLayout, 
         title: { text: 'Msd,x (kNm)', font: {size: 11, weight: 'bold', color: fontColor} },
         annotations: createAnnotations(mxTot, z)
     };
 
-    // 3. Plot My
+    // 3. Plot My (com linha tracejada de 1ª ordem)
     const traceMy = { 
         x: myTot, y: z, 
         type: 'scatter', mode: 'lines', fill: 'tozerox', 
         line: { color: lineColor, width: 2 },
         fillcolor: fillColor,
-        hoverinfo: 'x+y'
+        hoverinfo: 'x+y',
+        name: 'Total'
     };
+    const traceMy1 = { 
+        x: my1, y: z, 
+        type: 'scatter', mode: 'lines',
+        line: { color: dashedLineColor, width: 1, dash: 'dash' },
+        hoverinfo: 'x+y',
+        name: '1ª Ordem'
+    };
+
     const layoutMy = { 
         ...commonLayout, 
         title: { text: 'Msd,y (kNm)', font: {size: 11, weight: 'bold', color: fontColor} },
@@ -1315,8 +1659,8 @@ function renderElevation(caseIndex) {
 
     // Renderizar
     Plotly.newPlot('elevation-plot-n', [traceN], layoutN, {displayModeBar: false, responsive: true});
-    Plotly.newPlot('elevation-plot-mx', [traceMx], layoutMx, {displayModeBar: false, responsive: true});
-    Plotly.newPlot('elevation-plot-my', [traceMy], layoutMy, {displayModeBar: false, responsive: true});
+    Plotly.newPlot('elevation-plot-mx', [traceMx, traceMx1], layoutMx, {displayModeBar: false, responsive: true});
+    Plotly.newPlot('elevation-plot-my', [traceMy, traceMy1], layoutMy, {displayModeBar: false, responsive: true});
 }
 
 function updateSectionStats() {
@@ -1425,6 +1769,62 @@ function renderCrossSection() {
     ctx.moveTo(0, 0); ctx.lineTo(hx/2, 0); 
     ctx.moveTo(0, 0); ctx.lineTo(0, hy/2); 
     ctx.stroke();
+
+    // --- DIMENSIONS ---
+    const dimColor = dark ? '#94a3b8' : '#475569';
+    ctx.fillStyle = dimColor;
+    ctx.strokeStyle = dimColor;
+    ctx.lineWidth = 1 / currentScale;
+    
+    const offset = 15 / currentScale; // Distance from section
+    const tickLen = 5 / currentScale; // Tick length
+    
+    // Draw HX (Bottom)
+    const yDimX = -hy/2 - offset;
+    ctx.beginPath();
+    // Extension lines
+    ctx.moveTo(-hx/2, -hy/2 - 2/currentScale); ctx.lineTo(-hx/2, yDimX - tickLen);
+    ctx.moveTo(hx/2, -hy/2 - 2/currentScale); ctx.lineTo(hx/2, yDimX - tickLen);
+    // Main line
+    ctx.moveTo(-hx/2, yDimX); ctx.lineTo(hx/2, yDimX);
+    // Ticks (Diagonal /)
+    ctx.moveTo(-hx/2 - tickLen, yDimX - tickLen); ctx.lineTo(-hx/2 + tickLen, yDimX + tickLen);
+    ctx.moveTo(hx/2 - tickLen, yDimX - tickLen); ctx.lineTo(hx/2 + tickLen, yDimX + tickLen);
+    ctx.stroke();
+    
+    // Draw HY (Left)
+    const xDimY = -hx/2 - offset;
+    ctx.beginPath();
+    // Extension lines
+    ctx.moveTo(-hx/2 - 2/currentScale, -hy/2); ctx.lineTo(xDimY - tickLen, -hy/2);
+    ctx.moveTo(-hx/2 - 2/currentScale, hy/2); ctx.lineTo(xDimY - tickLen, hy/2);
+    // Main line
+    ctx.moveTo(xDimY, -hy/2); ctx.lineTo(xDimY, hy/2);
+    // Ticks
+    ctx.moveTo(xDimY - tickLen, -hy/2 - tickLen); ctx.lineTo(xDimY + tickLen, -hy/2 + tickLen);
+    ctx.moveTo(xDimY - tickLen, hy/2 - tickLen); ctx.lineTo(xDimY + tickLen, hy/2 + tickLen);
+    ctx.stroke();
+    
+    // Text
+    ctx.save();
+    ctx.scale(1, -1); // Flip Y so text isn't upside down
+    const fontSize = 14 / currentScale;
+    ctx.font = `${fontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    
+    // Text HX
+    ctx.textBaseline = 'top';
+    ctx.fillText(`${hx} cm`, 0, -yDimX + 2/currentScale);
+    
+    // Text HY
+    ctx.save();
+    ctx.translate(xDimY - 2/currentScale, 0);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${hy} cm`, 0, 0);
+    ctx.restore();
+    
+    ctx.restore(); // End text flip
 
     ctx.restore();
 
