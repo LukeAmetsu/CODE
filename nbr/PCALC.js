@@ -1,4 +1,10 @@
+console.log("nbr/PCALC.js loaded");
+
 // --- ESTRUTURA DE DADOS ---
+/**
+ * Global data structure for PCALC.
+ * Contains section definition, materials, reinforcement, loads, configuration, and results.
+ */
 const pcalcData = {
     secao: {
         tipoSecao: 'Retangular',
@@ -107,6 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
 const isDark = () => document.documentElement.classList.contains('dark');
 
 // --- INJEÇÃO DE UI DINÂMICA (ATUALIZADA COM 5 MÉTODOS) ---
+/**
+ * Injects dynamic UI components for selecting calculation methods and criteria.
+ */
 function injectDynamicUI() {
     const criteriaContainer = document.getElementById('criteria-container');
     if (criteriaContainer) {
@@ -147,12 +156,19 @@ function injectDynamicUI() {
                         <input type="checkbox" id="check-slenderness" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">Verificar Esbeltez Limite (λ1) para Dispensa</span>
                     </label>
+                     <label class="flex items-center gap-2 cursor-pointer" title="Consideração de Fluência (Desativado: Requer Cargas Perm/Var)">
+                        <input type="checkbox" id="check-creep" disabled class="rounded border-gray-300 text-gray-400 cursor-not-allowed">
+                        <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">Considerar Fluência (Em breve)</span>
+                    </label>
                 </div>
             </div>
         `;
     }
 }
 
+/**
+ * Sets up event listeners for inputs and buttons.
+ */
 function setupEventListeners() {
     const inputs = [
         'length', 'boundary-type', 
@@ -211,6 +227,9 @@ function setupEventListeners() {
 }
 
 // --- CONTROLES DO CANVAS (ZOOM APENAS, SEM PAN, RESIZE AUTOMATICO) ---
+/**
+ * Sets up controls for the cross-section canvas.
+ */
 function setupCanvasControls() {
     const canvas = document.getElementById('sectionCanvas');
     const container = document.getElementById('cross-section-container');
@@ -246,6 +265,9 @@ function setupCanvasControls() {
     canvas.style.cursor = 'default';
 }
 
+/**
+ * Adjusts the view scale to fit the section within the canvas.
+ */
 function fitViewToSection() {
     const canvas = document.getElementById('sectionCanvas');
     if(!canvas) return;
@@ -262,6 +284,9 @@ function fitViewToSection() {
 }
 
 // --- IMPORTAÇÃO EXCEL ---
+/**
+ * Sets up file import for Excel/CSV data.
+ */
 function setupExcelImport() {
     const fileInput = document.getElementById('upload-excel');
     if (fileInput) {
@@ -331,6 +356,10 @@ function setupExcelImport() {
     }
 }
 
+/**
+ * Processes data imported from Excel/CSV.
+ * @param {Array} jsonArray - The raw data array.
+ */
 function processImportedData(jsonArray) {
     const validRows = jsonArray.filter(row => row.length > 0 && !isNaN(parseFloat(row[0])));
     if (validRows.length === 0) {
@@ -355,6 +384,9 @@ function processImportedData(jsonArray) {
 }
 
 // --- MANIPULAÇÃO DE INPUTS ---
+/**
+ * Updates `pcalcData` based on current DOM input values.
+ */
 function updateDataFromInputs() {
     const getVal = (id) => parseFloat(document.getElementById(id)?.value) || 0;
     const getChk = (id) => document.getElementById(id)?.checked || false;
@@ -402,6 +434,9 @@ function updateDataFromInputs() {
     pcalcData.config.maxRate = getVal('rate-max');
 }
 
+/**
+ * Renders the loads table.
+ */
 function renderLoads() {
     const tbody = document.getElementById('loads-table').getElementsByTagName('tbody')[0];
     tbody.innerHTML = '';
@@ -451,6 +486,9 @@ function handleReinforcementAction(e) {
     }
 }
 
+/**
+ * Renders the reinforcement table.
+ */
 function renderReinforcement() {
     const tbody = document.getElementById('reinforcement-table').getElementsByTagName('tbody')[0];
     tbody.innerHTML = '';
@@ -466,6 +504,9 @@ function renderReinforcement() {
     });
 }
 
+/**
+ * Generates a rectangular reinforcement pattern.
+ */
 function generateRectPattern() {
     const hx = pcalcData.secao.hx;
     const hy = pcalcData.secao.hy;
@@ -489,6 +530,9 @@ function generateRectPattern() {
 
 // --- LÓGICA DE ENGENHARIA REAL (Método das Fibras) ---
 
+/**
+ * Discretizes the cross-section into fibers for analysis.
+ */
 function discretizeSection() {
     pcalcData.resultados.secaoC = [];
     const { hx, hy, tipoSecao } = pcalcData.secao;
@@ -521,6 +565,12 @@ function discretizeSection() {
     }
 }
 
+/**
+ * Calculates concrete stress based on strain using Parabola-Rectangle diagram (NBR 6118).
+ * @param {number} epsilon - Strain.
+ * @param {number} fcd - Design compressive strength.
+ * @returns {number} Stress.
+ */
 function getConcreteStress(epsilon, fcd) {
     if (epsilon >= 0) return 0;
     
@@ -536,6 +586,13 @@ function getConcreteStress(epsilon, fcd) {
     return 0; 
 }
 
+/**
+ * Calculates steel stress based on strain (Elastic-Plastic).
+ * @param {number} epsilon - Strain.
+ * @param {number} fyd - Design yield strength.
+ * @param {number} Es - Elastic modulus.
+ * @returns {number} Stress.
+ */
 function getSteelStress(epsilon, fyd, Es) {
     const sigma = epsilon * Es; 
     if (sigma > fyd) return fyd;     
@@ -543,6 +600,13 @@ function getSteelStress(epsilon, fyd, Es) {
     return sigma;
 }
 
+/**
+ * Calculates the internal forces (N, Mx, My) for a given strain plane.
+ * @param {number} epsilon0 - Strain at the centroid.
+ * @param {number} curvatureX - Curvature around X axis (related to y coordinate).
+ * @param {number} curvatureY - Curvature around Y axis (related to x coordinate).
+ * @returns {Object} Internal forces {N, Mx, My}.
+ */
 function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
     const fcd = (pcalcData.materiais.fck / 10) / pcalcData.config.gamaC; 
     const fyd = (pcalcData.materiais.fyk / 10) / pcalcData.config.gamaS; 
@@ -580,6 +644,10 @@ function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
     return { N: N_int, Mx: Mx_int, My: My_int };
 }
 
+/**
+ * Generates the 3D interaction surface.
+ * @returns {Object} Points {x, y, z}.
+ */
 function generateInteractionSurface() {
     const points = { x: [], y: [], z: [] };
     const ecu = -0.0035; 
@@ -653,6 +721,10 @@ function generateInteractionSurface() {
 }
 
 // --- NOVA FUNÇÃO: GERAR SUPERFÍCIE DE MOMENTO MÍNIMO ---
+/**
+ * Generates the minimum moment surface surface visualization.
+ * @returns {Object} Points {x, y, z}.
+ */
 function generateMinMomentSurface() {
     const hx = pcalcData.secao.hx; // cm
     const hy = pcalcData.secao.hy; // cm
@@ -706,11 +778,15 @@ function generateMinMomentSurface() {
     return points;
 }
 
+/**
+ * Main function to perform calculation for all load cases.
+ */
 function performCalculation() {
     const btn = document.getElementById('calculate-btn');
     const msg = document.getElementById('feedback-message');
     
     console.log("--- Iniciando Cálculo ---"); 
+    console.group("PCALC Calculation Log");
 
     btn.disabled = true;
     msg.textContent = 'Calculando...';
@@ -749,10 +825,18 @@ function performCalculation() {
             msg.className = 'text-center text-red-600 text-xs mt-2 font-medium';
         } finally {
             btn.disabled = false;
+            console.groupEnd();
         }
     }, 100);
 }
 
+/**
+ * Calculates the safety factor for a given load point (N, Mx, My) against the interaction surface.
+ * @param {number} N - Normal force.
+ * @param {number} Mx - Moment X.
+ * @param {number} My - Moment Y.
+ * @returns {number} Safety Factor.
+ */
 function calculateSafetyFactor(N, Mx, My) {
     if (Math.abs(Mx) < 0.1 && Math.abs(My) < 0.1) {
         const surface = pcalcData.resultados.surfacePoints;
@@ -826,6 +910,12 @@ function calculateSafetyFactor(N, Mx, My) {
 }
 
 // --- FUNÇÃO DE CÁLCULO DE CASO DE CARGA (ATUALIZADA) ---
+/**
+ * Calculates a specific load case, including 2nd order effects.
+ * @param {Object} load - The load object.
+ * @param {number} index - Index of the load case.
+ * @returns {Object} Calculation results.
+ */
 function calculateLoadCase(load, index) {
     console.group(`Detalhes do Caso ${index + 1}`); 
     const gf = pcalcData.config.gamaF;
@@ -844,6 +934,12 @@ function calculateLoadCase(load, index) {
     const method = pcalcData.config.method2ndOrder;
     const checkSlenderness = pcalcData.config.checkSlenderness;
     
+    // NOTE: Creep (Fluência) implementation is pending as it requires separation of Permanent (Dead) and Variable (Live) loads.
+    // The reference implementation calculates M_creep = (M_perm / N_perm) * ...
+    if (pcalcData.config.considerCreep) {
+        console.warn("Aviso: Cálculo de Fluência (Creep) não implementado. Requer separação de cargas G e Q.");
+    }
+
     // Momento Mínimo (NBR 6118)
     const e_min_x = 1.5 + 0.03 * hy; 
     const e_min_y = 1.5 + 0.03 * hx; 
@@ -896,8 +992,6 @@ function calculateLoadCase(load, index) {
     const safetyFactor = calculateSafetyFactor(Nsd, Mtot_x, Mtot_y);
 
     console.groupEnd();
-
-    console.groupEnd()
     return {
         id: index,
         originalIndex: index + 1,
@@ -917,6 +1011,9 @@ function calculateLoadCase(load, index) {
 }
 
 // --- AUXILIAR PARA LOGS PADRONIZADOS ---
+/**
+ * Helper to log mid-span analysis details.
+ */
 function logMidSpanAnalysis(axisName, M1t, M1b, M2d, minM, finalMtot) {
     const M1_mid = (M1t + M1b) / 2;
     const M_mid_calc = Math.abs(M1_mid) + M2d;
@@ -934,6 +1031,9 @@ function logMidSpanAnalysis(axisName, M1t, M1b, M2d, minM, finalMtot) {
 // --- IMPLEMENTAÇÃO DOS MÉTODOS DE 2ª ORDEM ---
 
 // Auxiliar: Cálculo de Alpha B e Esbeltez Limite
+/**
+ * Calculates Alpha B and slenderness limit Lambda 1.
+ */
 function calcAlphaAndLambda(Nsd, Ma, Mb, h, axisName) {
     const L = pcalcData.secao.length;
     const isPinned = pcalcData.secao.boundary === 'pinned';
@@ -956,6 +1056,9 @@ function calcAlphaAndLambda(Nsd, Ma, Mb, h, axisName) {
     return { alphaB, lambda, lambda1, Le };
 }
 
+/**
+ * Method 1: Approximate Curvature (Pilar Padrão com Curvatura Aproximada).
+ */
 function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
     const hx = pcalcData.secao.hx;
     const hy = pcalcData.secao.hy;
@@ -1027,7 +1130,9 @@ function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     return { Mtot_x: Mtotx, Mtot_y: Mtoty, M2d_x: M2dx, M2d_y: M2dy, info: "Curvatura Aprox." }
 }
 
-
+/**
+ * Method 2: Stiffness Approximation (Pilar Padrão com Rigidez Nominal).
+ */
 function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
     // Implementação da Rigidez Nominal (NBR 6118 - Método do Pilar Padrão com Rigidez Aproximada)
     // EI = 0.3 * Eci * Ic + Es * Is
@@ -1119,6 +1224,9 @@ function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     };
 }
 
+/**
+ * Method 3: Standard Diagram (Pilar Padrão Acoplado).
+ */
 function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
     const Ac = pcalcData.secao.areaAc;
     const fcd = (pcalcData.materiais.fck/10) / pcalcData.config.gamaC;
@@ -1175,6 +1283,9 @@ function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     return { Mtot_x: rx.M, Mtot_y: ry.M, M2d_x: rx.M2, M2d_y: ry.M2, info: "Pilar-Padrão Real" };
 }
 
+/**
+ * Method 4 & 5: General Method (Numerical Integration).
+ */
 function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxial) {
     const L = pcalcData.secao.length;
     const isPinned = pcalcData.secao.boundary === 'pinned';
@@ -1320,6 +1431,9 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxi
 
 // Auxiliar: Encontrar curvatura para (N, Mx, My)
 // Usa Newton-Raphson simplificado ou busca direta
+/**
+ * Solves for the curvature that produces the target internal forces.
+ */
 function solveCurvature(targetN, targetMx, targetMy) {
     // 1. Estimar deformação média (eps0) baseada em N
     // N = Ac * fcd * eps0 (linear approx inicial)
@@ -1374,6 +1488,9 @@ function solveCurvature(targetN, targetMx, targetMy) {
     return { kx, ky, e0 };
 }
 
+/**
+ * Renders the results table.
+ */
 function renderResultsTable() {
     const tbody = document.getElementById('results-table').getElementsByTagName('tbody')[0];
     tbody.innerHTML = '';
@@ -1418,6 +1535,9 @@ function renderResultsTable() {
     });
 }
 
+/**
+ * Renders the 3D interaction chart using Plotly.
+ */
 function render3DChart() {
     const chartDiv = document.getElementById('chart3d');
     if(!chartDiv) return;
@@ -1518,6 +1638,9 @@ function render3DChart() {
     Plotly.newPlot('chart3d', data, layout, {responsive: true});
 }
 
+/**
+ * Renders the elevation charts for the selected load case.
+ */
 function renderElevation(caseIndex) {
     const containerN = document.getElementById('elevation-plot-n');
     const containerMx = document.getElementById('elevation-plot-mx');
@@ -1632,6 +1755,9 @@ function renderElevation(caseIndex) {
     plotMoment('elevation-plot-my', myTot, my1, myMinLine, 'Msd,y (kNm)');
 }
 
+/**
+ * Updates the section statistics overlay.
+ */
 function updateSectionStats() {
     const container = document.getElementById('cross-section-container');
     if (!container) return;
@@ -1678,6 +1804,9 @@ function updateSectionStats() {
     `;
 }
 
+/**
+ * Renders the cross-section on the canvas.
+ */
 function renderCrossSection() {
     const ctx = sectionCanvas.getContext('2d');
     
