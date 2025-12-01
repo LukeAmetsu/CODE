@@ -121,7 +121,7 @@ function injectDynamicUI() {
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
                             <input type="radio" name="method-2nd" value="stiffness_approx" class="text-blue-600 focus:ring-blue-500">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">2. Pilar-Padrão (Rigidez κ Aprox.)</span>
+                            <span class="text-xs text-gray-600 dark:text-gray-400">2. Pilar-Padrão (Rigidez Nominal NBR)</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
                             <input type="radio" name="method-2nd" value="standard_diagram" class="text-blue-600 focus:ring-blue-500">
@@ -916,6 +916,21 @@ function calculateLoadCase(load, index) {
     }
 }
 
+// --- AUXILIAR PARA LOGS PADRONIZADOS ---
+function logMidSpanAnalysis(axisName, M1t, M1b, M2d, minM, finalMtot) {
+    const M1_mid = (M1t + M1b) / 2;
+    const M_mid_calc = Math.abs(M1_mid) + M2d;
+    
+    console.log(`[${axisName}] >>> ANÁLISE NO MEIO DO VÃO <<<`);
+    console.log(`   > M1_top = ${M1t.toFixed(2)}, M1_bot = ${M1b.toFixed(2)}`);
+    console.log(`   > M1_mid (1ª Ordem Real) = ${M1_mid.toFixed(2)} kNm`);
+    console.log(`   > M2d (Acréscimo)        = ${M2d.toFixed(2)} kNm`);
+    console.log(`   > M_mid_estimado (Soma)  = ${M_mid_calc.toFixed(2)} kNm`);
+    console.log(`   > M_min (Mínimo Norma)   = ${minM.toFixed(2)} kNm [cite: NBR 6118]`);
+    console.log(`   > M_final (Dimensionam.) = ${finalMtot.toFixed(2)} kNm`);
+    console.log(`-------------------------------------------`);
+}
+
 // --- IMPLEMENTAÇÃO DOS MÉTODOS DE 2ª ORDEM ---
 
 // Auxiliar: Cálculo de Alpha B e Esbeltez Limite
@@ -974,6 +989,9 @@ function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     // ✅ APLICAR O SINAL DO M1deq ao Mtotx final
     const signX = Math.sign(M1deqX) || 1
     Mtotx = Mtotx * signX
+
+    // LOG MEIO DO VÃO X
+    logMidSpanAnalysis("Eixo X", M1xt, M1xb, M2dx, MinX, Math.abs(Mtotx));
     
     // Eixo Y - mesma lógica
     const May = Math.abs(M1yt) > Math.abs(M1yb) ? M1yt : M1yb
@@ -1002,82 +1020,103 @@ function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     // ✅ APLICAR O SINAL DO M1deq ao Mtoty final
     const signY = Math.sign(M1deqY) || 1
     Mtoty = Mtoty * signY
+
+    // LOG MEIO DO VÃO Y
+    logMidSpanAnalysis("Eixo Y", M1yt, M1yb, M2dy, MinY, Math.abs(Mtoty));
     
-    return { Mtotx, Mtoty, M2dx, M2dy, info: "Curvatura Aprox." }
+    return { Mtot_x: Mtotx, Mtot_y: Mtoty, M2d_x: M2dx, M2d_y: M2dy, info: "Curvatura Aprox." }
 }
 
 
 function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
-    // Implementação Kappa Aproximado conforme CalculaEsforcos.java (calculaMomento2OrdP2)
-    // Usando fórmula quadrática aproximada
-    // CORRECTION: Convert cm to m for formula consistency
-    const hx_m = pcalcData.secao.hx / 100;
-    const hy_m = pcalcData.secao.hy / 100;
+    // Implementação da Rigidez Nominal (NBR 6118 - Método do Pilar Padrão com Rigidez Aproximada)
+    // EI = 0.3 * Eci * Ic + Es * Is
     
-    // Eixo X
-    const Max = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xt : M1xb;
-    const Mbx = Math.abs(M1xt) >= Math.abs(M1xb) ? M1xb : M1xt;
-    const pX = calcAlphaAndLambda(Nsd, Max, Mbx, pcalcData.secao.hy, "Eixo X");
+    const hx = pcalcData.secao.hx / 100; // converter para m
+    const hy = pcalcData.secao.hy / 100;
+    const Eci = 5600 * Math.sqrt(pcalcData.materiais.fck) * 1000; // MPa -> kPa
+    const Es = pcalcData.materiais.es * 1000000; // GPa -> kPa
     
-    let Mtot_x = Math.abs(Max);
-    let M2d_x = 0;
+    // Inércia Bruta do Concreto
+    const Ic_x = (hx * Math.pow(hy, 3)) / 12; // Eixo X gira em torno de X (altura hy)
+    const Ic_y = (hy * Math.pow(hx, 3)) / 12; // Eixo Y gira em torno de Y (altura hx)
     
-    if (!checkSlender || pX.lambda > pX.lambda1) {
-        // Kappa Aprox (Simplified formula equivalent from Java)
-        // Correction: Use alphaB for M1d_eq instead of manual recalculation which ignores signs
-        const M1d_eq = pX.alphaB * Math.abs(Max);
-        const h = hy_m; // meters
-        const L = pX.Le / 100; // meters
-        
-        // Coeficientes da equacao quadratica derivada da aproximacao de rigidez (unidades SI base: kN, m)
-        const a = 5 * h;
-        // b = -h^2*N + N*L^2/320 - 5*h*M1d
-        const b = -h*h*Nsd + (Nsd*L*L/320) - 5*h*M1d_eq; 
-        const c = Nsd * h * h * M1d_eq;
-        
-        const delta = b*b - 4*a*c;
-        if (delta >= 0) {
-            Mtot_x = (-b + Math.sqrt(delta)) / (2*a);
-            M2d_x = Mtot_x - M1d_eq;
-            console.log(`[Eixo X] 2ª Ordem necessária. M1d_eq=${M1d_eq.toFixed(2)}, M2d=${M2d_x.toFixed(2)}`);
-        } else {
-            Mtot_x = 9999; // Instabilidade
-            console.log(`[Eixo X] Instabilidade detectada (Delta < 0)`);
-        }
-    } else { console.log(`[Eixo X] 2ª Ordem dispensada.`); }
-    // CORRECTION: Ensure Mtot is not less than the end moment or Min moment
-    Mtot_x = Math.max(Mtot_x, Math.abs(Max), MinX);
+    // Inércia da Armadura (Is)
+    let Is_x = 0;
+    let Is_y = 0;
+    const xm = pcalcData.secao.hx / 2;
+    const ym = pcalcData.secao.hy / 2;
+    
+    pcalcData.armacao.barras.forEach(b => {
+        const area = Math.PI * Math.pow((b.diametro/10)/2, 2) / 10000; // cm² -> m²
+        const distY = (b.y - ym) / 100; // distância vertical ao centro (para Ix)
+        const distX = (b.x - xm) / 100; // distância horizontal ao centro (para Iy)
+        Is_x += area * distY * distY;
+        Is_y += area * distX * distX;
+    });
 
-    // Eixo Y
-    const May = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yt : M1yb;
-    const Mby = Math.abs(M1yt) >= Math.abs(M1yb) ? M1yb : M1yt;
-    const pY = calcAlphaAndLambda(Nsd, May, Mby, pcalcData.secao.hx, "Eixo Y");
-    
-    let Mtot_y = Math.abs(May);
-    let M2d_y = 0;
-    
-    if (!checkSlender || pY.lambda > pY.lambda1) {
-        // Correction: Use alphaB for M1d_eq
-        const M1d_eq = pY.alphaB * Math.abs(May);
-        const h = hx_m; // meters
-        const L = pY.Le / 100; // meters
-        const a = 5 * h;
-        const b = -h*h*Nsd + (Nsd*L*L/320) - 5*h*M1d_eq; 
-        const c = Nsd * h * h * M1d_eq;
-        const delta = b*b - 4*a*c;
-        if (delta >= 0) {
-            Mtot_y = (-b + Math.sqrt(delta)) / (2*a);
-            M2d_y = Mtot_y - M1d_eq;
-            console.log(`[Eixo Y] 2ª Ordem necessária. M1d_eq=${M1d_eq.toFixed(2)}, M2d=${M2d_y.toFixed(2)}`);
-        } else {
-            Mtot_y = 9999;
-            console.log(`[Eixo Y] Instabilidade detectada (Delta < 0)`);
-        }
-    } else { console.log(`[Eixo Y] 2ª Ordem dispensada.`); }
-    // CORRECTION: Ensure Mtot is not less than the end moment or Min moment
-    Mtot_y = Math.max(Mtot_y, Math.abs(May), MinY);
+    // Rigidez Equivalente
+    const EI_x = 0.3 * Eci * Ic_x + Es * Is_x;
+    const EI_y = 0.3 * Eci * Ic_y + Es * Is_y;
 
-    return { Mtot_x, Mtot_y, M2d_x, M2d_y, info: "Rigidez Aprox." };
+    const solveAxis = (M1t, M1b, h_dim, EI_val, minM, axisName) => {
+        const Ma = Math.abs(M1t) >= Math.abs(M1b) ? M1t : M1b;
+        const Mb = Math.abs(M1t) >= Math.abs(M1b) ? M1b : M1t;
+        const p = calcAlphaAndLambda(Nsd, Ma, Mb, h_dim * 100, axisName);
+        
+        let Mtot = Math.abs(Ma);
+        let M2d = 0;
+
+        console.log(`[${axisName}] --- INÍCIO CÁLCULO RIGIDEZ ---`);
+        
+        if (!checkSlender || p.lambda > p.lambda1) {
+            // Carga Crítica de Flambagem
+            const Le = p.Le / 100; // m
+            const Nb = (Math.PI * Math.PI * EI_val) / (Le * Le);
+            
+            // Momento Equivalente (NBR 6118)
+            const M1d_eq = Math.max(0.6 * Math.abs(Ma) + 0.4 * Math.abs(Mb), 0.4 * Math.abs(Ma));
+            
+            // Amplificação
+            if (Math.abs(Nsd) >= Nb) {
+                Mtot = 9999; // Instabilidade
+                console.log(`[${axisName}] INSTABILIDADE: Nsd (${Math.abs(Nsd).toFixed(0)}) >= Nb (${Nb.toFixed(0)})`);
+            } else {
+                const alpha = 1 / (1 - Math.abs(Nsd)/Nb);
+                Mtot = M1d_eq * alpha;
+                M2d = Mtot - M1d_eq;
+                
+                console.log(`[${axisName}] Rigidez Nominal:`);
+                console.log(`   > Nb (Carga Crítica) = ${Nb.toFixed(1)} kN`);
+                console.log(`   > M1d_eq (Equivalente) = ${M1d_eq.toFixed(2)} kNm`);
+                console.log(`   > Alpha (Amplificação) = ${alpha.toFixed(3)}`);
+            }
+        } else {
+             console.log(`[${axisName}] Esbeltez baixa (${p.lambda.toFixed(1)} < ${p.lambda1.toFixed(1)}). 2ª Ordem dispensada.`);
+        }
+        
+        // O Momento Total de Dimensionamento deve respeitar o Mínimo e o topo/base
+        const finalMtot = Math.max(Mtot, Math.abs(Ma), minM);
+        
+        // LOG MEIO DO VÃO
+        logMidSpanAnalysis(axisName, M1t, M1b, M2d, minM, finalMtot);
+
+        // Recalcular M2d efetivo para plotagem (diferença entre Final e 1ª ordem máx)
+        const effectiveM2d = Math.max(0, finalMtot - Math.abs(Ma));
+
+        return { Mtot: finalMtot, M2d: effectiveM2d };
+    };
+
+    const resX = solveAxis(M1xt, M1xb, hy, EI_x, MinX, "Eixo X");
+    const resY = solveAxis(M1yt, M1yb, hx, EI_y, MinY, "Eixo Y");
+
+    return { 
+        Mtot_x: resX.Mtot, 
+        Mtot_y: resY.Mtot, 
+        M2d_x: resX.M2d, 
+        M2d_y: resY.M2d, 
+        info: "Rigidez Nominal (NBR)" 
+    };
 }
 
 function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, checkSlender) {
@@ -1092,6 +1131,8 @@ function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
         const p = calcAlphaAndLambda(Nsd, Ma, Mb, h, axisName);
         
         let Mtot = Math.max(0.6 * Math.abs(Ma) + 0.4 * Math.abs(Mb), 0.4 * Math.abs(Ma));
+        let M2d = 0;
+
         if (!checkSlender || p.lambda > p.lambda1) {
             console.log(`[${axisName}] Iniciando iteração de rigidez real...`);
             // Iteração para encontrar rigidez secante no diagrama
@@ -1116,9 +1157,16 @@ function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
                 console.log(`[${axisName}] Iter ${i}: M=${M_curr.toFixed(2)}, k=${k.toFixed(6)}, EI=${EIsec.toFixed(0)}, Nb=${Nb.toFixed(0)}, M_new=${M_new.toFixed(2)}`);
                 M_curr = M_new;
             }
-            return { M: M_curr, M2: M_curr - Math.abs(Ma) };
+            Mtot = M_curr;
+            M2d = Mtot - Math.abs(Ma);
         }
-        return { M: Math.max(Math.abs(Ma), minM), M2: 0 };
+        
+        const finalMtot = Math.max(Mtot, Math.abs(Ma), minM);
+        
+        // LOG MEIO DO VÃO
+        logMidSpanAnalysis(axisName, M1t, M1b, M2d, minM, finalMtot);
+
+        return { M: finalMtot, M2: M2d };
     };
 
     const rx = solveAxis(M1xt, M1xb, hy, MinX, "Eixo X");
@@ -1161,9 +1209,7 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxi
                 M1y = M1yb * (1 - z/L);
             }
             
-            // Momento Total (N é negativo para compressão, mas gera momento P-Delta positivo se w oposto)
-            // Convenção: M2 = N * w. Se N compressão (-), w positivo, M2 negativo?
-            // Vamos usar valor absoluto para magnitude de 2ª ordem adicionada
+            // Momento Total
             let M_curr_x = M1x + Math.abs(Nsd) * w_x[i];
             let M_curr_y = M1y + Math.abs(Nsd) * w_y[i];
             
@@ -1185,45 +1231,30 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxi
             ky_vals.push(k.ky);
         }
 
-        // 2. Integrar Curvatura para achar deflexão w (Método das Diferenças Finitas ou Newmark)
-        // Simplificado: dupla integração trapezoidal
-        // w'' = -k
-        // theta' = -k => theta = int(-k)
-        // w' = theta => w = int(theta)
-        
-        // Integração para w_x (usando kx) e w_y (usando ky)
-        // Assumindo biapoiado simétrico w(0)=0, w(L)=0
-        
+        // 2. Integrar Curvatura para achar deflexão w
         const integrate = (k_vals) => {
             let deflections = new Array(numNodes).fill(0);
             if (isPinned) {
-                // Método do Momento-Area simplificado
-                // Passo 1: Calcular rotação no início (theta_0) assumindo w(L)=0
-                // w(z) = theta_0 * z - double_int(k)
-                // w(L) = 0 => theta_0 = double_int(k)_L / L
-                let d_int = 0; // integral dupla
-                let s_int = 0; // integral simples
+                let d_int = 0; 
+                let s_int = 0; 
                 for (let i = 0; i < numNodes; i++) {
-                    const k_avg = (i==0) ? 0 : (k_vals[i] + k_vals[i-1])/2; // Trapezio (simplif)
+                    const k_avg = (i==0) ? 0 : (k_vals[i] + k_vals[i-1])/2;
                     if (i>0) {
                         s_int += k_avg * dz;
-                        d_int += s_int * dz - (k_avg * dz * dz / 2); // Aproximado
+                        d_int += s_int * dz - (k_avg * dz * dz / 2);
                     }
                 }
                 const theta_0 = d_int / L;
-                
                 s_int = 0; d_int = 0;
                 for (let i = 0; i < numNodes; i++) {
                     if (i > 0) {
                         const k_avg = (k_vals[i] + k_vals[i-1])/2;
                         s_int += k_avg * dz;
-                        d_int += s_int * dz; // Simplificado
+                        d_int += s_int * dz; 
                     }
                     deflections[i] = theta_0 * (i*dz) - d_int;
                 }
             } else {
-                // Balanço: Engaste na base (z=0) => w(0)=0, w'(0)=0
-                // w(z) = double_int(k)
                 let s_int = 0; let d_int = 0;
                 for (let i = 0; i < numNodes; i++) {
                     if (i > 0) {
@@ -1237,7 +1268,7 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxi
             return deflections;
         };
 
-        w_x_new = integrate(kx_vals); // Curvatura X gera deflexão no plano YZ (w_x no código, visualmente dy)
+        w_x_new = integrate(kx_vals); 
         w_y_new = integrate(ky_vals);
 
         // Check convergence
@@ -1251,7 +1282,7 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxi
              console.log(`[Geral] Iter ${iter+1}: Max Diff=${max_w_diff.toFixed(4)} cm`);
         }
         
-        if (max_w_diff < 0.01) break; // Convergiu (1mm)
+        if (max_w_diff < 0.01) break; 
     }
     
     // Calcular momentos finais máximos
@@ -1267,10 +1298,24 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, isBiaxi
         if (Mx > Mtot_x) Mtot_x = Mx;
         if (My > Mtot_y) Mtot_y = My;
     }
-    Mtot_x = Math.max(Mtot_x, MinX);
-    Mtot_y = Math.max(Mtot_y, MinY);
+    const finalMtotX = Math.max(Mtot_x, MinX);
+    const finalMtotY = Math.max(Mtot_y, MinY);
 
-    return { Mtot_x, Mtot_y, M2d_x: Mtot_x - Math.max(Math.abs(M1xt), Math.abs(M1xb)), M2d_y: Mtot_y - Math.max(Math.abs(M1yt), Math.abs(M1yb)), info: isBiaxial ? "Geral Biaxial" : "Geral" };
+    // Calc M2d aproximado para o Log
+    const M2d_x_log = Mtot_x - Math.max(Math.abs(M1xt), Math.abs(M1xb));
+    const M2d_y_log = Mtot_y - Math.max(Math.abs(M1yt), Math.abs(M1yb));
+
+    // LOG MEIO DO VÃO
+    logMidSpanAnalysis("Eixo X", M1xt, M1xb, M2d_x_log, MinX, finalMtotX);
+    logMidSpanAnalysis("Eixo Y", M1yt, M1yb, M2d_y_log, MinY, finalMtotY);
+
+    return { 
+        Mtot_x: finalMtotX, 
+        Mtot_y: finalMtotY, 
+        M2d_x: finalMtotX - Math.max(Math.abs(M1xt), Math.abs(M1xb)), 
+        M2d_y: finalMtotY - Math.max(Math.abs(M1yt), Math.abs(M1yb)), 
+        info: isBiaxial ? "Geral Biaxial" : "Geral" 
+    };
 }
 
 // Auxiliar: Encontrar curvatura para (N, Mx, My)
@@ -1474,35 +1519,40 @@ function render3DChart() {
 }
 
 function renderElevation(caseIndex) {
-    // 1. Verificação segura dos elementos
     const containerN = document.getElementById('elevation-plot-n');
     const containerMx = document.getElementById('elevation-plot-mx');
     const containerMy = document.getElementById('elevation-plot-my');
     
     if (!containerN || !containerMx || !containerMy) return;
     
-    // 2. Esconder placeholder
     const placeholder = document.getElementById('elevation-placeholder');
     if(placeholder) placeholder.style.display = 'none';
     
     const loadCase = pcalcData.resultados.loadCases[caseIndex];
     if (!loadCase) return;
 
-    // --- GERAÇÃO DE DADOS ---
     const points = 20;
     const L = pcalcData.secao.length; 
     const z = []; 
     const normal = [];
     const mxTot = [];
     const myTot = [];
-    const mx1 = []; // Array para momento de 1ª ordem X
-    const my1 = []; // Array para momento de 1ª ordem Y
+    const mx1 = []; 
+    const my1 = [];
     
-    const M1xtop = loadCase.Mx1Top
-    const M1xbot = loadCase.Mx1Bot
-    
-    const M1ytop = loadCase.My1Top
-    const M1ybot = loadCase.My1Bot
+    // Envelope Mínimo
+    const mxMinLine = [];
+    const myMinLine = [];
+    // Recalcular Mínimo para exibição (aprox)
+    const e_min_x = 1.5 + 0.03 * pcalcData.secao.hy;
+    const e_min_y = 1.5 + 0.03 * pcalcData.secao.hx;
+    const Md_min_x = Math.abs(loadCase.Nsd) * (e_min_x / 100);
+    const Md_min_y = Math.abs(loadCase.Nsd) * (e_min_y / 100);
+
+    const M1xtop = loadCase.Mx1Top;
+    const M1xbot = loadCase.Mx1Bot;
+    const M1ytop = loadCase.My1Top;
+    const M1ybot = loadCase.My1Bot;
     
     const isPinned = pcalcData.secao.boundary === 'pinned';
     const N_val = loadCase.Nsd; 
@@ -1513,60 +1563,43 @@ function renderElevation(caseIndex) {
         z.push(height);
         
         normal.push(N_val); 
-        
+        mxMinLine.push(Md_min_x); // Linha reta do mínimo
+        myMinLine.push(Md_min_y);
+
         const m1x_curr = M1xbot + (M1xtop - M1xbot) * pos;
         const m1y_curr = M1ybot + (M1ytop - M1ybot) * pos;
         
         mx1.push(m1x_curr);
         my1.push(m1y_curr);
         
-        // Correção de Visualização: Usar amplitude de 2ª ordem calculada (M2d)
-        // em vez de forçar o meio a ser igual a Mtot (que pode ser o momento da extremidade)
-        if (isPinned) {
-            const m2x_mag = loadCase.M2dx || 0; // Magnitude
-            const m2y_mag = loadCase.M2dy || 0;
-            
-            // Heurística de sinal para a curvatura de 2ª ordem:
-            // Geralmente na direção do momento equivalente (M1d_eq) ou da soma dos momentos
-            let signX = 1;
-            if (Math.abs(M1xtop + M1xbot) > 0.01) {
-                signX = Math.sign(M1xtop + M1xbot);
-            } else {
-                // Caso antissimétrico (-M, +M): Curvatura segue o maior momento em módulo
-                signX = Math.sign(Math.abs(M1xtop) >= Math.abs(M1xbot) ? M1xtop : M1xbot);
-            }
+        // Visualização do efeito de 2ª ordem físico (senoidal simplificado)
+        const m2x_mag = loadCase.M2dx || 0;
+        const m2y_mag = loadCase.M2dy || 0;
+        
+        // Sinal baseado na curvatura predominante
+        let signX = Math.sign(loadCase.MxTot) || 1;
+        if (Math.abs(M1xtop + M1xbot) > 0.01) signX = Math.sign(M1xtop + M1xbot);
+        
+        let signY = Math.sign(loadCase.MyTot) || 1;
+        if (Math.abs(M1ytop + M1ybot) > 0.01) signY = Math.sign(M1ytop + M1ybot);
 
-            let signY = 1;
-            if (Math.abs(M1ytop + M1ybot) > 0.01) {
-                signY = Math.sign(M1ytop + M1ybot);
-            } else {
-                signY = Math.sign(Math.abs(M1ytop) >= Math.abs(M1ybot) ? M1ytop : M1ybot);
-            }
-            
+        if (isPinned) {
             mxTot.push(m1x_curr + (signX * m2x_mag) * Math.sin(Math.PI * pos));
             myTot.push(m1y_curr + (signY * m2y_mag) * Math.sin(Math.PI * pos));
         } else {
-            // Balanço: curva quadrática simples
             const factor = Math.pow(1 - pos, 2); 
-            // Amplitude approximation using M2d
-            const m2x_mag = loadCase.M2dx || 0;
-            const m2y_mag = loadCase.M2dy || 0;
-            const signX = Math.sign(loadCase.MxTot) || 1;
-            const signY = Math.sign(loadCase.MyTot) || 1;
-
-            mxTot.push(m1x_curr + signX * m2x_mag * (1 - factor)); // simplified shape
+            mxTot.push(m1x_curr + signX * m2x_mag * (1 - factor));
             myTot.push(m1y_curr + signY * m2y_mag * (1 - factor));
         }
     }
     
-    // Configurações comuns do Layout (Estilo Image Ref e Dark Mode)
     const dark = typeof isThemeDark === 'function' ? isThemeDark() : false;
-    const plotBgColor = dark ? '#1f2937' : '#f3f4f6'; // Gray-800 : Gray-100
+    const plotBgColor = dark ? '#1f2937' : '#f3f4f6';
     const lineColor = dark ? '#e5e7eb' : '#000000';
-    const dashedLineColor = dark ? '#9ca3af' : '#6b7280'; // Cor para linha tracejada
+    const dashedLineColor = dark ? '#9ca3af' : '#6b7280';
+    const minLineColor = '#ef4444'; // Vermelho para envelope mínimo
     const fontColor = dark ? '#9ca3af' : '#374151';
-    const fillColor = dark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.25)'; // Red
-    const zerolineColor = dark ? '#6b7280' : '#9ca3af';
+    const fillColor = dark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'; // Blue tint
 
     const commonLayout = {
         margin: { l: 30, r: 10, b: 30, t: 30 },
@@ -1574,113 +1607,29 @@ function renderElevation(caseIndex) {
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: plotBgColor,
         xaxis: { 
-            zeroline: true, zerolinecolor: zerolineColor, zerolinewidth: 2,
+            zeroline: true, zerolinecolor: '#9ca3af',
             showgrid: true, gridcolor: dark ? '#374151' : '#e5e7eb',
-            showticklabels: false, // Esconde números X para limpar
         },
-        yaxis: { 
-            showgrid: false, zeroline: false,
-            showticklabels: false, // Esconde Y também (apenas visual)
-            range: [0, L]
-        },
+        yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [0, L] },
         font: { size: 10, color: fontColor }
     };
 
-    // Função auxiliar para anotações (Topo e Base)
-    const createAnnotations = (xVals, yVals, suffix='') => {
-        const anns = [];
-        // Base
-        anns.push({
-            x: xVals[0], y: yVals[0],
-            text: Math.round(xVals[0]) + suffix,
-            showarrow: false, xanchor: 'right', xshift: -2, yshift: 10,
-            font: {size: 9, color: fontColor}
-        });
-        // Topo
-        anns.push({
-            x: xVals[xVals.length-1], y: yVals[yVals.length-1],
-            text: Math.round(xVals[xVals.length-1]) + suffix,
-            showarrow: false, xanchor: 'right', xshift: -2, yshift: -10,
-            font: {size: 9, color: fontColor}
-        });
-        // Meio (Aprox)
-        const mid = Math.floor(xVals.length/2);
-        // Só mostra anotação no meio se for diferente das extremidades (curvo)
-        if (Math.abs(xVals[mid] - (xVals[0] + xVals[xVals.length-1])/2) > 1) {
-            anns.push({
-                x: xVals[mid], y: yVals[mid],
-                text: Math.round(xVals[mid]) + suffix,
-                showarrow: false, xanchor: 'left', xshift: 2,
-                font: {size: 9, color: fontColor}
-            });
-        }
-        return anns;
-    };
-
-    // 1. Plot Normal (Nsd)
-    const traceN = { 
-        x: normal, y: z, 
-        type: 'scatter', mode: 'lines', fill: 'tozerox', 
-        line: { color: lineColor, width: 2 },
-        fillcolor: fillColor,
-        hoverinfo: 'x+y'
-    };
-    const layoutN = { 
-        ...commonLayout, 
-        title: { text: 'Nsd (kN)', font: {size: 11, weight: 'bold', color: fontColor} },
-        annotations: createAnnotations(normal, z)
-    };
+    // Plot N
+    const traceN = { x: normal, y: z, type: 'scatter', mode: 'lines', fill: 'tozerox', line: { color: lineColor, width: 2 }, fillcolor: fillColor };
+    Plotly.newPlot('elevation-plot-n', [traceN], { ...commonLayout, title: { text: 'Nsd (kN)', font: {size: 11, weight: 'bold', color: fontColor} } }, {displayModeBar: false});
     
-    // 2. Plot Mx (com linha tracejada de 1ª ordem)
-    const traceMx = { 
-        x: mxTot, y: z, 
-        type: 'scatter', mode: 'lines', fill: 'tozerox', 
-        line: { color: lineColor, width: 2 },
-        fillcolor: fillColor,
-        hoverinfo: 'x+y',
-        name: 'Total'
-    };
-    const traceMx1 = { 
-        x: mx1, y: z, 
-        type: 'scatter', mode: 'lines',
-        line: { color: dashedLineColor, width: 1, dash: 'dash' },
-        hoverinfo: 'x+y',
-        name: '1ª Ordem'
+    // Helper para Plotar M
+    const plotMoment = (divId, tTot, t1, tMin, title) => {
+        Plotly.newPlot(divId, [
+            { x: tMin, y: z, type: 'scatter', mode: 'lines', line: { color: minLineColor, width: 1, dash: 'dot' }, name: 'Mínimo (+)' },
+            { x: tMin.map(v => -v), y: z, type: 'scatter', mode: 'lines', line: { color: minLineColor, width: 1, dash: 'dot' }, name: 'Mínimo (-)' },
+            { x: t1, y: z, type: 'scatter', mode: 'lines', line: { color: dashedLineColor, width: 1, dash: 'dash' }, name: '1ª Ordem' },
+            { x: tTot, y: z, type: 'scatter', mode: 'lines', fill: 'tozerox', line: { color: lineColor, width: 2 }, fillcolor: fillColor, name: 'Total' }
+        ], { ...commonLayout, title: { text: title, font: {size: 11, weight: 'bold', color: fontColor} } }, {displayModeBar: false});
     };
 
-    const layoutMx = { 
-        ...commonLayout, 
-        title: { text: 'Msd,x (kNm)', font: {size: 11, weight: 'bold', color: fontColor} },
-        annotations: createAnnotations(mxTot, z)
-    };
-
-    // 3. Plot My (com linha tracejada de 1ª ordem)
-    const traceMy = { 
-        x: myTot, y: z, 
-        type: 'scatter', mode: 'lines', fill: 'tozerox', 
-        line: { color: lineColor, width: 2 },
-        fillcolor: fillColor,
-        hoverinfo: 'x+y',
-        name: 'Total'
-    };
-    const traceMy1 = { 
-        x: my1, y: z, 
-        type: 'scatter', mode: 'lines',
-        line: { color: dashedLineColor, width: 1, dash: 'dash' },
-        hoverinfo: 'x+y',
-        name: '1ª Ordem'
-    };
-
-    const layoutMy = { 
-        ...commonLayout, 
-        title: { text: 'Msd,y (kNm)', font: {size: 11, weight: 'bold', color: fontColor} },
-        annotations: createAnnotations(myTot, z)
-    };
-
-    // Renderizar
-    Plotly.newPlot('elevation-plot-n', [traceN], layoutN, {displayModeBar: false, responsive: true});
-    Plotly.newPlot('elevation-plot-mx', [traceMx, traceMx1], layoutMx, {displayModeBar: false, responsive: true});
-    Plotly.newPlot('elevation-plot-my', [traceMy, traceMy1], layoutMy, {displayModeBar: false, responsive: true});
+    plotMoment('elevation-plot-mx', mxTot, mx1, mxMinLine, 'Msd,x (kNm)');
+    plotMoment('elevation-plot-my', myTot, my1, myMinLine, 'Msd,y (kNm)');
 }
 
 function updateSectionStats() {
