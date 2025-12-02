@@ -227,6 +227,201 @@ const validationRules = {
 let validationStatus = true;
 
 /**
+    },
+    baseplate: {
+        'base_plate_length_N': { min: 1, required: true, label: 'Plate Length (N)' },
+        'base_plate_width_B': { min: 1, required: true, label: 'Plate Width (B)' },
+        'provided_plate_thickness_tp': { min: 0.125, required: true, label: 'Plate Thickness' },
+        'column_flange_width_bf': { min: 1, required: false, label: 'Column Flange Width' },
+        'column_depth_d': { min: 1, required: true, label: 'Column Depth/Diameter' },
+        'base_plate_Fy': { min: 1, required: true, label: 'Plate Fy' },
+        'concrete_fc': { min: 1, required: true, label: 'Concrete f\'c' },
+        'anchor_bolt_diameter': { min: 0.25, required: true, label: 'Bolt Diameter' },
+        'anchor_embedment_hef': { min: 1, required: true, label: 'Bolt Embedment (hef)' },
+        crossField: [
+            {
+                condition: (inputs) => inputs.column_depth_d < inputs.base_plate_length_N,
+                message: "Column Depth/Diameter (d) must be less than the Plate Length (N)."
+            },
+            {
+                condition: (inputs) => !inputs.column_flange_width_bf || inputs.column_flange_width_bf < inputs.base_plate_width_B,
+                message: "Column Flange Width (bf) must be less than the Plate Width (B)."
+            },
+            {
+                condition: (inputs) => {
+                    if (!inputs.column_flange_width_bf) return true; // Not applicable for HSS
+                    return (inputs.base_plate_width_B - inputs.column_flange_width_bf) / 2.0 >= 1.0;
+                },
+                message: "Plate edge distance to column flange is less than 1 inch. This may be insufficient for welding or erection tolerance.",
+                level: 'warning'
+            }
+        ]
+    },
+    wood: {
+        'Fb_unadjusted': { min: 0.001, required: true, label: 'Fb' },
+        'Fv_unadjusted': { min: 0.001, required: true, label: 'Fv' },
+        'Fc_unadjusted': { min: 0.001, required: true, label: 'Fc' },
+        'E_unadjusted': { min: 0.001, required: true, label: 'E' },
+        'E_min_unadjusted': { min: 0.001, required: true, label: 'E_min' },
+        'b_width': { min: 0.001, required: true, label: 'Width (b)' },
+        'd_depth': { min: 0.001, required: true, label: 'Depth (d)' },
+        'unbraced_length_L': { min: 0.001, required: true, label: 'Unbraced Length (L)' },
+        'effective_length_factor_K': { min: 0.001, required: true, label: 'K Factor' },
+    },
+    steel_check: {
+        'Fy': { min: 1, max: 100, required: true, label: 'Yield Strength (Fy)' },
+        'Fu': { min: 1, max: 200, required: true, label: 'Ultimate Strength (Fu)' },
+        'E': { min: 28000, max: 31000, required: true, label: 'Modulus of Elasticity (E)' },
+        'd': { min: 0.1, required: true, label: 'Depth/Height' },
+        'bf': { min: 0.1, required: true, label: 'Width/Flange Width' },
+        'tf': { min: 0.1, required: true, label: 'Thickness/Flange Thickness' },
+        'tw': { min: 0.1, required: true, label: 'Web Thickness' },
+        'K': { min: 0.1, required: true, label: 'Effective length factor (K)' },
+        'Lb_input': { min: 0, required: true, label: 'Unbraced Length (Lb)' },
+        'actual_deflection_input': { min: 0, required: false, label: 'Actual Deflection' },
+        crossField: [
+            {
+                condition: (inputs) => inputs.Fu > inputs.Fy,
+                message: "Ultimate Strength (Fu) must be greater than Yield Strength (Fy)."
+            },
+            {
+                condition: (inputs) => {
+                    if (inputs.section_type !== 'I-Shape' && !inputs.section_type.endsWith('-Shape')) return true;
+                    return inputs.d >= 2 * inputs.tf;
+                },
+                message: "For I-shapes, Depth (d) must be at least twice the flange thickness (tf)."
+            },
+            {
+                condition: (inputs) => {
+                    if (inputs.section_type !== 'I-Shape' && !inputs.section_type.endsWith('-Shape')) return true;
+                    return inputs.bf >= inputs.tw;
+                },
+                message: "For I-shapes, Flange width (bf) must be greater than or equal to web thickness (tw)."
+            },
+            {
+                condition: (inputs) => inputs.Fy >= 36 && inputs.Fy <= 80,
+                message: "Unusual steel grade. Common structural steel has Fy between 36 and 80 ksi.",
+                level: 'warning'
+            },
+            {
+                condition: (inputs) => Math.abs(inputs.Pu_or_Pa) <= 10000,
+                message: "Very high axial load detected. Please verify that the units are in kips.",
+                level: 'warning'
+            },
+            {
+                condition: (inputs) => Math.abs(inputs.Mux_or_Max) <= 10000,
+                message: "Very high moment detected. Please verify that the units are in kip-ft.",
+                level: 'warning'
+            }
+        ]
+    },
+    splice: {
+        'member_d': { min: 1, required: true, label: 'Member Depth' },
+        'member_bf': { min: 1, required: true, label: 'Member Flange Width' },
+        'member_tf': { min: 0.1, required: true, label: 'Member Flange Thickness' },
+        'member_tw': { min: 0.1, required: true, label: 'Member Web Thickness' },
+        'member_Fy': { min: 36, required: true, label: 'Member Fy' },
+        'H_fp': { min: 1, required: (inputs) => ['1', '2'].includes(inputs.num_flange_plates), label: 'Flange Plate Width' },
+        't_fp': { min: 0.1, required: (inputs) => ['1', '2'].includes(inputs.num_flange_plates), label: 'Flange Plate Thickness' },
+        'L_fp': { min: 1, required: (inputs) => ['1', '2'].includes(inputs.num_flange_plates), label: 'Flange Plate Length' },
+        'H_wp': { min: 1, required: (inputs) => ['1', '2'].includes(inputs.num_web_plates), label: 'Web Plate Height' },
+        't_wp': { min: 0.1, required: (inputs) => ['1', '2'].includes(inputs.num_web_plates), label: 'Web Plate Thickness' },
+        'L_wp': { min: 1, required: (inputs) => ['1', '2'].includes(inputs.num_web_plates), label: 'Web Plate Length' },
+        'D_fp': { min: 0.1, required: (inputs) => ['1', '2'].includes(inputs.num_flange_plates), label: 'Flange Bolt Diameter' },
+        'D_wp': { min: 0.1, required: (inputs) => ['1', '2'].includes(inputs.num_web_plates), label: 'Web Bolt Diameter' },
+        crossField: [
+            {
+                condition: (inputs) => inputs.H_fp >= inputs.g_gage_fp,
+                message: "Flange plate width (H_fp) must be greater than or equal to the bolt gage (g)."
+            }
+        ]
+    },
+    nbr_concreto: {
+        'fck': { min: 1, required: true, label: 'Resist. do Concreto (fck)' },
+        'fyk': { min: 1, required: true, label: 'Resist. do Aço (fyk)' },
+        'bw': { min: 0.01, required: true, label: 'Largura (bw)' },
+        'h': { min: 0.01, required: true, label: 'Altura (h)' },
+        'c': { min: 0, required: true, label: 'Cobrimento (c)' },
+        'num_barras': { min: 1, required: true, label: 'N° de Barras' },
+        'diam_barra': { min: 1, required: true, label: 'Diâmetro da Barra' },
+        's_estribo': { min: 0.01, required: true, label: 'Espaçamento do Estribo' },
+        'Msd': { required: true, label: 'Momento (Msd)' },
+        'Vsd': { required: true, label: 'Cortante (Vsd)' }
+    },
+    aci_concrete: {
+        'fc': { min: 2500, max: 20000, required: true, label: 'Concrete Strength (f\'c)' },
+        'fy': { min: 40000, max: 100000, required: true, label: 'Steel Yield Strength (fy)' },
+        'b': { min: 1, required: true, label: 'Width (b)' },
+        'h': { min: 1, required: true, label: 'Height (h)' },
+        'cover': { min: 0.5, required: true, label: 'Cover' },
+        'num_bars': { min: 1, required: true, label: 'Number of Bars' },
+        'bar_size': { min: 3, max: 11, required: true, label: 'Bar Size' },
+        'stirrup_spacing': { min: 1, required: true, label: 'Stirrup Spacing' },
+        'Mu': { required: true, label: 'Moment (Mu)' },
+        'Vu': { required: true, label: 'Shear (Vu)' }
+    },
+    nbr_madeira: {
+        'fc0k': { min: 1, required: true, label: 'Resist. à Compressão (fc0k)' },
+        'fvk': { min: 1, required: true, label: 'Resist. ao Cisalhamento (fvk)' },
+        'b': { min: 0.1, required: true, label: 'Largura (b)' },
+        'h': { min: 0.1, required: true, label: 'Altura (h)' },
+        'L': { min: 0.1, required: true, label: 'Vão (L)' },
+        'Msd': { required: true, label: 'Momento (Msd)' },
+        'Vsd': { required: true, label: 'Cortante (Vsd)' }
+    },
+    nbr_aco: {
+        'fy': { min: 100, required: true, label: 'Resist. ao Escoamento (fy)' },
+        'd': { min: 1, required: true, label: 'Altura (d)' },
+        'bf': { min: 1, required: true, label: 'Largura Mesa (bf)' },
+        'tf': { min: 0.1, required: true, label: 'Espessura Mesa (tf)' },
+        'tw': { min: 0.1, required: true, label: 'Espessura Alma (tw)' },
+        'Ag': { min: 1, required: true, label: 'Área Bruta (Ag)' },
+        'Zx': { min: 1, required: true, label: 'Módulo Plástico (Zx)' },
+        'Lb': { min: 0.1, required: true, label: 'Dist. entre Contenções (Lb)' },
+        'Nsd': { required: true, label: 'Força Axial (Nsd)' },
+        'Msdx': { required: true, label: 'Momento Fletor (Msdx)' }
+    },
+    'prestressed-beam-inputs-v2': { // NBR 6118 Viga Protendida
+        'fck': { min: 20, max: 90, required: true, label: 'Resist. do Concreto (fck)' },
+        'age_at_prestress': { min: 1, max: 365, required: true, label: 'Idade na Protensão' },
+        'Ap': { min: 0.1, required: true, label: 'Área da Cordoalha (Ap)' },
+        'Kperdas': { min: 0.5, max: 1.0, required: true, label: 'Fator de Perdas (Kperdas)' },
+        'num_cables': { min: 1, required: true, label: 'Número de Cabos' },
+        'num_strands_per_cable': { min: 1, required: true, label: 'Cordoalhas por Cabo' },
+        'load_pp': { min: 0, required: true, label: 'Peso Próprio' },
+        'load_perm': { min: 0, required: true, label: 'Carga Permanente' },
+        'load_var': { min: 0, required: true, label: 'Carga Variável' },
+        'beam_length': { min: 1, required: true, label: 'Comprimento da Viga' },
+        'beam_coords': { required: true, label: 'Vértices da Seção' },
+        'Ep': { min: 150000, max: 250000, required: true, label: 'Módulo do Aço (Ep)' },
+        'humidity': { min: 20, max: 100, required: true, label: 'Umidade Ambiente' },
+        'fptk': { min: 1000, max: 2200, required: true, label: 'Resist. do Aço (fptk)' },
+        'mu': { min: 0, max: 1, required: true, label: 'Coef. de Atrito (μ)' },
+        'k': { min: 0, max: 0.1, required: true, label: 'Coef. de Ondulação (k)' },
+        'anchorage_slip': { min: 0, max: 20, required: true, label: 'Acomodação da Ancoragem' },
+        'exposed_perimeter': { min: 0.1, required: true, label: 'Perímetro Exposto' }
+    },
+    mn_diagram: {
+        'b': { min: 0.1, required: true, label: 'Largura (b)' },
+        'h': { min: 0.1, required: true, label: 'Altura (h)' },
+        'fck': { min: 1, required: true, label: 'Concreto (fck)' },
+        'fyk': { min: 1, required: true, label: 'Aço (fyk)' },
+        'd_linha': { min: 0.1, required: true, label: 'Cobrimento (d\')' },
+        'As': { min: 0, required: true, label: 'Arm. Inf. (As)' },
+        'As_linha': { min: 0, required: true, label: 'Arm. Sup. (As\')' },
+        'gamma_c': { min: 0.1, required: true, label: 'Coef. Concreto (γc)' },
+        'gamma_s': { min: 0.1, required: true, label: 'Coef. Aço (γs)' }
+    }
+};
+// ===================================================================================
+// Input Validation Rules
+// This file contains functions to validate input fields across the application.
+// ===================================================================================
+
+// Global state to track validation status across the page
+let validationStatus = true;
+
+/**
  * Validates a single input field based on its required status and type (numeric).
  * @param {string} id The ID of the input element.
  * @param {boolean} isRequired Whether the field is mandatory.
@@ -254,44 +449,92 @@ function validateField(id, isRequired = true) {
 
     // Apply visual feedback (assuming a common error class)
     if (isValid) {
-        input.classList.remove('input-error'); // Remove error style
+        input.classList.remove('input-error');
     } else {
-        input.classList.add('input-error'); // Add error style
-        validationStatus = false; // Mark overall validation as failed
+        input.classList.add('input-error');
     }
-
     return isValid;
 }
 
-
 /**
- * Orchestrates the validation of all required input fields on the page.
- * This definition is added to resolve the "validateInputs is not defined" error.
- *
- * @param {Array<string>} inputIds An array of IDs for the input fields to validate.
- * @returns {boolean} True if all specified inputs are valid, false otherwise.
+ * Validates a set of inputs against the provided rules.
+ * @param { string[] } inputIds Array of input element IDs to validate.
+ * @param { object } rules The validation rules object for the current calculator.
+ * @returns { object } An object containing arrays of errors and warnings.
  */
-function validateInputs(inputIds) {
-    // Reset global status for a new validation run
-    validationStatus = true; 
+function validateInputs(inputIds, rules) {
+    const errors = [];
+    const warnings = [];
 
     // Assume inputIds is an array of strings, where each string is an element ID.
     if (!Array.isArray(inputIds)) {
         console.error("validateInputs requires an array of input IDs.");
-        return false;
+        return { errors: ["Internal Error: Validation function called incorrectly."], warnings: [] };
     }
 
-    // Apply validation to each required input
+    // Apply validation to each input based on the provided rules
     inputIds.forEach(id => {
-        // Assuming all inputs passed to this function are required for calculation
-        validateField(id, true);
+        const input = document.getElementById(id);
+        if (!input) return; // Skip if element doesn't exist
+
+        const rule = rules ? rules[id] : null;
+        const value = input.value.trim();
+        const numValue = parseFloat(value);
+        const label = rule ? rule.label : id;
+
+        // Reset error style
+        input.classList.remove('input-error');
+
+        // Check 1: Required status
+        if (rule && rule.required && value === "") {
+            errors.push(`${label} is required.`);
+            input.classList.add('input-error');
+            return;
+        }
+
+        // Check 2: Numeric validation (if it's a number input or has numeric rules)
+        if (value !== "" && !isNaN(numValue)) {
+            if (rule) {
+                if (rule.min !== undefined && numValue < rule.min) {
+                    errors.push(`${label} must be at least ${rule.min}.`);
+                    input.classList.add('input-error');
+                }
+                if (rule.max !== undefined && numValue > rule.max) {
+                    errors.push(`${label} must be at most ${rule.max}.`);
+                    input.classList.add('input-error');
+                }
+            }
+        } else if (value !== "" && input.type === 'number') {
+            errors.push(`${label} must be a valid number.`);
+            input.classList.add('input-error');
+        }
     });
 
-    // Provide a centralized message if validation failed
-    const messageArea = document.getElementById('messageArea'); // Assuming a common message ID
-    if (!validationStatus && messageArea) {
-        messageArea.textContent = "Please fill out all required fields with valid numeric data.";
+    // Cross-field validation (if defined in rules)
+    if (rules && rules.crossField) {
+        // Gather all inputs into a simple object for easier access in conditions
+        const inputs = {};
+        inputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                inputs[id] = el.type === 'checkbox' ? el.checked : parseFloat(el.value);
+            }
+        });
+
+        rules.crossField.forEach(check => {
+            try {
+                if (check.condition(inputs)) {
+                    if (check.level === 'warning') {
+                        warnings.push(check.message);
+                    } else {
+                        errors.push(check.message);
+                    }
+                }
+            } catch (e) {
+                console.warn("Cross-field validation error:", e);
+            }
+        });
     }
 
-    return validationStatus;
+    return { errors, warnings };
 }

@@ -1,11 +1,11 @@
-﻿// --- ESTRUTURA DE DADOS ---
+// --- ESTRUTURA DE DADOS ---
 const pcalcData = {
     secao: {
         tipoSecao: 'Retangular',
         boundary: 'pinned', // 'pinned' (Biapoiado) ou 'cantilever' (Balanço)
         hx: 30,
         hy: 50,
-        length: 400, // cm
+        length: 400,
         xm: 15,
         ym: 25,
         areaAc: 0,
@@ -48,7 +48,7 @@ const pcalcData = {
     resultados: {
         secaoC: [],
         surfacePoints: { x: [], y: [], z: [] },
-        minMomentSurface: { x: [], y: [], z: [] },
+        minMomentSurface: { x: [], y: [], z: [] }, // Nova estrutura para superfície min
         loadCases: []
     }
 };
@@ -74,10 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupEventListeners();
     setupExcelImport();
-    setupCanvasControls();
+    setupCanvasControls(); // Inicializar Zoom e Layout
 
+    // Listener para mudança de tema
     window.addEventListener('theme-changed', () => {
+        // Verifica se as funções existem antes de chamar
         if (typeof renderCrossSection === 'function') renderCrossSection();
+
         if (pcalcData.resultados.surfacePoints.x.length > 0 && typeof render3DChart === 'function') {
             render3DChart();
         }
@@ -86,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Renderização inicial forçada após setup
     setTimeout(() => {
         const canvas = document.getElementById('sectionCanvas');
         if (canvas) {
@@ -102,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const isDark = () => document.documentElement.classList.contains('dark');
 
-// --- INJEÇÃO DE UI DINÂMICA ---
+// --- INJEÇÃO DE UI DINÂMICA (ATUALIZADA COM 5 MÉTODOS) ---
 function injectDynamicUI() {
     const criteriaContainer = document.getElementById('criteria-container');
     if (criteriaContainer) {
@@ -125,11 +129,11 @@ function injectDynamicUI() {
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
                             <input type="radio" name="method-2nd" value="general_diagram" class="text-blue-600 focus:ring-blue-500">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">4. Método Geral (Iterativo Uniaxial)</span>
+                            <span class="text-xs text-gray-600 dark:text-gray-400">4. Método Geral (Diag. N, M, 1/r)</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1 rounded">
                             <input type="radio" name="method-2nd" value="general_biaxial" class="text-blue-600 focus:ring-blue-500">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">5. Método Geral Biaxial (Iterativo 3D)</span>
+                            <span class="text-xs text-gray-600 dark:text-gray-400">5. Método Geral Biaxial (N, Mx, My, 1/r)</span>
                         </label>
                     </div>
                 </div>
@@ -139,9 +143,9 @@ function injectDynamicUI() {
                         <input type="checkbox" id="check-min-moment" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">Verificar Momento Mínimo (NBR 6118)</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer" title="Desmarque para forçar o cálculo de 2a ordem mesmo em pilares curtos">
+                    <label class="flex items-center gap-2 cursor-pointer" title="Desmarque para forçar o cálculo de 2ª ordem mesmo em pilares curtos">
                         <input type="checkbox" id="check-slenderness" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                        <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">Verificar Esbeltez Limite (lambda1)</span>
+                        <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">Verificar Esbeltez Limite (λ1) para Dispensa</span>
                     </label>
                 </div>
             </div>
@@ -206,6 +210,7 @@ function setupEventListeners() {
     document.getElementById('calculate-btn')?.addEventListener('click', performCalculation);
 }
 
+// --- CONTROLES DO CANVAS (ZOOM APENAS, SEM PAN, RESIZE AUTOMATICO) ---
 function setupCanvasControls() {
     const canvas = document.getElementById('sectionCanvas');
     const container = document.getElementById('cross-section-container');
@@ -247,7 +252,7 @@ function fitViewToSection() {
 
     const w = canvas.width;
     const h = canvas.height;
-    const margin = 80;
+    const margin = 80; // Margem aumentada para caber cotas
     const { hx, hy } = pcalcData.secao;
     const safeHx = hx || 10;
     const safeHy = hy || 10;
@@ -256,6 +261,7 @@ function fitViewToSection() {
     canvasView.baseScale = fitScale;
 }
 
+// --- IMPORTAÇÃO EXCEL ---
 function setupExcelImport() {
     const fileInput = document.getElementById('upload-excel');
     if (fileInput) {
@@ -307,7 +313,6 @@ function setupExcelImport() {
                         load.myTop = parseFloat(values[2]) || 0;
                         load.myBot = load.myTop;
                     }
-
                     newLoads.push(load);
                 }
             });
@@ -349,6 +354,7 @@ function processImportedData(jsonArray) {
     renderLoads();
 }
 
+// --- MANIPULAÇÃO DE INPUTS ---
 function updateDataFromInputs() {
     const getVal = (id) => parseFloat(document.getElementById(id)?.value) || 0;
     const getChk = (id) => document.getElementById(id)?.checked || false;
@@ -408,7 +414,7 @@ function renderLoads() {
             <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.mxBot}" data-idx="${i}" data-key="mxBot"></td>
             <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.myTop}" data-idx="${i}" data-key="myTop"></td>
             <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.myBot}" data-idx="${i}" data-key="myBot"></td>
-            <td class="p-1 text-center"><button class="text-red-500 hover:text-red-700 font-bold px-1" data-idx="${i}" data-action="remove">X</button></td>
+            <td class="p-1 text-center"><button class="text-red-500 hover:text-red-700 font-bold px-1" data-idx="${i}" data-action="remove">×</button></td>
         `;
     });
 }
@@ -455,7 +461,7 @@ function renderReinforcement() {
             <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${b.x.toFixed(1)}" data-idx="${i}" data-key="x"></td>
             <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${b.y.toFixed(1)}" data-idx="${i}" data-key="y"></td>
             <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${b.diametro}" data-idx="${i}" data-key="diametro"></td>
-            <td class="p-1 text-center"><button class="text-red-500 hover:text-red-700 font-bold px-1" data-idx="${i}" data-action="remove">X</button></td>
+            <td class="p-1 text-center"><button class="text-red-500 hover:text-red-700 font-bold px-1" data-idx="${i}" data-action="remove">×</button></td>
         `;
     });
 }
@@ -480,6 +486,8 @@ function generateRectPattern() {
     renderReinforcement();
     renderCrossSection();
 }
+
+// --- LÓGICA DE ENGENHARIA REAL (Método das Fibras) ---
 
 function discretizeSection() {
     pcalcData.resultados.secaoC = [];
@@ -514,8 +522,7 @@ function discretizeSection() {
 }
 
 function getConcreteStress(epsilon, fcd) {
-    // Parábola-Retângulo
-    if (epsilon >= 0) return 0; // Tração ignorada no concreto
+    if (epsilon >= 0) return 0;
 
     const ec = Math.abs(epsilon);
     const ec2 = 0.002;
@@ -539,7 +546,7 @@ function getSteelStress(epsilon, fyd, Es) {
 function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
     const fcd = (pcalcData.materiais.fck / 10) / pcalcData.config.gamaC;
     const fyd = (pcalcData.materiais.fyk / 10) / pcalcData.config.gamaS;
-    const Es = pcalcData.materiais.es * 100; // GPa to kN/cm2
+    const Es = pcalcData.materiais.es * 100;
 
     let N_int = 0;
     let Mx_int = 0;
@@ -645,34 +652,44 @@ function generateInteractionSurface() {
     return points;
 }
 
+// --- NOVA FUNÇÃO: GERAR SUPERFÍCIE DE MOMENTO MÍNIMO ---
 function generateMinMomentSurface() {
-    const hx = pcalcData.secao.hx;
-    const hy = pcalcData.secao.hy;
+    const hx = pcalcData.secao.hx; // cm
+    const hy = pcalcData.secao.hy; // cm
 
-    const e_min_x = (1.5 + 0.03 * hy) / 100;
-    const e_min_y = (1.5 + 0.03 * hx) / 100;
+    // Fatores de excentricidade mínima
+    const e_min_x = (1.5 + 0.03 * hy) / 100; // metros (para Mx, braço é y)
+    const e_min_y = (1.5 + 0.03 * hx) / 100; // metros (para My, braço é x)
 
+    // Encontrar N máximo (compressão)
     let maxN = 0;
     if (pcalcData.resultados.surfacePoints.z.length > 0) {
-        maxN = Math.min(...pcalcData.resultados.surfacePoints.z);
+        maxN = Math.min(...pcalcData.resultados.surfacePoints.z); // N é negativo
     }
-    if (maxN === 0) maxN = -10000;
+    if (maxN === 0) maxN = -10000; // Fallback
 
     const points = { x: [], y: [], z: [] };
     const stepsN = 20;
     const stepsTheta = 36;
 
     for (let i = 0; i <= stepsN; i++) {
-        const N = maxN * (i / stepsN);
+        const N = maxN * (i / stepsN); // Vai de 0 a maxN (negativo)
         const absN = Math.abs(N);
 
+        // Limites retangulares do momento mínimo para este N
         const Mx_lim = absN * e_min_x;
         const My_lim = absN * e_min_y;
 
+        // Gerar anel
         for (let j = 0; j <= stepsTheta; j++) {
             const theta = (j / stepsTheta) * 2 * Math.PI;
             const cosT = Math.cos(theta);
             const sinT = Math.sin(theta);
+
+            // Raio para atingir a caixa retangular (Mx_lim, My_lim)
+            // |x| <= Mx_lim, |y| <= My_lim
+            // x = r*cos, y = r*sin
+            // r <= Mx_lim / |cos|, r <= My_lim / |sin|
 
             let r = 0;
             if (Mx_lim > 0 && My_lim > 0) {
@@ -681,8 +698,8 @@ function generateMinMomentSurface() {
                 r = Math.min(r_x, r_y);
             }
 
-            points.x.push(r * cosT);
-            points.y.push(r * sinT);
+            points.x.push(r * cosT); // Mx
+            points.y.push(r * sinT); // My
             points.z.push(N);
         }
     }
@@ -708,6 +725,7 @@ function performCalculation() {
             console.log("Superfície de interação gerada.");
             pcalcData.resultados.surfacePoints = surface;
 
+            // GERAR SUPERFÍCIE MÍNIMA
             const minSurf = generateMinMomentSurface();
             pcalcData.resultados.minMomentSurface = minSurf;
 
@@ -739,8 +757,12 @@ function calculateSafetyFactor(N, Mx, My) {
     if (Math.abs(Mx) < 0.1 && Math.abs(My) < 0.1) {
         const surface = pcalcData.resultados.surfacePoints;
         if (surface.z.length === 0) return 0;
+
         let minN = 0;
-        for (let z of surface.z) if (z < minN) minN = z;
+        for (let z of surface.z) {
+            if (z < minN) minN = z;
+        }
+
         if (N === 0) return 99.99;
         return Math.abs(minN) / Math.abs(N);
     }
@@ -753,6 +775,7 @@ function calculateSafetyFactor(N, Mx, My) {
     if (surface.x.length === 0) return 0;
 
     const toleranceN = Math.max(20, Math.abs(N) * 0.10);
+
     const slicePoints = [];
 
     for (let i = 0; i < surface.x.length; i++) {
@@ -763,6 +786,7 @@ function calculateSafetyFactor(N, Mx, My) {
             const R = Math.sqrt(pMx * pMx + pMy * pMy);
             let Ang = Math.atan2(pMy, pMx);
             if (Ang < 0) Ang += 2 * Math.PI;
+
             slicePoints.push({ r: R, ang: Ang });
         }
     }
@@ -773,15 +797,18 @@ function calculateSafetyFactor(N, Mx, My) {
     slicePoints.push({ r: slicePoints[0].r, ang: slicePoints[0].ang + 2 * Math.PI });
 
     let R_res = 0;
+
     for (let i = 0; i < slicePoints.length - 1; i++) {
         const p1 = slicePoints[i];
         const p2 = slicePoints[i + 1];
+
         if (angleLoad >= p1.ang && angleLoad <= p2.ang) {
             const ratio = (angleLoad - p1.ang) / (p2.ang - p1.ang);
             R_res = p1.r + ratio * (p2.r - p1.r);
             break;
         }
     }
+
     if (R_res === 0) {
         let minDiff = Infinity;
         for (let p of slicePoints) {
@@ -793,15 +820,19 @@ function calculateSafetyFactor(N, Mx, My) {
             }
         }
     }
+
     if (R_res === 0) return 0;
     return R_res / R_load;
 }
 
-// --- FUNÇÃO PRINCIPAL DE CÁLCULO DE CASO DE CARGA ---
+// --- FUNÇÃO DE CÁLCULO DE CASO DE CARGA (ATUALIZADA) ---
 function calculateLoadCase(load, index) {
     console.group(`Detalhes do Caso ${index + 1}`);
     const gf = pcalcData.config.gamaF;
     let Nsd = load.n * gf;
+
+    console.log(`Cargas de Entrada: N=${load.n}, MxTop=${load.mxTop}, MxBot=${load.mxBot}, MyTop=${load.myTop}, MyBot=${load.myBot}`);
+    console.log(`Cargas de Cálculo (x${gf}): Nsd=${Nsd.toFixed(2)}`);
 
     const M1d_x_top = load.mxTop * gf;
     const M1d_x_bot = load.mxBot * gf;
@@ -819,93 +850,54 @@ function calculateLoadCase(load, index) {
     const M1d_min_x = Math.abs(Nsd) * (e_min_x / 100);
     const M1d_min_y = Math.abs(Nsd) * (e_min_y / 100);
 
-    // --- VERIFICAÇÃO DE ESBELTEZ (LAMBDA 1) ---
-    const getAlphaB = (M1, M2) => {
-        const Ma = Math.abs(M1) > Math.abs(M2) ? Math.abs(M1) : Math.abs(M2);
-        const Mb = Math.abs(M1) > Math.abs(M2) ? Math.abs(M2) : Math.abs(M1);
-        if (Ma === 0) return 1.0;
-        const ratio = (M1 * M2 >= 0) ? (Mb / Ma) : -(Mb / Ma);
-        let ab = 0.6 + 0.4 * ratio;
-        return Math.max(0.4, ab);
-    };
+    console.log(`Excentricidade Mínima: ex_min=${e_min_x.toFixed(2)}cm, ey_min=${e_min_y.toFixed(2)}cm`);
+    console.log(`Momentos Mínimos: M1d_min_x=${M1d_min_x.toFixed(2)}, M1d_min_y=${M1d_min_y.toFixed(2)}`);
 
-    const length = pcalcData.secao.length; // cm
-    const boundary = pcalcData.secao.boundary;
-    const le = (boundary === 'pinned') ? length : 2 * length;
-
-    // lambda = le / i (i approx h/3.46 for rect)
-    const lambdaX = (hy > 0) ? (3.46 * le) / hy : 0; // Giro em torno de X, altura é hy
-    const lambdaY = (hx > 0) ? (3.46 * le) / hx : 0; // Giro em torno de Y, altura é hx
-
-    const alphaBx = getAlphaB(M1d_x_top, M1d_x_bot);
-    const alphaBy = getAlphaB(M1d_y_top, M1d_y_bot);
-
-    // Excentricidade de 1a ordem no centro (aprox para lambda1)
-    const e1x = Math.abs(Nsd) > 0 ? Math.max(Math.abs(M1d_x_top), Math.abs(M1d_x_bot)) / Math.abs(Nsd) * 100 : 0;
-    const e1y = Math.abs(Nsd) > 0 ? Math.max(Math.abs(M1d_y_top), Math.abs(M1d_y_bot)) / Math.abs(Nsd) * 100 : 0;
-
-    const lambda1_x = Math.min(90, Math.max(35, (25 + 12.5 * (e1x / hy)) / alphaBx));
-    const lambda1_y = Math.min(90, Math.max(35, (25 + 12.5 * (e1y / hx)) / alphaBy));
-
-    const needs2ndOrderX = checkSlenderness ? (lambdaX > lambda1_x) : true;
-    const needs2ndOrderY = checkSlenderness ? (lambdaY > lambda1_y) : true;
-
-    console.log(`LambdaX=${lambdaX.toFixed(1)}, Lambda1X=${lambda1_x.toFixed(1)}, 2aOrdemX=${needs2ndOrderX}`);
-    console.log(`LambdaY=${lambdaY.toFixed(1)}, Lambda1Y=${lambda1_y.toFixed(1)}, 2aOrdemY=${needs2ndOrderY}`);
-
-    // Variaveis de Saida
+    // Variáveis de Saída
     let Mtot_x = 0;
     let Mtot_y = 0;
     let M2d_x = 0;
     let M2d_y = 0;
     let info = "";
 
-    // SELEÇÃO DO MÉTODO DE 2a ORDEM
+    // SELEÇÃO DO MÉTODO DE 2ª ORDEM
     if (pcalcData.config.calc2ndOrder && Nsd < 0) {
+        switch (method) {
+            case 'curvature_approx': // Método 1 (Padrão)
+                const res1 = calculateMethod1_CurvatureApprox(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, checkSlenderness);
+                Mtot_x = res1.Mtot_x; Mtot_y = res1.Mtot_y; M2d_x = res1.M2d_x; M2d_y = res1.M2d_y; info = res1.info;
+                break;
 
-        let needsCalc = needs2ndOrderX || needs2ndOrderY;
-        // Se ambos forem dispensados, não calcula 2a ordem, apenas usa momento mínimo
-        if (!needsCalc && checkSlenderness) {
-            console.log("Dispensa de 2a ordem por esbeltez.");
-            Mtot_x = Math.max(Math.abs(M1d_x_top), Math.abs(M1d_x_bot), M1d_min_x);
-            Mtot_y = Math.max(Math.abs(M1d_y_top), Math.abs(M1d_y_bot), M1d_min_y);
-            info = "λ < λ1";
-        } else {
-            switch (method) {
-                case 'curvature_approx': // Metodo 1
-                    const res1 = calculateMethod1_CurvatureApprox(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, needs2ndOrderX, needs2ndOrderY);
-                    Mtot_x = res1.Mtot_x; Mtot_y = res1.Mtot_y; M2d_x = res1.M2d_x; M2d_y = res1.M2d_y; info = res1.info;
-                    break;
+            case 'stiffness_approx': // Método 2
+                const res2 = calculateMethod2_StiffnessApprox(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, checkSlenderness);
+                Mtot_x = res2.Mtot_x; Mtot_y = res2.Mtot_y; M2d_x = res2.M2d_x; M2d_y = res2.M2d_y; info = res2.info;
+                break;
 
-                case 'stiffness_approx': // Metodo 2
-                    const res2 = calculateMethod2_StiffnessApprox(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, needs2ndOrderX, needs2ndOrderY);
-                    Mtot_x = res2.Mtot_x; Mtot_y = res2.Mtot_y; M2d_x = res2.M2d_x; M2d_y = res2.M2d_y; info = res2.info;
-                    break;
+            case 'standard_diagram': // Método 3
+                const res3 = calculateMethod3_StandardDiagram(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, checkSlenderness);
+                Mtot_x = res3.Mtot_x; Mtot_y = res3.Mtot_y; M2d_x = res3.M2d_x; M2d_y = res3.M2d_y; info = res3.info;
+                break;
 
-                case 'standard_diagram': // Metodo 3
-                    const res3 = calculateMethod3_StandardDiagram(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, lambdaX, lambdaY, needs2ndOrderX, needs2ndOrderY);
-                    Mtot_x = res3.Mtot_x; Mtot_y = res3.Mtot_y; M2d_x = res3.M2d_x; M2d_y = res3.M2d_y; info = res3.info;
-                    break;
-
-                case 'general_diagram': // Metodo 4
-                case 'general_biaxial': // Metodo 5
-                    const isBiaxial = (method === 'general_biaxial');
-                    const resG = calculateMethodGeneral(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, isBiaxial, needs2ndOrderX, needs2ndOrderY);
-                    Mtot_x = resG.Mtot_x; Mtot_y = resG.Mtot_y; M2d_x = resG.M2d_x; M2d_y = resG.M2d_y; info = resG.info;
-                    break;
-            }
+            case 'general_diagram': // Método 4 (Simplificado Uniaxial)
+            case 'general_biaxial': // Método 5 (Biaxial)
+                const isBiaxial = (method === 'general_biaxial');
+                const resG = calculateMethodGeneral(Nsd, M1d_x_top, M1d_x_bot, M1d_y_top, M1d_y_bot, M1d_min_x, M1d_min_y, isBiaxial);
+                Mtot_x = resG.Mtot_x; Mtot_y = resG.Mtot_y; M2d_x = resG.M2d_x; M2d_y = resG.M2d_y; info = resG.info;
+                break;
         }
     } else {
-        // Sem 2a Ordem
+        // Sem 2ª Ordem
+        console.log("Cálculo de 2ª ordem não necessário (N >= 0 ou desativado).");
         Mtot_x = Math.max(Math.abs(M1d_x_top), Math.abs(M1d_x_bot), M1d_min_x);
         Mtot_y = Math.max(Math.abs(M1d_y_top), Math.abs(M1d_y_bot), M1d_min_y);
-        info = "1a Ordem";
+        info = "1ª Ordem";
     }
 
     const safetyFactor = calculateSafetyFactor(Nsd, Mtot_x, Mtot_y);
 
     console.groupEnd();
 
+    console.groupEnd()
     return {
         id: index,
         originalIndex: index + 1,
@@ -914,469 +906,267 @@ function calculateLoadCase(load, index) {
         Mx1Bot: M1d_x_bot,
         My1Top: M1d_y_top,
         My1Bot: M1d_y_bot,
-        MxTot: Mtot_x,
-        MyTot: Mtot_y,
+        MxTot: Mtot_x,  // ✅ Já vem com sinal correto dos métodos
+        MyTot: Mtot_y,  // ✅ Já vem com sinal correto dos métodos
         M2dx: M2d_x,
         M2dy: M2d_y,
         safetyFactor: safetyFactor,
-        info: info
-    };
+        info: info,
+        status: "Calc"
+    }
 }
 
-// --- MÉTODO 1: CURVATURA APROXIMADA ---
-function calculateMethod1_CurvatureApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, calcX, calcY) {
-    const hx = pcalcData.secao.hx / 100;
-    const hy = pcalcData.secao.hy / 100;
-    const nu_x = Math.abs(Nsd) / (pcalcData.secao.areaAc * (pcalcData.materiais.fck / 10 / 1.4));
+// --- AUXILIAR PARA LOGS PADRONIZADOS ---
+function logMidSpanAnalysis(axisName, M1t, M1b, M2d, minM, finalMtot) {
+    const M1_mid = (M1t + M1b) / 2;
+    const M_mid_calc = Math.abs(M1_mid) + M2d;
 
-    // Curvaturas 1/r
-    const invRx = calcX ? Math.min((0.005 / hy) / (nu_x + 0.5), 0.005 / hy) : 0;
-    const invRy = calcY ? Math.min((0.005 / hx) / (nu_x + 0.5), 0.005 / hx) : 0;
-
-    const Le_x = (pcalcData.secao.boundary === 'pinned') ? pcalcData.secao.length / 100 : 2 * pcalcData.secao.length / 100;
-    const M2d_x = Math.abs(Nsd) * (Math.pow(Le_x, 2) / 10) * invRx;
-    const M2d_y = Math.abs(Nsd) * (Math.pow(Le_x, 2) / 10) * invRy;
-
-    const getAlphaB = (M1, M2) => {
-        const Ma = Math.abs(M1) > Math.abs(M2) ? Math.abs(M1) : Math.abs(M2);
-        const Mb = Math.abs(M1) > Math.abs(M2) ? Math.abs(M2) : Math.abs(M1);
-        if (Ma === 0) return 1.0;
-        const ratio = (M1 * M2 >= 0) ? (Mb / Ma) : -(Mb / Ma);
-        return Math.max(0.4, 0.6 + 0.4 * ratio);
-    };
-
-    // CORREÇÃO: Remover o limite artificial de 0.6*M_max no cálculo do M1d_eq
-    // O alpha_b correto já está entre 0.4 e 1.0. O momento mínimo (MinX) atua como envelope final.
-    const M_max_x = Math.max(Math.abs(M1xt), Math.abs(M1xb));
-    const M1d_eq_x_calc = getAlphaB(M1xt, M1xb) * M_max_x;
-
-    const M_max_y = Math.max(Math.abs(M1yt), Math.abs(M1yb));
-    const M1d_eq_y_calc = getAlphaB(M1yt, M1yb) * M_max_y;
-
-    // O momento total é o maior entre (Equivalente + 2a Ordem) e (Mínimo + 2a Ordem)
-    // Como M2d é constante para o Método 1 (depende apenas de N), basta aplicar o Max no momento de 1a ordem.
-    const Mtot_x = Math.max(M1d_eq_x_calc, MinX) + M2d_x;
-    const Mtot_y = Math.max(M1d_eq_y_calc, MinY) + M2d_y;
-
-    return {
-        Mtot_x: Mtot_x,
-        Mtot_y: Mtot_y,
-        M2d_x, M2d_y,
-        info: `M1(1/r): rx=${invRx.toFixed(3)}, ry=${invRy.toFixed(3)}`
-    };
+    console.log(`[${axisName}] >>> ANÁLISE NO MEIO DO VÃO <<<`);
+    console.log(`   > M1_top = ${M1t.toFixed(2)}, M1_bot = ${M1b.toFixed(2)}`);
+    console.log(`   > M1_mid (1ª Ordem Real) = ${M1_mid.toFixed(2)} kNm`);
+    console.log(`   > M2d (Acréscimo)        = ${M2d.toFixed(2)} kNm`);
+    console.log(`   > M_mid_estimado (Soma)  = ${M_mid_calc.toFixed(2)} kNm`);
+    console.log(`   > M_min (Mínimo Norma)   = ${minM.toFixed(2)} kNm [cite: NBR 6118]`);
+    console.log(`   > M_final (Dimensionam.) = ${finalMtot.toFixed(2)} kNm`);
+    console.log(`-------------------------------------------`);
 }
 
-// --- MÉTODO 2: RIGIDEZ NOMINAL (CORRIGIDO EQ. QUADRÁTICA) ---
-function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, calcX, calcY) {
-    const hx = pcalcData.secao.hx / 100;
-    const hy = pcalcData.secao.hy / 100;
-    const Le = (pcalcData.secao.boundary === 'pinned') ? pcalcData.secao.length / 100 : 2 * pcalcData.secao.length / 100;
+// --- IMPLEMENTAÇÃO DOS MÉTODOS DE 2ª ORDEM ---
 
-    const solveQuadratic = (h, M1t, M1b, Min, active) => {
-        const M1Max = Math.max(Math.abs(M1t), Math.abs(M1b), Min);
-        if (!active) return { Mtot: M1Max, M2d: 0 };
+// Auxiliar: Cálculo de Alpha B e Esbeltez Limite
+function calcAlphaAndLambda(Nsd, Ma, Mb, h, axisName) {
+    const L = pcalcData.secao.length;
+    const isPinned = pcalcData.secao.boundary === 'pinned';
+    const Le = isPinned ? L : 2.0 * L;
 
-        const nsd_abs = Math.abs(Nsd);
+    const lambda = 3.46 * Le / h;
 
-        // Coeficientes da Equação (CalculaEsforcos.java - calculaMomento2OrdP2)
-        // a = 5*h
-        // b = -h^2*N + (N*L^2)/320 - 5*h*M1max
-        // c = N*h^2*M1max
+    let alphaB = 0.6 + 0.4 * (Mb / Ma);
+    if (alphaB < 0.4) alphaB = 0.4;
 
-        const a = 5.0 * h;
-        // Nota: Le = comprimento de flambagem. No Java é 'lFlamb'.
-        // Fórmula Java: b = ((-h * h) * nsd) + (((((nsd * lFlamb) / 100) * lFlamb) / 100) / 320) - ((5 * h) * md1Max);
-        // Assumindo Le em metros e N em kN.
+    // lambda1 = (25 + 12.5 * e1/h) / alphaB
+    let e1_h = Math.abs(Ma) / Math.abs(Nsd) / (h / 100);
+    let lambda1 = (25 + 12.5 * e1_h) / alphaB;
+    if (lambda1 > 90) lambda1 = 90;
+    if (lambda1 < 35) lambda1 = 35;
 
-        const termNLe2 = (nsd_abs * Le * Le) / 320.0;
-        const b = (-h * h * nsd_abs) + termNLe2 - (5.0 * h * M1Max);
-        const c = nsd_abs * h * h * M1Max;
+    console.log(`[${axisName}] AlphaB: Ma=${Ma.toFixed(2)}, Mb=${Mb.toFixed(2)}, alpha=${alphaB.toFixed(2)}`);
+    const numNodes = 7; // Discretização do pilar
+    const dz = L / (numNodes - 1);
 
-        const delta = b * b - 4 * a * c;
-        let Mtot = M1Max;
-
-        if (delta >= 0) {
-            Mtot = (-b + Math.sqrt(delta)) / (2 * a);
-        } else {
-            // Fallback se delta < 0 (muito instável)
-            Mtot = M1Max * 1.5;
-        }
-
-        // Garante que não é menor que 1a ordem
-        Mtot = Math.max(Mtot, M1Max);
-
-        return { Mtot, M2d: Mtot - M1Max };
-    };
-
-    const resX = solveQuadratic(hy, M1xt, M1xb, MinX, calcX);
-    const resY = solveQuadratic(hx, M1yt, M1yb, MinY, calcY);
-
-    return {
-        Mtot_x: resX.Mtot, Mtot_y: resY.Mtot,
-        M2d_x: resX.M2d, M2d_y: resY.M2d,
-        info: `M2(Rigidez NBR)`
-    };
-}
-
-// --- MÉTODO 3: PILAR PADRÃO ACOPLADO (RIGIDEZ KAPPA) ---
-function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, lamX, lamY, calcX, calcY) {
-    const fcd = (pcalcData.materiais.fck / 10) / 1.4;
-    const Ac = pcalcData.secao.areaAc;
-    const nu = Math.abs(Nsd) / (Ac * fcd);
-
-    const solveKappa = (M1t, M1b, Min, lambda, axis) => {
-        const M1Max = Math.max(Math.abs(M1t), Math.abs(M1b), Min);
-        if (lambda < 35) return { Mtot: M1Max, M2d: 0 }; // Segurança extra
-
-        // Estimar Rigidez Secante (Kappa)
-        // Precisa do momento atuante Mtot para achar rigidez. Processo iterativo simplificado.
-        let Mtarget = M1Max;
-        let kappa = 100; // Valor inicial alto
-
-        // Iterar algumas vezes para convergir Mtot e Rigidez
-        for (let i = 0; i < 3; i++) {
-            const mx_try = (axis === 'x') ? Mtarget : 0;
-            const my_try = (axis === 'y') ? Mtarget : 0;
-
-            // Buscar EI secante da seção
-            const stiff = getSecantStiffness(Nsd, mx_try, my_try);
-            const EI = (axis === 'x') ? stiff.EIx : stiff.EIy;
-
-            // Kappa = EI_sec / (Ac * h^2 * fcd) ??? 
-            // NBR define rigidez adimensional Kappa = Stiffness da secão
-            // Na verdade, a fórmula NBR usa kapa diretamente da rigidez.
-            // Mtot = M1d / (1 - (lambda^2 / 120 / kappa) * nu)
-
-            // No Java: kapa = EIsec / (Ac * h * h * fcd)
-            const h = (axis === 'x') ? pcalcData.secao.hy / 100 : pcalcData.secao.hx / 100; // h na direção da flexão
-            kappa = EI / (Ac * h * h * fcd);
-
-            const denom = 1.0 - ((lambda * lambda) / 120.0 / kappa) * nu;
-
-            if (denom <= 0) Mtarget = M1Max * 3; // Instabilidade
-            else Mtarget = M1Max / denom;
-        }
-
-        return { Mtot: Mtarget, M2d: Mtarget - M1Max };
-    };
-
-    const resX = calcX ? solveKappa(M1xt, M1xb, MinX, lamX, 'x') : { Mtot: Math.max(Math.abs(M1xt), Math.abs(M1xb), MinX), M2d: 0 };
-    const resY = calcY ? solveKappa(M1yt, M1yb, MinY, lamY, 'y') : { Mtot: Math.max(Math.abs(M1yt), Math.abs(M1yb), MinY), M2d: 0 };
-
-    return {
-        Mtot_x: resX.Mtot, Mtot_y: resY.Mtot,
-        M2d_x: resX.M2d, M2d_y: resY.M2d,
-        info: `M3(Kappa)`
-    };
-}
-
-// --- MÉTODO 4 e 5: MÉTODO GERAL (Iterativo) ---
-function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, biaxial, calcX, calcY) {
-    // Parâmetros de iteração
-    const nNodes = 11;
-    const maxIter = 20;
-    const tolerance = 0.005; // 0.5%
-    const Le = pcalcData.secao.length / 100; // metros
+    console.log(`[Geral] Iniciando iteração numérica (${isBiaxial ? "Biaxial" : "Uniaxial"}). L=${L}, Nos=${numNodes}`);
 
     // Arrays de estado
-    // x: posição, M1: 1a ordem, Mtot: total, w: deslocamento
-    let nodes = [];
-    for (let i = 0; i < nNodes; i++) {
-        const xi = (i / (nNodes - 1)) * Le;
-        nodes.push({ x: xi, M1x: 0, M1y: 0, MtotX: 0, MtotY: 0, wX: 0, wY: 0, curvX: 0, curvY: 0 });
-    }
+    let w_x = new Array(numNodes).fill(0); // Deslocamento na direção Y (gera Mx)
+    let w_y = new Array(numNodes).fill(0); // Deslocamento na direção X (gera My)
 
-    // Interpolação Linear de Momentos de 1a Ordem ao longo da barra
-    const setupM1 = (Mt, Mb, Min, prop) => {
-        // Ajuste para Minimo (Envelope)
-        const Mmax = Math.max(Math.abs(Mt), Math.abs(Mb), Min);
-        const signT = Mt >= 0 ? 1 : -1;
-        const signB = Mb >= 0 ? 1 : -1;
+    let Mtot_x = 0, Mtot_y = 0;
 
-        // Se momento muito baixo, força envelope mínimo constante ou linear
-        // Simplificação: Interpolação linear dos valores de entrada, mas garante que em nenhum ponto seja menor que o envelope se for crítico?
-        // O método geral integra a curvatura real. O mínimo deve ser considerado como excentricidade mínima accidental.
-        // NBR diz: M1d,min = N * (1.5 + 0.03h). Isso é constante.
-        // A prática comum é: M1(x) = M_topo + (M_base - M_topo)*x/L.
-        // E verificar se M1(x) < M_min e corrigir? Ou somar excentricidade acidental?
-        // O código Java (calculaMomento2OrdP4) usa M1 linear e M_min constante separadamente ou envelope.
-        // Vamos usar interpolação linear simples dos inputs.
+    // Loop Iterativo
+    for (let iter = 0; iter < 10; iter++) {
+        let max_w_diff = 0;
+        let w_x_new = new Array(numNodes).fill(0);
+        let w_y_new = new Array(numNodes).fill(0);
+        let kx_vals = [], ky_vals = [];
 
-        for (let i = 0; i < nNodes; i++) {
-            const alpha = i / (nNodes - 1);
-            // Interpolação Linear (Cuidado com sinais)
-            // Assumindo Mt em x=0 e Mb em x=L? Ou ao contrário? 
-            // Normalmente Topo (0) e Base (L).
-            let val = 0;
-            if (pcalcData.secao.boundary === 'pinned') {
-                val = Mt + (Mb - Mt) * alpha; // Linear
+        // 1. Calcular Momentos Totais e Curvaturas
+        for (let i = 0; i < numNodes; i++) {
+            const z = i * dz;
+            // Momento de 1ª ordem interpolado
+            let M1x = 0, M1y = 0;
+            if (isPinned) {
+                M1x = M1xb + (M1xt - M1xb) * (z / L);
+                M1y = M1yb + (M1yt - M1yb) * (z / L);
+            } else { // Balanço (Base engastada em z=0)
+                M1x = M1xb * (1 - z / L); // Simplificado linear
+                M1y = M1yb * (1 - z / L);
+            }
+
+            // Momento Total
+            let M_curr_x = M1x + Math.abs(Nsd) * w_x[i];
+            let M_curr_y = M1y + Math.abs(Nsd) * w_y[i];
+
+            // Limite mínimo
+            if (Math.abs(M_curr_x) < MinX) M_curr_x = Math.sign(M_curr_x || 1) * MinX;
+            if (Math.abs(M_curr_y) < MinY) M_curr_y = Math.sign(M_curr_y || 1) * MinY;
+
+            // Obter curvatura
+            let k;
+            if (isBiaxial) {
+                k = solveCurvature(Nsd, M_curr_x, M_curr_y);
             } else {
-                // Balanço: Topo livre (M=0 ou Carga), Base engastada (Mmax)
-                // Se Mt é ponta livre e Mb é engaste:
-                // Mas aqui vem os valores de cálculo. Vamos manter linear.
-                val = Mt + (Mb - Mt) * alpha;
+                // Desacoplado: chama 2 vezes considerando o outro zero
+                const kx = solveCurvature(Nsd, M_curr_x, 0).kx;
+                const ky = solveCurvature(Nsd, 0, M_curr_y).ky;
+                k = { kx, ky };
             }
-
-            // Envelope mínimo: Se M1 calculado for menor que min, usa min com sinal do calculado?
-            // NBR: M1d,tot = alpha_b * M1d > M1d,min
-            // Para o método geral, usamos a excentricidade geométrica real.
-            // Vamos impor o valor absoluto minimo apenas na verificação final ou aplicar excentricidade inicial?
-            // Vamos aplicar M = max(M_linear, Min) em magnitude.
-            if (Math.abs(val) < Min) val = (val >= 0 ? 1 : -1) * Min;
-
-            nodes[i][prop] = val;
-            if (prop === 'M1x') nodes[i].MtotX = val;
-            if (prop === 'M1y') nodes[i].MtotY = val;
-        }
-    };
-
-    setupM1(M1xt, M1xb, MinX, 'M1x');
-    setupM1(M1yt, M1yb, MinY, 'M1y');
-
-    // Loop de Iteração
-    for (let iter = 0; iter < maxIter; iter++) {
-        let maxChange = 0;
-
-        // 1. Calcular Curvaturas para os Momentos Totais atuais
-        for (let i = 0; i < nNodes; i++) {
-            const Mx_curr = nodes[i].MtotX;
-            const My_curr = biaxial ? nodes[i].MtotY : 0; // Se uniaxial, ignora Y na curvatura X
-
-            // Obter curvatura 1/r dado N e M
-            // Para uniaxial, calculamos apenas curvature X
-            // Para biaxial, calculamos curvature X e Y acopladas
-
-            let kx = 0, ky = 0;
-
-            if (calcX || calcY) {
-                const curve = solveCurvature(Nsd, Mx_curr, My_curr); // Retorna kx, ky
-                kx = curve.kx;
-                ky = curve.ky;
-            }
-
-            nodes[i].curvX = kx;
-            nodes[i].curvY = ky;
+            kx_vals.push(k.kx);
+            ky_vals.push(k.ky);
         }
 
-        // 2. Integrar Curvaturas para obter Deslocamentos (Método das Diferenças Finitas ou Integração Dupla)
-        // Usando integração numérica simples (Trapezoidal) duas vezes
-        // Curvatura -> Rotação -> Deslocamento
-        // w(x) = integral(integral(curv))
-        // Condições de contorno:
-        // Biapoiado: w(0) = 0, w(L) = 0.
-        // Balanço: w(L) = 0, w'(L) = 0 (Base engastada em L) ou w(0)=0, w'(0)=0.
-
-        const integrateDisplacement = (propCurv, propDisp) => {
-            const h = Le / (nNodes - 1);
-            const w = new Array(nNodes).fill(0);
-
-            if (pcalcData.secao.boundary === 'pinned') {
-                // Método de momento de área ou Conjugate Beam simplificado
-                // Ou resolver sistema linear de diferenças finitas: w[i-1] - 2w[i] + w[i+1] = h^2 * curv[i]
-
-                // Vamos usar diferenças finitas:
-                // Matriz tridiagonal. Simplificação: Integração dupla assumindo w(0)=0.
-                // Depois corrigir rotação de corpo rígido para w(L)=0.
-
-                let slope = new Array(nNodes).fill(0);
-                let disp = new Array(nNodes).fill(0);
-
-                // Int 1: Rotação (Theta)
-                for (let i = 1; i < nNodes; i++) {
-                    const avgCurv = (nodes[i - 1][propCurv] + nodes[i][propCurv]) / 2;
-                    slope[i] = slope[i - 1] + avgCurv * h;
+        // 2. Integrar Curvatura para achar deflexão w
+        const integrate = (k_vals) => {
+            let deflections = new Array(numNodes).fill(0);
+            if (isPinned) {
+                let d_int = 0;
+                let s_int = 0;
+                for (let i = 0; i < numNodes; i++) {
+                    const k_avg = (i == 0) ? 0 : (k_vals[i] + k_vals[i - 1]) / 2;
+                    if (i > 0) {
+                        s_int += k_avg * dz;
+                        d_int += s_int * dz - (k_avg * dz * dz / 2);
+                    }
                 }
-                // Int 2: Deslocamento
-                for (let i = 1; i < nNodes; i++) {
-                    const avgSlope = (slope[i - 1] + slope[i]) / 2;
-                    disp[i] = disp[i - 1] + avgSlope * h;
+                const theta_0 = d_int / L;
+                s_int = 0; d_int = 0;
+                for (let i = 0; i < numNodes; i++) {
+                    if (i > 0) {
+                        const k_avg = (k_vals[i] + k_vals[i - 1]) / 2;
+                        s_int += k_avg * dz;
+                        d_int += s_int * dz;
+                    }
+                    deflections[i] = theta_0 * (i * dz) - d_int;
                 }
-
-                // Correção linear para w(L) = 0 (Rotação do corpo rígido)
-                const gap = disp[nNodes - 1];
-                const angleCorr = gap / Le;
-                for (let i = 0; i < nNodes; i++) {
-                    const x = (i / (nNodes - 1)) * Le;
-                    disp[i] -= angleCorr * x;
-                    nodes[i][propDisp] = disp[i];
-                }
-
             } else {
-                // Balanço (Engaste na Base - índice nNodes-1, Topo Livre - índice 0)
-                // Integração do topo para base. w(base)=0, theta(base)=0.
-                // Integramos da base (i=N-1) para o topo (i=0)
-                let slope = 0;
-                let disp = 0;
-                nodes[nNodes - 1][propDisp] = 0;
-
-                for (let i = nNodes - 2; i >= 0; i--) {
-                    const avgCurv = (nodes[i + 1][propCurv] + nodes[i][propCurv]) / 2;
-                    slope += avgCurv * h; // Acumula rotação
-                    const w_step = slope * h; // Deslocamento no passo
-                    disp += w_step;
-                    nodes[i][propDisp] = disp; // w cresce para o topo
+                let s_int = 0; let d_int = 0;
+                for (let i = 0; i < numNodes; i++) {
+                    if (i > 0) {
+                        const k_avg = (k_vals[i] + k_vals[i - 1]) / 2;
+                        s_int += k_avg * dz;
+                        d_int += s_int * dz;
+                    }
+                    deflections[i] = d_int;
                 }
             }
+            return deflections;
         };
 
-        if (calcX) integrateDisplacement('curvX', 'wX'); // Curvatura em X gera deflexão em X? Cuidado com eixos.
-        // Curvatura em torno de Y (plano XZ) gera deslocamento em X. Curv X (plano YZ) gera deslocamento em Y.
-        // Nomenclatura PCALC: Mx gira em torno de X (afeta Y), My gira em torno de Y (afeta X).
-        // Então: Mx gera curvatura Kx -> deflexão wY. My gera Ky -> deflexão wX.
-        // Ajustando chamadas:
-        if (calcX) integrateDisplacement('curvX', 'wY'); // Mx -> wY
-        if (calcY) integrateDisplacement('curvY', 'wX'); // My -> wX
+        w_x_new = integrate(kx_vals);
+        w_y_new = integrate(ky_vals);
 
-        // 3. Atualizar Momentos de 2a Ordem
-        // Mtot = M1 + N * w
-        // Mx_tot = M1x + N * wY
-        // My_tot = M1y + N * wX
+        // Check convergence
+        for (let i = 0; i < numNodes; i++) {
+            max_w_diff = Math.max(max_w_diff, Math.abs(w_x_new[i] - w_x[i]), Math.abs(w_y_new[i] - w_y[i]));
+        }
+        w_x = w_x_new;
+        w_y = w_y_new;
 
-        let diffMax = 0;
-        for (let i = 0; i < nNodes; i++) {
-            const oldMx = nodes[i].MtotX;
-            const oldMy = nodes[i].MtotY;
-
-            const M2x = Math.abs(Nsd) * nodes[i].wY; // N positivo na fórmula de P-Delta (N*delta)
-            const M2y = Math.abs(Nsd) * nodes[i].wX;
-
-            // Manter sinal? Se Nsd é compressão (-), e w é positivo, momento aumenta.
-            // A deflexão w segue a curvatura. Se M positivo, K positivo, w "negativo" (concavidade).
-            // Simplificação: Somar magnitude do efeito 2a ordem ao momento 1a ordem?
-            // Rigorosamente: M(x) = M1(x) + N * v(x). Com N compressão sendo negativo.
-            // Se v(x) foi calculado consistente com M, o sinal se ajusta.
-
-            // Como solveCurvature e integração usam sinais consistentes, podemos somar direto.
-            // Mas Nsd no código é negativo para compressão.
-            // Se usamos N negativo na fórmula, M diminui? Não. Efeito P-Delta aumenta momento.
-            // O termo é - P * delta. Como P (compressão) é negativo no nosso sign convention, fica - (-) * delta = + delta.
-            // Então M_new = M1 + abs(N) * w.
-
-            const newMx = nodes[i].M1x + Math.abs(Nsd) * nodes[i].wY;
-            const newMy = nodes[i].M1y + Math.abs(Nsd) * nodes[i].wX;
-
-            nodes[i].MtotX = newMx;
-            nodes[i].MtotY = newMy;
-
-            diffMax = Math.max(diffMax, Math.abs(newMx - oldMx), Math.abs(newMy - oldMy));
+        if (iter === 0 || iter === 9 || max_w_diff < 0.01) {
+            console.log(`[Geral] Iter ${iter + 1}: Max Diff=${max_w_diff.toFixed(4)} cm`);
         }
 
-        if (diffMax < tolerance) break;
+        if (max_w_diff < 0.01) break;
     }
 
-    // Encontrar máximos finais
-    let maxMx = 0, maxMy = 0, maxM2x = 0, maxM2y = 0;
-    nodes.forEach(n => {
-        if (Math.abs(n.MtotX) > Math.abs(maxMx)) maxMx = n.MtotX;
-        if (Math.abs(n.MtotY) > Math.abs(maxMy)) maxMy = n.MtotY;
-    });
+    // Calcular momentos finais máximos
+    Mtot_x = 0; Mtot_y = 0;
+    for (let i = 0; i < numNodes; i++) {
+        const z = i * dz;
+        let M1x = isPinned ? M1xb + (M1xt - M1xb) * (z / L) : M1xb * (1 - z / L);
+        let M1y = isPinned ? M1yb + (M1yt - M1yb) * (z / L) : M1yb * (1 - z / L);
 
-    // M2d aproximado na seção crítica
-    maxM2x = maxMx - Math.max(Math.abs(M1xt), Math.abs(M1xb), MinX);
-    maxM2y = maxMy - Math.max(Math.abs(M1yt), Math.abs(M1yb), MinY);
+        let Mx = Math.abs(M1x) + Math.abs(Nsd * w_x[i]);
+        let My = Math.abs(M1y) + Math.abs(Nsd * w_y[i]);
+
+        if (Mx > Mtot_x) Mtot_x = Mx;
+        if (My > Mtot_y) Mtot_y = My;
+    }
+    const finalMtotX = Math.max(Mtot_x, MinX);
+    const finalMtotY = Math.max(Mtot_y, MinY);
+
+    // Calc M2d aproximado para o Log
+    const M2d_x_log = Mtot_x - Math.max(Math.abs(M1xt), Math.abs(M1xb));
+    const M2d_y_log = Mtot_y - Math.max(Math.abs(M1yt), Math.abs(M1yb));
+
+    // LOG MEIO DO VÃO
+    logMidSpanAnalysis("Eixo X", M1xt, M1xb, M2d_x_log, MinX, finalMtotX);
+    logMidSpanAnalysis("Eixo Y", M1yt, M1yb, M2d_y_log, MinY, finalMtotY);
 
     return {
-        Mtot_x: maxMx, Mtot_y: maxMy,
-        M2d_x: maxM2x, M2d_y: maxM2y,
-        info: `M${biaxial ? '5' : '4'}(Geral)`
+        Mtot_x: finalMtotX,
+        Mtot_y: finalMtotY,
+        M2d_x: finalMtotX - Math.max(Math.abs(M1xt), Math.abs(M1xb)),
+        M2d_y: finalMtotY - Math.max(Math.abs(M1yt), Math.abs(M1yb)),
+        info: isBiaxial ? "Geral Biaxial" : "Geral"
     };
 }
 
-// --- FUNÇÕES AUXILIARES DE CÁLCULO FÍSICO ---
-
-function getSecantStiffness(N, Mx, My) {
-    // Retorna rigidez EIx e EIy para o estado de carga
-    const res = solveCurvature(N, Mx, My);
-    // EI = M / k
-    // Limitar k muito pequeno
-    const kx = Math.abs(res.kx) < 1e-9 ? 1e-9 : res.kx;
-    const ky = Math.abs(res.ky) < 1e-9 ? 1e-9 : res.ky;
-
-    // Se M for zero, usa rigidez tangente inicial ou bruta?
-    // Usar EI bruto * 0.4 como fallback
-    const Ecs = 0.85 * 5600 * Math.sqrt(pcalcData.materiais.fck);
-    const Ecs_kNm2 = Ecs * 1000;
-
-    // Inércias Brutas (m4)
-    const Ix_gross = pcalcData.secao.ix / 1e8; // cm4 -> m4
-    const Iy_gross = pcalcData.secao.iy / 1e8;
-
-    const EIx_gross = Ecs_kNm2 * Ix_gross;
-    const EIy_gross = Ecs_kNm2 * Iy_gross;
-
-    let EIx = (Math.abs(Mx) > 0.1) ? Math.abs(Mx) / Math.abs(kx) : 0.7 * EIx_gross; // Aprox EIsec
-    let EIy = (Math.abs(My) > 0.1) ? Math.abs(My) / Math.abs(ky) : 0.7 * EIy_gross;
-
-    return { EIx, EIy };
-}
-
+// Auxiliar: Encontrar curvatura para (N, Mx, My)
+// Usa Newton-Raphson simplificado ou busca direta
 function solveCurvature(targetN, targetMx, targetMy) {
-    // Método de Newton-Raphson para encontrar (e0, kx, ky) que equilibram (N, Mx, My)
-    // Adaptado para rodar rápido
+    // 1. Estimar deformação média (eps0) baseada em N
+    // N = Ac * fcd * eps0 (linear approx inicial)
+    let e0 = -0.001; // Chute inicial compressão
+    let kx = 0;
+    let ky = 0;
 
-    const maxIter = 10;
-    const tol = 1.0; // kN, kNm
-
-    // Chute inicial: Linear elástico
-    // N = E A e0  -> e0 = N / EA
-    // M = E I k   -> k = M / EI
-
-    const Ecs = 0.85 * 5600 * Math.sqrt(pcalcData.materiais.fck); // MPa
-    const Ecs_kncm2 = (Ecs / 10);
-
-    const Ac = pcalcData.secao.areaAc;
-    const Ix = pcalcData.secao.ix;
-    const Iy = pcalcData.secao.iy;
-
-    let e0 = targetN / (Ecs_kncm2 * Ac);
-    // Fatores de rigidez secante estimados (0.4 para concreto fissurado)
-    let kx = (targetMx * 100) / (0.4 * Ecs_kncm2 * Ix);
-    let ky = (targetMy * 100) / (0.4 * Ecs_kncm2 * Iy);
-
-    for (let i = 0; i < maxIter; i++) {
-        const res = calculateSectionResistance(e0, kx, ky);
-
-        const dN = targetN - res.N;
-        const dMx = targetMx - res.Mx;
-        const dMy = targetMy - res.My;
-
-        if (Math.abs(dN) < tol && Math.abs(dMx) < tol && Math.abs(dMy) < tol) break;
-
-        // Matriz de rigidez tangente aproximada (ou secante atualizada)
-        // Para NR completo precisaria das derivadas parciais (Jacobiana).
-        // Vamos usar aproximação desacoplada para estabilidade e velocidade.
-        // K_axial ~ EA, K_flex ~ EI
-
-        // Ajuste heurístico dos incrementos
-        const K_axial = Ecs_kncm2 * Ac * 0.5; // Rigidez axial reduzida na ruptura
-        const K_flex_x = Ecs_kncm2 * Ix * 0.3;
-        const K_flex_y = Ecs_kncm2 * Iy * 0.3;
-
-        e0 += dN / K_axial;
-        kx += (dMx * 100) / K_flex_x;
-        ky += (dMy * 100) / K_flex_y;
+    // Loop simples para ajustar e0 para equilibrar N (mantendo k=0)
+    for (let i = 0; i < 5; i++) {
+        const res = calculateSectionResistance(e0, 0, 0);
+        const dN = res.N - targetN;
+        // Rigidez axial aprox: Ac * Ecs
+        const EA = pcalcData.secao.areaAc * (5600 * Math.sqrt(pcalcData.materiais.fck) * 0.85 / 10);
+        e0 = e0 - dN / EA;
     }
 
-    // Retorna curvaturas em 1/m (input foi kNm, calculo interno cm)
-    return { kx: kx * 100, ky: ky * 100, e0: e0 };
+    // Agora ajustar kx e ky para equilibrar Momentos (assumindo linearidade local)
+    // M = EI * k
+    // EI estimado bruto
+    const Ecs = 5600 * Math.sqrt(pcalcData.materiais.fck) * 0.85 / 10;
+    const EIx = Ecs * pcalcData.secao.ix;
+    const EIy = Ecs * pcalcData.secao.iy;
+
+    kx = targetMx / (0.4 * EIx); // Chute secante 0.4 EI
+    ky = targetMy / (0.4 * EIy);
+
+    // Refinamento iterativo (Método da Secante 2D simplificado)
+    for (let i = 0; i < 8; i++) {
+        const res = calculateSectionResistance(e0, kx, ky);
+
+        // Ajustar e0
+        const dN = res.N - targetN;
+        // Recalcula rigidez axial tangente (aprox)
+        const EA = Math.abs(dN / 0.0001) || (pcalcData.secao.areaAc * Ecs);
+        e0 = e0 - dN / EA;
+
+        // Ajustar kx
+        const dMx = res.Mx - targetMx;
+        // Rigidez flexão tangente aprox
+        // Se momento aumentou muito com pouco k, rigidez alta.
+        // k_new = k_old - dM / EI_tang
+        // Usar EI secante atual como estimador
+        const EIx_sec = (Math.abs(kx) > 1e-7) ? res.Mx / kx : EIx;
+        kx = kx - dMx / (Math.abs(EIx_sec) || EIx);
+
+        // Ajustar ky
+        const dMy = res.My - targetMy;
+        const EIy_sec = (Math.abs(ky) > 1e-7) ? res.My / ky : EIy;
+        ky = ky - dMy / (Math.abs(EIy_sec) || EIy);
+    }
+
+    return { kx, ky, e0 };
 }
 
 function renderResultsTable() {
     const tbody = document.getElementById('results-table').getElementsByTagName('tbody')[0];
     tbody.innerHTML = '';
-
+    // Os resultados já foram ordenados no performCalculation
     pcalcData.resultados.loadCases.forEach((res, i) => {
         const row = tbody.insertRow();
+        // Destaque para a linha selecionada
         const isSelected = canvasView.selectedCaseIndex === i;
         row.className = `hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700 transition-colors ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`;
 
+        // Ao clicar, atualizar a visualização
         row.onclick = () => {
             canvasView.selectedCaseIndex = i;
             renderElevation(i);
-            renderResultsTable();
+            renderResultsTable(); // Re-renderizar para atualizar o destaque
+            // Atualizar 3D com o novo ponto em destaque? Sim, se quisermos
             render3DChart();
         };
 
+        // Formatando FS para mostrar na tabela
         let fsText = "-";
         let fsClass = "";
         if (res.safetyFactor > 0 && res.safetyFactor < 99) {
@@ -1395,7 +1185,7 @@ function renderResultsTable() {
             <td class="p-2 text-center ${fsClass}">${fsText}</td>
             <td class="p-2"><span class="px-1 rounded bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 text-[10px]">${res.info}</span></td>
             <td class="p-2 text-xs text-blue-500 dark:text-blue-400 text-center">
-                ${isSelected ? '<b>(Sel)</b>' : 'Ver'}
+                ${isSelected ? '👁️' : 'Ver'}
             </td>
         `;
     });
@@ -1409,9 +1199,10 @@ function render3DChart() {
 
     const { x, y, z } = pcalcData.resultados.surfacePoints;
     const loadCases = pcalcData.resultados.loadCases;
-    const minSurf = pcalcData.resultados.minMomentSurface;
+    const minSurf = pcalcData.resultados.minMomentSurface; // Dados do momento mínimo
 
-    const dark = typeof isDark === 'function' ? isDark() : false;
+    // Cores dinâmicas
+    const dark = isDark();
     const meshColor = dark ? '#3462a3ff' : '#94a3b8';
     const axisColor = dark ? '#94a3b8' : '#475569';
     const gridColor = dark ? '#334155' : '#e2e8f0';
@@ -1427,16 +1218,18 @@ function render3DChart() {
         lighting: { ambient: 0.5, diffuse: 0.6 }
     };
 
+    // --- NOVA TRACE: Superfície de Momento Mínimo ---
     const minSurfTrace = {
         type: 'mesh3d',
         x: minSurf.x, y: minSurf.y, z: minSurf.z,
         opacity: 0.15,
-        color: '#facc15',
+        color: '#facc15', // Amarelo
         name: 'Momento Mínimo',
         alphahull: 0,
         lighting: { ambient: 0.5, diffuse: 0.6 }
     };
 
+    // Separar o caso selecionado dos outros para destaque
     const selectedIdx = canvasView.selectedCaseIndex;
 
     const x_other = [], y_other = [], z_other = [], text_other = [];
@@ -1520,13 +1313,14 @@ function renderElevation(caseIndex) {
     const mx1 = [];
     const my1 = [];
 
+    // Envelope Mínimo
+    const mxMinLine = [];
+    const myMinLine = [];
+    // Recalcular Mínimo para exibição (aprox)
     const e_min_x = 1.5 + 0.03 * pcalcData.secao.hy;
     const e_min_y = 1.5 + 0.03 * pcalcData.secao.hx;
     const Md_min_x = Math.abs(loadCase.Nsd) * (e_min_x / 100);
     const Md_min_y = Math.abs(loadCase.Nsd) * (e_min_y / 100);
-
-    const mxMinLine = [];
-    const myMinLine = [];
 
     const M1xtop = loadCase.Mx1Top;
     const M1xbot = loadCase.Mx1Bot;
@@ -1542,7 +1336,7 @@ function renderElevation(caseIndex) {
         z.push(height);
 
         normal.push(N_val);
-        mxMinLine.push(Md_min_x);
+        mxMinLine.push(Md_min_x); // Linha reta do mínimo
         myMinLine.push(Md_min_y);
 
         const m1x_curr = M1xbot + (M1xtop - M1xbot) * pos;
@@ -1551,9 +1345,11 @@ function renderElevation(caseIndex) {
         mx1.push(m1x_curr);
         my1.push(m1y_curr);
 
+        // Visualização do efeito de 2ª ordem físico (senoidal simplificado)
         const m2x_mag = loadCase.M2dx || 0;
         const m2y_mag = loadCase.M2dy || 0;
 
+        // Sinal baseado na curvatura predominante
         let signX = Math.sign(loadCase.MxTot) || 1;
         if (Math.abs(M1xtop + M1xbot) > 0.01) signX = Math.sign(M1xtop + M1xbot);
 
@@ -1570,13 +1366,13 @@ function renderElevation(caseIndex) {
         }
     }
 
-    const dark = typeof isDark === 'function' ? isDark() : false;
+    const dark = typeof isThemeDark === 'function' ? isThemeDark() : false;
     const plotBgColor = dark ? '#1f2937' : '#f3f4f6';
     const lineColor = dark ? '#e5e7eb' : '#000000';
     const dashedLineColor = dark ? '#9ca3af' : '#6b7280';
-    const minLineColor = '#ef4444';
+    const minLineColor = '#ef4444'; // Vermelho para envelope mínimo
     const fontColor = dark ? '#9ca3af' : '#374151';
-    const fillColor = dark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)';
+    const fillColor = dark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'; // Blue tint
 
     const commonLayout = {
         margin: { l: 30, r: 10, b: 30, t: 30 },
@@ -1591,14 +1387,16 @@ function renderElevation(caseIndex) {
         font: { size: 10, color: fontColor }
     };
 
+    // Plot N
     const traceN = { x: normal, y: z, type: 'scatter', mode: 'lines', fill: 'tozerox', line: { color: lineColor, width: 2 }, fillcolor: fillColor };
     Plotly.newPlot('elevation-plot-n', [traceN], { ...commonLayout, title: { text: 'Nsd (kN)', font: { size: 11, weight: 'bold', color: fontColor } } }, { displayModeBar: false });
 
+    // Helper para Plotar M
     const plotMoment = (divId, tTot, t1, tMin, title) => {
         Plotly.newPlot(divId, [
-            { x: tMin, y: z, type: 'scatter', mode: 'lines', line: { color: minLineColor, width: 1, dash: 'dot' }, name: 'Minimo (+)' },
-            { x: tMin.map(v => -v), y: z, type: 'scatter', mode: 'lines', line: { color: minLineColor, width: 1, dash: 'dot' }, name: 'Minimo (-)' },
-            { x: t1, y: z, type: 'scatter', mode: 'lines', line: { color: dashedLineColor, width: 1, dash: 'dash' }, name: '1a Ordem' },
+            { x: tMin, y: z, type: 'scatter', mode: 'lines', line: { color: minLineColor, width: 1, dash: 'dot' }, name: 'Mínimo (+)' },
+            { x: tMin.map(v => -v), y: z, type: 'scatter', mode: 'lines', line: { color: minLineColor, width: 1, dash: 'dot' }, name: 'Mínimo (-)' },
+            { x: t1, y: z, type: 'scatter', mode: 'lines', line: { color: dashedLineColor, width: 1, dash: 'dash' }, name: '1ª Ordem' },
             { x: tTot, y: z, type: 'scatter', mode: 'lines', fill: 'tozerox', line: { color: lineColor, width: 2 }, fillcolor: fillColor, name: 'Total' }
         ], { ...commonLayout, title: { text: title, font: { size: 11, weight: 'bold', color: fontColor } } }, { displayModeBar: false });
     };
@@ -1615,14 +1413,17 @@ function updateSectionStats() {
     if (!statsDiv) {
         statsDiv = document.createElement('div');
         statsDiv.id = 'section-stats-overlay';
+        // Estilos para sobreposição, com fundo translúcido e borda suave
         statsDiv.className = 'absolute top-2 left-2 bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300 pointer-events-none shadow-sm backdrop-blur-sm z-10';
         container.appendChild(statsDiv);
     }
 
+    // Cálculos
     const { hx, hy, length, boundary, areaAc } = pcalcData.secao;
     const { fck } = pcalcData.materiais;
     const { barras } = pcalcData.armacao;
 
+    // As total
     let As = 0;
     if (barras) {
         barras.forEach(b => {
@@ -1630,39 +1431,44 @@ function updateSectionStats() {
         });
     }
 
+    // Taxa de armadura (%)
     const rho = (areaAc > 0) ? (As / areaAc) * 100 : 0;
+
+    // Esbeltez
     const Le = (boundary === 'pinned') ? length : 2 * length;
+    // CORREÇÃO: lamX usa hy, lamY usa hx
     const lamX = (hy > 0) ? (3.46 * Le) / hy : 0;
     const lamY = (hx > 0) ? (3.46 * Le) / hx : 0;
 
+    // Render HTML
     statsDiv.innerHTML = `
         <div class="font-bold mb-1 border-b border-gray-300 dark:border-gray-600 pb-1">Propriedades</div>
         <div class="mb-1">Taxa de armadura = <span class="font-bold text-blue-600 dark:text-blue-400">${rho.toFixed(2)} %</span></div>
         <div class="mb-1">Índice de Esbeltez:</div>
-        <div class="pl-2">&lambda;x = <span class="font-bold">${lamX.toFixed(0)}</span></div>
-        <div class="pl-2">&lambda;y = <span class="font-bold">${lamY.toFixed(0)}</span></div>
+        <div class="pl-2">λx = <span class="font-bold">${lamX.toFixed(0)}</span></div>
+        <div class="pl-2">λy = <span class="font-bold">${lamY.toFixed(0)}</span></div>
         <div class="mt-1 pt-1 border-t border-gray-300 dark:border-gray-600">Concreto: fck = <span class="font-bold">${fck} MPa</span></div>
     `;
 }
 
 function renderCrossSection() {
-    const canvas = document.getElementById('sectionCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = sectionCanvas.getContext('2d');
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, sectionCanvas.width, sectionCanvas.height);
 
     ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.translate(sectionCanvas.width / 2, sectionCanvas.height / 2);
 
     const currentScale = canvasView.scale * canvasView.baseScale;
     ctx.scale(currentScale, -currentScale);
 
     const { hx, hy } = pcalcData.secao;
 
-    const dark = typeof isDark === 'function' ? isDark() : false;
-    const concreteFill = dark ? '#374151' : '#e5e7eb';
-    const concreteStroke = dark ? '#94a3b8' : '#64748b';
+    // Cores Dinâmicas
+    const dark = typeof isThemeDark === 'function' ? isThemeDark() : false;
+    const concreteFill = dark ? '#374151' : '#e5e7eb'; // Gray-700 : Gray-200
+    const concreteStroke = dark ? '#94a3b8' : '#64748b'; // Slate-400 : Slate-500
     const rebarFill = '#dc2626';
     const rebarStroke = dark ? '#fca5a5' : '#7f1d1d';
     const axisColor = '#3b82f6';
@@ -1706,41 +1512,53 @@ function renderCrossSection() {
     ctx.moveTo(0, 0); ctx.lineTo(0, hy / 2);
     ctx.stroke();
 
+    // --- DIMENSIONS ---
     const dimColor = dark ? '#94a3b8' : '#475569';
     ctx.fillStyle = dimColor;
     ctx.strokeStyle = dimColor;
     ctx.lineWidth = 1 / currentScale;
 
-    const offset = 15 / currentScale;
-    const tickLen = 5 / currentScale;
+    const offset = 15 / currentScale; // Distance from section
+    const tickLen = 5 / currentScale; // Tick length
 
+    // Draw HX (Bottom)
     const yDimX = -hy / 2 - offset;
     ctx.beginPath();
+    // Extension lines
     ctx.moveTo(-hx / 2, -hy / 2 - 2 / currentScale); ctx.lineTo(-hx / 2, yDimX - tickLen);
     ctx.moveTo(hx / 2, -hy / 2 - 2 / currentScale); ctx.lineTo(hx / 2, yDimX - tickLen);
+    // Main line
     ctx.moveTo(-hx / 2, yDimX); ctx.lineTo(hx / 2, yDimX);
+    // Ticks (Diagonal /)
     ctx.moveTo(-hx / 2 - tickLen, yDimX - tickLen); ctx.lineTo(-hx / 2 + tickLen, yDimX + tickLen);
     ctx.moveTo(hx / 2 - tickLen, yDimX - tickLen); ctx.lineTo(hx / 2 + tickLen, yDimX + tickLen);
     ctx.stroke();
 
+    // Draw HY (Left)
     const xDimY = -hx / 2 - offset;
     ctx.beginPath();
+    // Extension lines
     ctx.moveTo(-hx / 2 - 2 / currentScale, -hy / 2); ctx.lineTo(xDimY - tickLen, -hy / 2);
     ctx.moveTo(-hx / 2 - 2 / currentScale, hy / 2); ctx.lineTo(xDimY - tickLen, hy / 2);
+    // Main line
     ctx.moveTo(xDimY, -hy / 2); ctx.lineTo(xDimY, hy / 2);
+    // Ticks
     ctx.moveTo(xDimY - tickLen, -hy / 2 - tickLen); ctx.lineTo(xDimY + tickLen, -hy / 2 + tickLen);
     ctx.moveTo(xDimY - tickLen, hy / 2 - tickLen); ctx.lineTo(xDimY + tickLen, hy / 2 + tickLen);
     ctx.stroke();
 
+    // Text
     ctx.save();
-    ctx.scale(1, -1);
+    ctx.scale(1, -1); // Flip Y so text isn't upside down
     const fontSize = 14 / currentScale;
     ctx.font = `${fontSize}px sans-serif`;
     ctx.textAlign = 'center';
 
+    // Text HX
     ctx.textBaseline = 'top';
     ctx.fillText(`${hx} cm`, 0, -yDimX + 2 / currentScale);
 
+    // Text HY
     ctx.save();
     ctx.translate(xDimY - 2 / currentScale, 0);
     ctx.rotate(-Math.PI / 2);
@@ -1748,7 +1566,98 @@ function renderCrossSection() {
     ctx.fillText(`${hy} cm`, 0, 0);
     ctx.restore();
 
+    ctx.restore(); // End text flip
+
     ctx.restore();
-    ctx.restore();
+
+    // Atualizar stats sempre que renderizar
     updateSectionStats();
 }
+
+// Mock Browser Environment
+global.document = {
+    getElementById: (id) => {
+        return {
+            value: '0',
+            checked: false,
+            addEventListener: () => { },
+            style: {},
+            getElementsByTagName: () => [{ innerHTML: '', insertRow: () => ({ innerHTML: '', className: '', onclick: () => { } }) }]
+        };
+    },
+    addEventListener: () => { },
+    querySelector: () => ({ value: 'curvature_approx' }),
+    documentElement: { classList: { contains: () => false } },
+    createElement: () => ({ style: {} })
+};
+global.window = {
+    addEventListener: () => { },
+    injectHeader: () => { },
+    injectFooter: () => { }
+};
+global.ResizeObserver = class { observe() { } };
+global.Plotly = { newPlot: () => { } };
+global.XLSX = { utils: { sheet_to_json: () => [] } };
+
+// Mock console.group to avoid clutter
+const originalConsole = console.log;
+console.group = () => { };
+console.groupEnd = () => { };
+
+// Load PCALC.js content (we will append this file content to PCALC.js content in the run command)
+// For now, we assume PCALC.js code is present here or loaded.
+
+// --- TEST SETUP ---
+function runTests() {
+    console.log("--- RUNNING TESTS ---");
+
+    // Setup Data
+    pcalcData.secao.hx = 40; // cm
+    pcalcData.secao.hy = 40; // cm
+    pcalcData.secao.areaAc = 1600; // cm²
+    pcalcData.secao.length = 300; // cm
+    pcalcData.secao.boundary = 'pinned';
+    pcalcData.secao.tipoSecao = 'Retangular';
+
+    pcalcData.materiais.fck = 25; // MPa
+    pcalcData.materiais.fyk = 500; // MPa
+    pcalcData.materiais.es = 210; // GPa
+
+    pcalcData.config.gamaC = 1.4;
+    pcalcData.config.gamaS = 1.15;
+    pcalcData.config.gamaF = 1.4;
+    pcalcData.config.gammaF3 = 1.0; // Simplificar para teste
+
+    // Discretize Section (needed for solveCurvature -> calculateSectionResistance)
+    discretizeSection();
+
+    // Define Load Case
+    const N_load = -1000; // kN (Compression)
+    const M_top = 100; // kNm
+    const M_bot = 100; // kNm
+
+    const Nsd = N_load * 1.4; // -1400
+    const M1d = M_top * 1.4; // 140
+
+    console.log(`Test Case: Nsd=${Nsd}, M1d=${M1d}`);
+
+    // Test Method 1
+    console.log("\n--- Testing Method 1 (Curvature Approx) ---");
+    const res1 = calculateMethod1_CurvatureApprox(Nsd, M1d, M1d, 0, 0, 10, 10, true);
+    console.log("Result Method 1:", JSON.stringify(res1, null, 2));
+
+    // Test Method 2
+    console.log("\n--- Testing Method 2 (Stiffness Approx - Java) ---");
+    const res2 = calculateMethod2_StiffnessApprox(Nsd, M1d, M1d, 0, 0, 10, 10, true);
+    console.log("Result Method 2:", JSON.stringify(res2, null, 2));
+
+    // Test Method 3
+    console.log("\n--- Testing Method 3 (Standard Diagram - Java) ---");
+    const res3 = calculateMethod3_StandardDiagram(Nsd, M1d, M1d, 0, 0, 10, 10, true);
+    console.log("Result Method 3:", JSON.stringify(res3, null, 2));
+
+}
+
+// We need to wait for DOMContentLoaded or just call init if we were in browser.
+// But here we just call runTests after loading.
+setTimeout(runTests, 100);
