@@ -173,6 +173,34 @@
 
                 <div class="space-y-6">
                     <div class="form-section">
+                        <h2>Web Concentrated Forces (Crippling/Yielding)</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="lb_bearing" class="block text-sm font-medium mb-1">Bearing Length
+                                    (N)</label>
+                                <input type="number" id="lb_bearing" value="3.5">
+                            </div>
+                            <div>
+                                <label for="is_end_bearing" class="block text-sm font-medium mb-1">Bearing
+                                    Location</label>
+                                <select id="is_end_bearing">
+                                    <option value="false" selected>Interior (>d from end)</option>
+                                    <option value="true">End (<=d from end)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="k_des" class="block text-sm font-medium mb-1">Distance k (des)</label>
+                                <input type="number" id="k_des" value="1.0">
+                            </div>
+                            <div>
+                                <label for="stiffener_spacing_a" class="block text-sm font-medium mb-1">Stiffener
+                                    Spacing (a)</label>
+                                <input type="number" id="stiffener_spacing_a" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
                         <h2>Serviceability (Deflection)</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div><label for="deflection_span" class="block text-sm">Span (ft)</label><input
@@ -217,7 +245,8 @@
 
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
                 <button id="load-inputs-btn"
-                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
+                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load
+                    Inputs</button>
                 <button id="save-inputs-btn"
                     class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save
                     Inputs</button>
@@ -236,7 +265,8 @@
     <script src="../js/template.js"></script>
     <script src="../js/shared-utils.js"></script>
     <script src="../js/validation-rules.js"></script>
-    <script src="aisc-database.js"></script>
+    <script src="aisc-shapes-database-v16.0.js"></script>
+    <script src="database.js"></script>
     <script src="steel check.js"></script>
 </body>
 

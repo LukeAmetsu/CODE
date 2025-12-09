@@ -57,8 +57,8 @@ async function injectHeader(config) {
     // --- LOGIC TO FIND ACTIVE SECTION AND SIBLINGS ---
     // Get current filename (e.g., "wind.html")
     const currentPath = window.location.pathname;
-    const currentFilename = currentPath.substring(currentPath.lastIndexOf('/') + 1);
-    
+    const currentFilename = decodeURIComponent(currentPath.substring(currentPath.lastIndexOf('/') + 1));
+
     // Find the active item in the navigation tree
     let activeItem = null;
     let activeParent = null;
@@ -83,18 +83,18 @@ async function injectHeader(config) {
     }
 
     // If found, use the parent's key for the main active state
-    const mainActiveKey = activeParent ? activeParent.key : activePage; 
-    
+    const mainActiveKey = activeParent ? activeParent.key : activePage;
+
     // --- GENERATE HTML ---
 
     // Generate Main Nav Links
     const mainNavLinks = navConfig.mainNav.map(item => {
         const isActive = item.key === mainActiveKey;
         const activeClass = isActive ? 'text-blue-600 dark:text-blue-400 font-bold border-b-2 border-blue-600 dark:border-blue-400' : 'text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400';
-        
+
         // Use safeTranslate with fallback
         const text = safeTranslate(item.textKey);
-        
+
         return `<a href="${pathPrefix}${item.href}" class="${activeClass} px-3 py-2 transition-colors duration-200 whitespace-nowrap flex-shrink-0">${text}</a>`;
     }).join('');
 
@@ -103,9 +103,9 @@ async function injectHeader(config) {
     if (activeParent && activeParent.subNav && activeParent.subNav.length > 0) {
         const subNavLinks = activeParent.subNav.map(item => {
             // Check against filename again for sub-nav highlighting
-            const isSubActive = item.href.endsWith(currentFilename); 
+            const isSubActive = item.href.endsWith(currentFilename);
             const subActiveClass = isSubActive ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700';
-            
+
             // Use safeTranslate with fallback
             const text = safeTranslate(item.textKey);
 
@@ -250,7 +250,7 @@ async function injectFooter(config) {
     `;
 
     placeholder.innerHTML = footerHTML;
-    
+
     // Initialize Back to Top button logic if shared-utils is loaded
     if (typeof initializeBackToTopButton === 'function') {
         initializeBackToTopButton();

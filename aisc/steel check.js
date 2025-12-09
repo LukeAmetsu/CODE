@@ -1,21 +1,17 @@
-<<<<<<< HEAD
 // --- Global variables for the 3D scene ---
-let lastSteelRunResults = null;
+var lastSteelRunResults = null;
 
-const steelCheckInputIds = [
-    'jurisdiction', 'fos', 'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
+var steelCheckInputIds = [
+    'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
     'section_type', 'aisc_shape_select',
-    'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
+    'd', 'bf', 'tf', 'tw', 'stiffener_spacing_a', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
     'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input'
 ];
 
 // --- Move steelChecker definition OUTSIDE DOMContentLoaded ---
-const steelChecker = (() => {
-    function getDesignFactor(design_method, phi, omega, jurisdiction, fos) {
-        if (jurisdiction === 'OSHA') {
-            return 1 / (parseFloat(fos) || 2.0); // Use FOS for OSHA, with a default fallback
-        }
+var steelChecker = (() => {
+    function getDesignFactor(design_method, phi, omega) {
         if (design_method === 'LRFD') return phi;
         return 1 / omega; // ASD
     }
@@ -135,7 +131,7 @@ const steelChecker = (() => {
         // --- Calculate Nominal Capacities for Each Limit State ---
         const Mp = Fy * Zx; // Plastic Moment (Yielding)
         const My = Fy * Sx; // Yield Moment
-        
+
         const limit_states = {
             'Yielding (F2.1)': calculate_Mn_yield(props, inputs),
             'Lateral-Torsional Buckling (F2.2)': calculate_Mn_ltb(props, inputs, Mp, My, Lp, Lr, c),
@@ -164,7 +160,7 @@ const steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
         const phiMn_or_Mn_omega = Mn * factor;
 
         return {
@@ -178,9 +174,10 @@ const steelChecker = (() => {
 
     function checkFlexure_HSS(props, inputs) {
         const { Fy, E } = inputs;
+        const { Zx, Sx, type } = props;
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
 
         let isCompact, Mn;
         let slenderness = {};
@@ -227,16 +224,19 @@ const steelChecker = (() => {
 
     function checkFlexure_Angle(props, inputs) {
         const { Fy, E, Cb, Lb_input } = inputs;
+        const { Zx, Sx, ry, d, bf, tf } = props;
+        const Lb = Lb_input * 12;
+
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
 
         // F10.1 Yielding
         const My = 1.5 * Fy * Sx;
         const Mn_yield = My;
 
         // F10.2 LTB
-        const Me = (0.46 * E * bf**2 * tf**2) / Lb;
+        const Me = (0.46 * E * bf ** 2 * tf ** 2) / Lb;
 
         let Mn_ltb;
         if (Me <= My) { // Elastic LTB
@@ -257,7 +257,7 @@ const steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
 
         // Basic yielding capacity
         const Mpy = Math.min(Fy * Zy, 1.6 * Fy * Sy); // AISC F6.1
@@ -302,7 +302,8 @@ const steelChecker = (() => {
                     Mny = Fcr * Sy;
                     governing_limit_state = 'Wall Local Buckling (Slender, F7)';
                 }
-            }        } else if (type === 'HSS-round' || type === 'Pipe') {
+            }
+        } else if (type === 'HSS-round' || type === 'Pipe') {
             // Round HSS - same capacity for both axes (symmetric)
             // Use same logic as major axis
             const lambda = d / tf; // D/t
@@ -419,7 +420,7 @@ const steelChecker = (() => {
 
         const phi_c = 0.9;
         const omega_c = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_c, omega_c, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_c, omega_c);
 
         // --- 1. Slender Element Reduction Factor (Q) ---
         const Q_results = checkHSSLocalBuckling(props, inputs); // This function handles multiple types
@@ -473,7 +474,7 @@ const steelChecker = (() => {
         const Pn_yield = Fy * Ag;
         const phi_ty = 0.90;
         const omega_ty = 1.67;
-        const factor_yield = getDesignFactor(inputs.design_method, phi_ty, omega_ty, inputs.jurisdiction, inputs.fos);
+        const factor_yield = getDesignFactor(inputs.design_method, phi_ty, omega_ty);
         const cap_yield = Pn_yield * factor_yield;
 
         const An_net = Ag;
@@ -481,7 +482,7 @@ const steelChecker = (() => {
         const Pn_rupture = Fu * Ae;
         const phi_tr = 0.75;
         const omega_tr = 2.00;
-        const factor_rupture = getDesignFactor(inputs.design_method, phi_tr, omega_tr, inputs.jurisdiction, inputs.fos);
+        const factor_rupture = getDesignFactor(inputs.design_method, phi_tr, omega_tr);
         const cap_rupture = Pn_rupture * factor_rupture;
 
         const governing_capacity = Math.min(cap_yield, cap_rupture);
@@ -511,7 +512,7 @@ const steelChecker = (() => {
         const a = stiffener_spacing_a; // clear distance between transverse stiffeners
         const phi_v = 0.9;
         const omega_v = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
         const h_tw = h / tw;
         const kv = 5.34;
 
@@ -549,7 +550,7 @@ const steelChecker = (() => {
                     Cv = C_v1_limit / h_tw;
                     governing_limit_state = 'Inelastic Web Buckling (G2-2)';
                 } else {
-                    Cv = (1.51 * E * kv) / (h_tw**2 * Fy);
+                    Cv = (1.51 * E * kv) / (h_tw ** 2 * Fy);
                     governing_limit_state = 'Elastic Web Buckling (G2-3)';
                 }
             }
@@ -568,7 +569,7 @@ const steelChecker = (() => {
         if (tfa_permitted) {
             const a_h_ratio = a / h;
             // AISC Eq. G3-1
-            const Vn_tfa = 0.6 * Fy * Aw * (Cv + (1 - Cv) / (1.15 * Math.sqrt(1 + a_h_ratio**2)));
+            const Vn_tfa = 0.6 * Fy * Aw * (Cv + (1 - Cv) / (1.15 * Math.sqrt(1 + a_h_ratio ** 2)));
             if (Vn_tfa > Vn) {
                 Vn = Vn_tfa;
                 governing_limit_state = 'Shear with Tension-Field Action (G3)';
@@ -583,7 +584,7 @@ const steelChecker = (() => {
         const phiVn_or_Vn_omega = Vn * factor;
         return {
             phiVn_or_Vn_omega: phiVn_or_Vn_omega,
-            Vn, Cv, h_tw, governing_limit_state, tfa_details,
+            Vn, Cv, h_tw, governing_limit_state, tfa_details, Aw, // Added Aw
             reference: "AISC G2"
         };
     }
@@ -592,7 +593,7 @@ const steelChecker = (() => {
         const { Fy, E } = inputs;
         const phi_v = inputs.section_type === 'Rectangular HSS' ? 0.9 : 1.0;
         const omega_v = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
 
         let Vn, Cv = 1.0, h_tw = 0, Aw, governing_limit_state;
 
@@ -609,7 +610,8 @@ const steelChecker = (() => {
             if (h_tw <= limit1) { // Compact Web
                 Cv = 1.0;
                 governing_limit_state = 'Shear Yielding (G5-2a)';
-            } else if (h_tw <= limit2) {Cv = limit1 / h_tw;
+            } else if (h_tw <= limit2) {
+                Cv = limit1 / h_tw;
                 governing_limit_state = 'Inelastic Web Buckling (G5-2b)';
             } else {
                 Cv = (1.51 * kv * E) / (Fy * h_tw * h_tw);
@@ -620,8 +622,8 @@ const steelChecker = (() => {
             // AISC G6 - Shear for Circular HSS
             const D_t = props.d / props.tf;
             const Fcr_yield = 0.6 * Fy;
-            const Fcr_buckling1 = (1.60 * E) / (Math.sqrt(D_t) * Math.pow(D_t, 5/4));
-            const Fcr_buckling2 = (0.78 * E) / Math.pow(D_t, 3/2);
+            const Fcr_buckling1 = (1.60 * E) / (Math.sqrt(D_t) * Math.pow(D_t, 5 / 4));
+            const Fcr_buckling2 = (0.78 * E) / Math.pow(D_t, 3 / 2);
             const Fcr = Math.min(Math.max(Fcr_buckling1, Fcr_buckling2), Fcr_yield);
 
             if (Fcr < Fcr_yield) {
@@ -632,11 +634,11 @@ const steelChecker = (() => {
             Vn = Fcr * (props.Ag / 2);
         }
         const phiVn_or_Vn_omega = Vn * factor;
-        return { 
-            phiVn_or_Vn_omega: phiVn_or_Vn_omega, 
-            Vn, Cv, h_tw, governing_limit_state, 
-            phi: phi_v, omega: omega_v, 
-            reference: "AISC G5, G6" 
+        return {
+            phiVn_or_Vn_omega: phiVn_or_Vn_omega,
+            Vn, Cv, h_tw, governing_limit_state,
+            phi: phi_v, omega: omega_v,
+            reference: "AISC G5, G6"
         };
     }
 
@@ -651,15 +653,15 @@ const steelChecker = (() => {
         const Pr = Math.abs(Pu_or_Pa);
         if (Pr === 0) return 1.0;
 
-        const Pe_num = Math.PI**2 * E * (axis === 'x' ? Ix : Iy);
+        const Pe_num = Math.PI ** 2 * E * (axis === 'x' ? Ix : Iy);
         const Pe_denominator = Math.pow(K * L, 2);
-        
+
         // Guard against zero K*L
         if (Pe_denominator === 0 || K === 0 || L === 0) {
             console.error("B1 Factor Error: K*L = 0. Cannot calculate Pe.");
             return 1.0;
         }
-        
+
         const Pe = Pe_num / Pe_denominator;
         if (Pe <= 0) return 10.0;
 
@@ -710,7 +712,7 @@ const steelChecker = (() => {
         // Mcw is the capacity about the major principal axis (w-w)
         const Mcw = (checkFlexure_Angle(props, inputs).phiMn_or_Mn_omega || 0) * 12; // in kip-in
         // Mcz is the capacity about the minor principal axis (z-z). Conservatively use yield moment.
-        const Mcz = (design_method === 'LRFD' ? 0.9 : 1/1.67) * Fy * Math.min(Sx, Sy);
+        const Mcz = (design_method === 'LRFD' ? 0.9 : 1 / 1.67) * Fy * Math.min(Sx, Sy);
 
         // AISC Interaction Equation H2-1
         const ratio = (Pc > 0 ? Pr / Pc : 0) + (Mcw > 0 ? Mrw / Mcw : 0) + (Mcz > 0 ? Mrz / Mcz : 0);
@@ -759,7 +761,7 @@ const steelChecker = (() => {
 
         if (pr_pc >= 0.2) {
             // H1-1a
-            ratio = pr_pc + (8.0/9.0) * ((B1x * Mrx / Mcx) + (B1y * Mry / Mcy));
+            ratio = pr_pc + (8.0 / 9.0) * ((B1x * Mrx / Mcx) + (B1y * Mry / Mcy));
             equation = 'H1-1a';
         } else {
             // H1-1b
@@ -794,10 +796,10 @@ const steelChecker = (() => {
             ratio = (Vc > 0 ? Vr / Vc : 0) + (Tc > 0 ? Tr / Tc : 0);
         }
 
-        return { 
-            applicable: true, 
-            ratio, 
-            reference: "AISC H3.2 (HSS) or DG9 Approx (non-HSS)" 
+        return {
+            applicable: true,
+            ratio,
+            reference: "AISC H3.2 (HSS) or DG9 Approx (non-HSS)"
         };
     }
 
@@ -908,7 +910,7 @@ const steelChecker = (() => {
 
         const phi_T = 0.9;
         const omega_T = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_T, omega_T, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi_T, omega_T);
 
         return {
             applicable: true,
@@ -932,7 +934,7 @@ const steelChecker = (() => {
 
         const phi_T = 0.90;
         const omega_T = 1.67;
-        const factor = getDesignFactor(design_method, phi_T, omega_T, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(design_method, phi_T, omega_T);
 
         let Tn, governing_limit_state;
 
@@ -944,7 +946,7 @@ const steelChecker = (() => {
             const C = 2 * (b * h) * tf;
             const Fcr_yield = 0.6 * Fy;
             const h_t = (d - 3 * tf) / tf; // Slenderness is based on flat width
-            const Fcr_buckling = (h_t > 2.45 * Math.sqrt(E/Fy)) ? (0.6 * Fy * (2.45 * Math.sqrt(E/Fy)) / h_t) : Fcr_yield;
+            const Fcr_buckling = (h_t > 2.45 * Math.sqrt(E / Fy)) ? (0.6 * Fy * (2.45 * Math.sqrt(E / Fy)) / h_t) : Fcr_yield;
             const Fcr = Math.min(Fcr_yield, Fcr_buckling);
             Tn = Fcr * C;
             governing_limit_state = Fcr < Fcr_yield ? 'Torsional Buckling (H3)' : 'Torsional Yielding (H3)';
@@ -952,22 +954,22 @@ const steelChecker = (() => {
             // AISC H3.1 for Round HSS
             const D_t = d / tf;
             const Fcr_yield = 0.6 * Fy;
-            const Fcr_buckling1 = (1.23 * E) / (Math.sqrt(D_t) * Math.pow(D_t, 5/4));
-            const Fcr_buckling2 = (0.60 * E) / Math.pow(D_t, 3/2);
+            const Fcr_buckling1 = (1.23 * E) / (Math.sqrt(D_t) * Math.pow(D_t, 5 / 4));
+            const Fcr_buckling2 = (0.60 * E) / Math.pow(D_t, 3 / 2);
             const Fcr = Math.min(Math.max(Fcr_buckling1, Fcr_buckling2), Fcr_yield);
-            
+
             // Torsional constant for a thin tube
             const C = (Math.PI * Math.pow(d - tf, 2) * tf) / 2;
             Tn = Fcr * C; // AISC Eq. H3-1
             governing_limit_state = Fcr < Fcr_yield ? 'Torsional Buckling (H3)' : 'Torsional Yielding (H3)';
         }
 
-        return { 
-            applicable: true, 
-            phiTn_or_Tn_omega: Tn * factor, 
-            governing_limit_state, 
-            reference: "AISC H3", 
-            details: { sigma_w: 0, tau_sv: 0, beta: 0 } 
+        return {
+            applicable: true,
+            phiTn_or_Tn_omega: Tn * factor,
+            governing_limit_state,
+            reference: "AISC H3",
+            details: { sigma_w: 0, tau_sv: 0, beta: 0 }
         };
     }
 
@@ -979,7 +981,7 @@ const steelChecker = (() => {
 
         const phi = 0.75;
         const omega = 2.00;
-        const factor = getDesignFactor(inputs.design_method, phi, omega, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(inputs.design_method, phi, omega);
 
         // --- Web Local Yielding (AISC J10.2) ---
         const N_lb = lb_bearing;
@@ -993,17 +995,17 @@ const steelChecker = (() => {
         if (is_end_bearing) {
             // Eq. J10-4
             if ((N_lb / d) <= 0.2) {
-                Rn_crippling = 0.80 * tw**2 * (1 + 3 * (N_lb / d) * (tw / tf)**1.5) * common_term;
+                Rn_crippling = 0.80 * tw ** 2 * (1 + 3 * (N_lb / d) * (tw / tf) ** 1.5) * common_term;
             } else {
                 // CORRECTED: (4*N/d - 0.2) not (3*N/d - 0.2)
-                Rn_crippling = 0.80 * tw**2 * (1 + (4 * N_lb / d - 0.2) * (tw / tf)**1.5) * common_term;
+                Rn_crippling = 0.80 * tw ** 2 * (1 + (4 * N_lb / d - 0.2) * (tw / tf) ** 1.5) * common_term;
             }
         } else { // Interior load
             // Eq. J10-5
             if ((N_lb / d) <= 0.2) {
-                Rn_crippling = 0.40 * tw**2 * (1 + 3 * (N_lb / d) * (tw / tf)**1.5) * common_term;
+                Rn_crippling = 0.40 * tw ** 2 * (1 + 3 * (N_lb / d) * (tw / tf) ** 1.5) * common_term;
             } else {
-                Rn_crippling = 0.40 * tw**2 * (1 + (4.5 * N_lb / d - 0.2) * (tw / tf)**1.5) * common_term;
+                Rn_crippling = 0.40 * tw ** 2 * (1 + (4.5 * N_lb / d - 0.2) * (tw / tf) ** 1.5) * common_term;
             }
         }
 
@@ -1068,20 +1070,20 @@ const steelChecker = (() => {
         }
 
         const Aw = d * tw;
-        const Rn = (Cr * Aw * Fy) / (h_tw**2);
+        const Rn = (Cr * Aw * Fy) / (h_tw ** 2);
         const phi = 0.90;
         const omega = 1.67;
-        const factor = getDesignFactor(design_method, phi, omega, inputs.jurisdiction, inputs.fos);
+        const factor = getDesignFactor(design_method, phi, omega);
 
-        return { 
-            applicable: true, 
+        return {
+            applicable: true,
             Rn,
             phiRn_or_Rn_omega: Rn * factor,
-            phi, 
-            omega, 
-            Cr, h_tw, L_bf, 
+            phi,
+            omega,
+            Cr, h_tw, L_bf,
             governing_limit_state: 'Web Sidesway Buckling (G4)',
-            reference: "AISC G4" 
+            reference: "AISC G4"
         };
     }
 
@@ -1176,7 +1178,55 @@ const steelChecker = (() => {
         };
     }
 
-    function run(inputs, validation) {
+    function validateInputs(inputs) {
+        const errors = [];
+        const warnings = [];
+
+        if (inputs.Fy <= 0 || inputs.Fy > 100) {
+            errors.push("Yield Strength (Fy) must be between 0 and 100 ksi.");
+        }
+        if (inputs.Fy < 36 || inputs.Fy > 80) {
+            warnings.push("Unusual steel grade. Verify Fy value.");
+        }
+
+        if (inputs.Fu <= inputs.Fy) {
+            errors.push("Ultimate Strength (Fu) must be greater than Fy.");
+        }
+        if (inputs.E <= 0 || inputs.E > 50000) {
+            errors.push("Modulus of Elasticity (E) should be around 29,000 ksi for steel.");
+        }
+
+        if (inputs.d <= 0) errors.push("Section depth must be positive.");
+        if (inputs.tf <= 0) errors.push("Flange thickness must be positive.");
+
+        if (Math.abs(inputs.Pu_or_Pa) > 10000) {
+            warnings.push("Very high axial load - verify units (kips expected).");
+        }
+        if (Math.abs(inputs.Mux_or_Max) > 10000) {
+            warnings.push("Very high moment - verify units (kip-ft expected).");
+        }
+
+        if (inputs.section_type === 'I-Shape') {
+            if (inputs.d < 2 * inputs.tf) {
+                errors.push("Depth (d) must be greater than twice the flange thickness (tf).");
+            }
+            if (inputs.bf < inputs.tw) {
+                errors.push("Flange width (bf) must be greater than the web thickness (tw).");
+            }
+        }
+
+        // Add guard for K and Lb
+        if (inputs.K <= 0) {
+            errors.push("Effective length factor (K) must be positive.");
+        }
+        if (inputs.Lb_input < 0) {
+            errors.push("Unbraced length (Lb) cannot be negative.");
+        }
+
+        return { errors, warnings };
+    }
+
+    function run(inputs) {
         inputs.Fy = parseFloat(inputs.Fy) || 0;
         inputs.Fu = parseFloat(inputs.Fu) || 0;
         inputs.is_end_bearing = inputs.is_end_bearing === 'true';
@@ -1184,7 +1234,7 @@ const steelChecker = (() => {
         inputs.An_net = inputs.Ag_manual;
         inputs.U_shear_lag = 1.0;
 
-        const { errors, warnings } = validateInputs(Object.keys(inputs), validationRules.steel_check);
+        const { errors, warnings } = validateInputs(inputs);
         if (inputs.Tu_or_Ta !== 0 && inputs.section_type === 'I-Shape') {
             warnings.push("Torsion analysis for I-shapes is a simplified approximation. See AISC Design Guide 9 for complete analysis.");
         }
@@ -1192,7 +1242,13 @@ const steelChecker = (() => {
 
         const props = getSectionProperties(inputs);
 
-        const shear_results = checkShear(props, inputs);        
+        // After getting properties, if rts was calculated, update the UI input field to show it.
+        const rtsInput = document.getElementById('rts_manual');
+        if (rtsInput && props.rts > 0 && rtsInput.value !== props.rts.toFixed(5)) {
+            rtsInput.value = props.rts.toFixed(5);
+        }
+
+        const shear_results = checkShear(props, inputs);
         const isHighShear = Math.abs(inputs.Vu_or_Va) > 0.6 * shear_results.phiVn_or_Vn_omega;
         const flex_results_y = checkFlexureMinorAxisComplete(props, inputs);
         const torsion_results = checkTorsionComplete(props, inputs);
@@ -1258,14 +1314,25 @@ const steelChecker = (() => {
 function getSectionProperties(inputs) {
     // If a shape is selected from the dropdown, its properties are already in the manual input fields.
     // We can build the properties object directly from there. This handles both selected shapes and pure manual input.
-    const props = {};
-    const propIds = ['section_type', 'd', 'bf', 'tf', 'tw', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'k_des'];
-    propIds.forEach(id => {
-        const key = id.replace('_manual', '');
-        const value = inputs[id];
-        props[key] = (typeof value === 'string' && !isNaN(parseFloat(value))) ? parseFloat(value) : value;
-    });
-    props.k_des = props.k_des || props.tf || 0;
+    const props = {
+        type: inputs.section_type,
+        d: parseFloat(inputs.d) || 0,
+        bf: parseFloat(inputs.bf) || 0,
+        tf: parseFloat(inputs.tf) || 0,
+        tw: parseFloat(inputs.tw) || 0,
+        Ag: parseFloat(inputs.Ag_manual) || 0,
+        Ix: parseFloat(inputs.I_manual) || 0,
+        Sx: parseFloat(inputs.Sx_manual) || 0,
+        Zx: parseFloat(inputs.Zx_manual) || 0,
+        Iy: parseFloat(inputs.Iy_manual) || 0,
+        Sy: parseFloat(inputs.Sy_manual) || 0,
+        Zy: parseFloat(inputs.Zy_manual) || 0,
+        ry: parseFloat(inputs.ry_manual) || 0,
+        rts: parseFloat(inputs.rts_manual) || 0,
+        J: parseFloat(inputs.J_manual) || 0,
+        Cw: parseFloat(inputs.Cw_manual) || 0,
+        k_des: parseFloat(inputs.k_des) || parseFloat(inputs.tf) || 0
+    };
 
     // Calculate derived properties
     props.h = props.d - 2 * props.k_des;
@@ -1280,14 +1347,13 @@ function getSectionProperties(inputs) {
         props.x_bar = props.x_bar || 0; // Use database value if available, else 0
     }
 
-    props.rts_was_calculated = false;
     // If rts is missing for an I-shape, calculate it per AISC 360-22 Eq. F2-7
     if ((!props.rts || props.rts === 0) && ['W-Shape', 'S-Shape', 'M-Shape', 'HP-Shape'].includes(props.type)) {
         // Correct implementation of AISC F2-7 for doubly symmetric I-shapes
         if (props.bf > 0 && props.Sx > 0) {
+            const ho = props.d - props.tf;
             const rts_squared = (Math.sqrt(props.Iy * props.Cw)) / props.Sx;
             props.rts = Math.sqrt(rts_squared);
-            props.rts_was_calculated = true;
         }
     }
 
@@ -1311,7 +1377,7 @@ function updateGeometryInputsUI() {
     tf_container.style.display = 'block';
     tw_container.style.display = 'block';
     shapeSelectContainer.style.display = 'block';
- 
+
     if (sectionType.endsWith('-Shape')) { // Covers W-Shape, S-Shape, HP-Shape, M-Shape, WT-Shape
         d_label.textContent = 'Depth (d)';
         bf_label.textContent = 'Flange Width (bf)';
@@ -1368,16 +1434,10 @@ function generateSteelBreakdownHtml(name, data, results) {
     const { design_method } = inputs;
 
     const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
-    const factor_val = inputs.jurisdiction === 'OSHA' 
-        ? inputs.fos 
-        : (design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67));
-    const capacity_eq = inputs.jurisdiction === 'OSHA' 
-        ? `R<sub>n</sub> / FOS` 
-        : (design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`);
+    const factor_val = design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67);
+    const capacity_eq = design_method === 'LRFD' ? `${factor_char}R<sub>n</sub>` : `R<sub>n</sub> / ${factor_char}`;
     const nominal_capacity = check?.Mn || check?.Rn || 0; // Use Mn for flexure, Rn for others
-    const final_capacity = inputs.jurisdiction === 'OSHA' 
-        ? nominal_capacity / factor_val 
-        : (design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val);
+    const final_capacity = design_method === 'LRFD' ? nominal_capacity * factor_val : nominal_capacity / factor_val;
 
     const fmt = (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A';
     const format_list = (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`;
@@ -1409,10 +1469,10 @@ function generateSteelBreakdownHtml(name, data, results) {
                     `<u>Nominal Moment Capacity (M<sub>nx</sub>) for Each Limit State:</u><ul>${limit_state_rows}</ul>`,
                     `Plastic Moment (M<sub>p</sub>) = F<sub>y</sub> &times; Z<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Zx)} = ${fmt(Mp / 12)} kip-ft`,
                     `Yield Moment (M<sub>y</sub>) = F<sub>y</sub> &times; S<sub>x</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Sx)} = ${fmt(My / 12)} kip-ft`,
-                    `<b>LTB Check:</b> L<sub>b</sub>=${fmt(Lb/12)} ft, L<sub>p</sub>=${fmt(Lp/12)} ft, L<sub>r</sub>=${fmt(Lr/12)} ft, C<sub>b</sub>=${fmt(Cb)}`,
+                    `<b>LTB Check:</b> L<sub>b</sub>=${fmt(Lb / 12)} ft, L<sub>p</sub>=${fmt(Lp / 12)} ft, L<sub>r</sub>=${fmt(Lr / 12)} ft, C<sub>b</sub>=${fmt(Cb)}`,
                     slenderness ? `<b>FLB Check:</b> &lambda;<sub>f</sub>=${fmt(slenderness.lambda_f)}, &lambda;<sub>pf</sub>=${fmt(slenderness.lambda_p_f)}, &lambda;<sub>rf</sub>=${fmt(slenderness.lambda_r_f)}` : '',
                     `<u>Design Capacity</u>`,
-                    `Capacity = ${capacity_eq.replace('R','M')} = ${fmt(safeMn / 12)} / ${factor_val} = <b>${fmt(data.phiMn_or_Mn_omega)} kip-ft</b>`
+                    `Capacity = ${capacity_eq.replace('R', 'M')} = ${fmt(safeMn / 12)} / ${factor_val} = <b>${fmt(data.phiMn_or_Mn_omega)} kip-ft</b>`
                 ]);
             } else { // Minor Axis
                 const flex_data_y = results.flexure_y;
@@ -1422,7 +1482,7 @@ function generateSteelBreakdownHtml(name, data, results) {
                     `Plastic Moment (M<sub>py</sub>) = F<sub>y</sub> &times; Z<sub>y</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Zy)} = ${fmt(inputs.Fy * properties.Zy / 12)} kip-ft`,
                     `Yield Moment (M<sub>yy</sub>) = F<sub>y</sub> &times; S<sub>y</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Sy)} = ${fmt(inputs.Fy * properties.Sy / 12)} kip-ft`,
                     `<u>Design Capacity</u>`,
-                    `Capacity = ${capacity_eq.replace('R','M')} = ${fmt(flex_data_y.Mny / 12)} / ${factor_val} = <b>${fmt(flex_data_y.phiMny_or_Mny_omega)} kip-ft</b>`
+                    `Capacity = ${capacity_eq.replace('R', 'M')} = ${fmt(flex_data_y.Mny / 12)} / ${factor_val} = <b>${fmt(flex_data_y.phiMny_or_Mny_omega)} kip-ft</b>`
                 ]);
             }
             break;
@@ -1435,15 +1495,15 @@ function generateSteelBreakdownHtml(name, data, results) {
                     `Flange Stiffness Check: 2A<sub>w</sub>/A<sub>f</sub> = ${fmt(shear_data.tfa_details.flange_stiffness_check, 2)} &le; 2.5`,
                     `V<sub>n</sub> = 0.6F<sub>y</sub>A<sub>w</sub>[C<sub>v</sub> + (1-C<sub>v</sub>)/(1.15&radic;(1+(a/h)²))] = <b>${fmt(shear_data.Vn)} kips</b>`,
                 ] : [
-                `<u>Governing Limit State: <b>${shear_data.governing_limit_state}</b></u>`,
-                `Web Slenderness (h/t<sub>w</sub>) = ${fmt(shear_data.h_tw)}`,
-                `Web Shear Coefficient (C<sub>v</sub>) = ${fmt(shear_data.Cv, 3)}`,
-                `<u>Nominal Shear Strength (V<sub>n</sub>) per AISC G2</u>`,
-                `V<sub>n</sub> = 0.6 &times; F<sub>y</sub> &times; A<sub>w</sub> &times; C<sub>v</sub>`,
-                `V<sub>n</sub> = 0.6 &times; ${fmt(inputs.Fy)} &times; ${fmt(properties.d * properties.tw)} &times; ${fmt(shear_data.Cv, 3)} = <b>${fmt(shear_data.Vn)} kips</b>`,
+                    `<u>Governing Limit State: <b>${shear_data.governing_limit_state}</b></u>`,
+                    `Web Slenderness (h/t<sub>w</sub>) = ${fmt(shear_data.h_tw)}`,
+                    `Web Shear Coefficient (C<sub>v</sub>) = ${fmt(shear_data.Cv, 3)}`,
+                    `<u>Nominal Shear Strength (V<sub>n</sub>) per AISC G2</u>`,
+                    `V<sub>n</sub> = 0.6 &times; F<sub>y</sub> &times; A<sub>w</sub> &times; C<sub>v</sub>`,
+                    `V<sub>n</sub> = 0.6 &times; ${fmt(inputs.Fy)} &times; ${fmt(properties.d * properties.tw)} &times; ${fmt(shear_data.Cv, 3)} = <b>${fmt(shear_data.Vn)} kips</b>`,
                 ]),
                 `<u>Design Capacity</u>`,
-                `Capacity = ${capacity_eq.replace('R','V')} = ${fmt(shear_data.Vn)} / ${factor_val} = <b>${fmt(shear_data.phiVn_or_Vn_omega)} kips</b>`
+                `Capacity = ${capacity_eq.replace('R', 'V')} = ${fmt(shear_data.Vn)} / ${factor_val} = <b>${fmt(shear_data.phiVn_or_Vn_omega)} kips</b>`
             ]);
             break;
 
@@ -1487,7 +1547,7 @@ function generateSteelBreakdownHtml(name, data, results) {
                 `<u>Nominal Strength (R<sub>n</sub>)</u>`,
                 `R<sub>n</sub> = min(R<sub>n,y</sub>, R<sub>n,c</sub>) = <b>${fmt(wc_data.details.Rn)} kips</b>`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${capacity_eq.replace('R','R')} = ${fmt(wc_data.details.Rn)} / ${factor_val} = <b>${fmt(wc_data.phiRn_or_Rn_omega)} kips</b>`
+                `Capacity = ${capacity_eq.replace('R', 'R')} = ${fmt(wc_data.details.Rn)} / ${factor_val} = <b>${fmt(wc_data.phiRn_or_Rn_omega)} kips</b>`
             ]);
             break;
 
@@ -1520,9 +1580,9 @@ function generateSteelBreakdownHtml(name, data, results) {
                 `Total Normal Stress (&sigma;<sub>total</sub>) = f<sub>a</sub> + f<sub>bx</sub> + f<sub>by</sub> + &sigma;<sub>w</sub> = <b>${fmt(h33_data.details.total_normal_stress)} ksi</b>`,
                 `Total Shear Stress (&tau;<sub>total</sub>) = f<sub>v</sub> + &tau;<sub>sv</sub> = <b>${fmt(h33_data.details.total_shear_stress)} ksi</b>`,
                 `<u>Required Strength (von Mises)</u>`,
-                `f<sub>required</sub> = &radic;(&sigma;<sub>total</sub>² + 3&tau;<sub>total</sub>²) = <b>${fmt(Math.sqrt(h33_data.details.total_normal_stress**2 + 3 * h33_data.details.total_shear_stress**2))} ksi</b>`,
+                `f<sub>required</sub> = &radic;(&sigma;<sub>total</sub>² + 3&tau;<sub>total</sub>²) = <b>${fmt(Math.sqrt(h33_data.details.total_normal_stress ** 2 + 3 * h33_data.details.total_shear_stress ** 2))} ksi</b>`,
                 `<u>Design Strength</u>`,
-                `Capacity = ${capacity_eq.replace('R','F')} = <b>${fmt(h33_data.details.capacity)} ksi</b>`
+                `Capacity = ${capacity_eq.replace('R', 'F')} = <b>${fmt(h33_data.details.capacity)} ksi</b>`
             ]);
             break;
 
@@ -1537,7 +1597,7 @@ function generateSteelBreakdownHtml(name, data, results) {
                 `R<sub>n</sub> = (C<sub>r</sub> × A<sub>w</sub> × F<sub>y</sub>) / (h/t<sub>w</sub>)²`,
                 `R<sub>n</sub> = <b>${fmt(wsb_data.Rn)} kips</b>`,
                 `<u>Design Capacity</u>`,
-                `Capacity = ${capacity_eq.replace('R','R')} = <b>${fmt(wsb_data.phiRn_or_Rn_omega)} kips</b>`
+                `Capacity = ${capacity_eq.replace('R', 'R')} = <b>${fmt(wsb_data.phiRn_or_Rn_omega)} kips</b>`
             ]);
             break;
 
@@ -1554,8 +1614,7 @@ function generateSteelBreakdownHtml(name, data, results) {
         default:
             return 'Breakdown not available for this check.';
     }
-    // Return content without a leading heading — the ReportBuilder will render the section title.
-    return `${content}`;
+    return `<h4 class="font-semibold">${name}</h4>${content}`;
 }
 
 async function populateShapeDropdown() {
@@ -1585,137 +1644,11 @@ async function populateShapeDropdown() {
     } catch (error) {
         console.error("Failed to populate shape dropdown:", error);
         shapeSelect.innerHTML = '<option value="">Could not load shapes</option>';
-=======
-
-document.addEventListener('DOMContentLoaded', async () => {
-    // --- Initialization ---
-    populateSteelMaterialDropdown();
-
-    // Load shape database and populate default shape type
-    try {
-        await AISC_SPEC.loadShapeDatabase();
-        updateShapeDropdown(); // Initial population
-    } catch (error) {
-        console.error("Failed to load shape database:", error);
-    }
-
-    // --- Event Listeners ---
-    document.getElementById('steel_material').addEventListener('change', handleMaterialChange);
-    document.getElementById('section_type').addEventListener('change', updateShapeDropdown);
-    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-    document.getElementById('run-steel-check-btn').addEventListener('click', runSteelCheck);
-
-    // File I/O
-    document.getElementById('save-inputs-btn').addEventListener('click', saveInputs);
-    document.getElementById('load-inputs-btn').addEventListener('click', () => document.getElementById('file-input').click());
-    document.getElementById('file-input').addEventListener('change', loadInputsFromFile);
-
-    // Initial material set
-    handleMaterialChange();
-});
-
-// --- UI Helpers ---
-
-function populateSteelMaterialDropdown() {
-    const select = document.getElementById('steel_material');
-    const grades = AISC_SPEC.structuralSteelGrades;
-
-    select.innerHTML = ''; // Clear existing
-    for (const [grade, props] of Object.entries(grades)) {
-        const option = document.createElement('option');
-        option.value = grade;
-        option.textContent = grade;
-        if (grade === 'A992') option.selected = true; // Default
-        select.appendChild(option);
-    }
-}
-
-function handleMaterialChange() {
-    const select = document.getElementById('steel_material');
-    const grade = select.value;
-    const props = AISC_SPEC.getSteelGrade(grade);
-
-    if (props) {
-        document.getElementById('Fy').value = props.Fy;
-        document.getElementById('Fu').value = props.Fu;
-    }
-}
-
-async function updateShapeDropdown() {
-    const sectionType = document.getElementById('section_type').value;
-    const shapeSelect = document.getElementById('aisc_shape_select');
-
-    shapeSelect.innerHTML = '<option value="">Loading...</option>';
-
-    // Map UI Selection Type to Database Types if necessary, or use "All" for specific logic
-    // The current AISC_SPEC.getShapesByType handles strict matching.
-    // We need to map the UI values (e.g. "W-Shape") to what might be in the DB or filter logic
-    // Assuming simple mapping for now based on what I saw in database.js
-
-    let dbType = sectionType;
-    // Adjust if needed based on typical AISC DB naming (e.g., "W", "HSS", etc.)
-    // For now assuming existing getShapesByType handles generic types or we filter manually.
-
-    // Common mappings if DB uses different keys:
-    const typeMapping = {
-        'W-Shape': 'W',
-        'S-Shape': 'S',
-        'HP-Shape': 'HP',
-        'M-Shape': 'M',
-        'WT-Shape': 'WT',
-        'Rectangular HSS': 'HSS_Rect', // Guessing keys, will need verification if this fails
-        'Round HSS': 'HSS_Round',
-        'Pipe': 'Pipe',
-        'Channel': 'C',
-        'Angle': 'L'
-    };
-
-    const typeKey = typeMapping[sectionType] || sectionType;
-
-    try {
-        const allShapes = await AISC_SPEC.loadShapeDatabase();
-        const shapes = [];
-
-        // Filter locally if getShapesByType isn't sufficient or to be safe
-        for (const [name, props] of Object.entries(allShapes)) {
-            // Check type property. 
-            // Note: The database structure might vary. Checking 'type' property.
-            if (props.type === typeKey || name.startsWith(typeKey)) {
-                shapes.push(name);
-            }
-        }
-
-        shapes.sort(); // Alphabetical sort
-
-        shapeSelect.innerHTML = '<option value="">-- Select a Shape --</option>';
-        shapes.forEach(shape => {
-            const option = document.createElement('option');
-            option.value = shape;
-            option.textContent = shape;
-            shapeSelect.appendChild(option);
-        });
-
-        if (sectionType === 'Manual Input') {
-            shapeSelect.disabled = true;
-            toggleManualInputs(true);
-        } else {
-            shapeSelect.disabled = false;
-            toggleManualInputs(false);
-        }
-
-    } catch (e) {
-        console.error("Error updating shapes:", e);
-        shapeSelect.innerHTML = '<option value="">Error loading shapes</option>';
->>>>>>> 7d2b2da81da7bc1fb833c80f4e5395107e6ff36f
     }
 }
 
 async function handleShapeSelection() {
-<<<<<<< HEAD
-    const shapeSelect = document.getElementById('aisc_shape_select');
-    if (!shapeSelect) return; // Se o elemento não existe na página, não faça nada.
-
-    const shapeName = shapeSelect.value;
+    const shapeName = document.getElementById('aisc_shape_select').value;
     const geometryInputs = ['d', 'bf', 'tf', 'tw'];
     const manualPropInputs = ['Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual', 'Iy_manual', 'Sy_manual', 'Zy_manual'];
 
@@ -1737,7 +1670,7 @@ async function handleShapeSelection() {
         ry_manual: shape.ry, rts_manual: shape.rts || '', J_manual: shape.J || '', Cw_manual: shape.cw || '', // CORRECTED: Use shape.cw and provide a fallback
         Iy_manual: shape.Iy, Sy_manual: shape.Sy, Zy_manual: shape.Zy,
         // Also populate k_des if available, otherwise it will be calculated from tf
-        k_des: shape.k_des || shape.tf 
+        k_des: shape.k_des || shape.tf
     };
 
     Object.keys(propertyMap).forEach(id => {
@@ -1745,23 +1678,25 @@ async function handleShapeSelection() {
         if (el && propertyMap[id] !== undefined) {
             el.value = propertyMap[id];
             // Make all property inputs read-only when a shape is selected
-            el.readOnly = true; 
+            el.readOnly = true;
         }
     });
 }
 
 function renderSteelInputSummary(inputs) {
-    const { jurisdiction, fos, design_method, aisc_standard, steel_material, Fy, Fu, Lb_input, K, Cb, Pu_or_Pa, Vu_or_Va, Mux_or_Max, Muy_or_May, Tu_or_Ta, deflection_span, deflection_limit, actual_deflection_input } = inputs;
-
-    const jurisdictionDetails = jurisdiction === 'OSHA'
-        ? `<tr><td>Jurisdiction</td><td>OSHA (FOS = ${fos})</td></tr>`
-        : `<tr><td>Design Method</td><td>${design_method} (${aisc_standard})</td></tr>`;
+    const { design_method, aisc_standard, steel_material, Fy, Fu, Lb_input, K, Cb, Pu_or_Pa, Vu_or_Va, Mux_or_Max, Muy_or_May, Tu_or_Ta, deflection_span, deflection_limit, actual_deflection_input } = inputs;
 
     return `
+    <div id="input-summary-section" class="report-section-copyable">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header">Input Summary</h3>
+            <button data-copy-target-id="input-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
             <table class="w-full mt-2 summary-table">
                 <caption class="report-caption">General & Material Properties</caption>
                 <tbody>
-                    ${jurisdictionDetails}
+                    <tr><td>Design Method</td><td>${design_method} (${aisc_standard})</td></tr>
                     <tr><td>Material</td><td>${steel_material} (F<sub>y</sub>=${Fy} ksi, F<sub>u</sub>=${Fu} ksi)</td></tr>
                     <tr><td>Unbraced Length (L<sub>b</sub>)</td><td>${Lb_input} ft</td></tr>
                     <tr><td>Effective Length Factor (K)</td><td>${K}</td></tr>
@@ -1786,16 +1721,13 @@ function renderSteelInputSummary(inputs) {
                     <tr><td>Actual Deflection</td><td>${actual_deflection_input} in</td></tr>
                 </tbody>
             </table>
-    `;
+        </div>
+    </div>`;
 }
 
 function renderSteelPropertySummary(properties) {
     const selectedShape = lastSteelRunResults?.inputs?.aisc_shape_select || 'Manual Input';
     const fmt = (val, dec = 2) => (typeof val === 'number' && isFinite(val)) ? val.toFixed(dec) : 'N/A';
-
-    const rts_display_val = properties.rts_was_calculated 
-        ? `${fmt(properties.rts, 2)} <span class="text-xs text-gray-500 dark:text-gray-400">(Calculated)</span>`
-        : fmt(properties.rts, 2);
 
     const rows = [
         `<tr><td>Section Type</td><td>${properties.type}</td></tr>`,
@@ -1818,15 +1750,22 @@ function renderSteelPropertySummary(properties) {
         `<tr><td colspan="2" class="bg-gray-100 dark:bg-gray-700 font-bold text-center">Torsional Properties</td></tr>`,
         `<tr><td>Torsional Constant (J)</td><td>${fmt(properties.J, 2)} in⁴</td></tr>`,
         `<tr><td>Warping Constant (C<sub>w</sub>)</td><td>${fmt(properties.Cw, 2)} in⁶</td></tr>`,
-        `<tr><td>Radius of Gyration (r<sub>ts</sub>)</td><td>${rts_display_val} in</td></tr>`
+        `<tr><td>Radius of Gyration (r<sub>ts</sub>)</td><td>${fmt(properties.rts, 2)} in</td></tr>`
     ];
 
     return `
-        <table class="w-full mt-2 summary-table">
-            <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-            <tbody>${rows.join('')}</tbody>
-        </table>
-    `;
+    <div id="property-summary-section" class="report-section-copyable mt-6">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header">Section Properties</h3>
+            <button data-copy-target-id="property-summary-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
+            <table class="w-full mt-2 summary-table">
+                <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+                <tbody>${rows.join('')}</tbody>
+            </table>
+        </div>
+    </div>`;
 }
 
 function renderSlendernessChecks(results) {
@@ -1847,7 +1786,7 @@ function renderSlendernessChecks(results) {
         const { lambda_f, lambda_p_f, lambda_r_f, lambda_w, lambda_p_w, lambda_r_w } = slenderness;
         rows.push(`<tr><td>Flange Slenderness (b<sub>f</sub>/2t<sub>f</sub>)</td><td>${lambda_f.toFixed(2)}</td><td>&lambda;<sub>p</sub>=${lambda_p_f.toFixed(2)}, &lambda;<sub>r</sub>=${lambda_r_f.toFixed(2)}</td><td>${getStatus(lambda_f, lambda_p_f, lambda_r_f)}</td></tr>`);
         rows.push(`<tr><td>Web Slenderness (h/t<sub>w</sub>)</td><td>${lambda_w.toFixed(2)}</td><td>&lambda;<sub>p</sub>=${lambda_p_w.toFixed(2)}, &lambda;<sub>r</sub>=${lambda_r_w.toFixed(2)}</td><td>${getStatus(lambda_w, lambda_p_w, lambda_r_w)}</td></tr>`);
-    } 
+    }
     // Check for Round HSS/Pipe properties
     else if (slenderness.lambda !== undefined) {
         const { lambda, lambda_p, lambda_r } = slenderness;
@@ -1857,15 +1796,22 @@ function renderSlendernessChecks(results) {
     if (rows.length === 0) return ''; // Don't render the table if no slenderness checks were applicable
 
     return `
-        <table class="w-full mt-2 summary-table">
-            <thead>
-                <tr><th>Element</th><th>Ratio</th><th>Limits</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-                ${rows.join('')}
-            </tbody>
-        </table>
-    `;
+    <div id="slenderness-checks-section" class="report-section-copyable mt-6">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="report-header">Section Compactness (AISC B4)</h3>
+            <button data-copy-target-id="slenderness-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+        </div>
+        <div class="copy-content">
+            <table class="w-full mt-2 summary-table">
+                <thead>
+                    <tr><th>Element</th><th>Ratio</th><th>Limits</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    ${rows.join('')}
+                </tbody>
+            </table>
+        </div>
+    </div>`;
 }
 
 function renderSteelStrengthChecks(results) {
@@ -1878,18 +1824,20 @@ function renderSteelStrengthChecks(results) {
     };
 
     const createRow = (name, demand, capacity, ratio, status, data) => {
-        if ((capacity === 0 || !isFinite(capacity)) && (demand === 0 || !isFinite(demand))) return '';
-        const detailId = `detail-${name.replace(/[\s\(\)]/g, '-')}`;
+        if (capacity === 0 && demand === 0) return '';
+        // Sanitize name for ID: remove non-alphanumeric, collapse hyphens, remove leading/trailing hyphens
+        const safeName = name.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+        const detailId = `detail-${safeName}`;
         const breakdownHtml = generateSteelBreakdownHtml(name, data, results);
         return `
             <tr class="border-t dark:border-gray-700">
-                <td>${name} <span class="ref">[${data.reference}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs">[Show]</button></td>
+                <td>${name} <span class="ref">[${data.reference}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                 <td>${fmt(demand, 2)}</td>
                 <td>${fmt(capacity, 2)}</td>
                 <td>${fmt(ratio, 3)}</td>
                 <td>${status}</td>
             </tr>
-            <tr id="${detailId}" class="details-row hidden"><td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td></tr>
+            <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">${breakdownHtml}</div></td></tr>
         `;
     };
 
@@ -1908,11 +1856,18 @@ function renderSteelStrengthChecks(results) {
     ].filter(Boolean).join('');
 
     return `
-        <table id="strength-checks-table" class="w-full mt-2 results-table">
-            <thead><tr><th>Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
-            <tbody>${strengthRows}</tbody>
-        </table>
-    `;
+        <div id="strength-checks-section" class="report-section-copyable mt-6">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="report-header">Strength & Serviceability Checks (${inputs.design_method})</h3>
+                <button data-copy-target-id="strength-checks-section" class="copy-section-btn bg-green-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-700 text-xs print-hidden">Copy Section</button>
+            </div>
+            <div class="copy-content">
+                <table class="w-full mt-2 results-table">
+                    <thead><tr><th>Limit State</th><th>Demand</th><th>Capacity</th><th>Ratio</th><th>Status</th></tr></thead>
+                    <tbody>${strengthRows}</tbody>
+                </table>
+            </div>
+        </div>`;
 }
 
 function renderSteelResults(results) {
@@ -1920,479 +1875,141 @@ function renderSteelResults(results) {
     const { inputs, properties, warnings, errors } = results;
     const resultsContainer = document.getElementById('steel-results-container');
 
-    const report = new ReportBuilder({
-        reportId: 'steel-check-report-content',
-        title: `Steel Section Check Results (${inputs.jurisdiction === 'OSHA' ? 'OSHA' : inputs.design_method})`
-    });
-
     if (errors && errors.length > 0) {
-        report.addSection('Errors', renderValidationResults({ errors, warnings }));
-        report.render(resultsContainer.id);
+        resultsContainer.innerHTML = renderValidationResults({ errors, warnings });
         return;
     }
 
-    report.addSection('Input Summary', renderSteelInputSummary(inputs), 'input-summary-section');
-    report.addSection('Section Properties', renderSteelPropertySummary(properties), 'property-summary-section');
-    report.addSection('Section Compactness (AISC B4)', renderSlendernessChecks(results), 'slenderness-checks-section');
-    report.addSection(`Strength & Serviceability Checks (${inputs.design_method})`, renderSteelStrengthChecks(results), 'strength-checks-section');
+    const inputSummaryHtml = renderSteelInputSummary(inputs);
+    const propertySummaryHtml = renderSteelPropertySummary(properties);
+    const slendernessChecksHtml = renderSlendernessChecks(results);
+    const strengthChecksHtml = renderSteelStrengthChecks(results);
 
-    report.render(resultsContainer.id);
-}
-
-function handleJurisdictionChange() {
-    const jurisdiction = document.getElementById('jurisdiction').value;
-    const oshaOptions = document.getElementById('osha-options');
-    const designMethodContainer = document.getElementById('design-method-container');
-    const aiscStandardContainer = document.getElementById('aisc-standard-container');
-
-    if (jurisdiction === 'OSHA') {
-        oshaOptions.classList.remove('hidden');
-        designMethodContainer.classList.add('hidden');
-        aiscStandardContainer.classList.add('hidden');
-    } else { // AISC
-        oshaOptions.classList.add('hidden');
-        designMethodContainer.classList.remove('hidden');
-        aiscStandardContainer.classList.remove('hidden');
-    }
+    const finalHtml = `
+        <div id="steel-check-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+            <div class="flex justify-end flex-wrap gap-2 -mt-2 -mr-2 print-hidden">
+                <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 text-sm" data-state="hidden">Show All Details</button>
+                <button id="print-report-btn" class="bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 text-sm">Print Report</button>
+                <button id="download-word-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">Download Word</button>
+                <button id="download-pdf-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 text-sm">Download PDF</button>
+                <button id="copy-report-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">Copy Full Report</button>
+            </div>
+            <h2 class="report-title text-center">Steel Section Check Results (${inputs.design_method})</h2>
+            ${inputSummaryHtml}
+            ${propertySummaryHtml}
+            ${slendernessChecksHtml}
+            ${strengthChecksHtml}
+        </div>
+    `;
+    resultsContainer.innerHTML = finalHtml;
 }
 
 // --- DOMContentLoaded: Initialize UI ---
-initializeApp({
-    inputIds: steelCheckInputIds,
-    calculationHandler: createCalculationHandler({
+document.addEventListener('DOMContentLoaded', () => {
+    injectHeader({
+        activePage: 'steel-check',
+        pageTitle: 'AISC Steel Section Design Checker',
+        headerPlaceholderId: 'header-placeholder',
+        pathPrefix: '../'
+    });
+
+    injectFooter({
+        footerPlaceholderId: 'footer-placeholder'
+    });
+    initializeSharedUI();
+
+    function populateMaterialDropdowns() {
+        const gradeOptions = Object.keys(AISC_SPEC.structuralSteelGrades).map(grade =>
+            `<option value="${grade}">${grade}</option>`
+        ).join('');
+
+        const select = document.getElementById('steel_material');
+        if (select) {
+            select.innerHTML = gradeOptions;
+            select.value = 'A992';
+            select.addEventListener('change', (e) => {
+                const grade = AISC_SPEC.getSteelGrade(e.target.value);
+                if (grade) {
+                    document.getElementById(e.target.dataset.fyTarget).value = grade.Fy;
+                    document.getElementById(e.target.dataset.fuTarget).value = grade.Fu;
+                }
+            });
+            select.dispatchEvent(new Event('change'));
+        }
+    }
+
+    const handleRunSteelCheck = createCalculationHandler({
         gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
         storageKey: 'steel-check-inputs',
         validationRuleKey: 'steel_check',
+        validatorFunction: (inputs) => {
+            lastSteelRunResults = null; // Clear previous results on new run
+            return steelChecker.validateInputs(inputs);
+        },
         calculatorFunction: steelChecker.run,
         renderFunction: renderSteelResults,
         resultsContainerId: 'steel-results-container',
-        buttonId: 'run-steel-check-btn'
-    }),
-    onReady: (loadedInputs) => {
-        populateMaterialDropdowns();
-        populateShapeDropdown();
-        updateGeometryInputsUI();
-        handleJurisdictionChange(); // Call on initial load
-        document.getElementById('jurisdiction').addEventListener('change', handleJurisdictionChange);
-        document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
-        document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
-        if (loadedInputs) {
-            // If inputs were loaded from storage, we might want to run the check automatically.
-            // For now, we'll just ensure the UI is updated.
-            // To run automatically, you could call: handleRunSteelCheck();
-        }
-    }
-});
-=======
-    const shapeName = document.getElementById('aisc_shape_select').value;
-    if (!shapeName) return;
+        buttonId: 'run-steel-check-btn' // Add button ID for loading state
+    });
 
-    const props = await AISC_SPEC.getShape(shapeName);
-    if (!props) return;
+    // --- Event Listeners ---
+    document.getElementById('run-steel-check-btn').addEventListener('click', handleRunSteelCheck);
+    document.getElementById('save-inputs-btn').addEventListener('click', createSaveInputsHandler(steelCheckInputIds, 'steel-check-inputs.txt'));
+    document.getElementById('load-inputs-btn').addEventListener('click', () => initiateLoadInputsFromFile('file-input'));
+    document.getElementById('file-input').addEventListener('change', createLoadInputsHandler(steelCheckInputIds, handleRunSteelCheck));
+    document.getElementById('section_type').addEventListener('change', updateGeometryInputsUI);
+    document.getElementById('aisc_shape_select').addEventListener('change', handleShapeSelection);
 
-    // Auto-fill geometry inputs
-    // Mapping DB keys to Input IDs
-    const map = {
-        'd': 'd',
-        'bf': 'bf',
-        'tf': 'tf',
-        'tw': 'tw',
-        'A': 'Ag_manual',
-        'Ix': 'I_manual',
-        'Sx': 'Sx_manual',
-        'Zx': 'Zx_manual',
-        'ry': 'ry_manual',
-        'rts': 'rts_manual',
-        'J': 'J_manual',
-        'Cw': 'Cw_manual',
-        'Iy': 'Iy_manual',
-        'Sy': 'Sy_manual',
-        'Zy': 'Zy_manual'
-    };
-
-    // Helper to safely set value
-    const setVal = (id, val) => {
+    // --- Auto-save to Local Storage (with debouncing) ---
+    const debouncedSave = debounce(() => {
+        saveInputsToLocalStorage('steel-check-inputs', gatherInputsFromIds(steelCheckInputIds));
+    }, 300);
+    steelCheckInputIds.forEach(id => {
         const el = document.getElementById(id);
-        if (el && val !== undefined) el.value = val;
-    };
+        el?.addEventListener('input', debouncedSave);
+    });
 
-    for (const [dbKey, inputId] of Object.entries(map)) {
-        setVal(inputId, props[dbKey]);
-    }
-}
+    // --- Initial Setup ---
+    populateMaterialDropdowns();
+    populateShapeDropdown();
+    updateGeometryInputsUI();
+    loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
 
-function toggleManualInputs(enable) {
-    // Optional: visual indication or disabling of auto-filled fields
-    // For now, we trust the users to overwrite if they want specific overrides
-}
+    // --- Results Container Event Delegation ---
+    document.getElementById('steel-results-container').addEventListener('click', (event) => {
+        const target = event.target;
+        const toggleBtn = target.closest('.toggle-details-btn');
+        const copyBtn = target.closest('.copy-section-btn');
 
-// --- Main Calculation ---
+        if (toggleBtn) {
+            const detailId = toggleBtn.dataset.toggleId;
+            const detailRow = document.getElementById(detailId);
+            console.log('Toggling details:', detailId, detailRow);
 
-function runSteelCheck() {
-    const inputs = gatherInputs();
-    const resultsContainer = document.getElementById('steel-results-container');
-
-    if (!inputs) {
-        resultsContainer.innerHTML = '<p class="text-red-500">Invalid Inputs. Please check your values.</p>';
-        return;
-    }
-
-    // --- Perform Checks ---
-    const axial = checkAxial(inputs);
-    const flexure = checkFlexure(inputs);
-    const shear = checkShear(inputs);
-    const combined = checkCombined(inputs, axial, flexure);
-    const deflection = checkDeflection(inputs);
-
-    // --- Render Results ---
-    renderResults(inputs, { axial, flexure, shear, combined, deflection });
-}
-
-function gatherInputs() {
-    const getNum = (id) => parseFloat(document.getElementById(id).value);
-    const getStr = (id) => document.getElementById(id).value;
-
-    return {
-        design_method: getStr('design_method'), // ASD or LRFD
-        grade: getStr('steel_material'),
-        Fy: getNum('Fy'),
-        Fu: getNum('Fu'),
-        E: getNum('E'),
-
-        // Loads
-        P: getNum('Pu_or_Pa'),
-        V: getNum('Vu_or_Va'),
-        Mx: getNum('Mux_or_Max'),
-        My: getNum('Muy_or_May'),
-        T: getNum('Tu_or_Ta'),
-
-        // Geometry
-        section_type: getStr('section_type'),
-        shape: getStr('aisc_shape_select'),
-        d: getNum('d'),
-        bf: getNum('bf'),
-        tf: getNum('tf'),
-        tw: getNum('tw'),
-
-        // Manual / Section Properties
-        Ag: getNum('Ag_manual'),
-        Ix: getNum('I_manual'),
-        Sx: getNum('Sx_manual'),
-        Zx: getNum('Zx_manual'),
-        Iy: getNum('Iy_manual'),
-        Sy: getNum('Sy_manual'),
-        Zy: getNum('Zy_manual'),
-        ry: getNum('ry_manual'),
-        rts: getNum('rts_manual'),
-        J: getNum('J_manual'),
-        Cw: getNum('Cw_manual'),
-
-        // Stability
-        Lb: getNum('Lb_input') * 12, // Convert ft to in
-        K: getNum('K'),
-        Cb: getNum('Cb'),
-        Cm: getNum('Cm'),
-
-        // Serviceability
-        def_span: getNum('deflection_span') * 12, // ft to in
-        def_limit: getNum('deflection_limit'),
-        def_actual: getNum('actual_deflection_input')
-    };
-}
-
-// --- AISC Check Functions (simplified for W-Shapes) ---
-
-function getPhiOmega(type, method) {
-    // Standard factors
-    const factors = {
-        'yield': { phi: 0.90, omega: 1.67 },
-        'rupture': { phi: 0.75, omega: 2.00 },
-        'compression': { phi: 0.90, omega: 1.67 },
-        'flexure': { phi: 0.90, omega: 1.67 },
-        'shear': { phi: 0.90, omega: 1.67 }, // Most W-shapes (G2.1a)
-    };
-    const f = factors[type] || { phi: 1.0, omega: 1.0 };
-    return method === 'LRFD' ? f.phi : f.omega;
-}
-
-function checkAxial(inputs) {
-    const { P, Ag, Fy, E, K, Lb, ry, design_method } = inputs;
-    const factors = getPhiOmega('compression', design_method);
-
-    // Euler Buckling Stress (Fe)
-    // KL/r
-    const KL_r = (K * Lb) / ry;
-    const Fe = (Math.PI ** 2 * E) / (KL_r ** 2);
-
-    // Critical Stress (Fcr) - AISC E3
-    let Fcr;
-    if (KL_r <= 4.71 * Math.sqrt(E / Fy)) {
-        Fcr = (0.658 ** (Fy / Fe)) * Fy;
-    } else {
-        Fcr = 0.877 * Fe;
-    }
-
-    const Pn = Fcr * Ag;
-    const capacity = design_method === 'LRFD' ? Pn * factors.phi : Pn / factors.omega;
-
-    // Check if Tensile (P < 0 in our sign convention usually, checking abs for now or assuming P is load)
-    // The HTML says "negative for compression", but standard formulas usually assume P is input as desired.
-    // Let's stick to interpretation: Input P is demand. calculate Capacity Pn.
-    // If P is negative (compression): check buckling.
-    // If P is positive (tension): check yield/rupture (D2).
-
-    // For this generic check, let's assume P is magnitude or check sign.
-    // HTML: "Use negative for compression"
-
-    let type = "Compression";
-    let status = "N/A";
-    let ratio = 0;
-
-    if (P < 0) {
-        // Compression
-        type = "Compression (AISC E3)";
-        ratio = Math.abs(P) / capacity;
-        status = ratio <= 1.0 ? "Pass" : "Fail";
-    } else if (P > 0) {
-        // Tension (Yielding only for simplicity of this script)
-        type = "Tension (Yielding)";
-        const Pn_yield = Fy * Ag;
-        const cap_yield = design_method === 'LRFD' ? Pn_yield * 0.9 : Pn_yield / 1.67;
-        ratio = Math.abs(P) / cap_yield;
-        status = ratio <= 1.0 ? "Pass" : "Fail";
-    }
-
-    return { type, capacity, ratio, status, P: Math.abs(P) };
-}
-
-function checkFlexure(inputs) {
-    // AISC F2 - W-Shapes
-    const { Mx, My, Zx, Sx, Zy, Sy, Fy, E, Lb, Cb, rts, J, Cw, design_method, shape } = inputs;
-    // Simplify: Assume Compact
-
-    // X-Axis (Major) - LTB
-    const f_flex = getPhiOmega('flexure', design_method);
-
-    // Lp and Lr
-    const ry = inputs.ry; // ensure we have ry
-    const ho = inputs.d - inputs.tf; // approx distance between flange centroids
-    const c = 1.0; // Doubly symmetric
-
-    const Lp = 1.76 * ry * Math.sqrt(E / Fy);
-
-    let Lr;
-    // Sqrt term logic for Lr is complex, simplified for now or standard formula
-    const rts_sq = rts * rts;
-    const J_c = J * c;
-    const Sx_ho = Sx * ho;
-
-    // Simplified Lr (F2-6) - very rough if manual calc needed, usually huge formula
-    // Using standard approximation if exact geometry not fully available
-    // For now, let's proceed with assumption or simplified logic if Lr not easily computed
-    // F2-6: Lr = 1.95 * rts * (E / (0.7*Fy)) * sqrt( (J*c)/(Sx*ho) + sqrt(...) ) ... complex
-
-    // Let's implement full F2-6 if possible, else simplified assume Lb < Lp or similar
-    // We have rts, J, Sx, ho.
-
-    const term1 = (J * c) / (Sx * ho);
-    const term2 = 6.76 * ((0.7 * Fy) / E) ** 2;
-    Lr = 1.95 * rts * (E / (0.7 * Fy)) * Math.sqrt(term1 + Math.sqrt(term1 ** 2 + term2));
-
-    let Mn_x = 0;
-    const Mp = Fy * Zx;
-
-    // Zone 1: Lb <= Lp
-    if (Lb <= Lp) {
-        Mn_x = Mp;
-    }
-    // Zone 2: Lp < Lb <= Lr
-    else if (Lb <= Lr) {
-        Mn_x = Cb * (Mp - (Mp - 0.7 * Fy * Sx) * ((Lb - Lp) / (Lr - Lp)));
-        Mn_x = Math.min(Mn_x, Mp);
-    }
-    // Zone 3: Lb > Lr
-    else {
-        const Fcr = ((Cb * Math.PI ** 2 * E) / ((Lb / rts) ** 2)) * Math.sqrt(1 + 0.078 * ((J * c) / (Sx * ho)) * ((Lb / rts) ** 2));
-        Mn_x = Fcr * Sx;
-        Mn_x = Math.min(Mn_x, Mp);
-    }
-
-    const capX = design_method === 'LRFD' ? Mn_x * f_flex.phi : Mn_x / f_flex.omega;
-
-    // Y-Axis (Minor) - F6 (Yielding / Flange Local Buckling)
-    // Assuming compact for now
-    let Mn_y = Math.min(Fy * Zy, 1.6 * Fy * Sy);
-    const capY = design_method === 'LRFD' ? Mn_y * f_flex.phi : Mn_y / f_flex.omega;
-
-    // Check ratios
-    const ratioX = Math.abs(Mx) / capX;
-    const ratioY = Math.abs(My) / capY;
-
-    return {
-        Mx: { capacity: capX, ratio: ratioX, status: ratioX <= 1 ? "Pass" : "Fail" },
-        My: { capacity: capY, ratio: ratioY, status: ratioY <= 1 ? "Pass" : "Fail" },
-        details: { Lp: Lp / 12, Lr: Lr / 12, Lb: Lb / 12, Cb }
-    };
-}
-
-function checkShear(inputs) {
-    const { V, d, tw, Fy, E, design_method } = inputs;
-    // AISC G2.1
-    // Aw = d * tw
-    const Aw = d * tw;
-    const kv = 5; // Unstiffened webs
-
-    // h/tw check
-    // h ~ d - 2*k_des theoretically, but d - 2*tf approximation
-    const h = d - 2 * inputs.tf; // Rough approx
-
-    let Cv1 = 1.0;
-    // G2.1a limit: 2.24 * sqrt(E/Fy)
-    if ((h / tw) <= 2.24 * Math.sqrt(E / Fy)) {
-        Cv1 = 1.0;
-    } else {
-        // ... more complex if not compact web, assume 1.0 for standard rolled shapes usually
-    }
-
-    const Vn = 0.6 * Fy * Aw * Cv1;
-    const f_shear = getPhiOmega('shear', design_method);
-    const cap = design_method === 'LRFD' ? Vn * f_shear.phi : Vn / f_shear.omega;
-
-    const ratio = Math.abs(V) / cap;
-
-    return { capacity: cap, ratio, status: ratio <= 1 ? "Pass" : "Fail" };
-}
-
-function checkCombined(inputs, axial, flexure) {
-    // AISC H1-1
-    const Pr = axial.P;
-    const Pc = axial.capacity;
-
-    const Mrx = Math.abs(inputs.Mx);
-    const Mcx = flexure.Mx.capacity;
-    const Mry = Math.abs(inputs.My);
-    const Mcy = flexure.My.capacity;
-
-    let ratio = 0;
-
-    if (Pr / Pc >= 0.2) {
-        // H1-1a
-        ratio = (Pr / Pc) + (8 / 9) * (Mrx / Mcx + Mry / Mcy);
-    } else {
-        // H1-1b
-        ratio = (Pr / (2 * Pc)) + (Mrx / Mcx + Mry / Mcy);
-    }
-
-    return { ratio, status: ratio <= 1 ? "Pass" : "Fail" };
-}
-
-function checkDeflection(inputs) {
-    const { def_actual, def_limit, def_span } = inputs;
-    const limitVal = def_span / def_limit;
-    const status = def_actual <= limitVal ? "Pass" : "Fail";
-    return { limit: limitVal, actual: def_actual, ratio: def_actual / limitVal, status };
-}
-
-// --- IO Helpers ---
-
-function saveInputs() {
-    const inputs = gatherInputs();
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inputs));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "steel_check_inputs.txt");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-}
-
-function loadInputsFromFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const inputs = JSON.parse(e.target.result);
-            // Map inputs back to fields
-            // For now specific IDs matching gatherInputs keys or manual map
-            // Simplified refilling:
-            document.getElementById('design_method').value = inputs.design_method || 'ASD';
-            // ... (Full mapping would be verbose, handling basic ones)
-            if (inputs.P !== undefined) document.getElementById('Pu_or_Pa').value = inputs.P;
-            // Add other fields as needed
-            document.getElementById('file-name-display').textContent = "Loaded: " + file.name;
-        } catch (err) {
-            alert('Error parsing file');
+            if (detailRow) {
+                // Toggle the class AND explictly set display to ensure visibility
+                detailRow.classList.toggle('is-visible');
+                const isVisible = detailRow.classList.contains('is-visible');
+                detailRow.style.display = isVisible ? 'table-row' : 'none';
+                toggleBtn.textContent = isVisible ? '[Hide]' : '[Show]';
+            } else {
+                console.warn('Detail row not found for ID:', detailId);
+            }
+        } else if (target.id === 'toggle-all-details-btn') {
+            handleToggleAllDetails(target, '#steel-results-container');
+        } else if (target.id === 'copy-report-btn') {
+            handleCopyToClipboard('steel-check-report-content', 'feedback-message');
+        } else if (target.id === 'download-pdf-btn') {
+            handleDownloadPdf('steel-check-report-content', 'Steel-Check-Report.pdf');
+        } else if (target.id === 'print-report-btn') {
+            window.print();
+        } else if (target.id === 'download-word-btn') {
+            handleDownloadWord('steel-check-report-content', 'Steel-Check-Report.doc');
+        } else if (copyBtn) {
+            const targetId = copyBtn.dataset.copyTargetId;
+            if (targetId) {
+                handleCopyToClipboard(targetId, 'feedback-message');
+            }
         }
-    };
-    reader.readAsText(file);
-}
-
-// --- Rendering (Standardized Style) ---
-
-function renderResults(inputs, results) {
-    const container = document.getElementById('steel-results-container');
-    const { axial, flexure, shear, combined, deflection } = results;
-
-    // Helper to create a status badge
-    const getStatusBadge = (status) => {
-        const colorClass = status === 'Pass' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-        return `<span class="${colorClass} text-xs font-medium px-2.5 py-0.5 rounded border border-${status === 'Pass' ? 'green' : 'red'}-400">${status}</span>`;
-    };
-
-    // Helper to create a table section
-    const createTableSection = (title, headers, rows) => {
-        const headerHtml = headers.map(h => `<th scope="col" class="px-6 py-3">${h}</th>`).join('');
-        const rowsHtml = rows.map(row => {
-            const cellsHtml = row.cells.map((c, i) => {
-                // If it's the status cell (last usually), wrapping handled by caller or passed as HTML
-                return `<td class="px-6 py-4">${c}</td>`;
-            }).join('');
-            return `<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">${cellsHtml}</tr>`;
-        }).join('');
-
-        return `
-            <div class="mb-8 overflow-x-auto shadow-md sm:rounded-lg">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 ml-1">${title}</h3>
-                <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                        <tr>${headerHtml}</tr>
-                    </thead>
-                    <tbody>${rowsHtml}</tbody>
-                </table>
-            </div>
-        `;
-    };
-
-    let html = `<div class="p-4 space-y-6">`;
-    html += `<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Analysis Report (${inputs.design_method})</h2>`;
-
-    // 1. Loading Summary
-    html += createTableSection('Applied Loads', ['Load Type', 'Magnitude'], [
-        { cells: ['Axial (P)', `${inputs.P.toFixed(2)} kips`] },
-        { cells: ['Shear (V)', `${inputs.V.toFixed(2)} kips`] },
-        { cells: ['Moment (Mx)', `${inputs.Mx.toFixed(2)} kip-ft`] },
-        { cells: ['Moment (My)', `${inputs.My.toFixed(2)} kip-ft`] }
-    ]);
-
-    // 2. Strength Checks
-    const strengthRows = [
-        { cells: [`Axial (${axial.type})`, `${inputs.P.toFixed(2)} k`, `${axial.capacity.toFixed(2)} k`, axial.ratio.toFixed(3), getStatusBadge(axial.status)] },
-        { cells: ['Flexure (Major X)', `${Math.abs(inputs.Mx).toFixed(2)} k-ft`, `${flexure.Mx.capacity.toFixed(2)} k-ft`, flexure.Mx.ratio.toFixed(3), getStatusBadge(flexure.Mx.status)] },
-        { cells: ['Flexure (Minor Y)', `${Math.abs(inputs.My).toFixed(2)} k-ft`, `${flexure.My.capacity.toFixed(2)} k-ft`, flexure.My.ratio.toFixed(3), getStatusBadge(flexure.My.status)] },
-        { cells: ['Shear', `${Math.abs(inputs.V).toFixed(2)} k`, `${shear.capacity.toFixed(2)} k`, shear.ratio.toFixed(3), getStatusBadge(shear.status)] }
-    ];
-    html += createTableSection('Strength Checks', ['Limit State', 'Demand', 'Capacity', 'Ratio', 'Status'], strengthRows);
-
-    // 3. Interaction & Serviceability
-    const otherRows = [
-        { cells: ['Combined Forces (H1-1)', '-', '-', combined.ratio.toFixed(3), getStatusBadge(combined.status)] },
-        { cells: [`Deflection (L/${inputs.def_limit})`, `${deflection.actual.toFixed(3)}"`, `${deflection.limit.toFixed(3)}"`, deflection.ratio.toFixed(3), getStatusBadge(deflection.status)] }
-    ];
-    html += createTableSection('Interaction & Serviceability', ['Check', 'Actual', 'Limit', 'Ratio', 'Status'], otherRows);
-
-    html += `</div>`;
-    container.innerHTML = html;
-}
->>>>>>> 7d2b2da81da7bc1fb833c80f4e5395107e6ff36f
+    });
+});
