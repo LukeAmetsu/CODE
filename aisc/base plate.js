@@ -457,7 +457,7 @@ const basePlateCalculator = (() => {
      * @returns {{errors: string[], warnings: string[]}} - Validation results.
      */
     function validateBasePlateInputs(inputs) {
-        const { errors, warnings } = validateInputs(inputs, validationRules.baseplate); // Uses shared validator
+        const { errors, warnings } = validateInputs(Object.keys(inputs), validationRules.baseplate); // Uses shared validator
 
         // Add custom, inter-dependent validation logic here
         if (inputs.column_type === 'Wide Flange') {

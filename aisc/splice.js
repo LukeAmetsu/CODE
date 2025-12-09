@@ -2417,7 +2417,7 @@ const handleRunSpliceCheck = createCalculationHandler({
     storageKey: 'splice-inputs',
     validationRuleKey: 'splice',
     validatorFunction: (inputs) => {
-        const { errors, warnings } = validateInputs(inputs, validationRules.splice); // Basic validation
+        const { errors, warnings } = validateInputs(Object.keys(inputs), validationRules.splice); // Basic validation
 
         // Custom cross-field validation for web plate height
         const clearWebDepth = inputs.member_d - (2 * inputs.member_tf);

@@ -1178,9 +1178,35 @@ const windLoadCalculator = (() => {
 
     // MWFRS pressures for low-rise buildings (h <= 60ft)
     function calculateLowRisePressures(inputs, intermediate_globals) {
-        const { effective_standard, mean_roof_height, building_length_L, building_width_B, roof_type, roof_slope_deg, unit_system } = inputs;
+        const { effective_standard, mean_roof_height, building_length_L, building_width_B, roof_type, roof_slope_deg, unit_system, enclosure_classification, wind_obstruction } = inputs;
         const { qz, G, abs_gcpi } = intermediate_globals;
         const directional_results = {};
+
+        // --- Handle Open Buildings ---
+        if (enclosure_classification === 'Open') {
+            const isObstructed = wind_obstruction === 'obstructed';
+            const { cnMap, ref } = getOpenBuildingCnValues(roof_slope_deg, isObstructed, roof_type);
+            
+            const open_results = {};
+            for (const [zone, val] of Object.entries(cnMap)) {
+                if (!val) continue;
+                const { cn_pos, cn_neg } = val;
+                const p_pos = qz * G * cn_pos;
+                const p_neg = qz * G * cn_neg;
+                open_results[zone] = {
+                    surface: zone,
+                    cn_pos, cn_neg,
+                    p_pos, p_neg,
+                    p_pos_asd: p_pos * 0.6,
+                    p_neg_asd: p_neg * 0.6
+                };
+            }
+            directional_results.open_roof = open_results;
+            directional_results.open_roof_ref = ref;
+            return directional_results;
+        }
+
+
 
         // Wind Perpendicular to L (wind parallel to L)
         const { cpMap: cp_map_L } = getCpValues(effective_standard, mean_roof_height, building_length_L, building_width_B, roof_type, roof_slope_deg, unit_system);
@@ -1495,7 +1521,7 @@ function gatherWindInputs() {
 function validateWindInputs(inputs) {
     // Use a default empty object for inputs if it's not provided to prevent errors on initial load.
     const currentInputs = inputs || {};
-    const { errors, warnings } = validateInputs(currentInputs, validationRules.wind, 'wind.js');
+    const { errors, warnings } = validateInputs(Object.keys(currentInputs), validationRules.wind, 'wind.js');
 
     // Add specific, inter-dependent validation logic here
     if (['gable', 'hip'].includes(currentInputs.roof_type) && currentInputs.roof_slope_deg > 45) {
@@ -2437,6 +2463,53 @@ function sendWindToCombos(results) {
     }
 }
 
+/**
+ * Renders the Envelope Procedure MWFRS section.
+ */
+function renderEnvelopeSection(envelope_results, inputs, intermediate, mwfrs_method, units) {
+    const { p_unit } = units;
+    const pressures = envelope_results.pressures;
+    
+    let html = `
+        <div class="copy-content">
+            <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">
+                Reference: ${sanitizeHTML(envelope_results.ref)}
+            </p>
+            <table class="w-full mt-4 border-collapse">
+                <caption class="font-bold mb-2">Envelope Procedure Pressures</caption>
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr class="text-center">
+                        <th>Zone</th>
+                        <th>(GCpf)</th>
+                        <th>Design Pressure (+Internal) [${p_unit}]</th>
+                        <th>Design Pressure (-Internal) [${p_unit}]</th>
+                    </tr>
+                </thead>
+                <tbody class="dark:text-gray-300 text-center">`;
+
+    const sortedZones = Object.keys(pressures).sort();
+    
+    sortedZones.forEach((zone, i) => {
+        const data = pressures[zone];
+        // For Envelope, we typically have p_net (max magnitude) and p_net_uplift (min magnitude/uplift)
+        
+        const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
+        const p_max = data.p_net * factor;
+        const p_min = data.p_net_uplift * factor;
+        
+        html += `
+            <tr>
+                <td>${sanitizeHTML(zone)}</td>
+                <td>${Array.isArray(data.gcpf) ? data.gcpf.join('/') : safeToFixed(data.gcpf, 2)}</td>
+                <td>${safeToFixed(p_max, 2)}</td>
+                <td>${safeToFixed(p_min, 2)}</td>
+            </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    return html;
+}
+
 function renderWindResults(results) {
     // This function is now correctly defined.
     lastWindRunResults = results; // Save for sending to combos
@@ -2588,14 +2661,15 @@ function renderWindResults(results) {
 
     // --- Assemble Report Sections for Buildings ---
     if (results.envelope_results && results.envelope_results.applicable) {
-        // For Envelope Procedure, we call the same render function but pass the envelope_results
-        report.addSection(`MWFRS Pressures (${mwfrs_method})`, renderMwfrsSection(results.envelope_results, inputs, intermediate, mwfrs_method, units), 'mwfrs-section');
+        // For Envelope Procedure, we use the specific render function
+        report.addSection(`MWFRS Pressures (${mwfrs_method})`, renderEnvelopeSection(results.envelope_results, inputs, intermediate, mwfrs_method, units), 'mwfrs-section');
         // C&C is still relevant for Envelope procedure
         report.addSection('Components & Cladding (C&C) Pressures', renderCandCSection(candc, inputs, intermediate, units), 'candc-section');
     } else if (inputs.enclosure_classification === 'Open') {
         // --- Handle Open Buildings as a special case ---
         const openBuildingData = directional_results.open_roof || (directional_results.rooftop_structure ? directional_results : null);
-        const openBuildingHtml = openBuildingData ? renderOpenBuildingResults(openBuildingData, open_building_ref, inputs, units) : '<p class="text-center text-red-500">Could not calculate open building pressures for the given roof type.</p>';
+        const effectiveRef = open_building_ref || (directional_results ? directional_results.open_roof_ref : '');
+        const openBuildingHtml = openBuildingData ? renderOpenBuildingResults(openBuildingData, effectiveRef, inputs, units) : '<p class="text-center text-red-500">Could not calculate open building pressures for the given roof type.</p>';
         report.addSection('MWFRS Design Pressures', openBuildingHtml, 'mwfrs-section');
     } else {
         // --- Standard Enclosed/Partially Enclosed Building Sections ---

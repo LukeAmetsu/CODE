@@ -1183,7 +1183,7 @@ const steelChecker = (() => {
         inputs.An_net = inputs.Ag_manual;
         inputs.U_shear_lag = 1.0;
 
-        const { errors, warnings } = validateInputs(inputs);
+        const { errors, warnings } = validateInputs(Object.keys(inputs), validationRules.steel_check);
         if (inputs.Tu_or_Ta !== 0 && inputs.section_type === 'I-Shape') {
             warnings.push("Torsion analysis for I-shapes is a simplified approximation. See AISC Design Guide 9 for complete analysis.");
         }

@@ -1887,3 +1887,38 @@ function initializeGlobalInputSteps() {
         }
     });
 }
+
+/**
+ * Linearly interpolates a Y value for a given X, based on sorted arrays of X and Y data points.
+ * @param {number} x - The input value to interpolate for.
+ * @param {number[]} x_points - Sorted array of X reference values (ascending).
+ * @param {number[]} y_values - Corresponding array of Y reference values.
+ * @returns {number} The interpolated Y value.
+ */
+function interpolate(x, x_points, y_values) {
+    // Basic validation
+    if (!Array.isArray(x_points) || !Array.isArray(y_values) || x_points.length !== y_values.length || x_points.length === 0) {
+        console.warn('Invalid interpolation data provided to interpolate()', { x, x_points, y_values });
+        return 0;
+    }
+
+    // Handle out of bounds (clamp to range)
+    if (x <= x_points[0]) return y_values[0];
+    if (x >= x_points[x_points.length - 1]) return y_values[y_values.length - 1];
+
+    // Find the segment [x_i, x_{i+1}] that contains x
+    for (let i = 0; i < x_points.length - 1; i++) {
+        if (x >= x_points[i] && x <= x_points[i + 1]) {
+            const x0 = x_points[i];
+            const x1 = x_points[i + 1];
+            const y0 = y_values[i];
+            const y1 = y_values[i + 1];
+
+            // Linear interpolation formula: y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+            if (x1 - x0 === 0) return y0; // Avoid division by zero
+            return y0 + (x - x0) * ((y1 - y0) / (x1 - x0));
+        }
+    }
+    
+    return y_values[y_values.length - 1]; // Should not be reached
+}
