@@ -110,7 +110,7 @@ async function injectHeader(config) {
             const text = safeTranslate(item.textKey);
 
             return `
-                <a href="${pathPrefix}${item.href}" class="${subActiveClass} group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 whitespace-nowrap flex-shrink-0">
+                <a href="${pathPrefix}${item.href}" class="${subActiveClass} group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 whitespace-nowrap flex-shrink-0">
                     <span class="truncate">${text}</span>
                 </a>
             `;
@@ -123,8 +123,8 @@ async function injectHeader(config) {
         subNavHtml = `
             <div class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 w-full">
                 <div class="container mx-auto px-4 max-w-full">
-                    <div class="flex items-center h-12 overflow-x-auto no-scrollbar space-x-4">
-                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-2 sticky left-0 bg-gray-50 dark:bg-gray-900 z-10 pl-1">${sectionTitle}:</span>
+                    <div class="flex items-center h-12 overflow-x-auto no-scrollbar space-x-2">
+                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap mr-2 left-0 bg-gray-50 dark:bg-gray-900 z-10 pl-1 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">${sectionTitle}:</span>
                         ${subNavLinks}
                     </div>
                 </div>
@@ -136,31 +136,25 @@ async function injectHeader(config) {
     const brandText = safeTranslate('engineering_hub', 'Engineering Hub');
 
     const headerHTML = `
-    <header class="bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300 fixed w-full top-0 z-50 flex flex-col">
+    <header class="bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300 relative w-full bottom-5 z-50 flex flex-col">
         <!-- Top Navigation Bar -->
-        <!-- Use w-full here to ensure full width, adjusted padding for alignment -->
-        <nav class="container mx-auto px-4 h-16 flex items-center justify-between w-full gap-4">
+        <nav class="container mx-auto px-4 h-16 flex items-center justify-between w-full">
             
-            <!-- Left: Logo / Brand (Never shrinks) -->
-            <div class="flex items-center flex-shrink-0">
+            <!-- Left: Logo / Brand (Always fixed size, never shrinks) -->
+            <div class="flex items-center flex-shrink-0 mr-4">
                 <a href="${pathPrefix}index.html" class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <svg class="w-8 h-8 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <svg class="w-7 h-7 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                     <span class="whitespace-nowrap hidden sm:inline">${brandText}</span>
                 </a>
             </div>
 
-            <!-- Center: Main Navigation 
-                 - flex-1: Allows it to take up remaining space.
-                 - min-w-0: CRITICAL. Allows flex item to shrink below content size, triggering overflow.
-                 - overflow-x-auto: Enables horizontal scrolling.
-                 - justify-start: Aligns items to left so start isn't clipped.
-            -->
-            <div class="hidden md:flex flex-1 items-center justify-start space-x-1 overflow-x-auto no-scrollbar min-w-0 px-4">
+            <!-- Center: Main Navigation -->
+            <div class="hidden md:flex flex-1 items-center justify-start overflow-x-auto w-full min-w-0 mx-2">
                 ${mainNavLinks}
             </div>
 
-            <!-- Right: Actions (Never shrinks, stays glued to right) -->
-            <div class="flex items-center space-x-2 lg:space-x-3 flex-shrink-0 ml-auto">
+            <!-- Right: Actions (Fixed size, anchored to right) -->
+            <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
                 <!-- Language Selector -->
                 <div class="relative">
                     <select id="language-selector" onchange="i18n.setLanguage(this.value)" class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-1.5 cursor-pointer">

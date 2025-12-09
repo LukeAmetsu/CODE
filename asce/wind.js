@@ -222,15 +222,15 @@ const windLoadCalculator = (() => {
 
         if (member_shape === 'flat') {
             // ASCE 7 Table 29.6-1 for flat-sided members
-            Cf = 4.0 * epsilon**2 - 5.9 * epsilon + 4.0;
+            Cf = 4.0 * epsilon ** 2 - 5.9 * epsilon + 4.0;
             ref = "ASCE 7 Table 29.6-1 (Flat Members)";
         } else { // round members
             // ASCE 7 Table 29.6-2 for round members
             if (structure_type.includes('Square')) {
-                Cf = 3.4 * epsilon**2 - 4.7 * epsilon + 2.7;
+                Cf = 3.4 * epsilon ** 2 - 4.7 * epsilon + 2.7;
                 ref = "ASCE 7 Table 29.6-2 (Square Tower, Round Members)";
             } else { // Triangular or All Other
-                Cf = 2.6 * epsilon**2 - 3.5 * epsilon + 2.2;
+                Cf = 2.6 * epsilon ** 2 - 3.5 * epsilon + 2.2;
                 ref = "ASCE 7 Table 29.6-2 (Triangular Tower, Round Members)";
             }
         }
@@ -326,30 +326,30 @@ const windLoadCalculator = (() => {
 
     // Cp values for buildings of all heights (Analytical Procedure, ASCE 7-16 Fig 27.3-1)
     function getAnalyticalCpValues(h, dim_parallel_to_wind, dim_perp_to_wind, roofSlopeDeg) {
-    const cpMap = {};
-    const L_over_B = dim_perp_to_wind > 0 ? dim_parallel_to_wind / dim_perp_to_wind : 0;
-    
-    cpMap["Windward Wall"] = 0.8;
-    // Leeward wall Cp depends on L/B ratio
-    cpMap[`Leeward Wall (L/B = ${safeToFixed(L_over_B, 2)})`] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]);
-    cpMap["Side Wall"] = -0.7;
-    
-    
-    // Roof coefficients also depend on h/L ratio
-    const h_over_L = dim_parallel_to_wind > 0 ? h / dim_parallel_to_wind : 0;
-    
-    if (h_over_L <= 0.8) { // Note: ASCE 7-16 Fig 27.3-1 uses h/L, not h/B
-        // For windward roof surface, Cp varies with roof angle theta
-        cpMap[`Roof Windward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.7, -0.5, -0.3, -0.2, 0.0, 0.2, 0.4]);
-        // For leeward roof surface, Cp varies with roof angle theta
-        cpMap[`Roof Leeward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20], [-0.3, -0.5, -0.6]);
-    } else {
-        cpMap[`Roof Windward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.9, -0.7, -0.4, -0.3, -0.2, 0.0, 0.4]); // Interpolate for windward
-        cpMap[`Roof Leeward (h/L = ${safeToFixed(h_over_L, 2)})`] = -0.7;
+        const cpMap = {};
+        const L_over_B = dim_perp_to_wind > 0 ? dim_parallel_to_wind / dim_perp_to_wind : 0;
+
+        cpMap["Windward Wall"] = 0.8;
+        // Leeward wall Cp depends on L/B ratio
+        cpMap[`Leeward Wall (L/B = ${safeToFixed(L_over_B, 2)})`] = interpolate(L_over_B, [0, 1, 2, 4], [-0.5, -0.5, -0.3, -0.2]);
+        cpMap["Side Wall"] = -0.7;
+
+
+        // Roof coefficients also depend on h/L ratio
+        const h_over_L = dim_parallel_to_wind > 0 ? h / dim_parallel_to_wind : 0;
+
+        if (h_over_L <= 0.8) { // Note: ASCE 7-16 Fig 27.3-1 uses h/L, not h/B
+            // For windward roof surface, Cp varies with roof angle theta
+            cpMap[`Roof Windward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.7, -0.5, -0.3, -0.2, 0.0, 0.2, 0.4]);
+            // For leeward roof surface, Cp varies with roof angle theta
+            cpMap[`Roof Leeward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20], [-0.3, -0.5, -0.6]);
+        } else {
+            cpMap[`Roof Windward (h/L = ${safeToFixed(h_over_L, 2)})`] = interpolate(roofSlopeDeg, [10, 15, 20, 25, 30, 35, 45], [-0.9, -0.7, -0.4, -0.3, -0.2, 0.0, 0.4]); // Interpolate for windward
+            cpMap[`Roof Leeward (h/L = ${safeToFixed(h_over_L, 2)})`] = -0.7;
+        }
+
+        return { cpMap };
     }
-    
-    return { cpMap };
-}
 
     // Net pressure coefficients CN for Open Buildings with Free Roofs (ASCE 7-16/22 Fig 27.3-4)
     function getOpenBuildingCnValues(roofSlopeDeg, isObstructed, roofType) {
@@ -367,25 +367,25 @@ const windLoadCalculator = (() => {
             unobstructed: {
                 pos: { // Max CN values
                     windward_qtr: interpolate(interp_theta, [5, 30, 45], [0.8, 1.2, 1.2]),
-                    middle_half:  interpolate(interp_theta, [5, 30, 45], [-0.8, -0.8, -0.8]),
-                    leeward_qtr:  interpolate(interp_theta, [5, 30, 45], [-0.6, -0.5, -0.5])
+                    middle_half: interpolate(interp_theta, [5, 30, 45], [-0.8, -0.8, -0.8]),
+                    leeward_qtr: interpolate(interp_theta, [5, 30, 45], [-0.6, -0.5, -0.5])
                 },
                 neg: { // Min CN values
                     windward_qtr: interpolate(interp_theta, [5, 30, 45], [-1.2, -1.8, -1.8]),
-                    middle_half:  interpolate(interp_theta, [5, 30, 45], [-1.2, -1.2, -1.2]),
-                    leeward_qtr:  interpolate(interp_theta, [5, 30, 45], [-1.0, -0.8, -0.8])
+                    middle_half: interpolate(interp_theta, [5, 30, 45], [-1.2, -1.2, -1.2]),
+                    leeward_qtr: interpolate(interp_theta, [5, 30, 45], [-1.0, -0.8, -0.8])
                 }
             },
             obstructed: {
                 pos: {
                     windward_qtr: interpolate(interp_theta, [5, 30, 45], [1.6, 2.4, 2.4]),
-                    middle_half:  interpolate(interp_theta, [5, 30, 45], [-1.6, -1.6, -1.6]),
-                    leeward_qtr:  interpolate(interp_theta, [5, 30, 45], [-1.2, -1.0, -1.0])
+                    middle_half: interpolate(interp_theta, [5, 30, 45], [-1.6, -1.6, -1.6]),
+                    leeward_qtr: interpolate(interp_theta, [5, 30, 45], [-1.2, -1.0, -1.0])
                 },
                 neg: {
                     windward_qtr: interpolate(interp_theta, [5, 30, 45], [-2.2, -3.3, -3.3]),
-                    middle_half:  interpolate(interp_theta, [5, 30, 45], [-2.2, -2.2, -2.2]),
-                    leeward_qtr:  interpolate(interp_theta, [5, 30, 45], [-1.6, -1.4, -1.4])
+                    middle_half: interpolate(interp_theta, [5, 30, 45], [-2.2, -2.2, -2.2]),
+                    leeward_qtr: interpolate(interp_theta, [5, 30, 45], [-1.6, -1.4, -1.4])
                 }
             }
         };
@@ -419,21 +419,21 @@ const windLoadCalculator = (() => {
                 const min_a = unitSystem === 'imperial' ? 3.0 : 0.9;
                 a = Math.max(a, min_a);
                 cpMap[`Roof Zone 1 (0 to ${safeToFixed(a, 1)} ${h_unit})`] = -0.9;
-                cpMap[`Roof Zone 2 (${safeToFixed(a, 1)} to ${safeToFixed(2*a, 1)} ${h_unit})`] = -0.5;
-                cpMap[`Roof Zone 3 (> ${safeToFixed(2*a, 1)} ${h_unit})`] = -0.3;
+                cpMap[`Roof Zone 2 (${safeToFixed(a, 1)} to ${safeToFixed(2 * a, 1)} ${h_unit})`] = -0.5;
+                cpMap[`Roof Zone 3 (> ${safeToFixed(2 * a, 1)} ${h_unit})`] = -0.3;
                 refNotes["Roof"] = "ASCE 7-22 Fig. 27.4-1 (Zoned approach)";
             } else { // ASCE 7-16
                 // ASCE 7-16 Figure 27.4-1 (h/L approach)
                 const h_over_L = L > 0 ? h / L : 0;
                 if (h_over_L <= 0.5) {
-                    cpMap[`Roof (0 to ${safeToFixed(h/2, 1)} ${h_unit})`] = -0.9;
-                    cpMap[`Roof (${safeToFixed(h/2, 1)} to ${safeToFixed(h, 1)} ${h_unit})`] = -0.9;
-                    cpMap[`Roof (${safeToFixed(h, 1)} to ${safeToFixed(2*h, 1)} ${h_unit})`] = -0.5;
-                    cpMap[`Roof (> ${safeToFixed(2*h, 1)} ${h_unit})`] = -0.3;
+                    cpMap[`Roof (0 to ${safeToFixed(h / 2, 1)} ${h_unit})`] = -0.9;
+                    cpMap[`Roof (${safeToFixed(h / 2, 1)} to ${safeToFixed(h, 1)} ${h_unit})`] = -0.9;
+                    cpMap[`Roof (${safeToFixed(h, 1)} to ${safeToFixed(2 * h, 1)} ${h_unit})`] = -0.5;
+                    cpMap[`Roof (> ${safeToFixed(2 * h, 1)} ${h_unit})`] = -0.3;
                     refNotes["Roof"] = "ASCE 7-16 Fig. 27.4-1 (h/L ≤ 0.5)";
                 } else {
-                    cpMap[`Roof (0 to ${safeToFixed(h/2, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -1.3]);
-                    cpMap[`Roof (${safeToFixed(h/2, 1)} to ${safeToFixed(h, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -0.7]);
+                    cpMap[`Roof (0 to ${safeToFixed(h / 2, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -1.3]);
+                    cpMap[`Roof (${safeToFixed(h / 2, 1)} to ${safeToFixed(h, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.9, -0.7]);
                     cpMap[`Roof (> ${safeToFixed(h, 1)} ${h_unit})`] = interpolate(h_over_L, [0.5, 1.0], [-0.5, -0.4]);
                     refNotes["Roof"] = "ASCE 7-16 Fig. 27.4-1 (h/L > 0.5)";
                 }
@@ -447,7 +447,7 @@ const windLoadCalculator = (() => {
             cpMap["Windward Roof"] = interpolate(roofSlopeDeg, [0, 10, 27], [-0.9, -0.7, -0.7]);
             cpMap["Leeward Roof"] = -0.5;
             refNotes["Roof"] = "ASCE 7-16/22 Fig. 27.4-1 (Monoslope)";
-        } 
+        }
         return { cpMap, refNotes };
     }
 
@@ -482,47 +482,47 @@ const windLoadCalculator = (() => {
 
     // Wind exposure constants (alpha, zg) (ASCE 7-16/22 Table 26.9-1)
     function getExposureConstants(category, units) {
-    const expMap = {
-        'B': { alpha: 7.0, zg_imp: 1200.0, zg_metric: 365.8, ref: "ASCE 7 Table 26.9-1 (Exposure B)" },
-        'C': { alpha: 9.5, zg_imp: 900.0, zg_metric: 274.3, ref: "ASCE 7 Table 26.9-1 (Exposure C)" },
-        'D': { alpha: 11.5, zg_imp: 700.0, zg_metric: 213.4, ref: "ASCE 7 Table 26.9-1 (Exposure D)" }
-    };
-    const data = expMap[category] || expMap['C'];
-    const zg = units === 'imperial' ? data.zg_imp : data.zg_metric;
-    return { alpha: data.alpha, zg, ref_note: data.ref };
-}
+        const expMap = {
+            'B': { alpha: 7.0, zg_imp: 1200.0, zg_metric: 365.8, ref: "ASCE 7 Table 26.9-1 (Exposure B)" },
+            'C': { alpha: 9.5, zg_imp: 900.0, zg_metric: 274.3, ref: "ASCE 7 Table 26.9-1 (Exposure C)" },
+            'D': { alpha: 11.5, zg_imp: 700.0, zg_metric: 213.4, ref: "ASCE 7 Table 26.9-1 (Exposure D)" }
+        };
+        const data = expMap[category] || expMap['C'];
+        const zg = units === 'imperial' ? data.zg_imp : data.zg_metric;
+        return { alpha: data.alpha, zg, ref_note: data.ref };
+    }
 
     // Exposure factor Kz (ASCE 7-16/22 Eq. 26.10-1)
     function calculateKz(h, category, units) {
-    // --- 1. Input Validation (Guard Clauses) ---
-    if (!isFinite(h) || h < 0 || !category) {
-        console.error("Invalid parameters for calculateKz:", { h, category });
-        return { Kz: 1.0, alpha: 0, zg: 0, ref_note: "Error: Invalid input" };
+        // --- 1. Input Validation (Guard Clauses) ---
+        if (!isFinite(h) || h < 0 || !category) {
+            console.error("Invalid parameters for calculateKz:", { h, category });
+            return { Kz: 1.0, alpha: 0, zg: 0, ref_note: "Error: Invalid input" };
+        }
+
+        const { alpha, zg, ref_note } = getExposureConstants(category, units);
+        if (!isFinite(alpha) || !isFinite(zg) || alpha <= 0 || zg <= 0) {
+            console.error("Invalid exposure constants from getExposureConstants:", { alpha, zg });
+            return { Kz: 1.0, alpha, zg, ref_note: "Error: Invalid exposure constants" };
+        }
+
+        // --- 2. Main Calculation Logic ---
+        const min_h = units === 'imperial' ? 15.0 : 4.6;
+        const calc_h = Math.max(h, min_h);
+        const Kz = 2.01 * Math.pow(calc_h / zg, 2 / alpha);
+
+        // --- 3. Output Validation ---
+        if (!isFinite(Kz)) {
+            console.error("Kz calculation resulted in a non-finite value:", { calc_h, zg, alpha });
+            return { Kz: 1.0, alpha, zg, ref_note: "Error: Kz calculation failed" };
+        }
+
+        // The reference for Kz itself is Table 26.10-1, not 26.9-1 (which is for the constants alpha and zg).
+        const kz_ref_note = `ASCE 7 Table 26.10-1 (Exposure ${category})`;
+
+        // Return the calculated Kz, the intermediate constants, and the corrected reference.
+        return { Kz, alpha, zg, ref_note: kz_ref_note };
     }
-
-    const { alpha, zg, ref_note } = getExposureConstants(category, units);
-    if (!isFinite(alpha) || !isFinite(zg) || alpha <= 0 || zg <= 0) {
-        console.error("Invalid exposure constants from getExposureConstants:", { alpha, zg });
-        return { Kz: 1.0, alpha, zg, ref_note: "Error: Invalid exposure constants" };
-    }
-
-    // --- 2. Main Calculation Logic ---
-    const min_h = units === 'imperial' ? 15.0 : 4.6;
-    const calc_h = Math.max(h, min_h);
-    const Kz = 2.01 * Math.pow(calc_h / zg, 2 / alpha);
-
-    // --- 3. Output Validation ---
-    if (!isFinite(Kz)) {
-        console.error("Kz calculation resulted in a non-finite value:", { calc_h, zg, alpha });
-        return { Kz: 1.0, alpha, zg, ref_note: "Error: Kz calculation failed" };
-    }
-
-    // The reference for Kz itself is Table 26.10-1, not 26.9-1 (which is for the constants alpha and zg).
-    const kz_ref_note = `ASCE 7 Table 26.10-1 (Exposure ${category})`;
-
-    // Return the calculated Kz, the intermediate constants, and the corrected reference.
-    return { Kz, alpha, zg, ref_note: kz_ref_note };
-}
 
     // Elevation factor Ke (ASCE 7-16 Table 26.9-1; ASCE 7-22 Sec 26.9)
     function calculateKe(elevation, units, standard) {
@@ -536,36 +536,36 @@ const windLoadCalculator = (() => {
 
     // Wind velocity pressure qz (ASCE 7-16/22 Eq. 26.10-1)
     function calculateVelocityPressure(Kz, Kzt, Kd, Ke, V, standard, riskCat, units) {
-    // Validate all inputs
-    const safeKz = isFinite(Kz) && Kz > 0 ? Kz : 1.0;
-    const safeKzt = isFinite(Kzt) && Kzt > 0 ? Kzt : 1.0;
-    const safeKd = isFinite(Kd) && Kd > 0 ? Kd : 0.85;
-    const safeKe = isFinite(Ke) && Ke > 0 ? Ke : 1.0;
-    const safeV = isFinite(V) && V > 0 ? V : 100; // Default safe wind speed
-    
-    const [Iw, iw_ref] = getImportanceFactor(riskCat, standard);
-    const constant = units === 'imperial' ? 0.00256 : 0.613;
-    
-    let qz, ref_note;
-    if (standard === 'ASCE 7-22') {
-        // ASCE 7-22 includes Iw directly in the velocity pressure equation.
-        qz = constant * safeKz * safeKzt * safeKd * safeKe * Iw * (safeV * safeV); 
-        ref_note = `ASCE 7-22 Eq. 26.10-1 (Iw = ${Iw.toFixed(2)} from ${iw_ref})`;
-    } else { // ASCE 7-16 and other fallbacks
-        // ASCE 7-16 does NOT include Iw in the velocity pressure equation. It's applied later in load combinations.
-        qz = constant * safeKz * safeKzt * safeKd * safeKe * (safeV * safeV);
-        ref_note = "ASCE 7-16 Eq. 26.10-1";
+        // Validate all inputs
+        const safeKz = isFinite(Kz) && Kz > 0 ? Kz : 1.0;
+        const safeKzt = isFinite(Kzt) && Kzt > 0 ? Kzt : 1.0;
+        const safeKd = isFinite(Kd) && Kd > 0 ? Kd : 0.85;
+        const safeKe = isFinite(Ke) && Ke > 0 ? Ke : 1.0;
+        const safeV = isFinite(V) && V > 0 ? V : 100; // Default safe wind speed
+
+        const [Iw, iw_ref] = getImportanceFactor(riskCat, standard);
+        const constant = units === 'imperial' ? 0.00256 : 0.613;
+
+        let qz, ref_note;
+        if (standard === 'ASCE 7-22') {
+            // ASCE 7-22 includes Iw directly in the velocity pressure equation.
+            qz = constant * safeKz * safeKzt * safeKd * safeKe * Iw * (safeV * safeV);
+            ref_note = `ASCE 7-22 Eq. 26.10-1 (Iw = ${Iw.toFixed(2)} from ${iw_ref})`;
+        } else { // ASCE 7-16 and other fallbacks
+            // ASCE 7-16 does NOT include Iw in the velocity pressure equation. It's applied later in load combinations.
+            qz = constant * safeKz * safeKzt * safeKd * safeKe * (safeV * safeV);
+            ref_note = "ASCE 7-16 Eq. 26.10-1";
+        }
+
+        // Final validation
+        if (!isFinite(qz) || qz < 0) {
+            console.warn("Invalid qz calculated, using fallback");
+            qz = units === 'imperial' ? 10.0 : 500.0; // Reasonable fallback
+            ref_note += " - Fallback value used due to calculation issue";
+        }
+
+        return { qz, ref_note };
     }
-    
-    // Final validation
-    if (!isFinite(qz) || qz < 0) {
-        console.warn("Invalid qz calculated, using fallback");
-        qz = units === 'imperial' ? 10.0 : 500.0; // Reasonable fallback
-        ref_note += " - Fallback value used due to calculation issue";
-    }
-    
-    return { qz, ref_note };
-}
 
     // Design pressure p = q(GCp) - qi(GCpi) (ASCE 7-16/22 Eq. 27.4-1)
     function calculateDesignPressure(q_ext, q_int, G, Cp, GCpi) {
@@ -580,23 +580,23 @@ const windLoadCalculator = (() => {
     // --- C&C Calculation Helpers ---
     function interpolateHighRiseGcp(gcp_data, A, h) {
         const results = {};
-    
+
         // Iterate over the zones defined in the gcp_data object (e.g., 'Wall Zone 4', 'Roof Zone 1'').
         for (const zone of Object.keys(gcp_data).filter(k => k !== 'heights' && k !== 'areas')) {
             const zoneData = gcp_data[zone];
-    
+
             // 1. Interpolate across area. The GCp values in the table are constant for all heights.
             // We only need to interpolate based on the effective wind area 'A'.
             const log_areas = gcp_data.areas.map(Math.log);
             const log_A = Math.log(A);
             const pos_val_at_A = interpolate(log_A, log_areas, zoneData.pos);
             const neg_val_at_A = interpolate(log_A, log_areas, zoneData.neg);
-    
+
             // 2. Interpolate across height using the results from the area interpolation.
             // Since the values are constant across height, we create an array of the same value.
             const pos_vals_at_h = gcp_data.heights.map(() => pos_val_at_A);
             const neg_vals_at_h = gcp_data.heights.map(() => neg_val_at_A);
-    
+
             results[zone] = {
                 positive: interpolate(h, gcp_data.heights, pos_vals_at_h),
                 negative: interpolate(h, gcp_data.heights, neg_vals_at_h)
@@ -617,13 +617,13 @@ const windLoadCalculator = (() => {
 
     function calculateSteepRoofCandC(A, h, theta) {
         // ASCE 7-16 Figure 30.5-2 for Steep Roofs (7 < theta <= 45 deg)
-        
+
         const h_tan_theta = h * Math.tan(theta * Math.PI / 180);
         const log_A = Math.log(A);
         const log_areas = [Math.log(10), Math.log(100), Math.log(500)];
-    
+
         let gcp_data;
-    
+
         if (theta > 7 && theta <= 27) {
             gcp_data = {
                 h_tan_theta_points: [20, 100, 500],
@@ -657,25 +657,25 @@ const windLoadCalculator = (() => {
                 }
             };
         }
-    
+
         const results = {};
         for (const zone of Object.keys(gcp_data).filter(k => k !== 'h_tan_theta_points')) {
             const zoneData = gcp_data[zone];
-            
+
             // 1. For each h*tan(theta) point, interpolate GCp for the given Area A.
             const pos_gcp_at_A_for_each_h_tan_theta = zoneData.pos.map(pos_values_for_area => interpolate(log_A, log_areas, pos_values_for_area));
             const neg_gcp_at_A_for_each_h_tan_theta = zoneData.neg.map(neg_values_for_area => interpolate(log_A, log_areas, neg_values_for_area));
-    
+
             // 2. Interpolate along h*tan(theta) using the results from step 1.
             const final_pos_gcp = interpolate(h_tan_theta, gcp_data.h_tan_theta_points, pos_gcp_at_A_for_each_h_tan_theta);
             const final_neg_gcp = interpolate(h_tan_theta, gcp_data.h_tan_theta_points, neg_gcp_at_A_for_each_h_tan_theta);
-    
+
             results[zone] = {
                 positive: final_pos_gcp,
                 negative: final_neg_gcp
             };
         }
-        
+
         return results;
     }
 
@@ -859,8 +859,8 @@ const windLoadCalculator = (() => {
             // Monoslope C&C from Fig 30.3-5
             const pos_gcp = 0.2; // All zones have the same positive GCp
             gcp_map['Roof Zone 1 (Interior)'] = { neg: logInterpolate([-1.5, -1.4, -1.2, -1.0, -0.7, -0.5]), pos: pos_gcp };
-            gcp_map['Roof Zone 2 (Edges)'] =    { neg: logInterpolate([-2.3, -2.1, -1.8, -1.5, -1.0, -0.7]), pos: pos_gcp };
-            gcp_map['Roof Zone 3 (Corners)'] =  { neg: logInterpolate([-3.2, -2.9, -2.4, -2.0, -1.3, -0.9]), pos: pos_gcp };
+            gcp_map['Roof Zone 2 (Edges)'] = { neg: logInterpolate([-2.3, -2.1, -1.8, -1.5, -1.0, -0.7]), pos: pos_gcp };
+            gcp_map['Roof Zone 3 (Corners)'] = { neg: logInterpolate([-3.2, -2.9, -2.4, -2.0, -1.3, -0.9]), pos: pos_gcp };
         }
 
         const final_pressures = {};
@@ -948,7 +948,7 @@ const windLoadCalculator = (() => {
         return {
             applicable: true,
             pressure: { 'Net Uplift on Overhang': { pressure: pressure, ref: 'ASCE 7-16 Sec. 27.4.6' } },
-            ref: `ASCE 7-16 Sec. 27.4.6 (Cp_top=${safeToFixed(cp_roof_top,2)}, Cp_bottom=${safeToFixed(cp_overhang,2)})`
+            ref: `ASCE 7-16 Sec. 27.4.6 (Cp_top=${safeToFixed(cp_roof_top, 2)}, Cp_bottom=${safeToFixed(cp_overhang, 2)})`
         };
     }
 
@@ -1022,18 +1022,18 @@ const windLoadCalculator = (() => {
     function calculateHeightVaryingPressures(inputs, intermediate_globals) {
         const { exposure_category, unit_system, risk_category, mean_roof_height, design_method } = inputs;
         const { Kzt, Kd, Ke, V_in, effective_standard, abs_gcpi, G, qz: qh } = intermediate_globals;
-    
+
         // Better validation
         if (!inputs || !intermediate_globals || !mean_roof_height || mean_roof_height <= 0 || !exposure_category) {
             console.error("Invalid inputs for height varying pressure calculation");
             return [];
         }
-    
+
         const results = [];
         const is_imp = unit_system === 'imperial';
         const step = is_imp ? 5 : 1.5;
         const heights = [];
-    
+
         // Generate height points
         for (let z = 0; z <= mean_roof_height; z += step) {
             heights.push(z);
@@ -1042,17 +1042,17 @@ const windLoadCalculator = (() => {
         if (heights[heights.length - 1] < mean_roof_height) {
             heights.push(mean_roof_height);
         }
-    
+
         for (const z of heights) {
             // Calculate Kz for each height
             const { Kz } = calculateKz(z, exposure_category, unit_system);
             // Calculate velocity pressure at height z
             const { qz } = calculateVelocityPressure(Kz, Kzt, Kd, Ke, V_in, effective_standard, risk_category, unit_system);
-    
+
             // Use the main design pressure function for consistency. Cp for windward wall is 0.8.
             const p_pos = calculateDesignPressure(qz, qh, G, 0.8, abs_gcpi);
             const p_neg = calculateDesignPressure(qz, qh, G, 0.8, -abs_gcpi);
-    
+
             results.push({ height: z, Kz, qz, p_pos, p_neg });
         }
         return results;
@@ -1061,9 +1061,9 @@ const windLoadCalculator = (() => {
     // Constants for gust effect factor calculation (ASCE 7-16 Table 26.11-1)
     function getGustCalculationConstants(exposure_category, unit_system) {
         const constants = {
-            'B': { b_bar: 0.47, c: 0.30, l: 320, epsilon_bar: 1/3.0 },
-            'C': { b_bar: 0.65, c: 0.20, l: 500, epsilon_bar: 1/5.0 },
-            'D': { b_bar: 0.80, c: 0.15, l: 650, epsilon_bar: 1/8.0 }
+            'B': { b_bar: 0.47, c: 0.30, l: 320, epsilon_bar: 1 / 3.0 },
+            'C': { b_bar: 0.65, c: 0.20, l: 500, epsilon_bar: 1 / 5.0 },
+            'D': { b_bar: 0.80, c: 0.15, l: 650, epsilon_bar: 1 / 8.0 }
         };
         const metric_multipliers = { b_bar: 1.32, c: 1.5, l: 0.3048, epsilon_bar: 1.0 };
 
@@ -1083,7 +1083,7 @@ const windLoadCalculator = (() => {
     // Mean hourly wind speed at a given height (ASCE 7-16 Eq. 26.11-7)
     function calculateMeanHourlyWindSpeed(V_in, z_effective, zg, alpha, b_bar, unit_system) {
         // For Imperial units, V_in (mph) is converted to fps. For Metric, V_in (m/s) is used directly.
-        const V_bar_33ft = V_in * b_bar * Math.pow(33 / zg, 1 / alpha) * (unit_system === 'imperial' ? (88/60) : 1);
+        const V_bar_33ft = V_in * b_bar * Math.pow(33 / zg, 1 / alpha) * (unit_system === 'imperial' ? (88 / 60) : 1);
         return V_bar_33ft * Math.pow(z_effective / 33, 1 / alpha);
     }
 
@@ -1093,7 +1093,7 @@ const windLoadCalculator = (() => {
         // ASCE 7-16 Section C26.11.3 suggests 0.01 is a reasonable general assumption.
         const damping_ratio = 0.01;
         const N1 = (n1 * Lz_bar) / V_z_bar;
-        const Rn = (7.47 * N1) / Math.pow(1 + 10.3 * N1, 5/3);
+        const Rn = (7.47 * N1) / Math.pow(1 + 10.3 * N1, 5 / 3);
         const Rh = (1 / N1) - (1 / (2 * N1 * N1)) * (1 - Math.exp(-2 * N1));
         const RB = Rh; // For simplicity, assuming B=h, so Rh = RB
 
@@ -1109,31 +1109,31 @@ const windLoadCalculator = (() => {
         const { alpha, zg } = intermediate; // Defensive destructuring
         const n1 = fundamental_period > 0 ? 1 / fundamental_period : 0;
 
-        const { b_bar, c, l, epsilon_bar } = getGustCalculationConstants(exposure_category, unit_system); 
+        const { b_bar, c, l, epsilon_bar } = getGustCalculationConstants(exposure_category, unit_system);
 
         const z_bar = 0.6 * mean_roof_height;
         const min_z = unit_system === 'imperial' ? 15.0 : 4.6;
         const z_bar_effective = Math.max(z_bar, min_z);
-        
+
         const V_z_bar = calculateMeanHourlyWindSpeed(V_in, z_bar_effective, zg, alpha, b_bar, unit_system);
         // Turbulence Intensity, Iz_bar. Ref: ASCE 7-16 Eq. 26.11-7
-        const Iz_bar = c * Math.pow(33 / z_bar_effective, 1/6);
+        const Iz_bar = c * Math.pow(33 / z_bar_effective, 1 / 6);
         const ref_h = unit_system === 'imperial' ? 33 : 10; // 33 ft or 10 m
         // Integral Length Scale, Lz_bar. Ref: ASCE 7-16 Eq. 26.11-8
         const Lz_bar = l * Math.pow(z_bar_effective / ref_h, epsilon_bar);
-    
+
         // Peak factor for background response (gQ) is taken as 3.4 per ASCE 7-16 Section 26.11.2.
         const gQ = 3.4;
         // Peak factor for resonant response, gR. Ref: ASCE 7-16 Eq. 26.11-9
         const gR = Math.sqrt(2 * Math.log(3600 * n1)) + (0.577 / Math.sqrt(2 * Math.log(3600 * n1)));
-    
+
         // Background Response Factor, Q. Ref: ASCE 7-16 Eq. 26.11-14
         const Q = Math.sqrt(1 / (1 + 0.63 * Math.pow((building_width_B + mean_roof_height) / Lz_bar, 0.63)));
         const R = calculateResonantResponseFactor(n1, V_z_bar, Lz_bar, building_width_B, mean_roof_height);
 
         // Gust-Effect Factor, Gf. Ref: ASCE 7-16 Eq. 26.11-6
-        const Gf = 0.925 * (1 + 1.7 * Iz_bar * Math.sqrt(gQ*gQ * Q*Q + gR*gR * R*R)) / (1 + 1.7 * gQ * Iz_bar);
-    
+        const Gf = 0.925 * (1 + 1.7 * Iz_bar * Math.sqrt(gQ * gQ * Q * Q + gR * gR * R * R)) / (1 + 1.7 * gQ * Iz_bar);
+
         return {
             G: Gf,
             ref: `ASCE 7 Eq. 26.11-6 (Flexible, G=${safeToFixed(Gf, 3)})`
@@ -1164,8 +1164,8 @@ const windLoadCalculator = (() => {
 
         distances.forEach(dist => {
             // Find the correct Cp value for the current distance from the pre-calculated zones
-            let cp_at_dist = roof_zones.find(zone => dist >= zone.start && dist <= zone.end)?.cp ?? 
-                             (cp_map["Leeward Roof"] || cp_map["Roof Leeward"] || -0.3); // Fallback to leeward value
+            let cp_at_dist = roof_zones.find(zone => dist >= zone.start && dist <= zone.end)?.cp ??
+                (cp_map["Leeward Roof"] || cp_map["Roof Leeward"] || -0.3); // Fallback to leeward value
 
             const p_pos = calculateDesignPressure(qz, qz, G, cp_at_dist, abs_gcpi);
             const p_neg = calculateDesignPressure(qz, qz, G, cp_at_dist, -abs_gcpi);
@@ -1277,7 +1277,7 @@ const windLoadCalculator = (() => {
                 heightVaryingResults_L: null
             };
 
-        if (inputs.calculate_height_varying_pressure === 'Yes') {
+            if (inputs.calculate_height_varying_pressure === 'Yes') {
                 results.heightVaryingResults_L = calculateHeightVaryingPressures(inputs, intermediate);
             }
 
@@ -1285,14 +1285,14 @@ const windLoadCalculator = (() => {
             if (results.candc.warnings && results.candc.warnings.length > 0) {
                 results.warnings = [...(results.warnings || []), ...results.candc.warnings];
             }
-            
+
             // Torsional moment calculation for low-rise buildings
             if (!is_tall_building && ["Enclosed", "Partially Enclosed"].includes(inputs.enclosure_classification) && results.directional_results.perp_to_L) {
                 const { qz, G } = intermediate;
                 const { perp_to_L, perp_to_B } = results.directional_results;
                 const cp_map_L = Object.fromEntries(perp_to_L.map(r => [r.surface, r.cp]));
                 const cp_map_B = Object.fromEntries(perp_to_B.map(r => [r.surface, r.cp]));
-                
+
                 const F_ww_L = (qz * G * (cp_map_L["Windward Wall"] || 0.8)) * (inputs.building_width_B * inputs.mean_roof_height);
                 const F_lw_L = (qz * G * (cp_map_L["Leeward Wall"] || 0)) * (inputs.building_width_B * inputs.mean_roof_height);
                 const Mt_L = 0.75 * (Math.abs(F_ww_L) + Math.abs(F_lw_L)) * (0.15 * inputs.building_width_B);
@@ -1338,7 +1338,7 @@ const windLoadCalculator = (() => {
             const { Cf, ref } = getOpenSignCf(inputs.solidity_ratio, cf_options);
             const pressure = qz * G * Cf;
             return { is_open_sign: true, open_sign_results: { Cf, ref, pressure, pressure_asd: pressure * 0.6 } };
-        },'Solid Freestanding Signs/Walls': (inputs, intermediate) => {
+        }, 'Solid Freestanding Signs/Walls': (inputs, intermediate) => {
             const { qz, G } = intermediate;
             const z_centroid = inputs.clearance_z + inputs.sign_height_s / 2;
             const { Kz: Kz_sign } = calculateKz(z_centroid, inputs.exposure_category, inputs.unit_system);
@@ -1433,7 +1433,7 @@ const windLoadCalculator = (() => {
         const alpha_val = kzResult.alpha || 0;
         const zg_val = kzResult.zg || 0;
         const kz_ref_val = kzResult.ref_note || "Error: Kz calculation failed";
-        
+
         const intermediate_for_G = { alpha: alpha_val, zg: zg_val, Kz: Kz_val, Iw };
         const { G, ref: g_ref } = calculateGustEffectFactor({ ...inputs, V_in: v_input }, intermediate_for_G);
 
@@ -1812,7 +1812,8 @@ function renderDesignParameters(inputs, intermediate, units) {
  */
 function renderCalculationBreakdown(results, units) {
     const { inputs, intermediate, open_sign_results, solid_sign_results, chimney_results, truss_tower_results } = results;
-    const { h_unit, p_unit } = units;let breakdownContent = '';if (open_sign_results) {const { Cf, ref, pressure } = open_sign_results;breakdownContent = `
+    const { h_unit, p_unit } = units; let breakdownContent = ''; if (open_sign_results) {
+        const { Cf, ref, pressure } = open_sign_results; breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2"> 
                 <li><strong>Velocity Pressure (q<sub>z</sub>):</strong> ${safeToFixed(intermediate.qz, 2)} ${p_unit} (Calculated at height h=${inputs.mean_roof_height} ${h_unit})</li>
                 <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)}</li>
@@ -1822,7 +1823,8 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of the sign face (A<sub>s</sub>).</div>
                 </li>
             </ul>`;
-    } else if (solid_sign_results) {const { CN, ref, pressure, Kz_sign, qz_sign } = solid_sign_results;breakdownContent = `
+    } else if (solid_sign_results) {
+        const { CN, ref, pressure, Kz_sign, qz_sign } = solid_sign_results; breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2">
                 <li><strong>Height to Sign Centroid (z):</strong> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</li> 
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_sign, 3)}</li>
@@ -1833,7 +1835,8 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(CN, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
                 </li>
             </ul>`;
-    } else if (chimney_results) {const { Cf, ref, pressure, Kz_struct, qz_struct } = chimney_results;breakdownContent = `
+    } else if (chimney_results) {
+        const { Cf, ref, pressure, Kz_struct, qz_struct } = chimney_results; breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2">
                 <li><strong>Height to Top of Structure (h):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li> 
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at h:</strong> ${safeToFixed(Kz_struct, 3)}</li>
@@ -1844,7 +1847,8 @@ function renderCalculationBreakdown(results, units) {
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
                 </li>
             </ul>`;
-    } else if (truss_tower_results) {const { Cf, ref, pressure, Kz_tower, qz_tower } = truss_tower_results;breakdownContent = `
+    } else if (truss_tower_results) {
+        const { Cf, ref, pressure, Kz_tower, qz_tower } = truss_tower_results; breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2">
                 <li><strong>Height to Tower Centroid (z):</strong> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</li> 
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_tower, 3)}</li>
@@ -1857,7 +1861,7 @@ function renderCalculationBreakdown(results, units) {
                 </li>
             </ul>`;
     } else {// Default breakdown for buildings
-    breakdownContent = `
+        breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2"> 
                 <li><strong>Factors:</strong> I<sub>w</sub> = ${safeToFixed(intermediate.Iw, 2)}, K<sub>d</sub> = ${safeToFixed(intermediate.Kd, 2)}, K<sub>zt</sub> = ${safeToFixed(inputs.topographic_factor_Kzt, 2)}, G = ${safeToFixed(intermediate.G, 3)}, GC<sub>pi</sub> = &plusmn;${safeToFixed(inputs.GCpi_abs, 2)}</li>
                 <li><strong>Exposure Constants (&alpha;, z<sub>g</sub>):</strong> ${intermediate.alpha}, ${safeToFixed(intermediate.zg, 0)} ${h_unit} <span class="ref">[${intermediate.Kz_ref}]</span></li>
@@ -1874,7 +1878,7 @@ function renderCalculationBreakdown(results, units) {
                     </div>
                 </li>
             </ul>`;
-    }return `<div class="calc-breakdown">${breakdownContent}</div>`;
+    } return `<div class="calc-breakdown">${breakdownContent}</div>`;
 }
 
 /**
@@ -1885,9 +1889,9 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
 
     // --- Path 1: Handle high-rise rooftop structure results ---
     if (directional_results && directional_results.rooftop_structure) {
-        
+
         let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">ROOFTOP STRUCTURE PRESSURES (p = q_h*GC_r)</h3></div>`;
-        
+
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Rooftop Structure Pressures (${open_building_ref})</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
                 <th>Force Direction</th><th>GC_r</th><th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
@@ -1905,7 +1909,7 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
         });
 
         tableHtml += `</tbody></table>`;
-        
+
         // **CRITICAL FIX**: Return here to prevent fall-through to the low-rise logic.
         return html + tableHtml;
     }
@@ -1915,7 +1919,7 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
     // The data source can return a single object, an object with direction keys, or an array. 
     // This defensive block ensures it's always a safe-to-iterate array.
     let openRoofResults = [];
-    
+
     if (Array.isArray(directional_results)) {
         openRoofResults = directional_results;
     } else if (directional_results && typeof directional_results === 'object') {
@@ -1941,9 +1945,9 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
             <tbody class="dark:text-gray-300 text-center">`;
 
     openRoofResults.forEach(r => {
-            const p_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
-            const p_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
-            tableHtml += `
+        const p_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
+        const p_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
+        tableHtml += `
                 <tr>
                     <td>${r.surface}</td>
                     <td>${safeToFixed(r.cn_pos || 0, 2)}</td>
@@ -1951,8 +1955,8 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
                     <td>${safeToFixed(p_pos || 0, 2)}</td>
                     <td>${safeToFixed(p_neg || 0, 2)}</td>
                 </tr>`;
-        });
-        tableHtml += `</tbody></table>`;
+    });
+    tableHtml += `</tbody></table>`;
 
     return html + tableHtml;
 }
@@ -1963,26 +1967,26 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
 function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermediate, units) {
     const { p_unit } = units;
 
-        let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
+    let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
                 <th>Surface/Zone</th><th>C_p</th><th>Pressure (+GCpi) (${inputs.design_method}) [${p_unit}]</th><th>Pressure (-GCpi) (${inputs.design_method}) [${p_unit}]</th>
             </tr></thead>
             <tbody class="dark:text-gray-300 text-center">`;
-        
-        data.forEach((r, i) => {
-            const p_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
-            const p_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg; // These are now the final pressures
-            const asd_factor_str = ''; // The 0.6 factor is not part of the nominal load calculation
-            
-            // Correctly distinguish between qz and qh in the formula string 
-            const q_ext_str = r.surface.toLowerCase().includes('windward wall') ? 'q_z' : 'q_h';
-            const q_int_str = 'q_h';
-            let formula_str = `p = ${q_ext_str}*G*C_p - ${q_int_str}*(GC_pi)`;
-            if (inputs.design_method === 'ASD') {
-                formula_str = `p = 0.6 * (${formula_str})`;
-            }
-            const detailId = `${id_prefix}-detail-${i}`;
-            tableHtml += `
+
+    data.forEach((r, i) => {
+        const p_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
+        const p_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg; // These are now the final pressures
+        const asd_factor_str = ''; // The 0.6 factor is not part of the nominal load calculation
+
+        // Correctly distinguish between qz and qh in the formula string 
+        const q_ext_str = r.surface.toLowerCase().includes('windward wall') ? 'q_z' : 'q_h';
+        const q_int_str = 'q_h';
+        let formula_str = `p = ${q_ext_str}*G*C_p - ${q_int_str}*(GC_pi)`;
+        if (inputs.design_method === 'ASD') {
+            formula_str = `p = 0.6 * (${formula_str})`;
+        }
+        const detailId = `${id_prefix}-detail-${i}`;
+        tableHtml += `
                 <tr>
                     <td>${sanitizeHTML(r.surface)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                     <td>${r.cp !== null ? safeToFixed(r.cp, 2) : 'N/A'}</td>
@@ -1995,10 +1999,53 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
                             <li><b>Calculation (-GCpi):</b> ${safeToFixed(p_neg, 2)} = ${inputs.design_method === 'ASD' ? '0.6 * ' : ''}(${safeToFixed(intermediate.qz, 2)}*${safeToFixed(intermediate.G, 3)}*${safeToFixed(r.cp, 2)} - ${safeToFixed(intermediate.qz, 2)}*${-inputs.GCpi_abs})</li>
                         </ul>
                     </div></td></tr>`;
-        });
-        tableHtml += `</tbody></table>`;
-        return tableHtml;
-    };
+    });
+    tableHtml += `</tbody></table>`;
+    return tableHtml;
+}
+
+/**
+ * Renders the results for the Envelope Procedure (Low-Rise).
+ */
+function renderEnvelopeSection(envelope_results, inputs, intermediate, units) {
+    const { h_unit, p_unit } = units;
+    const { pressures, ref } = envelope_results;
+    const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
+
+    let html = `
+        <div class="mb-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Reference: ${ref}</p>
+            <table class="w-full mt-4 border-collapse">
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                        <th class="p-2 border dark:border-gray-600">Zone</th>
+                        <th class="p-2 border dark:border-gray-600">GCpf</th>
+                        <th class="p-2 border dark:border-gray-600">Design Pressure (+Internal) (${p_unit})</th>
+                        <th class="p-2 border dark:border-gray-600">Design Pressure (-Internal) (${p_unit})</th>
+                    </tr>
+                </thead>
+                <tbody class="dark:text-gray-300 text-center">
+    `;
+
+    for (const [zone, data] of Object.entries(pressures)) {
+        html += `
+            <tr>
+                <td class="p-2 border dark:border-gray-600 font-semibold">${zone}</td>
+                <td class="p-2 border dark:border-gray-600">${safeToFixed(data.gcpf, 2)}</td>
+                <td class="p-2 border dark:border-gray-600">${safeToFixed(data.p_net * factor, 2)}</td>
+                <td class="p-2 border dark:border-gray-600">${safeToFixed(data.p_net_uplift * factor, 2)}</td>
+            </tr>
+        `;
+    }
+
+    html += `
+                </tbody>
+            </table>
+            <p class="text-xs text-gray-500 mt-2">* Pressures include internal pressure coefficient (GCpi).</p>
+        </div>
+    `;
+    return html;
+}
 
 /**
  * Renders the entire MWFRS section, including diagrams and tables for both directions.
@@ -2042,14 +2089,10 @@ function renderMwfrsSection(directional_results, inputs, intermediate, mwfrs_met
         `;
     return html;
 }
-
-/**
- * Renders the table for height-varying windward wall pressures.
- */
 function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs, units) {
     const { h_unit, p_unit } = units;
     if (!heightVaryingResults) return '';
-        const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
+    const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
     let html = `<div class="copy-content">
                     <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Leeward wall pressure is constant and based on q<sub>h</sub>.</p>
                     <table class="w-full mt-4 border-collapse">
@@ -2063,14 +2106,14 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
                         </thead>
                         <tbody class="dark:text-gray-300 text-center">`;
     heightVaryingResults.forEach(result => {
-            html += `
+        html += `
                 <tr>
                     <td>${safeToFixed(result.height, 1)}</td>
                     <td>${safeToFixed(result.Kz, 3)}</td>
                     <td>${safeToFixed(result.qz, 2)}</td>
                     <td>${safeToFixed(result.p_pos * factor, 2)}</td>
                 </tr>`;
-        });
+    });
     html += `   <tr>
                         <td colspan="3" class="text-right font-semibold pr-4">Constant Leeward Pressure (Perp. to L):</td>
                         <td>${safeToFixed(leeward_pressure * factor, 2)}</td>
@@ -2115,15 +2158,15 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
                             <table class="w-full mt-4 border-collapse text-sm">
                                 <thead class="bg-gray-100 dark:bg-gray-700"><tr><th>Distance</th><th>Ratio</th><th>Cp</th><th>Pressure</th></tr></thead>
                                 <tbody class="dark:text-gray-300 text-center">`;
-        roofPressureDist_L.forEach(r => {
-            html += `<tr>
+    roofPressureDist_L.forEach(r => {
+        html += `<tr>
                         <td>${safeToFixed(r.distance, 1)}</td>
                         <td>${safeToFixed(r.distance_ratio, 2)}</td>
                         <td>${safeToFixed(r.cp, 2)}</td>
                         <td>${safeToFixed(r.p_neg * factor, 2)}</td>
                      </tr>`;
-        });
-        html += `           </tbody>
+    });
+    html += `           </tbody>
                             </table>
                         </div>
                         <div>
@@ -2131,15 +2174,15 @@ function renderRoofPressureDistribution(roofPressureDist_L, roofPressureDist_B, 
                             <table class="w-full mt-4 border-collapse text-sm">
                                 <thead class="bg-gray-100 dark:bg-gray-700"><tr><th>Distance</th><th>Ratio</th><th>Cp</th><th>Pressure</th></tr></thead>
                                 <tbody class="dark:text-gray-300 text-center">`;
-            roofPressureDist_B.forEach(r => {
-                html += `<tr>
+    roofPressureDist_B.forEach(r => {
+        html += `<tr>
                             <td>${safeToFixed(r.distance, 1)}</td>
                             <td>${safeToFixed(r.distance_ratio, 2)}</td>
                             <td>${safeToFixed(r.cp, 2)}</td>
                             <td>${safeToFixed(r.p_neg * factor, 2)}</td>
                          </tr>`;
-            });
-        html += `           </tbody></table>
+    });
+    html += `           </tbody></table>
                     </div></div>
                 </div>`;
     html += `</div>`;
@@ -2212,7 +2255,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
             const detailId = `torsional-detail-${i}`;
             contentHtml += `<tr>
                                 <td>${caseName} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                                <td class="font-bold">${Mt.toLocaleString(undefined, {maximumFractionDigits: 0})} ${m_unit}</td>
+                                <td class="font-bold">${Mt.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${m_unit}</td>
                             </tr>
                             <tr id="${detailId}" class="details-row"><td colspan="2" class="p-0"><div class="calc-breakdown">
                                 <p>${data.note}</p>
@@ -2233,11 +2276,11 @@ function renderTorsionalCase(torsional_case, inputs, units) {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                             <div>
                                 <p class="font-semibold">Wind Perpendicular to L</p>
-                                <p class="text-2xl font-bold">${Mt_L.toLocaleString(undefined, {maximumFractionDigits: 0})} ${m_unit}</p>
+                                <p class="text-2xl font-bold">${Mt_L.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${m_unit}</p>
                             </div>
                             <div>
                                 <p class="font-semibold">Wind Perpendicular to B</p>
-                                <p class="text-2xl font-bold">${Mt_B.toLocaleString(undefined, {maximumFractionDigits: 0})} ${m_unit}</p>
+                                <p class="text-2xl font-bold">${Mt_B.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${m_unit}</p>
                             </div>
                         </div>`;
     }
@@ -2251,7 +2294,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
 function renderParapetSection(parapet_results, inputs, units) {
     if (!parapet_results || !parapet_results.applicable) return '';
     const { p_unit } = units;
-    
+
     let html = `<div class="copy-content">
                         <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Pressures are based on ${parapet_results.ref} and are applied to the vertical projection of the parapet.</p>
                         <table class="w-full mt-4 border-collapse">
@@ -2276,7 +2319,7 @@ function renderParapetSection(parapet_results, inputs, units) {
 function renderOverhangSection(overhang_results, inputs, units) {
     if (!overhang_results || !overhang_results.applicable) return '';
     const { p_unit } = units;
-    
+
     let html = `<div class="copy-content">
                         <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Pressures are based on ${overhang_results.ref}. This is the net pressure on the overhang element.</p>
                         <table class="w-full mt-4 border-collapse">
@@ -2301,7 +2344,7 @@ function renderOverhangSection(overhang_results, inputs, units) {
 function renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, units) {
     if (!rooftop_results || !rooftop_results.applicable) return '';
     const { p_unit } = units;
-    
+
     let html = `<div class="copy-content">
                         <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">Pressures for ${rooftop_results.type} based on ${rooftop_results.ref}.</p>
                         <table class="w-full mt-4 border-collapse">
@@ -2344,8 +2387,8 @@ function renderCandCSection(candc, inputs, intermediate, units) {
 
                     <table class="w-full border-collapse">
                     `;
-        if (candc.is_high_rise) {
-            html += `<thead class="bg-gray-100 dark:bg-gray-700">
+    if (candc.is_high_rise) {
+        html += `<thead class="bg-gray-100 dark:bg-gray-700">
                         <tr>
                             <th>Zone</th>
                             <th>GCp (+)</th>
@@ -2355,27 +2398,27 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                         </tr>
                     </thead>
                     <tbody class="dark:text-gray-300 text-center">`;
-            Object.entries(candc.pressures).forEach(([zone, data], i) => {
-                const p_pos_lrfd = data.p_pos;
-                const p_neg_lrfd = data.p_neg;
-                const p_pos_asd = p_pos_lrfd * 0.6;
-                const p_neg_asd = p_neg_lrfd * 0.6;
-                const detailId = `candc-detail-${i}`;
-                html += `<tr>
+        Object.entries(candc.pressures).forEach(([zone, data], i) => {
+            const p_pos_lrfd = data.p_pos;
+            const p_neg_lrfd = data.p_neg;
+            const p_pos_asd = p_pos_lrfd * 0.6;
+            const p_neg_asd = p_neg_lrfd * 0.6;
+            const detailId = `candc-detail-${i}`;
+            html += `<tr>
                             <td>${sanitizeHTML(zone)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                             <td>${safeToFixed(data.gcp_pos, 2)}</td>
                             <td>${safeToFixed(data.gcp_neg, 2)}</td>
                             <td>${safeToFixed(p_pos_lrfd, 2)} / ${safeToFixed(p_neg_lrfd, 2)}</td>
                             <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
                          </tr>`;
-                html += `<tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
+            html += `<tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
                             <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
                             <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                             <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                          </div></td></tr>`;
-            });
-        } else {
-            html += `<thead class="bg-gray-100 dark:bg-gray-700">
+        });
+    } else {
+        html += `<thead class="bg-gray-100 dark:bg-gray-700">
                         <tr>
                             <th>Zone</th>
                             <th>GCp</th>
@@ -2383,21 +2426,21 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                         </tr>
                     </thead>
                     <tbody class="dark:text-gray-300 text-center">`;
-            Object.entries(candc.pressures).forEach(([zone, data], i) => {
-                const p_neg_lrfd = data.p_neg;
-                const p_pos_lrfd = data.p_pos;
-                const pressure = inputs.design_method === 'ASD' ? Math.min(p_neg_lrfd, p_pos_lrfd) * 0.6 : Math.min(p_neg_lrfd, p_pos_lrfd);
-                const detailId = `candc-detail-${i}`;
-                html += `<tr>
+        Object.entries(candc.pressures).forEach(([zone, data], i) => {
+            const p_neg_lrfd = data.p_neg;
+            const p_pos_lrfd = data.p_pos;
+            const pressure = inputs.design_method === 'ASD' ? Math.min(p_neg_lrfd, p_pos_lrfd) * 0.6 : Math.min(p_neg_lrfd, p_pos_lrfd);
+            const detailId = `candc-detail-${i}`;
+            html += `<tr>
                             <td>${sanitizeHTML(zone)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                             <td>${safeToFixed(data.gcp_neg, 2)}</td><td>${safeToFixed(pressure, 2)}</td>
                          </tr>
                          <tr id="${detailId}" class="details-row"><td colspan="3" class="p-0"><div class="calc-breakdown">
                             <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
                          </div></td></tr>`;
-            });
-        }
-        html += `</tbody></table></div>`;
+        });
+    }
+    html += `</tbody></table></div>`;
     return html;
 }
 
@@ -2549,7 +2592,7 @@ function renderWindResults(results) {
     if (is_arched_roof) {
         const { arched_roof_results } = results;
         const { cnMap, ref, pressures } = arched_roof_results;
-    let archedRoofHtml = `
+        let archedRoofHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
                     <table class="w-full mt-4 border-collapse">
                         <thead class="bg-gray-100 dark:bg-gray-700">
@@ -2580,7 +2623,7 @@ function renderWindResults(results) {
         const { Cf, ref, pressure, pressure_asd, Kz_tower, qz_tower } = truss_tower_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
         // Custom breakdown for trussed towers
-    const trussHtml = `
+        const trussHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the tower's centroid height (h/2).</p>
                     <div class="calc-breakdown">
                         <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
@@ -2603,7 +2646,202 @@ function renderWindResults(results) {
         const { Cf, ref, pressure, pressure_asd, h_struct, Kz_struct, qz_struct } = chimney_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
         // Custom breakdown for chimneys/tanks
-    const chimneyHtml = `
+        const chimneyHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
+                    <div class="calc-breakdown">
+                        <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
+                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at h:</b> ${safeToFixed(Kz_struct, 3)}</p>
+                        <p><b>Velocity Pressure (q<sub>z</sub>) at h:</b> ${safeToFixed(qz_struct, 2)} ${p_unit}</p>
+                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
+                            <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
+                            <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
+                            <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
+                         </div></td></tr>`;
+    });
+} else {
+    html += `<thead class="bg-gray-100 dark:bg-gray-700">
+                        <tr>
+                            <th>Zone</th>
+                            <th>GCp</th>
+                            <th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300 text-center">`;
+    Object.entries(candc.pressures).forEach(([zone, data], i) => {
+        const p_neg_lrfd = data.p_neg;
+        const p_pos_lrfd = data.p_pos;
+        const pressure = inputs.design_method === 'ASD' ? Math.min(p_neg_lrfd, p_pos_lrfd) * 0.6 : Math.min(p_neg_lrfd, p_pos_lrfd);
+        const detailId = `candc-detail-${i}`;
+        html += `<tr>
+                            <td>${sanitizeHTML(zone)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
+                            <td>${safeToFixed(data.gcp_neg, 2)}</td><td>${safeToFixed(pressure, 2)}</td>
+                         </tr>
+                         <tr id="${detailId}" class="details-row"><td colspan="3" class="p-0"><div class="calc-breakdown">
+                            <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
+                         </div></td></tr>`;
+    });
+}
+html += `</tbody></table></div>`;
+return html;
+}
+
+function sendWindToCombos(results) {
+    if (results) {
+        const getGoverningMwfrsPressure = (surface_name) => {
+            let max_abs_pressure = { p_pos_asd: 0, p_neg_asd: 0 };
+            let max_abs_val = -1;
+            for (const dir in results.directional_results) {
+                const resultSet = results.directional_results[dir] || [];
+                const surfaceResult = resultSet.find(r => r.surface.includes(surface_name));
+
+                if (surfaceResult) {
+                    const current_max_abs = Math.max(Math.abs(surfaceResult.p_pos_asd), Math.abs(surfaceResult.p_neg_asd));
+                    if (current_max_abs > max_abs_val) {
+                        max_abs_val = current_max_abs;
+                        max_abs_pressure = surfaceResult;
+                    }
+                }
+            }
+            return { max: max_abs_pressure.p_pos_asd, min: max_abs_pressure.p_neg_asd };
+        };
+
+        const comboData = {
+            combo_wind_wall_ww_max: 0, combo_wind_wall_ww_min: 0,
+            combo_wind_wall_lw_max: 0, combo_wind_wall_lw_min: 0,
+            combo_wind_roof_ww_max: 0, combo_wind_roof_ww_min: 0,
+            combo_wind_roof_lw_max: 0, combo_wind_roof_lw_min: 0,
+            combo_wind_cc_max: 0, combo_wind_cc_min: 0,
+            combo_wind_cc_wall_max: 0, combo_wind_cc_wall_min: 0,
+        };
+
+
+        const ww_wall = getGoverningMwfrsPressure('Windward Wall');
+        const lw_wall = getGoverningMwfrsPressure('Leeward Wall');
+        const ww_roof = getGoverningMwfrsPressure('Windward Roof');
+        const lw_roof = getGoverningMwfrsPressure('Leeward Roof');
+
+        comboData.combo_wind_wall_ww_max = ww_wall.max;
+        comboData.combo_wind_wall_ww_min = ww_wall.min;
+        comboData.combo_wind_wall_lw_max = lw_wall.max;
+        comboData.combo_wind_wall_lw_min = lw_wall.min;
+        comboData.combo_wind_roof_ww_max = ww_roof.max;
+        comboData.combo_wind_roof_ww_min = ww_roof.min;
+        comboData.combo_wind_roof_lw_max = lw_roof.max;
+        comboData.combo_wind_roof_lw_min = lw_roof.min;
+
+        const candc = results.candc;
+        if (candc && candc.applicable && candc.pressures) {
+            for (const [zone, pressureData] of Object.entries(candc.pressures)) {
+                const p_asd_pos = pressureData.p_pos * 0.6;
+                const p_asd_neg = pressureData.p_neg * 0.6;
+                if (zone.toLowerCase().includes('wall')) {
+                    comboData.combo_wind_cc_wall_max = Math.max(comboData.combo_wind_cc_wall_max, p_asd_pos);
+                    comboData.combo_wind_cc_wall_min = Math.min(comboData.combo_wind_cc_wall_min, p_asd_neg);
+                } else {
+                    comboData.combo_wind_cc_max = Math.max(comboData.combo_wind_cc_max, p_asd_pos);
+                    comboData.combo_wind_cc_min = Math.min(comboData.combo_wind_cc_min, p_asd_neg);
+                }
+            }
+        }
+        sendToCombos(comboData, 'Wind Calculator', 'Wind');
+    }
+}
+
+function renderWindResults(results) {
+    // This function is now correctly defined.
+    lastWindRunResults = results; // Save for sending to combos
+    const {
+        inputs, intermediate, warnings, errors, jurisdiction_note,
+        directional_results, candc, envelope_results, mwfrs_method,
+        open_building_ref, parapet_results, overhang_results, rooftop_results,
+        torsional_case, heightVaryingResults_L,
+        roofPressureDist_L, roofPressureDist_B
+    } = results;
+
+    const units = getUnits(inputs.unit_system);
+    const { p_unit, h_unit } = units;
+
+    // Determine structure type for conditional rendering
+    const is_arched_roof = inputs.structure_type === 'Arched Roofs';
+    const is_truss_tower = inputs.structure_type.startsWith('Trussed Towers');
+    const is_chimney = inputs.structure_type.startsWith('Chimneys, Tanks');
+    const is_solid_sign = inputs.structure_type === 'Solid Freestanding Signs/Walls';
+    const is_open_sign = inputs.structure_type === 'Open Signs/Frames';
+
+    const report = new ReportBuilder({
+        reportId: 'wind-report-content',
+        title: `WIND LOAD REPORT (${inputs.effective_standard})`,
+        warnings: warnings,
+        actionButtons: [
+            { id: 'send-to-combos-btn', text: 'Send to Combos', classes: 'bg-purple-600 hover:bg-purple-700' }
+        ]
+    });
+
+    if (jurisdiction_note) report.addSection(null, `<div class="bg-blue-100 dark:bg-blue-900/50 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md"><p><strong>Jurisdiction Note:</strong> ${jurisdiction_note}</p></div>`);
+
+    report.addSection('Design Parameters', renderDesignParameters(results.inputs, results.intermediate, units), 'design-parameters-section');
+    report.addSection('Detailed Calculation Breakdown', renderCalculationBreakdown(results, units), 'calc-breakdown-section');
+
+    // --- Special rendering path for Arched Roofs ---
+    if (is_arched_roof) {
+        const { arched_roof_results } = results;
+        const { cnMap, ref, pressures } = arched_roof_results;
+        let archedRoofHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations based on ${ref}.</p>
+                    <table class="w-full mt-4 border-collapse">
+                        <thead class="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                                <th>Roof Zone</th>
+                                <th>C<sub>N</sub></th>
+                                <th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
+                            </tr>
+                        </thead>
+                        <tbody class="dark:text-gray-300 text-center">`;
+        for (const [zone, data] of Object.entries(pressures)) {
+            const final_pressure = inputs.design_method === 'ASD' ? data.pressure_asd : data.pressure;
+            archedRoofHtml += `<tr>
+                        <td>${zone}</td>
+                        <td>${safeToFixed(data.CN, 3)}</td>
+                        <td>${safeToFixed(final_pressure, 2)}</td>
+                     </tr>`;
+        }
+        archedRoofHtml += `</tbody></table>`;
+        report.addSection('Arched Roof Net Pressures', archedRoofHtml, 'arched-roof-section');
+        report.render('results-container');
+        return;
+    }
+
+    // --- Special rendering path for Trussed Towers ---
+    if (is_truss_tower) {
+        const { truss_tower_results } = results;
+        const { Cf, ref, pressure, pressure_asd, Kz_tower, qz_tower } = truss_tower_results;
+        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
+        // Custom breakdown for trussed towers
+        const trussHtml = `
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the tower's centroid height (h/2).</p>
+                    <div class="calc-breakdown">
+                        <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
+                        <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_tower, 3)}</p>
+                        <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_tower, 2)} ${p_unit}</p>
+                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
+                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the solid area of one face (A<sub>f</sub> = ε &times; w &times; h).</p>
+                    </div>
+                 `;
+        report.addSection('Trussed Tower Calculation Breakdown', trussHtml, 'truss-tower-breakdown');
+        report.render('results-container');
+        return;
+    }
+
+    // --- Special rendering path for Chimneys/Tanks ---
+    if (is_chimney) {
+        const { chimney_results } = results;
+        const { Cf, ref, pressure, pressure_asd, h_struct, Kz_struct, qz_struct } = chimney_results;
+        const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
+        // Custom breakdown for chimneys/tanks
+        const chimneyHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
                     <div class="calc-breakdown">
                         <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
@@ -2626,7 +2864,7 @@ function renderWindResults(results) {
         const { CN, ref, pressure, pressure_asd, h_sign, Kz_sign, qz_sign } = solid_sign_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
         // Custom breakdown for solid signs
-    const solidSignHtml = `
+        const solidSignHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the sign's centroid height.</p>
                     <div class="calc-breakdown">
                         <p><b>Height to Sign Centroid (z):</b> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</p>
@@ -2641,22 +2879,23 @@ function renderWindResults(results) {
         report.render('results-container');
         return;
     }
+
     // --- Special rendering path for Open Signs ---
     if (is_open_sign) {
         const { open_sign_results } = results;
         const { Cf, ref, pressure, pressure_asd } = open_sign_results;
         const final_pressure = inputs.design_method === 'ASD' ? pressure_asd : pressure;
-    const openSignHtml = `
+        const openSignHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">The design wind pressure below should be multiplied by the solid area of the sign (A<sub>s</sub>) to get the total design force (F).</p>
                     <div class="calc-breakdown">
-                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub></p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.solidity_ratio})</p>
-                        <p><b>Design Wind Pressure (p):</b> ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
+                        <p><b>Formula:</b> p = q<sub>h</sub> &times; G &times; C<sub>f</sub></p>
+                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                     </div>
                  `;
-        report.addSection('Open Sign Force Calculation', openSignHtml, 'open-sign-section');
+        report.addSection('Open Sign Calculation Breakdown', openSignHtml, 'open-sign-breakdown');
         report.render('results-container');
-        return; // End rendering for open signs
+        return;
     }
 
     // --- Assemble Report Sections for Buildings ---

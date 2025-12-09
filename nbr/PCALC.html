@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="pcalc_title">PCalc - Concrete Column Checker</title>
+    <title data-i18n="pcalc_title">PCalc - Concrete Column Checker (NBR 6118)</title>
+    
+    <!-- External Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Theme Script -->
     <script>
-        // Immediate theme application
         (function() {
             if (localStorage.getItem('theme') === 'dark' || 
                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -19,130 +22,341 @@
             }
         })();
     </script>
+
+    <!-- Local Project Dependencies -->
     <link rel="stylesheet" href="../styles.min.css">
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    
+    <style>
+        .table-container::-webkit-scrollbar { height: 8px; width: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .table-container::-webkit-scrollbar-track { background: #1e293b; }
+        .dark .table-container::-webkit-scrollbar-thumb { background: #475569; }
+        
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .tab-btn.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-color: #3b82f6;
+        }
+        .dark .tab-btn.active {
+            background-color: #2563eb; /* blue-600 */
+            border-color: #2563eb;
+        }
+    </style>
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300">
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300 flex flex-col overflow-hidden">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <div id="header-placeholder" style="min-height: 110px;"></div>
+    <div class="flex-grow flex flex-col h-full">
+        <!-- Header Placeholder -->
+        <div id="header-placeholder" class="flex-shrink-0" style="min-height: 64px;"></div>
 
-        <main id="pcalc-app" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Left Panel: Inputs -->
-            <div class="flex flex-col gap-6">
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_section_geometry">Section Geometry</h2>
-                    <form id="geometry-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label for="section-type" class="block text-sm font-medium mb-1" data-i18n="pcalc_section_type">Section Type</label>
-                            <select id="section-type" name="section-type">
-                                <option value="Retangular">Rectangular</option>
-                                <option value="Circular">Circular</option>
-                            </select>
+        <main id="pcalc-app" class="flex flex-col lg:flex-row flex-grow overflow-hidden">
+            
+            <!-- Left Panel: Inputs ONLY -->
+            <div class="w-full lg:w-[390px] flex flex-col bg-white dark:bg-gray-800 border-r dark:border-gray-700 shadow-lg z-10 flex-shrink-0">
+                
+                <!-- Ribbon Tabs -->
+                <div class="flex overflow-x-auto border-b dark:border-gray-700 p-2 gap-1 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
+                    <button class="tab-btn active px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-geometry">Geometry</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-materials">Materials</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-reinforcement">Rebar</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-loads">Loads</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-criteria">Criteria</button>
+                </div>
+
+                <!-- Tab Contents (Scrollable part) -->
+                <div class="flex-grow overflow-y-auto p-4 custom-scrollbar">
+                    
+                    <!-- Geometry Tab -->
+                    <div id="tab-geometry" class="tab-content space-y-4">
+                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">Section Geometry</h2>
+                        <form id="geometry-form" class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Section Type</label>
+                                <select id="section-type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                                    <option value="Retangular">Rectangular</option>
+                                    <option value="Circular">Circular</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-span-2">
+                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Boundary Condition</label>
+                                <select id="boundary-type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                                    <option value="pinned">Pinned-Pinned (Biapoiado)</option>
+                                    <option value="cantilever">Cantilever (Balanço)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Width (hx) [cm]</label>
+                                <input type="number" id="hx" value="30" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Height (hy) [cm]</label>
+                                <input type="number" id="hy" value="50" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Column Length L (cm)</label>
+                                <input type="number" id="length" value="400" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div class="col-span-2 pt-2">
+                                <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
+                                    <input type="checkbox" id="check-2nd-order" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Calculate 2nd Order Effects</span>
+                                </label>
+                            </div>
+                        </form>
+                        <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800">
+                            <p class="text-[10px] text-blue-600 dark:text-blue-400 leading-relaxed">
+                                <span class="font-bold">Note:</span> For circular sections, 'hx' acts as the diameter. 'hy' is ignored.
+                            </p>
                         </div>
-                        <div><label for="hx" class="block text-sm font-medium mb-1">hx (cm)</label><input type="number" id="hx" name="hx" value="30"></div>
-                        <div><label for="hy" class="block text-sm font-medium mb-1">hy (cm)</label><input type="number" id="hy" name="hy" value="50"></div>
-                    </form>
-                </div>
+                    </div>
 
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_materials">Materials</h2>
-                    <form id="materials-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div><label for="fck" class="block text-sm font-medium mb-1">fck (MPa)</label><input type="number" id="fck" name="fck" value="25"></div>
-                    </form>
-                </div>
+                    <!-- Materials Tab -->
+                    <div id="tab-materials" class="tab-content hidden space-y-4">
+                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">Material Properties</h2>
+                        <form id="materials-form" class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2 sm:col-span-1">
+                                <label class="block text-xs font-medium mb-1 text-gray-500">Concrete fck (MPa)</label>
+                                <input type="number" id="fck" value="25" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div class="col-span-2 sm:col-span-1">
+                                <label class="block text-xs font-medium mb-1 text-gray-500">Steel fyk (MPa)</label>
+                                <input type="number" id="fyk" value="500" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-xs font-medium mb-1 text-gray-500">Elastic Modulus Es (GPa)</label>
+                                <input type="number" id="es" value="210" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            
+                            <div class="col-span-2 pt-2">
+                                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Safety Factors (γ)</h3>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="block text-[10px] font-medium text-gray-400 mb-1">Concrete (γc)</label>
+                                        <input type="number" id="gamac" value="1.4" step="0.1" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm text-center bg-white dark:bg-gray-700 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-medium text-gray-400 mb-1">Steel (γs)</label>
+                                        <input type="number" id="gamas" value="1.15" step="0.05" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm text-center bg-white dark:bg-gray-700 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-medium text-gray-400 mb-1">Load (γf)</label>
+                                        <input type="number" id="gamaf" value="1.4" step="0.1" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm text-center bg-white dark:bg-gray-700 dark:text-white">
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
 
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_reinforcement">Reinforcement</h2>
-                    <form id="reinforcement-form">
-                        <div class="overflow-x-auto">
-                            <table id="reinforcement-table" class="w-full text-sm text-left">
-                                <thead>
+                    <!-- Reinforcement Tab -->
+                    <div id="tab-reinforcement" class="tab-content hidden space-y-4">
+                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Reinforcement</h2>
+                            <div class="flex gap-2">
+                                <button type="button" id="add-bar-btn" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">+ Bar</button>
+                                <button type="button" id="generate-rect-btn" class="text-green-600 hover:text-green-800 text-xs font-semibold">+ Pattern</button>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-y-auto table-container max-h-[300px] border rounded-md dark:border-gray-700">
+                            <table id="reinforcement-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
                                     <tr>
-                                        <th class="px-4 py-2">x (cm)</th>
-                                        <th class="px-4 py-2">y (cm)</th>
-                                        <th class="px-4 py-2">Diameter (mm)</th>
-                                        <th class="px-4 py-2"></th>
+                                        <th class="px-3 py-2 font-semibold">x (cm)</th>
+                                        <th class="px-3 py-2 font-semibold">y (cm)</th>
+                                        <th class="px-3 py-2 font-semibold">Ø (mm)</th>
+                                        <th class="px-3 py-2 w-8"></th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                                    <!-- Rows injected by JS -->
+                                </tbody>
                             </table>
                         </div>
-                        <button type="button" id="add-bar-btn" class="mt-4" data-i18n="pcalc_add_bar">+ Add Bar</button>
-                    </form>
-                </div>
+                        <p class="text-[10px] text-gray-400 text-center italic">Coordinates are relative to the bottom-left corner (0,0).</p>
+                    </div>
 
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_loads">Factored Loads</h2>
-                    <form id="loads-form">
-                        <div class="overflow-x-auto">
-                            <table id="loads-table" class="w-full text-sm text-left">
-                                <thead>
+                    <!-- Loads Tab -->
+                    <div id="tab-loads" class="tab-content hidden space-y-4">
+                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Design Loads (Sk)</h2>
+                            <div class="flex gap-2 items-center">
+                                <label for="upload-excel" class="cursor-pointer py-1 px-2 text-[10px] font-semibold bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition-colors">
+                                    Import Excel
+                                </label>
+                                <input type="file" id="upload-excel" accept=".xlsx, .xls" class="hidden">
+                                <button type="button" id="add-load-btn" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">+ Case</button>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-y-auto table-container max-h-[300px] border rounded-md dark:border-gray-700">
+                            <table id="loads-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
                                     <tr>
-                                        <th class="px-4 py-2">N (kN)</th>
-                                        <th class="px-4 py-2">Mx (kNm)</th>
-                                        <th class="px-4 py-2">My (kNm)</th>
-                                        <th class="px-4 py-2"></th>
+                                        <th class="px-2 py-2 font-semibold w-16">N (kN)</th>
+                                        <th class="px-2 py-2 font-semibold">Mx Top</th>
+                                        <th class="px-2 py-2 font-semibold">Mx Bot</th>
+                                        <th class="px-2 py-2 font-semibold">My Top</th>
+                                        <th class="px-2 py-2 font-semibold">My Bot</th>
+                                        <th class="px-1 py-2 w-6"></th>
                                     </tr>
                                 </thead>
-                                <tbody></tbody>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                                    <!-- Rows injected by JS -->
+                                </tbody>
                             </table>
                         </div>
-                        <button type="button" id="add-load-btn" class="mt-4" data-i18n="pcalc_add_load">+ Add Load</button>
-                    </form>
-                </div>
-                 <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_config">Calculation Settings</h2>
-                    <!-- Add settings inputs here if needed -->
+                        <div class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-100 dark:border-yellow-800">
+                            <p class="text-[10px] text-yellow-700 dark:text-yellow-400">
+                                <span class="font-bold">Tip:</span> Paste data directly from Excel (Ctrl+V).<br>
+                                Format: N | Mx_top | Mx_bot | My_top | My_bot
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Criteria Tab -->
+                    <div id="tab-criteria" class="tab-content hidden space-y-4">
+                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">Design Criteria</h2>
+                        
+                        <div id="criteria-container" class="space-y-4">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
                 </div>
 
-                <div class="flex justify-center items-center gap-4 mt-4">
-                    <button id="new-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">New</button>
-                    <button id="open-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Open</button>
-                    <button id="save-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Save</button>
-                    <button id="calculate-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700" data-i18n="pcalc_calculate">Calculate</button>
-                    <button id="pdf-btn" class="bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700">Generate PDF</button>
+                <!-- Action Footer -->
+                <div class="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+                    <button id="calculate-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform active:scale-[0.98] flex items-center justify-center gap-2">
+                        <span>CALCULATE</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                    <div id="feedback-message" class="text-center text-xs min-h-[20px] mt-2 font-medium"></div>
                 </div>
             </div>
 
             <!-- Right Panel: Results -->
-            <div class="flex flex-col gap-6">
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4" data-i18n="pcalc_cross_section">Cross Section</h2>
-                    <div id="cross-section-canvas" class="min-h-[300px] bg-gray-100 dark:bg-gray-800 rounded-md"></div>
-                </div>
-                <div class="form-section">
-                    <h2 class="text-xl font-bold mb-4">Results</h2>
-                    <div class="flex flex-wrap items-center gap-4 mb-4">
-                        <button id="nmxmy-btn" class="text-sm font-medium">N-Mx-My</button>
-                        <button id="nmx-btn" class="text-sm font-medium">N-Mx</button>
-                        <button id="nmy-btn" class="text-sm font-medium">N-My</button>
+            <div class="flex-grow flex flex-col h-full overflow-hidden bg-gray-100 dark:bg-gray-900 relative">
+                <!-- Result Content -->
+                <div class="flex-grow overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar">
+                    
+                    <!-- Row 1: 3D Chart (5/8) + Section (3/8) -->
+                    <!-- Height reduced to 400px -->
+                    <div class="grid grid-cols-1 xl:grid-cols-8 gap-6 h-[400px] min-h-[400px]">
+                        <!-- 3D Chart (Envoltória) - 5/8 Width (cols 1-5) -->
+                        <div class="xl:col-span-5 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Interaction Surface</h3>
+                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">3D View</span>
+                            </div>
+                            <div id="chart3d" class="flex-grow relative w-full">
+                                <div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                                    Ready to calculate
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cross Section Preview (3/8 Width) (cols 6-8) -->
+                        <div class="xl:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-700 dark:text-gray-300 text-xs uppercase tracking-wider">Cross Section</h3>
+                                <span class="text-[10px] text-gray-400">Scroll to Zoom</span>
+                            </div>
+                            <div id="cross-section-container" class="relative w-full flex-grow bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                                <canvas id="sectionCanvas" class="block w-full h-full"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div class="relative h-96">
-                        <canvas id="myChart"></canvas>
+
+                    <!-- Row 2: Elevation (1/2) + Results Table (1/2) -->
+                    <!-- Grid set to 2 cols for 50/50 split -->
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[500px] min-h-[500px]">
+                        <!-- Elevation View (1/2 Width) - REFACTORED TO SUPPORT 3 PLOTS -->
+                        <div class="xl:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Column Elevation (2nd Order Effects)</h3>
+                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Normal | Mx | My</span>
+                            </div>
+                            <div class="flex-grow relative w-full p-2 bg-white dark:bg-gray-900 grid grid-cols-3 gap-2">
+                                <!-- Placeholders for 3 plots - Corrected IDs to match JS logic easier -->
+                                <div id="elevation-plot-n" class="w-full h-full"></div>
+                                <div id="elevation-plot-mx" class="w-full h-full"></div>
+                                <div id="elevation-plot-my" class="w-full h-full"></div>
+                                <div id="elevation-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10" style="display:none;">
+                                    Select a load case to view elevation
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results Table (1/2 Width) -->
+                        <div class="xl:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Detailed Results</h3>
+                                <button class="text-xs text-blue-600 hover:underline">Export CSV</button>
+                            </div>
+                            <div class="flex-grow overflow-y-auto table-container p-0">
+                                <table id="results-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                    <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            <th class="px-4 py-3 font-semibold">Case</th>
+                                            <th class="px-4 py-3 font-semibold">Nsd</th>
+                                            <th class="px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">Mx,tot</th>
+                                            <th class="px-4 py-3 font-semibold text-green-600 dark:text-green-400">My,tot</th>
+                                            <th class="px-4 py-3 font-semibold text-center">Safety (ν)</th>
+                                            <th class="px-4 py-3 font-semibold">Status</th>
+                                            <th class="px-4 py-3 font-semibold"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        <!-- Results -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mt-6 overflow-x-auto">
-                        <table id="results-table" class="w-full text-sm text-left">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-2">Comb.</th>
-                                    <th class="px-4 py-2">Nsd (kN)</th>
-                                    <th class="px-4 py-2">Msd,x (kNm)</th>
-                                    <th class="px-4 py-2">Msd,y (kNm)</th>
-                                    <th class="px-4 py-2">F.S.</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                    
+                    <div id="footer-placeholder"></div>
                 </div>
             </div>
         </main>
-
-        <div id="footer-placeholder"></div>
     </div>
-<script src="PCALC.js"></script>
+
+    <script src="PCALC.js"></script>
+    
+    <!-- Tab Navigation Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    // Add active class to click tab
+                    tab.classList.add('active');
+                    
+                    // Hide all contents
+                    contents.forEach(c => c.classList.add('hidden'));
+                    // Show target content
+                    const target = document.getElementById(tab.dataset.target);
+                    if(target) target.classList.remove('hidden');
+                });
+            });
+        });
+    </script>
 </body>
 </html>
