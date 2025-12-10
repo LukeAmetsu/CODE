@@ -62,8 +62,7 @@ const canvasView = {
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.injectHeader) window.injectHeader({ activePage: 'pcalc', pageTitle: 'pcalc_title', headerPlaceholderId: 'header-placeholder', pathPrefix: '../' });
-    if (window.injectFooter) window.injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+
 
     injectDynamicUI();
 

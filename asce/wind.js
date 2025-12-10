@@ -1186,7 +1186,7 @@ const windLoadCalculator = (() => {
         if (enclosure_classification === 'Open') {
             const isObstructed = wind_obstruction === 'obstructed';
             const { cnMap, ref } = getOpenBuildingCnValues(roof_slope_deg, isObstructed, roof_type);
-            
+
             const open_results = {};
             for (const [zone, val] of Object.entries(cnMap)) {
                 if (!val) continue;
@@ -2512,7 +2512,7 @@ function sendWindToCombos(results) {
 function renderEnvelopeSection(envelope_results, inputs, intermediate, mwfrs_method, units) {
     const { p_unit } = units;
     const pressures = envelope_results.pressures;
-    
+
     let html = `
         <div class="copy-content">
             <p class="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">
@@ -2531,15 +2531,15 @@ function renderEnvelopeSection(envelope_results, inputs, intermediate, mwfrs_met
                 <tbody class="dark:text-gray-300 text-center">`;
 
     const sortedZones = Object.keys(pressures).sort();
-    
+
     sortedZones.forEach((zone, i) => {
         const data = pressures[zone];
         // For Envelope, we typically have p_net (max magnitude) and p_net_uplift (min magnitude/uplift)
-        
+
         const factor = inputs.design_method === 'ASD' ? 0.6 : 1.0;
         const p_max = data.p_net * factor;
         const p_min = data.p_net_uplift * factor;
-        
+
         html += `
             <tr>
                 <td>${sanitizeHTML(zone)}</td>
@@ -2654,13 +2654,17 @@ function renderWindResults(results) {
                         <p><b>Velocity Pressure (q<sub>z</sub>) at h:</b> ${safeToFixed(qz_struct, 2)} ${p_unit}</p>
                         <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
-                            <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
-                            <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
-                            <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
-                         </div></td></tr>`;
-    });
-} else {
-    html += `<thead class="bg-gray-100 dark:bg-gray-700">
+                        <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
+                        <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the projected area normal to the wind (A = D &times; h).</p>
+                    </div>
+                 `;
+        report.addSection('Chimney/Tank Calculation Breakdown', chimneyHtml, 'chimney-breakdown');
+        report.render('results-container');
+        return;
+    }
+    else {
+        html += `<thead class="bg-gray-100 dark:bg-gray-700">
                         <tr>
                             <th>Zone</th>
                             <th>GCp</th>
@@ -2668,22 +2672,22 @@ function renderWindResults(results) {
                         </tr>
                     </thead>
                     <tbody class="dark:text-gray-300 text-center">`;
-    Object.entries(candc.pressures).forEach(([zone, data], i) => {
-        const p_neg_lrfd = data.p_neg;
-        const p_pos_lrfd = data.p_pos;
-        const pressure = inputs.design_method === 'ASD' ? Math.min(p_neg_lrfd, p_pos_lrfd) * 0.6 : Math.min(p_neg_lrfd, p_pos_lrfd);
-        const detailId = `candc-detail-${i}`;
-        html += `<tr>
+        Object.entries(candc.pressures).forEach(([zone, data], i) => {
+            const p_neg_lrfd = data.p_neg;
+            const p_pos_lrfd = data.p_pos;
+            const pressure = inputs.design_method === 'ASD' ? Math.min(p_neg_lrfd, p_pos_lrfd) * 0.6 : Math.min(p_neg_lrfd, p_pos_lrfd);
+            const detailId = `candc-detail-${i}`;
+            html += `<tr>
                             <td>${sanitizeHTML(zone)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                             <td>${safeToFixed(data.gcp_neg, 2)}</td><td>${safeToFixed(pressure, 2)}</td>
                          </tr>
                          <tr id="${detailId}" class="details-row"><td colspan="3" class="p-0"><div class="calc-breakdown">
                             <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
                          </div></td></tr>`;
-    });
-}
-html += `</tbody></table></div>`;
-return html;
+        });
+    }
+    html += `</tbody></table></div>`;
+    return html;
 }
 
 function sendWindToCombos(results) {

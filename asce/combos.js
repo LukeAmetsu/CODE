@@ -1,6 +1,6 @@
-let lastComboRunResults = null;
+var lastComboRunResults = null;
 
-const comboInputIds = [
+var comboInputIds = [
     'combo_asce_standard', 'combo_jurisdiction', 'combo_design_method', 'combo_input_load_level', 'combo_unit_system',
     'combo_dead_load_d', 'combo_live_load_l', 'combo_roof_live_load_lr', 'combo_rain_load_r', 'combo_balanced_snow_load_sb',
     'combo_unbalanced_windward_snow_load_suw', 'combo_unbalanced_leeward_snow_load_sul', 'combo_drift_surcharge_sd', 'combo_seismic_load_e',
@@ -13,31 +13,31 @@ const comboInputIds = [
     'combo_wind_cc_max', 'combo_wind_cc_min',
     'combo_wind_cc_wall_max', 'combo_wind_cc_wall_min'
 ];
-const handleRunComboCheck = createCalculationHandler({
+var handleRunComboCheck = createCalculationHandler({
     inputIds: comboInputIds,
     storageKey: 'combo-calculator-inputs',
     validationRuleKey: 'combo',
     calculatorFunction: (inputs) => {
         const validation = validateInputs(Object.keys(inputs), validationRules.combo);
-        const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;        
+        const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;
         const scenarios = buildScenarios(inputs);
 
         const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
         const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
-        
+
         const scenarios_data = {};
         for (const key in scenarios) {
             const isWallScenario = key.includes('wall');
-            
+
             // Start with all loads from the form.
             const scenario_loads = {
-                D: inputs.combo_dead_load_d, 
-                L: inputs.combo_live_load_l, 
-                Lr: inputs.combo_roof_live_load_lr, 
-                R: inputs.combo_rain_load_r, 
+                D: inputs.combo_dead_load_d,
+                L: inputs.combo_live_load_l,
+                Lr: inputs.combo_roof_live_load_lr,
+                R: inputs.combo_rain_load_r,
                 S: scenarios[key].S, // Use scenario-specific snow
-                E: inputs.combo_seismic_load_e, 
-                unit_system: inputs.combo_unit_system 
+                E: inputs.combo_seismic_load_e,
+                unit_system: inputs.combo_unit_system
             };
 
             // **CORRECTED LOGIC**: For wall analysis, zero out ALL roof-specific gravity loads.
@@ -46,7 +46,7 @@ const handleRunComboCheck = createCalculationHandler({
                 scenario_loads.R = 0;
                 scenario_loads.S = 0; // Walls don't have direct snow load.
             }
-            
+
             scenarios_data[`${key}_wmax`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_max }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
             scenarios_data[`${key}_wmin`] = comboLoadCalculator.calculate({ ...scenario_loads, W: scenarios[key].W_min }, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
         }
@@ -177,7 +177,7 @@ function buildFormulaString(formula_def) {
     }).filter(Boolean).join(' + ');
 }
 
-const comboStrategies = {
+var comboStrategies = {
     'ASCE 7-16': {
         prepareLoads: (loads, level) => {
             // --- FIX: Correctly handle ASCE 7-16 wind load levels ---
@@ -286,7 +286,7 @@ function generateCalculationString(formula_def, scope) {
     });
     return terms.join(' + ');
 }
-const comboLoadCalculator = (() => {
+var comboLoadCalculator = (() => {
     function calculateCombinations(loads, standard, level, method) {
         const { D, L, Lr, R, E, unit_system } = loads;
         const strategy = comboStrategies[standard];
@@ -296,7 +296,7 @@ const comboLoadCalculator = (() => {
 
         // The prepareLoads function is now much simpler but retained for future-proofing.
         const { scope, adjustment_notes } = strategy.prepareLoads(loads, level);
-        
+
         // **FIXED**: Directly choose the correct definition set and remove old dynamic generation logic.
         let formulaDefs;
         if (method === 'LRFD') {
@@ -309,7 +309,7 @@ const comboLoadCalculator = (() => {
         for (const key in formulaDefs) {
             final_formulas[key] = buildFormulaFunction(formulaDefs[key]);
         }
-        
+
         let results = {};
         let pattern_results = {};
         let calc_strings = {};
@@ -317,7 +317,7 @@ const comboLoadCalculator = (() => {
 
         const live_load_threshold = scope.unit_system === 'imperial' ? 100 : 4.79;
         const pattern_load_required = scope.L > live_load_threshold;
-        
+
         const evaluateCombinations = (formulas, defs, data) => {
             const calculated = {};
             const strings = {};
@@ -327,7 +327,7 @@ const comboLoadCalculator = (() => {
             }
             return { results: calculated, strings };
         };
-        
+
         ({ results, strings: calc_strings } = evaluateCombinations(final_formulas, formulaDefs, scope));
         if (pattern_load_required) {
             const pattern_scope = { ...scope, L: 0.75 * scope.L };
@@ -345,7 +345,7 @@ const comboLoadCalculator = (() => {
  * Configuration for all possible calculation scenarios.
  * This is the single source of truth for scenario keys and titles.
  */
-const scenarioConfig = [
+var scenarioConfig = [
     { key: 'windward_wall', title: 'Windward Wall Analysis', s: 'unbalanced_windward_snow_load_suw', wMax: 'wind_wall_ww_max', wMin: 'wind_wall_ww_min' },
     { key: 'leeward_wall', title: 'Leeward Wall Analysis', s: 'unbalanced_leeward_snow_load_sul', wMax: 'wind_wall_lw_max', wMin: 'wind_wall_lw_min' },
     { key: 'windward_roof', title: 'Windward Roof Analysis', s: 'unbalanced_windward_snow_load_suw', wMax: 'wind_roof_ww_max', wMin: 'wind_roof_ww_min' },
@@ -387,7 +387,7 @@ function buildScenarios(inputs) {
  * Defines the configuration for displaying input loads in the report.
  * Each object can have a 'label', 'id' (for simple value lookup), or a 'value' function for complex calculations.
  */
-const inputLoadConfig = [
+var inputLoadConfig = [
     { label: 'Dead Load (D)', id: 'combo_dead_load_d' },
     { label: 'Live Load (L)', id: 'combo_live_load_l' },
     { label: 'Roof Live (Lr)', id: 'combo_roof_live_load_lr' },
@@ -453,7 +453,7 @@ function renderComboResults(fullResults) {
         return { cells: [label, value] };
     });
     report.addTableSection('A. Input Loads', { headers: ['Load', 'Value'], rows: inputRows }, 'combo-inputs-section');
-    
+
     // --- 2. Base Load Combinations (No Wind/Snow) ---
     const baseComboRows = [];
     for (const combo in fullResults.base_combos.results) {

@@ -44,7 +44,7 @@ async function injectHeader(config) {
     let navConfig = window.NAV_CONFIG;
     if (!navConfig) {
         try {
-            const response = await fetch(`${pathPrefix}js/nav-config.json`);
+            const response = await fetch(`${pathPrefix.replace(/\/+$/, '')}/js/nav-config.json`);
             navConfig = await response.json();
             window.NAV_CONFIG = navConfig;
         } catch (error) {

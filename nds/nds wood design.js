@@ -1,31 +1,22 @@
-let lastWoodRunResults = null; // To hold the results for report generation
+var lastWoodRunResults = null; // To hold the results for report generation
 
-const inputIds = [
-    'Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted',
+var inputIds = [
+    'Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted', 'jurisdiction',
     'b_width', 'd_depth', 'unbraced_length_L', 'effective_length_factor_K', 'bearing_length_Lb',
     'load_duration', 'wet_service', 'temperature', 'flat_use', 'incising', 'repetitive_member', 'deflection_span', 'deflection_limit',
     'axial_load_P', 'moment_load_M', 'shear_load_V'
 ];
 
-const handleRunWoodCheck = createCalculationHandler({
-    inputIds: inputIds,
-    storageKey: 'wood-design-inputs',
-    validationRuleKey: 'wood',
-    calculatorFunction: woodChecker.run,
-    renderFunction: renderWoodResults,
-    resultsContainerId: 'wood-results-container',
-    buttonId: 'run-wood-check-btn'
-});
-
-initializeApp({
-    inputIds: inputIds,
-    calculationHandler: handleRunWoodCheck
-});
-
-const woodChecker = (() => {
+var woodChecker = (() => {
     function calculate_all_factors(inputs) {
         const factors = {};
-        const { is_wet, temp_cond, Fb, Fc, b, d, is_incised, is_repetitive, Lb, CD } = inputs;
+        const { is_wet, temp_cond, Fb, Fc, b, d, is_incised, is_repetitive, Lb, CD, jurisdiction } = inputs;
+
+        // OSHA Factor of Safety Implementation
+        // Standard NDS ASD has FOS ~ 1.5 - 2.0 depending on property.
+        // OSHA requires FOS = 4.0. We apply a conservative reduction factor C_OSHA = 0.5.
+        // This effectively doubles the safety factor.
+        factors.C_OSHA = jurisdiction === 'OSHA' ? 0.5 : 1.0;
 
         factors.CD = CD;
         factors.CM_Fb = is_wet && Fb > 1150 ? 0.85 : 1.0;
@@ -40,7 +31,7 @@ const woodChecker = (() => {
         else if (temp_cond === 'high') factors.Ct = 0.7;
         else factors.Ct = 1.0;
 
-        if (d > 12) factors.CF = Math.pow((12 / d), 1/9);
+        if (d > 12) factors.CF = Math.pow((12 / d), 1 / 9);
         else if (d > 4) factors.CF = 1.0;
         else factors.CF = b >= 4 ? 1.1 : 1.5;
 
@@ -59,12 +50,13 @@ const woodChecker = (() => {
             Fc: inputs.Fc_unadjusted, E: inputs.E_unadjusted, E_min: inputs.E_min_unadjusted,
             b: inputs.b_width, d: inputs.d_depth, Lu: inputs.unbraced_length_L * 12, K: inputs.effective_length_factor_K, Lb: inputs.bearing_length_Lb,
             CD: parseFloat(inputs.load_duration),
+            jurisdiction: inputs.jurisdiction,
             is_wet: inputs.wet_service.includes('Wet'),
             temp_cond: inputs.temperature,
             is_weak_axis: inputs.flat_use.includes('Weak'),
             is_incised: inputs.incising.includes('Yes'),
             is_repetitive: inputs.repetitive_member.includes('Yes'),
-            P: inputs.axial_load_P * 1000, 
+            P: inputs.axial_load_P * 1000,
             M: inputs.moment_load_M * 1000 * 12,
             deflection_span: inputs.deflection_span * 12,
             deflection_limit_divisor: inputs.deflection_limit,
@@ -117,10 +109,10 @@ const woodChecker = (() => {
         }
 
         const adj = {};
-        adj.Fb_prime = processedInputs.Fb * factors.CD * factors.CM_Fb * factors.Ct * factors.CL * factors.CF * factors.Cfu * factors.Ci * factors.Cr;
-        adj.Fv_prime = processedInputs.Fv * factors.CD * factors.CM_Fv * factors.Ct * factors.Ci;
-        adj.Fc_perp_prime = processedInputs.Fc_perp * factors.CM_Fc_perp * factors.Ct * factors.Ci * factors.Cb;
-        adj.Fc_prime = Fc_star * factors.Cp;
+        adj.Fb_prime = processedInputs.Fb * factors.CD * factors.CM_Fb * factors.Ct * factors.CL * factors.CF * factors.Cfu * factors.Ci * factors.Cr * factors.C_OSHA;
+        adj.Fv_prime = processedInputs.Fv * factors.CD * factors.CM_Fv * factors.Ct * factors.Ci * factors.C_OSHA;
+        adj.Fc_perp_prime = processedInputs.Fc_perp * factors.CM_Fc_perp * factors.Ct * factors.Ci * factors.Cb * factors.C_OSHA;
+        adj.Fc_prime = Fc_star * factors.Cp * factors.C_OSHA;
         results.adjusted = adj;
 
         const A = processedInputs.b * processedInputs.d;
@@ -142,7 +134,7 @@ const woodChecker = (() => {
 
         // Pass factors for breakdown display
         results.factors = factors;
-        
+
         // Deflection Calculation (assuming simply supported beam with uniform load)
         const I = (b_beam * Math.pow(d_beam, 3)) / 12;
         const E_adj = processedInputs.E * factors.CM_E * factors.Ct * factors.Ci;
@@ -165,11 +157,28 @@ const woodChecker = (() => {
         // Return a single object with all necessary data for rendering
         return {
             inputs: processedInputs, // Return the processed inputs
-            ...results };
+            ...results
+        };
     }
 
     return { run };
 })();
+
+var handleRunWoodCheck = createCalculationHandler({
+    inputIds: inputIds,
+    storageKey: 'wood-design-inputs',
+    validationRuleKey: 'wood',
+    calculatorFunction: woodChecker.run,
+    renderFunction: renderWoodResults,
+    resultsContainerId: 'wood-results-container',
+    buttonId: 'run-wood-check-btn'
+});
+
+initializeApp({
+    inputIds: inputIds,
+    calculationHandler: handleRunWoodCheck,
+    buttonId: 'run-wood-check-btn'
+});
 
 function renderWoodResults(calculationOutput) {
     lastWoodRunResults = calculationOutput;
@@ -190,8 +199,8 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Actual Bending Stress (f<sub>b</sub>) = M / S<sub>x</sub> = ${inputs.M.toFixed(0)} lb-in / ${actual.Sx.toFixed(3)} in³ = <b>${actual.fb.toFixed(2)} psi</b></li>
-                    <li>Allowable Bending Stress (F'<sub>b</sub>) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>r</sub></li>
-                    <li>F'<sub>b</sub> = ${inputs.Fb.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fb.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.CL.toFixed(3)} * ${wood_results.factors.CF.toFixed(3)} * ${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.Cr.toFixed(2)} = <b>${adj.Fb_prime.toFixed(2)} psi</b></li>
+                    <li>Allowable Bending Stress (F'<sub>b</sub>) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>r</sub> * C<sub>OSHA</sub></li>
+                    <li>F'<sub>b</sub> = ${inputs.Fb.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fb.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.CL.toFixed(3)} * ${wood_results.factors.CF.toFixed(3)} * ${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.Cr.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fb_prime.toFixed(2)} psi</b></li>
                     <li>Beam Stability Factor (C<sub>L</sub>) = <b>${wood_results.factors.CL.toFixed(3)}</b> (from R<sub>B</sub> = ${wood_results.Rb.toFixed(2)})</li>
                 </ul>`
         },
@@ -204,8 +213,8 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Actual Shear Stress (f<sub>v</sub>) = 1.5 * V / A = 1.5 * ${inputs.V.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fv.toFixed(2)} psi</b></li>
-                    <li>Allowable Shear Stress (F'<sub>v</sub>) = F<sub>v</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub></li>
-                    <li>F'<sub>v</sub> = ${inputs.Fv.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fv.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci.toFixed(2)} = <b>${adj.Fv_prime.toFixed(2)} psi</b></li>
+                    <li>Allowable Shear Stress (F'<sub>v</sub>) = F<sub>v</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
+                    <li>F'<sub>v</sub> = ${inputs.Fv.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fv.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fv_prime.toFixed(2)} psi</b></li>
                 </ul>`
         },
         { // Compression
@@ -217,7 +226,7 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Actual Compression Stress (f<sub>c</sub>) = P / A = ${inputs.P.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fc.toFixed(2)} psi</b></li>
-                    <li>Allowable Compression Stress (F'<sub>c</sub>) = F<sub>c</sub>* * C<sub>P</sub> = ${wood_results.Fc_star.toFixed(2)} psi * ${wood_results.factors.Cp.toFixed(3)} = <b>${adj.Fc_prime.toFixed(2)} psi</b></li>
+                    <li>Allowable Compression Stress (F'<sub>c</sub>) = F<sub>c</sub>* * C<sub>P</sub> * C<sub>OSHA</sub> = ${wood_results.Fc_star.toFixed(2)} psi * ${wood_results.factors.Cp.toFixed(3)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fc_prime.toFixed(2)} psi</b></li>
                     <li>Column Stability Factor (C<sub>P</sub>) = <b>${wood_results.factors.Cp.toFixed(3)}</b> (from L<sub>e</sub>/d = ${wood_results.Le_d.toFixed(2)})</li>
                 </ul>`
         },
@@ -262,7 +271,9 @@ function renderWoodResults(calculationOutput) {
             Cr: { name: 'Repetitive Member (C<sub>r</sub>)', ref: 'NDS 4.3.9' },
             Cb: { name: 'Bearing Area (C<sub>b</sub>)', ref: 'NDS 3.10.4' },
             CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
+            CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
             Cp: { name: 'Column Stability (C<sub>P</sub>)', ref: 'NDS 3.7.1' },
+            C_OSHA: { name: 'OSHA Safety Factor (C<sub>OSHA</sub>)', ref: 'OSHA 1926' },
         };
         const info = factorMap[key];
         if (info) {

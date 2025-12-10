@@ -2,7 +2,7 @@
 var lastSteelRunResults = null;
 
 var steelCheckInputIds = [
-    'design_method', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
+    'design_method', 'jurisdiction', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
     'section_type', 'aisc_shape_select',
     'd', 'bf', 'tf', 'tw', 'stiffener_spacing_a', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
@@ -11,7 +11,8 @@ var steelCheckInputIds = [
 
 // --- Move steelChecker definition OUTSIDE DOMContentLoaded ---
 var steelChecker = (() => {
-    function getDesignFactor(design_method, phi, omega) {
+    function getDesignFactor(design_method, phi, omega, jurisdiction) {
+        if (jurisdiction === 'OSHA') return 0.25; // FOS = 4.0 -> phi = 1/4 = 0.25
         if (design_method === 'LRFD') return phi;
         return 1 / omega; // ASD
     }
@@ -160,7 +161,7 @@ var steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction);
         const phiMn_or_Mn_omega = Mn * factor;
 
         return {
@@ -177,7 +178,7 @@ var steelChecker = (() => {
         const { Zx, Sx, type } = props;
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction);
 
         let isCompact, Mn;
         let slenderness = {};
@@ -229,7 +230,7 @@ var steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction);
 
         // F10.1 Yielding
         const My = 1.5 * Fy * Sx;
@@ -257,7 +258,7 @@ var steelChecker = (() => {
 
         const phi_b = 0.9;
         const omega_b = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b);
+        const factor = getDesignFactor(inputs.design_method, phi_b, omega_b, inputs.jurisdiction);
 
         // Basic yielding capacity
         const Mpy = Math.min(Fy * Zy, 1.6 * Fy * Sy); // AISC F6.1
@@ -420,7 +421,7 @@ var steelChecker = (() => {
 
         const phi_c = 0.9;
         const omega_c = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_c, omega_c);
+        const factor = getDesignFactor(inputs.design_method, phi_c, omega_c, inputs.jurisdiction);
 
         // --- 1. Slender Element Reduction Factor (Q) ---
         const Q_results = checkHSSLocalBuckling(props, inputs); // This function handles multiple types
@@ -474,7 +475,7 @@ var steelChecker = (() => {
         const Pn_yield = Fy * Ag;
         const phi_ty = 0.90;
         const omega_ty = 1.67;
-        const factor_yield = getDesignFactor(inputs.design_method, phi_ty, omega_ty);
+        const factor_yield = getDesignFactor(inputs.design_method, phi_ty, omega_ty, inputs.jurisdiction);
         const cap_yield = Pn_yield * factor_yield;
 
         const An_net = Ag;
@@ -482,7 +483,7 @@ var steelChecker = (() => {
         const Pn_rupture = Fu * Ae;
         const phi_tr = 0.75;
         const omega_tr = 2.00;
-        const factor_rupture = getDesignFactor(inputs.design_method, phi_tr, omega_tr);
+        const factor_rupture = getDesignFactor(inputs.design_method, phi_tr, omega_tr, inputs.jurisdiction);
         const cap_rupture = Pn_rupture * factor_rupture;
 
         const governing_capacity = Math.min(cap_yield, cap_rupture);
@@ -512,7 +513,7 @@ var steelChecker = (() => {
         const a = stiffener_spacing_a; // clear distance between transverse stiffeners
         const phi_v = 0.9;
         const omega_v = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
+        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v, inputs.jurisdiction);
         const h_tw = h / tw;
         const kv = 5.34;
 
@@ -593,7 +594,7 @@ var steelChecker = (() => {
         const { Fy, E } = inputs;
         const phi_v = inputs.section_type === 'Rectangular HSS' ? 0.9 : 1.0;
         const omega_v = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v);
+        const factor = getDesignFactor(inputs.design_method, phi_v, omega_v, inputs.jurisdiction);
 
         let Vn, Cv = 1.0, h_tw = 0, Aw, governing_limit_state;
 
@@ -910,7 +911,7 @@ var steelChecker = (() => {
 
         const phi_T = 0.9;
         const omega_T = 1.67;
-        const factor = getDesignFactor(inputs.design_method, phi_T, omega_T);
+        const factor = getDesignFactor(inputs.design_method, phi_T, omega_T, inputs.jurisdiction);
 
         return {
             applicable: true,
@@ -934,7 +935,7 @@ var steelChecker = (() => {
 
         const phi_T = 0.90;
         const omega_T = 1.67;
-        const factor = getDesignFactor(design_method, phi_T, omega_T);
+        const factor = getDesignFactor(design_method, phi_T, omega_T, inputs.jurisdiction);
 
         let Tn, governing_limit_state;
 
@@ -981,7 +982,7 @@ var steelChecker = (() => {
 
         const phi = 0.75;
         const omega = 2.00;
-        const factor = getDesignFactor(inputs.design_method, phi, omega);
+        const factor = getDesignFactor(inputs.design_method, phi, omega, inputs.jurisdiction);
 
         // --- Web Local Yielding (AISC J10.2) ---
         const N_lb = lb_bearing;
@@ -1073,7 +1074,7 @@ var steelChecker = (() => {
         const Rn = (Cr * Aw * Fy) / (h_tw ** 2);
         const phi = 0.90;
         const omega = 1.67;
-        const factor = getDesignFactor(design_method, phi, omega);
+        const factor = getDesignFactor(design_method, phi, omega, inputs.jurisdiction);
 
         return {
             applicable: true,
@@ -1906,16 +1907,7 @@ function renderSteelResults(results) {
 
 // --- DOMContentLoaded: Initialize UI ---
 document.addEventListener('DOMContentLoaded', () => {
-    injectHeader({
-        activePage: 'steel-check',
-        pageTitle: 'AISC Steel Section Design Checker',
-        headerPlaceholderId: 'header-placeholder',
-        pathPrefix: '../'
-    });
 
-    injectFooter({
-        footerPlaceholderId: 'footer-placeholder'
-    });
     initializeSharedUI();
 
     function populateMaterialDropdowns() {

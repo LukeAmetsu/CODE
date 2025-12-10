@@ -1,9 +1,9 @@
-const nbr6118InputIds = [
+var nbr6118InputIds = [
     'fck', 'fyk', 'bw', 'h', 'c', 'num_barras', 'diam_barra',
     'diam_estribo', 'pernas_estribo', 's_estribo', 'Msd', 'Vsd'
 ];
 
-const nbr6118Calculator = (() => {
+var nbr6118Calculator = (() => {
     function calculate(inputs) {
         const i = { ...inputs };
         // Convert to base units (kN, cm)
@@ -111,7 +111,7 @@ function renderNbrResults(calc_results) {
         { cells: ['Força Cortante (V<sub>Sd</sub>)', `${inputs.Vsd} kN`] }
     ];
     report.addTableSection('Resumo dos Dados de Entrada', { headers: ['Parâmetro', 'Valor'], rows: inputRows }, 'input-summary-section');
-    
+
     const tableRows = checks.map(check => {
         return {
             cells: [
@@ -134,7 +134,7 @@ function renderNbrResults(calc_results) {
     report.render('results-container');
 }
 
-const handleRunNbrCheck = createCalculationHandler({
+var handleRunNbrCheck = createCalculationHandler({
     inputIds: nbr6118InputIds,
     storageKey: 'nbr6118-inputs',
     validationRuleKey: 'nbr_concreto', // This key is used for validation and report naming

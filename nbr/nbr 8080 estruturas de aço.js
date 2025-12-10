@@ -1,9 +1,9 @@
-const nbr8800InputIds = [
+var nbr8800InputIds = [
     'fy', 'E', 'd', 'bf', 'tf', 'tw', 'Ag', 'Zx', 'rx', 'ry',
     'Lb', 'Cb', 'Nsd', 'Msdx'
 ];
 
-const nbr8800Calculator = (() => {
+var nbr8800Calculator = (() => {
     function calculate(inputs) {
         const i = { ...inputs };
         // Convert to base units (N, mm)
@@ -95,7 +95,7 @@ function generateSteelBreakdownHtml(check) {
         case 'Flexão (Eixo X)':
             return `
                 <ul>
-                    <li>Momento de Plastificação (M<sub>pl</sub>) = Z<sub>x</sub> &times; f<sub>y</sub> = <b>${((check.details.Zx * check.details.fy) / 10**6).toFixed(2)} kN·m</b></li>
+                    <li>Momento de Plastificação (M<sub>pl</sub>) = Z<sub>x</sub> &times; f<sub>y</sub> = <b>${((check.details.Zx * check.details.fy) / 10 ** 6).toFixed(2)} kN·m</b></li>
                     <li>Resistência (M<sub>Rd,x</sub>) = M<sub>pl</sub> / &gamma;<sub>a1</sub> = <b>${(check.capacity).toFixed(2)} kN·m</b></li>
                     <li><small>Nota: Flambagem lateral com torção (FLT) não foi verificada neste cálculo simplificado.</small></li>
                 </ul>`;
@@ -124,8 +124,8 @@ function renderNbr8800Results(calc_results) {
         },
         {
             name: 'Flexão (Eixo X)',
-            demand: calc_results.inputs.Msdx / 10**6,
-            capacity: results.Mrd / 10**6,
+            demand: calc_results.inputs.Msdx / 10 ** 6,
+            capacity: results.Mrd / 10 ** 6,
             ratio: results.Mrd > 0 ? (calc_results.inputs.Msdx / results.Mrd) : Infinity,
             unit: 'kN·m',
             details: { ...results, Zx: inputs.Zx, fy: inputs.fy }
@@ -148,7 +148,7 @@ function renderNbr8800Results(calc_results) {
     });
 
     report.addSection('Resumo dos Dados de Entrada', inputSummaryHtml, 'input-summary-section');
-    
+
     const tableRows = checks.map(check => {
         if (!check.name) return null; // Skip if it's not a valid check row
         return {
@@ -166,7 +166,7 @@ function renderNbr8800Results(calc_results) {
     report.render('results-container'); // Render into the main container
 }
 
-const handleRunNbr8800Check = createCalculationHandler({
+var handleRunNbr8800Check = createCalculationHandler({
     inputIds: nbr8800InputIds,
     storageKey: 'nbr8800-inputs',
     validationRuleKey: 'nbr_aco', // This key is used for validation and report naming

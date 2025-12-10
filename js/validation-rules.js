@@ -660,8 +660,8 @@ function validateInputs(inputIds, rules = {}) {
         let isValid = true;
         let errorMessage = null;
 
-        const isRequired = rule ? (typeof rule.required === 'function' ? rule.required(inputs) : rule.required) : false; 
-        
+        const isRequired = rule ? (typeof rule.required === 'function' ? rule.required(inputs) : rule.required) : false;
+
         // 1. Required Check
         if (isRequired && rawValue.trim() === "") {
             isValid = false;
@@ -697,21 +697,21 @@ function validateInputs(inputIds, rules = {}) {
 
     // Cross-field validation
     if (rules.crossField && Array.isArray(rules.crossField)) {
-         rules.crossField.forEach(check => {
-             // The condition usually returns true if the BAD condition is met (e.g. invalid state)
-             if (check.condition(inputs)) {
-                 if (check.level === 'warning') {
-                     warnings.push(check.message);
-                 } else {
-                     errors.push(check.message);
-                     validationStatus = false;
-                 }
-             }
-         });
+        rules.crossField.forEach(check => {
+            // The condition defines the VALID state. If it returns false, it's an error/warning.
+            if (!check.condition(inputs)) {
+                if (check.level === 'warning') {
+                    warnings.push(check.message);
+                } else {
+                    errors.push(check.message);
+                    validationStatus = false;
+                }
+            }
+        });
     }
 
     // Provide a centralized message if validation failed
-    const messageArea = document.getElementById('messageArea'); 
+    const messageArea = document.getElementById('messageArea');
     if (!validationStatus && messageArea) {
         messageArea.textContent = "Please check the errors above.";
     }

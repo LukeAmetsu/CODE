@@ -1,6 +1,6 @@
 // --- 1. CONFIGURAÇÕES E DADOS BASE (NBR 8681 e 6118) ---
 // This section defines the core coefficients and load types according to Brazilian standards.
-const LOAD_TYPES = {
+var LOAD_TYPES = {
     'Peso Próprio (PP)': { isVariable: false, gamma_g: 1.35 },
     'Permanente (G)': { isVariable: false, gamma_g: 1.40 },
     'Permanente (Retração/Recalque)': { isVariable: false, gamma_g: 1.20 },
@@ -13,7 +13,7 @@ const LOAD_TYPES = {
     'Outras Ações Variáveis (Q)': { isVariable: true, psi0: 0.8, psi1: 0.6, psi2: 0.4, gamma_q: 1.4 },
 };
 
-const nbrComboCalculator = (() => {
+var nbrComboCalculator = (() => {
     function calculate(userLoads) {
         const permanentes = userLoads.filter(l => !LOAD_TYPES[l.type].isVariable);
         const variaveis = userLoads.filter(l => LOAD_TYPES[l.type].isVariable);
@@ -127,6 +127,7 @@ initializeApp({
         validationRuleKey: 'nbr_combos', // Added for consistency
         feedbackElId: 'feedback-message'
     }),
+    buttonId: 'generate-report-btn',
     onReady: () => {
         const loadsContainer = document.getElementById('loads-container');
         const addLoadBtn = document.getElementById('add-load-btn');
@@ -136,40 +137,40 @@ initializeApp({
 });
 
 function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {
-        const rowId = `row-${Date.now()}`;
-        const row = document.createElement('div');
-        row.id = rowId;
-        row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center load-row';
+    const rowId = `row-${Date.now()}`;
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center load-row';
 
-        const loadName = document.createElement('input');
-        loadName.type = 'text';
-        loadName.placeholder = 'Ex: Vento X+, Sobrecarga 1';
-        loadName.className = 'load-name';
+    const loadName = document.createElement('input');
+    loadName.type = 'text';
+    loadName.placeholder = 'Ex: Vento X+, Sobrecarga 1';
+    loadName.className = 'load-name';
 
-        const loadType = document.createElement('select');
-        loadType.className = 'load-type';
-        Object.keys(LOAD_TYPES).forEach(key => {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = key;
-            loadType.appendChild(option);
-        });
+    const loadType = document.createElement('select');
+    loadType.className = 'load-type';
+    Object.keys(LOAD_TYPES).forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = key;
+        loadType.appendChild(option);
+    });
 
-        const loadValue = document.createElement('input');
-        loadValue.type = 'number';
-        loadValue.placeholder = 'Valor (ex: 10)';
-        loadValue.className = 'load-value w-full';
-        loadValue.value = load.value;
+    const loadValue = document.createElement('input');
+    loadValue.type = 'number';
+    loadValue.placeholder = 'Valor (ex: 10)';
+    loadValue.className = 'load-value w-full';
+    loadValue.value = load.value;
 
-        const removeButton = document.createElement('button');
-        removeButton.textContent = "Remover";
-        removeButton.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 text-sm';
-        removeButton.onclick = () => document.getElementById(rowId).remove();
-        
-        row.appendChild(loadName);
-        row.appendChild(loadType);
-        row.appendChild(loadValue);
-        row.appendChild(removeButton);
+    const removeButton = document.createElement('button');
+    removeButton.textContent = "Remover";
+    removeButton.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 text-sm';
+    removeButton.onclick = () => document.getElementById(rowId).remove();
+
+    row.appendChild(loadName);
+    row.appendChild(loadType);
+    row.appendChild(loadValue);
+    row.appendChild(removeButton);
 
     container.appendChild(row);
 };
@@ -184,8 +185,8 @@ function gatherNbrLoads() {
     }).filter(l => l.name && l.type);
 }
 
-function renderNbrComboResults(fullResults) {
-    const { combinations, inputs } = fullResults;
+function renderNbrComboResults(fullResults, inputs) {
+    const { combinations } = fullResults;
 
     const report = new ReportBuilder({
         reportId: 'nbr-report-content',

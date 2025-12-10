@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verificador de Viga Protendida (NBR 6118)</title>
-    
+
     <!-- Dependências Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Configuração de Tema -->
     <script>
-        (function() {
+        (function () {
             const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
             document.documentElement.classList.toggle('dark', isDark);
         })();
@@ -27,10 +29,11 @@
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
-    
+
     <!-- Lógica da Página -->
     <script src="viga_protendida.js" defer></script>
 </head>
+
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
 
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
@@ -40,7 +43,7 @@
             <h1 class="text-2xl font-bold mb-6 text-center">Verificador de Viga Protendida (Multi-Cabo / NBR 6118)</h1>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
+
                 <!-- Coluna 1: Parâmetros Gerais e Materiais -->
                 <div class="space-y-6">
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
@@ -48,86 +51,101 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-medium mb-1">Norma</label>
-                                <input type="text" id="design_code" value="NBR 6118" class="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm" readonly>
+                                <input type="text" id="design_code" value="NBR 6118"
+                                    class="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm" readonly>
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Sistema</label>
-                                <select id="unit_system" class="w-full p-2 bg-white dark:bg-gray-700 border rounded text-sm">
+                                <select id="unit_system"
+                                    class="w-full p-2 bg-white dark:bg-gray-700 border rounded text-sm">
                                     <option value="metric">Métrico</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Concreto f<sub>ck</sub> (MPa)</label>
-                                <input type="number" id="fck" value="35" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="fck" value="35"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Aço f<sub>ptk</sub> (MPa)</label>
-                                <input type="number" id="fptk" value="1900" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="fptk" value="1900"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Aço E<sub>p</sub> (MPa)</label>
-                                <input type="number" id="Ep" value="200000" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="Ep" value="200000"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
-                             <div>
+                            <div>
                                 <label class="block text-xs font-medium mb-1">Área Cordoalha (cm²)</label>
-                                <input type="number" id="Ap" value="1.40" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="Ap" value="1.40"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                         </div>
                     </div>
 
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
                         <h2 class="font-bold mb-3 border-b pb-1">Perdas (Parâmetros)</h2>
-                         <div class="grid grid-cols-2 gap-4">
-                             <div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
                                 <label class="block text-xs font-medium mb-1">Atrito (μ)</label>
-                                <input type="number" id="mu" value="0.2" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="mu" value="0.2"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Ondulação (k)</label>
-                                <input type="number" id="k" value="0.002" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="k" value="0.002"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Acomodação (mm)</label>
-                                <input type="number" id="anchorage_slip" value="6" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="anchorage_slip" value="6"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Umidade (%)</label>
-                                <input type="number" id="humidity" value="70" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="humidity" value="70"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Tipo Cimento (s)</label>
-                                <select id="cement_s_factor" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <select id="cement_s_factor"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                                     <option value="0.25">Normal (CPI/II)</option>
                                     <option value="0.20">Rápido (CPV)</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Perímetro (m)</label>
-                                <input type="number" id="exposed_perimeter" value="2.0" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="exposed_perimeter" value="2.0"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
-                             <!-- Inputs ocultos para compatibilidade com lógica antiga se necessário -->
-                             <input type="hidden" id="cement_alpha_factor" value="1">
-                             <input type="hidden" id="Kperdas" value="0.85">
-                         </div>
+                            <!-- Inputs ocultos para compatibilidade com lógica antiga se necessário -->
+                            <input type="hidden" id="cement_alpha_factor" value="1">
+                            <input type="hidden" id="Kperdas" value="0.85">
+                        </div>
                     </div>
                 </div>
 
                 <!-- Coluna 2: Geometria e Cabos -->
                 <div class="space-y-6">
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
-                         <h2 class="font-bold mb-3 border-b pb-1">Geometria da Viga</h2>
-                         <div class="grid grid-cols-2 gap-4 mb-4">
+                        <h2 class="font-bold mb-3 border-b pb-1">Geometria da Viga</h2>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label class="block text-xs font-medium mb-1">Comprimento (m)</label>
-                                <input type="number" id="beam_length" value="20" class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <input type="number" id="beam_length" value="20"
+                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-xs font-medium mb-1">Altura Aprox (cm)</label>
-                                <input type="number" id="beam_height" readonly class="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm">
+                                <input type="number" id="beam_height" readonly
+                                    class="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm">
                             </div>
                         </div>
                         <label class="block text-xs font-medium mb-1">Coordenadas Seção (cm)</label>
-                        <textarea id="beam_coords" rows="4" class="w-full p-2 border rounded text-sm font-mono dark:bg-gray-700 dark:border-gray-600">0,100
+                        <textarea id="beam_coords" rows="4"
+                            class="w-full p-2 border rounded text-sm font-mono dark:bg-gray-700 dark:border-gray-600">0,100
 50,100
 50,85
 20,85
@@ -140,7 +158,9 @@
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
                         <div class="flex justify-between items-center mb-3 border-b pb-1">
                             <h2 class="font-bold">Grupos de Cabos</h2>
-                            <button id="add-cable-group-btn" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">+ Grupo</button>
+                            <button id="add-cable-group-btn"
+                                class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">+
+                                Grupo</button>
                         </div>
                         <div id="cables-list-container" class="max-h-[500px] overflow-y-auto pr-1">
                             <!-- JS irá injetar os cartões de cabos aqui -->
@@ -153,12 +173,15 @@
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
                         <h2 class="font-bold mb-3 border-b pb-1">Cargas (kN/m)</h2>
                         <div class="space-y-2">
-                             <div><label class="text-xs">Peso Próprio</label><input type="number" id="load_pp" value="15" class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
-                             <div><label class="text-xs">Permanente</label><input type="number" id="load_perm" value="10" class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
-                             <div><label class="text-xs">Variável</label><input type="number" id="load_var" value="15" class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
+                            <div><label class="text-xs">Peso Próprio</label><input type="number" id="load_pp" value="15"
+                                    class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
+                            <div><label class="text-xs">Permanente</label><input type="number" id="load_perm" value="10"
+                                    class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
+                            <div><label class="text-xs">Variável</label><input type="number" id="load_var" value="15"
+                                    class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
                         </div>
                     </div>
-                    
+
                     <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow h-[300px]">
                         <h2 class="font-bold mb-1 text-xs text-center">Seção Transversal</h2>
                         <div class="relative h-full pb-6">
@@ -175,20 +198,43 @@
                     <canvas id="longitudinal-canvas"></canvas>
                 </div>
             </div>
-            
+
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
-                 <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Carregar</button>
-                 <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Salvar</button>
-                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                 <input type="file" id="file-input" class="hidden" accept=".txt,.json">
-                <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-blue-700 shadow-lg transform transition hover:scale-105">Calcular e Verificar</button>
+                <button id="load-inputs-btn"
+                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Carregar</button>
+                <button id="save-inputs-btn"
+                    class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+                <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
+                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
+                <button id="run-check-btn"
+                    class="bg-blue-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-blue-700 shadow-lg transform transition hover:scale-105">Calcular
+                    e Verificar</button>
             </div>
         </main>
-        
+
         <div id="feedback-message" class="text-center mt-4 text-sm h-5"></div>
         <div id="results-container" class="mt-10 mb-20"></div>
         <div id="footer-placeholder" class="mt-12"></div>
     </div>
 
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'viga-protendida', // Matches key in nav-config.json
+                    pageTitle: 'verification_of_prestressed_beam', // Optional i18n key
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../' // CRITICAL FIX: Correct relative path
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder'
+                });
+            }
+        });
+    </script>
 </body>
+
 </html>

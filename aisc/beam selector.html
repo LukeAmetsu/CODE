@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AISC Beam Selector (Table 3-10)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Dark mode init
+        (function () {
+            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main id="beam-selector-main">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Beam Selector (AISC Table 3-10)</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Finds the lightest W-shape based on Unbraced Length ($L_b$) and Required Moment ($M_u$).
+                        Calculates capacities per AISC 360-16/22 Chapter F.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                    <div class="space-y-4">
+                        <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">Design Criteria</h3>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Method</label>
+                            <select id="design_method"
+                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <option value="LRFD" selected>LRFD (&phi; = 0.9)</option>
+                                <option value="ASD">ASD (&Omega; = 1.67)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Steel Yield ($F_y$)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="Fy" value="50"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <span class="flex items-center text-sm text-gray-500">ksi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">Stability</h3>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Unbraced Length ($L_b$)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="Lb" value="5" step="0.5"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-bold text-blue-700 dark:text-blue-300">
+                                <span class="flex items-center text-sm text-gray-500">ft</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Distance between purlins/braces.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Moment Gradient ($C_b$)</label>
+                            <input type="number" id="Cb" value="1.0" step="0.01"
+                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            <p class="text-xs text-gray-400 mt-1">1.0 = Conservative. 1.14 = Simple Span Uniform Load.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
+                        <h3 class="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">Option A: Known
+                            Moment</h3>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Required Moment ($M_{req}$)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="Mu_direct" value="" placeholder="e.g. 45"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <span class="flex items-center text-sm text-gray-500">kips-ft</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 italic">If filled, this overrides Option B.</p>
+                    </div>
+
+                    <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
+                        <h3 class="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">Option B: Calc from
+                            Load</h3>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Beam Span ($L$)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="span_calc" value="20"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <span class="flex items-center text-sm text-gray-500">ft</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Uniform Load ($w$)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="w_load" value="0.6" step="0.1"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <span class="flex items-center text-sm text-gray-500">kips/ft</span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-center text-gray-500" id="calc_preview">
+                            M = wL²/8 = <span id="moment_preview">30.0</span> kips-ft
+                        </div>
+                    </div>
+
+                </div>
+
+                <div
+                    class="mt-8 flex flex-wrap gap-4 justify-center md:justify-end border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <div class="flex items-center gap-2 mr-auto">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="depth_limit_check" class="sr-only peer">
+                            <div
+                                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+                            </div>
+                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Max Depth
+                                Limit</span>
+                        </label>
+                        <input type="number" id="max_depth" value="14" class="w-20 p-1 text-sm border rounded hidden"
+                            placeholder="in">
+                    </div>
+
+                    <button id="run-selector-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
+                        Find Lightest Beam
+                    </button>
+                </div>
+            </div>
+
+            <div id="results-container" class="hidden space-y-6">
+
+                <div
+                    class="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 p-4 rounded shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-green-800 dark:text-green-300">Recommended Shape</h2>
+                        <div class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1" id="winner-name">W12x26
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400" id="winner-stats">Weight: 26 lb/ft •
+                            Efficiency: 85%</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Capacity vs Demand
+                        </div>
+                        <div class="text-xl font-bold" id="winner-ratio">
+                            <span class="text-green-600">45.2</span> / <span class="text-gray-500">30.0</span> k-ft
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                            <thead
+                                class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
+                                <tr>
+                                    <th class="px-6 py-3">Shape</th>
+                                    <th class="px-6 py-3">Weight (lb/ft)</th>
+                                    <th class="px-6 py-3">Depth (in)</th>
+                                    <th class="px-6 py-3">Capacity (k-ft)</th>
+                                    <th class="px-6 py-3">Ratio (D/C)</th>
+                                    <th class="px-6 py-3">L<sub>p</sub> / L<sub>r</sub> (ft)</th>
+                                    <th class="px-6 py-3">Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 text-xs text-center text-gray-400 border-t dark:border-gray-700">
+                        Showing top 10 lightest valid shapes.
+                    </div>
+                </div>
+            </div>
+
+            <div id="no-results"
+                class="hidden p-8 text-center bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400">
+                <p class="font-bold text-lg">No W-Shapes found.</p>
+                <p>Try reducing the load, bracing the beam (lower Lb), or removing depth limits.</p>
+            </div>
+
+        </main>
+
+        <div id="footer-placeholder" class="mt-12"></div>
+    </div>
+
+    <script src="../js/template.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="aisc-shapes-database-v16.0.js" defer></script>
+    <script src="database.js" defer></script>
+    <script src="beam selector.js" defer></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'beam_selector',
+                    pageTitle: 'beam_selector',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+            }
+        });
+    </script>
+</body>
+
+</html>

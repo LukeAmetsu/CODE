@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,9 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         // Lógica de Tema Imediata para evitar o "flash"
-        (function() {
-            if (localStorage.getItem('theme') === 'dark' || 
-               (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
@@ -24,6 +25,7 @@
     <script src="../js/template.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
 </head>
+
 <body>
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <div id="header-placeholder" style="min-height: 110px;"></div>
@@ -35,11 +37,13 @@
                         <h2>Parâmetros Gerais</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="fy" class="block text-sm font-medium mb-1">Resistência ao Escoamento (f<sub>y</sub>, MPa)</label>
+                                <label for="fy" class="block text-sm font-medium mb-1">Resistência ao Escoamento
+                                    (f<sub>y</sub>, MPa)</label>
                                 <input type="number" id="fy" value="345">
                             </div>
                             <div>
-                                <label for="E" class="block text-sm font-medium mb-1">Módulo de Elasticidade (E, MPa)</label>
+                                <label for="E" class="block text-sm font-medium mb-1">Módulo de Elasticidade (E,
+                                    MPa)</label>
                                 <input type="number" id="E" value="200000">
                             </div>
                         </div>
@@ -47,14 +51,22 @@
                     <div class="form-section">
                         <h2>Geometria do Perfil (Perfil I)</h2>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label for="d" class="block text-sm">Altura (d)</label><input type="number" id="d" value="533"></div>
-                            <div><label for="bf" class="block text-sm">Largura Mesa (b<sub>f</sub>)</label><input type="number" id="bf" value="210"></div>
-                            <div><label for="tf" class="block text-sm">Espessura Mesa (t<sub>f</sub>)</label><input type="number" id="tf" value="15.6"></div>
-                            <div><label for="tw" class="block text-sm">Espessura Alma (t<sub>w</sub>)</label><input type="number" id="tw" value="10.2"></div>
-                            <div><label for="Ag" class="block text-sm">Área Bruta (A<sub>g</sub>)</label><input type="number" id="Ag" value="12600"></div>
-                            <div><label for="Zx" class="block text-sm">Módulo Plástico (Z<sub>x</sub>)</label><input type="number" id="Zx" value="2350000"></div>
-                            <div><label for="rx" class="block text-sm">Raio de Giração (r<sub>x</sub>)</label><input type="number" id="rx" value="218"></div>
-                            <div><label for="ry" class="block text-sm">Raio de Giração (r<sub>y</sub>)</label><input type="number" id="ry" value="46.3"></div>
+                            <div><label for="d" class="block text-sm">Altura (d)</label><input type="number" id="d"
+                                    value="533"></div>
+                            <div><label for="bf" class="block text-sm">Largura Mesa (b<sub>f</sub>)</label><input
+                                    type="number" id="bf" value="210"></div>
+                            <div><label for="tf" class="block text-sm">Espessura Mesa (t<sub>f</sub>)</label><input
+                                    type="number" id="tf" value="15.6"></div>
+                            <div><label for="tw" class="block text-sm">Espessura Alma (t<sub>w</sub>)</label><input
+                                    type="number" id="tw" value="10.2"></div>
+                            <div><label for="Ag" class="block text-sm">Área Bruta (A<sub>g</sub>)</label><input
+                                    type="number" id="Ag" value="12600"></div>
+                            <div><label for="Zx" class="block text-sm">Módulo Plástico (Z<sub>x</sub>)</label><input
+                                    type="number" id="Zx" value="2350000"></div>
+                            <div><label for="rx" class="block text-sm">Raio de Giração (r<sub>x</sub>)</label><input
+                                    type="number" id="rx" value="218"></div>
+                            <div><label for="ry" class="block text-sm">Raio de Giração (r<sub>y</sub>)</label><input
+                                    type="number" id="ry" value="46.3"></div>
                         </div>
                     </div>
                 </div>
@@ -64,11 +76,13 @@
                         <h2>Contenção Lateral</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="Lb" class="block text-sm font-medium mb-1">Dist. entre Contenções (L<sub>b</sub>, m)</label>
+                                <label for="Lb" class="block text-sm font-medium mb-1">Dist. entre Contenções
+                                    (L<sub>b</sub>, m)</label>
                                 <input type="number" id="Lb" value="6">
                             </div>
                             <div>
-                                <label for="Cb" class="block text-sm font-medium mb-1">Fator de Modificação (C<sub>b</sub>)</label>
+                                <label for="Cb" class="block text-sm font-medium mb-1">Fator de Modificação
+                                    (C<sub>b</sub>)</label>
                                 <input type="number" id="Cb" value="1.0">
                             </div>
                         </div>
@@ -78,11 +92,13 @@
                         <p class="text-xs mb-2">Valores já majorados (ELU).</p>
                         <div class="space-y-4">
                             <div>
-                                <label for="Nsd" class="block text-sm font-medium mb-1">Força Axial (N<sub>Sd</sub>, kN)</label>
+                                <label for="Nsd" class="block text-sm font-medium mb-1">Força Axial (N<sub>Sd</sub>,
+                                    kN)</label>
                                 <input type="number" id="Nsd" value="500">
                             </div>
                             <div>
-                                <label for="Msdx" class="block text-sm font-medium mb-1">Momento Fletor (M<sub>Sd,x</sub>, kN·m)</label>
+                                <label for="Msdx" class="block text-sm font-medium mb-1">Momento Fletor
+                                    (M<sub>Sd,x</sub>, kN·m)</label>
                                 <input type="number" id="Msdx" value="200">
                             </div>
                         </div>
@@ -93,25 +109,51 @@
                     <div class="form-section">
                         <h2>Resumo dos Resultados</h2>
                         <div id="summary-results" class="space-y-3">
-                            <p class="text-center text-gray-500">Clique em "Verificar Perfil" para ver os resultados.</p>
+                            <p class="text-center text-gray-500">Clique em "Verificar Perfil" para ver os resultados.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="mt-8 flex justify-center">
-                <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Carregar</button>
-                <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 mr-4">Salvar</button>
-                <button id="run-check-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Verificar Perfil</button>
+                <button id="load-inputs-btn"
+                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Carregar</button>
+                <button id="save-inputs-btn"
+                    class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 mr-4">Salvar</button>
+                <button id="run-check-btn"
+                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Verificar
+                    Perfil</button>
                 <input type="file" id="file-input" class="hidden" accept=".txt,.json">
             </div>
         </main>
 
         <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
-        <button id="toggle-all-details-btn" class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-gray-600 text-xs" data-state="hidden">Mostrar Todos Detalhes</button>
+        <button id="toggle-all-details-btn"
+            class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-gray-600 text-xs"
+            data-state="hidden">Mostrar Todos Detalhes</button>
         <div id="results-container" class="mt-10 results-container"></div>
         <div id="footer-placeholder"></div>
     </div>
-<script src="nbr 8080 estruturas de aço.js"></script>
+    <script src="nbr 8080 estruturas de aço.js" defer></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'nbr-aco', // Verify key in nav-config.json
+                    pageTitle: 'verification_of_steel_profile',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder'
+                });
+            }
+        });
+    </script>
 </body>
+
 </html>

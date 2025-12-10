@@ -38,6 +38,13 @@
                                 </select>
                             </div>
                             <div>
+                                <label for="jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
+                                <select id="jurisdiction">
+                                    <option value="AISC" selected>AISC</option>
+                                    <option value="OSHA">OSHA</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label for="aisc_standard" class="block text-sm font-medium mb-1">AISC Standard</label>
                                 <select id="aisc_standard">
                                     <option value="360-22" selected>AISC 360-22</option>
@@ -262,12 +269,30 @@
         <div id="steel-results-container" class="mt-10 results-container"></div>
         <div id="footer-placeholder" class="mt-12"></div>
     </div>
-    <script src="../js/template.js"></script>
-    <script src="../js/shared-utils.js"></script>
-    <script src="../js/validation-rules.js"></script>
-    <script src="aisc-shapes-database-v16.0.js"></script>
-    <script src="database.js"></script>
-    <script src="steel check.js"></script>
+    <script src="../js/template.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="aisc-shapes-database-v16.0.js" defer></script>
+    <script src="database.js" defer></script>
+    <script src="steel check.js" defer></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'steel-check', // Verify key in nav-config.json
+                    pageTitle: 'steel_check',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder'
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

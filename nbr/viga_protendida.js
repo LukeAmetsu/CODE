@@ -104,19 +104,19 @@ const concreteBeamCalculator = (() => {
     function calculateInitialPrestressEstimate({ moments, materials, props, Kperdas, cables, ecc_mid, Ap, fptk }) {
         const total_strands = cables.reduce((acc, c) => acc + c.num_strands, 0);
         const Ap_single_cm2 = parseFloat(Ap) || 0;
-        
+
         const P_strand_kN = (Ap_single_cm2 * 0.74 * fptk) / 10;
         const M_aux_kNm = Math.max(moments.M_CF - (props.W.i / 1e6) * materials.fctf * 1000, moments.M_CQP);
-        const ks_m = props.ks / 100; 
-        const denominator = ks_m + ecc_mid; 
+        const ks_m = props.ks / 100;
+        const denominator = ks_m + ecc_mid;
 
         let P_est_i = 0;
         if (Math.abs(denominator) > 1e-9) {
-            P_est_i = (M_aux_kNm) / denominator; 
+            P_est_i = (M_aux_kNm) / denominator;
         }
-        
-        const Pest_perdas = Kperdas > 0 ? P_est_i / Kperdas : 0; 
-        
+
+        const Pest_perdas = Kperdas > 0 ? P_est_i / Kperdas : 0;
+
         const num_cables = cables.length || 1;
         const num_tendons_total_est = (P_strand_kN > 0) ? Math.ceil(Pest_perdas / P_strand_kN) : 0;
         const num_tendons_per_cable = Math.ceil(num_tendons_total_est / num_cables);
@@ -140,17 +140,17 @@ const concreteBeamCalculator = (() => {
         const h0_cm = u_ar_cm > 0 ? (2 * Ac_cm2) / u_ar_cm : 0;
         const gamma = 1 + Math.exp(-7.8 + 0.1 * U);
         const h_fic_cm = gamma * h0_cm;
-        const epsilon_1s = -8.09 + U/15 - U**2 / 2284 - U**3/133765 + U**4/7608150;
+        const epsilon_1s = -8.09 + U / 15 - U ** 2 / 2284 - U ** 3 / 133765 + U ** 4 / 7608150;
         const epsilon_2s = (33 + 2 * h_fic_cm) / (20.8 + 3 * h_fic_cm);
         const h_aux = h_fic_cm / 100;
         const A_cs = 40;
-        const B_cs = 116 * h_aux**3 - 282 * h_aux**2 + 220 * h_aux - 4.8;
-        const C_cs = 2.5 * h_aux**3 - 8.8 * h_aux + 40.7;
-        const D_cs = -75 * h_aux**3 + 585 * h_aux**2 + 496 * h_aux - 6.8;
-        const E_cs = -169 * h_aux**4 + 88 * h_aux**3 + 584 * h_aux**2 - 39 * h_aux + 0.8;
+        const B_cs = 116 * h_aux ** 3 - 282 * h_aux ** 2 + 220 * h_aux - 4.8;
+        const C_cs = 2.5 * h_aux ** 3 - 8.8 * h_aux + 40.7;
+        const D_cs = -75 * h_aux ** 3 + 585 * h_aux ** 2 + 496 * h_aux - 6.8;
+        const E_cs = -169 * h_aux ** 4 + 88 * h_aux ** 3 + 584 * h_aux ** 2 - 39 * h_aux + 0.8;
         const t_ratio = t0 / 100;
-        const beta_s_t0 = (t_ratio**3 + A_cs * t_ratio**2 + B_cs * t_ratio) / 
-                            (t_ratio**3 + C_cs * t_ratio**2 + D_cs * t_ratio + E_cs);
+        const beta_s_t0 = (t_ratio ** 3 + A_cs * t_ratio ** 2 + B_cs * t_ratio) /
+            (t_ratio ** 3 + C_cs * t_ratio ** 2 + D_cs * t_ratio + E_cs);
         const epsilon_cs = (epsilon_1s * epsilon_2s * (1 - beta_s_t0)) / 10000;
         const delta_sigma_cs = epsilon_cs * E_p;
         return { value: delta_sigma_cs, h_fic_cm, epsilon_cs, intermediate: { h_fic_cm, gamma, epsilon_cs, beta_s_t0, epsilon_1s, epsilon_2s } };
@@ -164,11 +164,11 @@ const concreteBeamCalculator = (() => {
         const phi_1c = 4.45 - 0.035 * U;
         const phi_2c = (42 + h_fic_cm) / (20 + h_fic_cm);
         const h_aux = h_fic_cm / 100;
-        const A_cc = 42 * h_aux**3 - 350 * h_aux**2 + 588 * h_aux + 113;
-        const B_cc = 768 * h_aux**3 - 3060 * h_aux**2 + 3234 * h_aux - 23;
-        const C_cc = -200 * h_aux**3 + 13 * h_aux**2 + 1090 * h_aux + 183;
-        const D_cc = 7579 * h_aux**3 - 31916 * h_aux**2 + 35343 * h_aux + 1931;
-        const beta_c_t0 = (t_0c**2 + A_cc * t_0c + B_cc) / (t_0c**2 + C_cc * t_0c + D_cc);
+        const A_cc = 42 * h_aux ** 3 - 350 * h_aux ** 2 + 588 * h_aux + 113;
+        const B_cc = 768 * h_aux ** 3 - 3060 * h_aux ** 2 + 3234 * h_aux - 23;
+        const C_cc = -200 * h_aux ** 3 + 13 * h_aux ** 2 + 1090 * h_aux + 183;
+        const D_cc = 7579 * h_aux ** 3 - 31916 * h_aux ** 2 + 35343 * h_aux + 1931;
+        const beta_c_t0 = (t_0c ** 2 + A_cc * t_0c + B_cc) / (t_0c ** 2 + C_cc * t_0c + D_cc);
         const phi_f = phi_1c * phi_2c * (1 - beta_c_t0);
         const phi_d = 0.4;
         const phi_total = phi_a + phi_f + phi_d;
@@ -193,7 +193,7 @@ const concreteBeamCalculator = (() => {
             if (x_pos >= x0 && x_pos <= x1) {
                 const y0 = ys[i - 1];
                 const y1 = ys[i];
-                if (Math.abs(x1 - x0) < 1e-6) return y0; 
+                if (Math.abs(x1 - x0) < 1e-6) return y0;
                 const t = (x_pos - x0) / (x1 - x0);
                 return y0 + t * (y1 - y0);
             }
@@ -241,7 +241,7 @@ const concreteBeamCalculator = (() => {
         const inputs = { ...raw_inputs };
         const { vertices, fck, beam_length, cables, Ap, Kperdas } = inputs;
         const Ap_single_cm2 = parseFloat(Ap) || 0;
-        
+
         const total_strands = cables.reduce((sum, c) => sum + c.num_strands, 0);
         const Ap_total_cm2 = Ap_single_cm2 * total_strands;
         const Ap_total_m2 = Ap_total_cm2 / 1e4;
@@ -252,7 +252,7 @@ const concreteBeamCalculator = (() => {
 
         const props = calculateSectionProperties(vertices);
         if (!props) return { errors: ["Seção inválida."] };
-        
+
         const A_m2 = props.area / 1e4;
         const Wi_m3 = props.W.i / 1e6;
         const Ws_m3 = props.W.s / 1e6;
@@ -263,7 +263,7 @@ const concreteBeamCalculator = (() => {
         const { loads, moments } = calculateLoadsAndMoments(inputs);
 
         const num_segments = 50;
-        const standard_x = Array.from({length: num_segments + 1}, (_, i) => i * (beam_length / num_segments));
+        const standard_x = Array.from({ length: num_segments + 1 }, (_, i) => i * (beam_length / num_segments));
         let cables_analysis = [];
 
         cables.forEach((cable, idx) => {
@@ -273,7 +273,7 @@ const concreteBeamCalculator = (() => {
                 const e = y_cg - y;
                 return { x, y, e };
             });
-            const x_a_result = calculateAnchorageSlipDistance(inputs, materials, cable_path_abs, cable.path.map(p=>p.x));
+            const x_a_result = calculateAnchorageSlipDistance(inputs, materials, cable_path_abs, cable.path.map(p => p.x));
             cables_analysis.push({
                 id: idx,
                 strands: cable.num_strands,
@@ -286,14 +286,14 @@ const concreteBeamCalculator = (() => {
         });
 
         const loss_results = calculateDetailedLossesMultiCable(inputs, props, materials, cables_analysis, moments, Ap_total_m2);
-        
+
         const detailed_calcs = {
             friction: loss_results.sigma_p_friction.map((p, i) => {
                 const calcStr = `${p.value.toFixed(1)} MPa`;
                 return { x: p.x, value: p.value || 0, calc: calcStr };
             }),
             anchorage: {
-                x_a: cables_analysis.map(c => c.x_a_result.x_a).reduce((a,b)=>a+b,0)/cables_analysis.length,
+                x_a: cables_analysis.map(c => c.x_a_result.x_a).reduce((a, b) => a + b, 0) / cables_analysis.length,
                 A_delta: { value: cables_analysis[0].x_a_result.A_delta || 0, calc: '' },
                 sigma_prime: loss_results.sigma_p_anchorage.map(p => ({ x: p.x, value: p.value || 0, calc: '' }))
             },
@@ -322,7 +322,7 @@ const concreteBeamCalculator = (() => {
         loss_results.detailed_calcs = detailed_calcs;
 
         const stress_profiles = { initial: { top: 0, bottom: 0 }, final: { top: 0, bottom: 0 } };
-        
+
         // ——————————————————————————————————————
         // CÁLCULO CORRETO DA FORÇA TOTAL NO MEIO DO VÃO
         // ——————————————————————————————————————
@@ -363,20 +363,20 @@ const concreteBeamCalculator = (() => {
             }
 
             // --- Área do cabo em m² (já vem correta no objeto após correção da função detalhada) ---
-            const Ap_m2 = c.Ap_cable_m2 || 0; 
+            const Ap_m2 = c.Ap_cable_m2 || 0;
 
             // --- Força em kN ---
-            const Pi_cabo    = sigma_i    * Ap_m2 * 1000;   // MPa × m² → MN → *1000 = kN
-            const Pinf_cabo = sigma_inf  * Ap_m2 * 1000;   
+            const Pi_cabo = sigma_i * Ap_m2 * 1000;   // MPa × m² → MN → *1000 = kN
+            const Pinf_cabo = sigma_inf * Ap_m2 * 1000;
 
-            P_total_i_mid       += Pi_cabo;
-            P_total_inf_mid     += Pinf_cabo;
-            M_prestress_i_mid   += Pi_cabo    * e_mid;
+            P_total_i_mid += Pi_cabo;
+            P_total_inf_mid += Pinf_cabo;
+            M_prestress_i_mid += Pi_cabo * e_mid;
             M_prestress_inf_mid += Pinf_cabo * e_mid;
         });
 
         // Arredondamento para exibição
-        P_total_i_mid   = Math.round(P_total_i_mid);
+        P_total_i_mid = Math.round(P_total_i_mid);
         P_total_inf_mid = Math.round(P_total_inf_mid);
 
         stress_profiles.initial.top = (-P_total_i_mid * 1000 / A_m2) + (M_prestress_i_mid * 1000 / Ws_m3) - (moments.M_g1k / 1000 / Ws_m3); // Força em N
@@ -387,23 +387,23 @@ const concreteBeamCalculator = (() => {
         // P/A (kN/m2 = kPa) / 1000 = MPa.
         stress_profiles.initial.top = (-P_total_i_mid / A_m2 / 1000) + (M_prestress_i_mid / Ws_m3 / 1000) - (moments.M_g1k / 1000 / Ws_m3);
         stress_profiles.initial.bottom = (-P_total_i_mid / A_m2 / 1000) - (M_prestress_i_mid / Wi_m3 / 1000) + (moments.M_g1k / 1000 / Wi_m3);
-        
+
         stress_profiles.final.top = (-P_total_inf_mid / A_m2 / 1000) + (M_prestress_inf_mid / Ws_m3 / 1000) - (moments.M_CQP / 1000 / Ws_m3);
         stress_profiles.final.bottom = (-P_total_inf_mid / A_m2 / 1000) - (M_prestress_inf_mid / Wi_m3 / 1000) + (moments.M_CF / 1000 / Wi_m3);
 
         const uls_checks = performUlsChecks(inputs, props, loss_results, Ap_total_m2, mid_x, cables_analysis);
-        
+
         // Excentricidade Média Ponderada
         const total_e_mid = cables_analysis.reduce((sum, c) => sum + (c.path_details[mid_idx].e * c.Ap_cable_m2), 0);
         const avg_ecc_mid = Ap_total_m2 > 0 ? total_e_mid / Ap_total_m2 : 0;
-        
+
         const prestress_checks = {
-             P_i: P_total_i_mid, 
-             P_total_i_mid_MN: P_total_i_mid / 1000, // MN para compatibilidade se usado
-             P_max_comp_i: solveForPrestressForce(-materials.limits.comp_i, -Ws_m3, moments.M_g1k / 1000, A_m2, avg_ecc_mid, 1.0),
-             P_min_tens_i: solveForPrestressForce(materials.limits.tens_i, Wi_m3, moments.M_g1k / 1000, A_m2, avg_ecc_mid, 1.0),
-             P_min_comp_s: solveForPrestressForce(-materials.limits.comp_s, -Ws_m3, moments.M_CQP / 1000, A_m2, avg_ecc_mid, Kperdas),
-             P_max_tens_s: solveForPrestressForce(materials.limits.tens_s, Wi_m3, moments.M_CF / 1000, A_m2, avg_ecc_mid, Kperdas),
+            P_i: P_total_i_mid,
+            P_total_i_mid_MN: P_total_i_mid / 1000, // MN para compatibilidade se usado
+            P_max_comp_i: solveForPrestressForce(-materials.limits.comp_i, -Ws_m3, moments.M_g1k / 1000, A_m2, avg_ecc_mid, 1.0),
+            P_min_tens_i: solveForPrestressForce(materials.limits.tens_i, Wi_m3, moments.M_g1k / 1000, A_m2, avg_ecc_mid, 1.0),
+            P_min_comp_s: solveForPrestressForce(-materials.limits.comp_s, -Ws_m3, moments.M_CQP / 1000, A_m2, avg_ecc_mid, Kperdas),
+            P_max_tens_s: solveForPrestressForce(materials.limits.tens_s, Wi_m3, moments.M_CF / 1000, A_m2, avg_ecc_mid, Kperdas),
         };
 
         const prestress_estimation = calculateInitialPrestressEstimate({ moments, materials, props, Kperdas, cables, ecc_mid: avg_ecc_mid, Ap, fptk: inputs.fptk });
@@ -414,14 +414,14 @@ const concreteBeamCalculator = (() => {
                 materials,
                 loads: { pp: inputs.load_pp, perm: inputs.load_perm, var: inputs.load_var, ...loads },
                 moments,
-                path_details: cables_analysis[0].path_details, 
+                path_details: cables_analysis[0].path_details,
                 prestress_checks,
                 prestress_estimation,
                 loss_results,
                 stress_profiles,
                 uls_checks,
                 cables_analysis,
-                avg_ecc_mid 
+                avg_ecc_mid
             },
             inputs
         };
@@ -487,83 +487,83 @@ const concreteBeamCalculator = (() => {
         const { beam_length, mu, k, anchorage_slip, fptk } = inputs;
         const { E_p } = materials;
         const sigma_pi = 0.74 * fptk;
-        
+
         // Ensure points are sorted and include ends and mid
-        const calc_points = [...new Set([...preliminary_key_points, 0, beam_length, beam_length/2])].sort((a,b)=>a-b);
+        const calc_points = [...new Set([...preliminary_key_points, 0, beam_length, beam_length / 2])].sort((a, b) => a - b);
         const refined_points = [];
         // Subdivide to ensure good integration resolution
-        for(let i=0; i<calc_points.length-1; i++){
+        for (let i = 0; i < calc_points.length - 1; i++) {
             refined_points.push(calc_points[i]);
-            const diff = calc_points[i+1] - calc_points[i];
-            if(diff > 1.0) { 
-                 const steps = Math.ceil(diff);
-                 for(let j=1; j<steps; j++) refined_points.push(calc_points[i] + j*(diff/steps));
+            const diff = calc_points[i + 1] - calc_points[i];
+            if (diff > 1.0) {
+                const steps = Math.ceil(diff);
+                for (let j = 1; j < steps; j++) refined_points.push(calc_points[i] + j * (diff / steps));
             }
         }
-        refined_points.push(calc_points[calc_points.length-1]);
-        const points_to_check = [...new Set(refined_points)].sort((a,b)=>a-b);
-        
+        refined_points.push(calc_points[calc_points.length - 1]);
+        const points_to_check = [...new Set(refined_points)].sort((a, b) => a - b);
+
         // Calculate basic friction profile
         const sigma_p_friction_prelim = points_to_check.map(x => {
             const angle_at_start = getTangentAngleAt(0, cable_path_abs, beam_length);
             const current_angle = getTangentAngleAt(x, cable_path_abs, beam_length);
             const cumulative_alpha = Math.abs(current_angle - angle_at_start);
             const value = sigma_pi * Math.exp(-(mu * cumulative_alpha + k * x));
-            return { x, value: isNaN(value) ? sigma_pi : value }; 
+            return { x, value: isNaN(value) ? sigma_pi : value };
         });
-        
+
         const delta = anchorage_slip; // mm
         const A_delta_target = E_p * (delta / 1000); // Required Area (MPa * m)
         let integral_sigma_fric = 0;
         let x_a = 0;
         let found = false;
-        let extra_drop = 0; 
-        
+        let extra_drop = 0;
+
         // CORRECTED ALGORITHM: 
         // Iterate x_i. Assume x_a = x_i.
         // Area_Wedge(x_i) = 2 * [ Integral(0->xi) Sigma(x)dx - xi * Sigma(xi) ]
         // This calculates the area between the friction curve and the horizontal line y = Sigma(xi), multiplied by 2.
-        
+
         for (let i = 1; i < sigma_p_friction_prelim.length; i++) {
             const p_curr = sigma_p_friction_prelim[i];
             const p_prev = sigma_p_friction_prelim[i - 1];
             const dx = p_curr.x - p_prev.x;
             const avg_sigma = (p_curr.value + p_prev.value) / 2;
-            
+
             integral_sigma_fric += avg_sigma * dx;
-            
+
             const area_if_xa_is_curr = 2 * (integral_sigma_fric - p_curr.x * p_curr.value);
-            
+
             if (area_if_xa_is_curr >= A_delta_target) {
-                 // Found the segment where x_a lies.
-                 // Need to find x_a between p_prev.x and p_curr.x
-                 // Linear interpolation of the 'Area' function is sufficient for small dx
-                 const area_prev_step = 2 * ((integral_sigma_fric - avg_sigma*dx) - p_prev.x * p_prev.value);
-                 
-                 // Linear interpolation:
-                 // Target = A_delta_target
-                 // (x_a - x_prev) / (x_curr - x_prev) = (Target - Area_prev) / (Area_curr - Area_prev)
-                 const ratio = (A_delta_target - area_prev_step) / (area_if_xa_is_curr - area_prev_step);
-                 x_a = p_prev.x + ratio * dx;
-                 found = true;
-                 break;
+                // Found the segment where x_a lies.
+                // Need to find x_a between p_prev.x and p_curr.x
+                // Linear interpolation of the 'Area' function is sufficient for small dx
+                const area_prev_step = 2 * ((integral_sigma_fric - avg_sigma * dx) - p_prev.x * p_prev.value);
+
+                // Linear interpolation:
+                // Target = A_delta_target
+                // (x_a - x_prev) / (x_curr - x_prev) = (Target - Area_prev) / (Area_curr - Area_prev)
+                const ratio = (A_delta_target - area_prev_step) / (area_if_xa_is_curr - area_prev_step);
+                x_a = p_prev.x + ratio * dx;
+                found = true;
+                break;
             }
         }
-        
+
         if (!found) {
             x_a = beam_length;
             // If full length isn't enough, we drop the whole curve.
-            const last_p = sigma_p_friction_prelim[sigma_p_friction_prelim.length-1];
+            const last_p = sigma_p_friction_prelim[sigma_p_friction_prelim.length - 1];
             const area_at_L = 2 * (integral_sigma_fric - last_p.x * last_p.value);
-            
+
             if (beam_length > 0) {
                 extra_drop = (A_delta_target - area_at_L) / beam_length;
             }
         }
-        
+
         x_a = Math.min(Math.max(x_a, 0), beam_length);
-        const sigma_pa = interpolate(x_a, sigma_p_friction_prelim.map(p=>p.x), sigma_p_friction_prelim.map(p=>p.value));
-        
+        const sigma_pa = interpolate(x_a, sigma_p_friction_prelim.map(p => p.x), sigma_p_friction_prelim.map(p => p.value));
+
         return { x_a, sigma_pa, A_delta: A_delta_target, delta, extra_drop };
     }
 
@@ -583,10 +583,10 @@ const concreteBeamCalculator = (() => {
                 const val = sigma_pi * Math.exp(-(mu * alpha + k * p.x));
                 return { x: p.x, value: isNaN(val) ? sigma_pi : val };
             });
-            
+
             const { x_a, sigma_pa, extra_drop } = cable.x_a_result;
             const drop = extra_drop || 0;
-            
+
             const sigma_p_anchorage = sigma_p_friction.map(p => ({
                 x: p.x,
                 // If within influence length, mirror the curve relative to horizontal line at Sigma(x_a)
@@ -594,14 +594,14 @@ const concreteBeamCalculator = (() => {
                 // Subtract extra_drop if needed (for full length slip)
                 value: p.x <= x_a ? Math.max(0, (2 * sigma_pa - p.value) - drop) : p.value
             }));
-            
+
             results_per_cable.push({
                 id: cable.id,
                 // IMPORTANTE: Propagar a área do cabo para cálculo de forças posteriores
                 Ap_cable_m2: cable.Ap_cable_m2,
                 path_details: cable.path_details,
                 sigma_p_anchorage,
-                sigma_p_friction, 
+                sigma_p_friction,
                 x_a,
                 sigma_p_ime: [],
                 sigma_p_inf: []
@@ -619,7 +619,7 @@ const concreteBeamCalculator = (() => {
                 const M_g1k_x = (load_pp * p.x * (beam_length - p.x)) / 2;
                 let sigma_cp_total = 0;
                 cables_analysis.forEach((other_c, other_idx) => {
-                    if(results_per_cable[other_idx].sigma_p_anchorage[i]) {
+                    if (results_per_cable[other_idx].sigma_p_anchorage[i]) {
                         const other_P = results_per_cable[other_idx].sigma_p_anchorage[i].value * other_c.Ap_cable_m2;
                         const other_e = other_c.path_details[i].e;
                         sigma_cp_total += (other_P / A_m2) + (other_P * other_e * p.e / I_cx_m4);
@@ -636,78 +636,78 @@ const concreteBeamCalculator = (() => {
         });
 
         cables_analysis.forEach((cable, idx) => {
-             const current_results = results_per_cable[idx];
-             if (!current_results.sigma_p_ime || current_results.sigma_p_ime.length === 0) return;
-             const shrink = calculateShrinkageLoss(props, inputs.humidity, cable.age, E_p, inputs.exposed_perimeter);
-             const delta_sigma_cs = shrink.value;
-             const creep_coeff = calculateCreepCoefficient(inputs.fck, inputs.humidity, cable.age, shrink.h_fic_cm, inputs.cement_s_factor, inputs.cement_alpha_factor);
-             const phi = creep_coeff.value;
-             const sigma_p_inf = [];
-             current_results.sigma_p_ime.forEach((p_ime, i) => {
-                 const zeta = p_ime.value / fptk;
-                 const psi_1000 = (zeta >= 0.6 && zeta < 0.7) ? 0.025 - (0.025 - 0.013) * ((0.7 - zeta) / 0.1) : (zeta >= 0.7 ? 0.025 : (zeta >= 0.5 ? 0.013 : 0));
-                 const psi_inf = 2.5 * psi_1000;
-                 const chi_inf = -Math.log(1 - psi_inf);
-                 const delta_sigma_r = chi_inf * p_ime.value;
-                 const M_gk_x = (inputs.load_pp + inputs.load_perm) * p_ime.x * (beam_length - p_ime.x) / 2;
-                 let P_total_ime = 0;
-                 let M_total_ime = 0;
-                 cables_analysis.forEach((oc, oidx) => {
-                      if (results_per_cable[oidx].sigma_p_ime[i]) {
-                          const op_val = results_per_cable[oidx].sigma_p_ime[i].value;
-                          const op_force = op_val * oc.Ap_cable_m2;
-                          P_total_ime += op_force;
-                          M_total_ime += op_force * oc.path_details[i].e;
-                      }
-                 });
-                 const p_e = cable.path_details[i].e;
-                 const sigma_c_p_perm = (P_total_ime / A_m2) + (M_total_ime * p_e / I_cx_m4);
-                 const sigma_c_m_perm = -(M_gk_x / 1000 * p_e / I_cx_m4);
-                 const sigma_c_perm = sigma_c_p_perm + sigma_c_m_perm;
-                 const delta_sigma_cc = alpha_p * sigma_c_perm * phi;
-                 const rho_p = Ap_total_m2 / A_m2; 
-                 const chi_c = 1 + 0.5 * phi;
-                 const eta_p = p_e * p_e * A_m2 / I_cx_m4; 
-                 const theta = 1 + chi_inf + chi_c * rho_p * eta_p * alpha_p;
-                 const delta_dif = (delta_sigma_r + delta_sigma_cs + delta_sigma_cc) / theta;
-                 const safe_delta_dif = isNaN(delta_dif) ? 0 : delta_dif;
-                 sigma_p_inf.push({ x: p_ime.x, value: p_ime.value - safe_delta_dif });
-             });
-             current_results.sigma_p_inf = sigma_p_inf;
+            const current_results = results_per_cable[idx];
+            if (!current_results.sigma_p_ime || current_results.sigma_p_ime.length === 0) return;
+            const shrink = calculateShrinkageLoss(props, inputs.humidity, cable.age, E_p, inputs.exposed_perimeter);
+            const delta_sigma_cs = shrink.value;
+            const creep_coeff = calculateCreepCoefficient(inputs.fck, inputs.humidity, cable.age, shrink.h_fic_cm, inputs.cement_s_factor, inputs.cement_alpha_factor);
+            const phi = creep_coeff.value;
+            const sigma_p_inf = [];
+            current_results.sigma_p_ime.forEach((p_ime, i) => {
+                const zeta = p_ime.value / fptk;
+                const psi_1000 = (zeta >= 0.6 && zeta < 0.7) ? 0.025 - (0.025 - 0.013) * ((0.7 - zeta) / 0.1) : (zeta >= 0.7 ? 0.025 : (zeta >= 0.5 ? 0.013 : 0));
+                const psi_inf = 2.5 * psi_1000;
+                const chi_inf = -Math.log(1 - psi_inf);
+                const delta_sigma_r = chi_inf * p_ime.value;
+                const M_gk_x = (inputs.load_pp + inputs.load_perm) * p_ime.x * (beam_length - p_ime.x) / 2;
+                let P_total_ime = 0;
+                let M_total_ime = 0;
+                cables_analysis.forEach((oc, oidx) => {
+                    if (results_per_cable[oidx].sigma_p_ime[i]) {
+                        const op_val = results_per_cable[oidx].sigma_p_ime[i].value;
+                        const op_force = op_val * oc.Ap_cable_m2;
+                        P_total_ime += op_force;
+                        M_total_ime += op_force * oc.path_details[i].e;
+                    }
+                });
+                const p_e = cable.path_details[i].e;
+                const sigma_c_p_perm = (P_total_ime / A_m2) + (M_total_ime * p_e / I_cx_m4);
+                const sigma_c_m_perm = -(M_gk_x / 1000 * p_e / I_cx_m4);
+                const sigma_c_perm = sigma_c_p_perm + sigma_c_m_perm;
+                const delta_sigma_cc = alpha_p * sigma_c_perm * phi;
+                const rho_p = Ap_total_m2 / A_m2;
+                const chi_c = 1 + 0.5 * phi;
+                const eta_p = p_e * p_e * A_m2 / I_cx_m4;
+                const theta = 1 + chi_inf + chi_c * rho_p * eta_p * alpha_p;
+                const delta_dif = (delta_sigma_r + delta_sigma_cs + delta_sigma_cc) / theta;
+                const safe_delta_dif = isNaN(delta_dif) ? 0 : delta_dif;
+                sigma_p_inf.push({ x: p_ime.x, value: p_ime.value - safe_delta_dif });
+            });
+            current_results.sigma_p_inf = sigma_p_inf;
         });
 
         const combined_sigma_friction = [];
-        const combined_sigma_anchorage = []; 
+        const combined_sigma_anchorage = [];
         const combined_sigma_ime = [];
         const combined_sigma_inf = [];
-        const master_x = cables_analysis[0].path_details.map(p=>p.x);
-        
+        const master_x = cables_analysis[0].path_details.map(p => p.x);
+
         master_x.forEach((x, i) => {
-             let P_fric = 0, P_anc = 0, P_ime = 0, P_inf = 0;
-             results_per_cable.forEach((cr, idx) => {
-                 const ac = cables_analysis[idx].Ap_cable_m2;
-                 if (cr.sigma_p_friction[i]) P_fric += (cr.sigma_p_friction[i].value || 0) * ac;
-                 if (cr.sigma_p_anchorage[i]) P_anc += (cr.sigma_p_anchorage[i].value || 0) * ac;
-                 if (cr.sigma_p_ime[i]) P_ime += (cr.sigma_p_ime[i].value || 0) * ac;
-                 if (cr.sigma_p_inf[i]) P_inf += (cr.sigma_p_inf[i].value || 0) * ac;
-             });
-             const safe_div = Ap_total_m2 > 0 ? Ap_total_m2 : 1;
-             combined_sigma_friction.push({x, value: P_fric / safe_div});
-             combined_sigma_anchorage.push({x, value: P_anc / safe_div});
-             combined_sigma_ime.push({x, value: P_ime / safe_div});
-             combined_sigma_inf.push({x, value: P_inf / safe_div});
+            let P_fric = 0, P_anc = 0, P_ime = 0, P_inf = 0;
+            results_per_cable.forEach((cr, idx) => {
+                const ac = cables_analysis[idx].Ap_cable_m2;
+                if (cr.sigma_p_friction[i]) P_fric += (cr.sigma_p_friction[i].value || 0) * ac;
+                if (cr.sigma_p_anchorage[i]) P_anc += (cr.sigma_p_anchorage[i].value || 0) * ac;
+                if (cr.sigma_p_ime[i]) P_ime += (cr.sigma_p_ime[i].value || 0) * ac;
+                if (cr.sigma_p_inf[i]) P_inf += (cr.sigma_p_inf[i].value || 0) * ac;
+            });
+            const safe_div = Ap_total_m2 > 0 ? Ap_total_m2 : 1;
+            combined_sigma_friction.push({ x, value: P_fric / safe_div });
+            combined_sigma_anchorage.push({ x, value: P_anc / safe_div });
+            combined_sigma_ime.push({ x, value: P_ime / safe_div });
+            combined_sigma_inf.push({ x, value: P_inf / safe_div });
         });
 
         return {
             cables: results_per_cable,
-            sigma_p_friction: combined_sigma_friction, 
-            sigma_p_ime: combined_sigma_ime, 
-            sigma_p_inf: combined_sigma_inf, 
-            sigma_p_anchorage: combined_sigma_anchorage, 
+            sigma_p_friction: combined_sigma_friction,
+            sigma_p_ime: combined_sigma_ime,
+            sigma_p_inf: combined_sigma_inf,
+            sigma_p_anchorage: combined_sigma_anchorage,
             key_points: cables_analysis[0].path_details
         };
     }
-    
+
     function performUlsChecks(inputs, props, loss_results, Ap_total_m2, mid_x, cables_analysis) {
         const { fck, fptk, load_pp, load_perm, load_var, beam_length, Ep } = inputs;
         const gamma_g = 1.4, gamma_q = 1.4, gamma_c = 1.4, gamma_s = 1.15;
@@ -723,25 +723,25 @@ const concreteBeamCalculator = (() => {
         let total_P_inf_mid = 0;
 
         loss_results.cables.forEach((c, idx) => {
-             if (!c.sigma_p_inf || !c.sigma_p_inf[mid_idx]) return;
-             const y_cable = cables_analysis[idx].path_details[mid_idx].y;
-             const d_pi = props.y_max / 100 - y_cable;
-             const Ap_i = cables_analysis[idx].Ap_cable_m2;
-             const sigma_inf = c.sigma_p_inf[mid_idx].value;
-             sum_d_p_Ap += d_pi * Ap_i;
-             total_P_inf_mid += (sigma_inf || 0) * Ap_i; 
+            if (!c.sigma_p_inf || !c.sigma_p_inf[mid_idx]) return;
+            const y_cable = cables_analysis[idx].path_details[mid_idx].y;
+            const d_pi = props.y_max / 100 - y_cable;
+            const Ap_i = cables_analysis[idx].Ap_cable_m2;
+            const sigma_inf = c.sigma_p_inf[mid_idx].value;
+            sum_d_p_Ap += d_pi * Ap_i;
+            total_P_inf_mid += (sigma_inf || 0) * Ap_i;
         });
         // CORREÇÃO: Altura útil média ponderada
         const d_p = Ap_total_m2 > 0 ? sum_d_p_Ap / Ap_total_m2 : 0;
         const avg_sigma_inf = Ap_total_m2 > 0 ? total_P_inf_mid / Ap_total_m2 : 0;
         const epsilon_p0 = avg_sigma_inf / Ep;
 
-        let x_m = props.height / 200; 
+        let x_m = props.height / 200;
         for (let i = 0; i < 50; i++) {
             const epsilon_c = 0.0035;
             const delta_epsilon_p = x_m > 0 ? epsilon_c * (d_p - x_m) / x_m : 0;
             const epsilon_pd = epsilon_p0 + delta_epsilon_p;
-            const sigma_pd = Math.min(epsilon_pd * Ep, fpd); 
+            const sigma_pd = Math.min(epsilon_pd * Ep, fpd);
             const compression_depth_m = lambda * x_m;
             const compressed_area_m2 = calculateCompressedArea(inputs.vertices, compression_depth_m * 100, props.y_max) / 10000;
             const Fst = sigma_pd * Ap_total_m2 * 1000;
@@ -769,7 +769,7 @@ const concreteBeamCalculator = (() => {
         const points = [...vertices, vertices[0]];
         for (let i = 0; i < vertices.length; i++) {
             let p1 = { x: points[i][0], y: points[i][1] };
-            let p2 = { x: points[i+1][0], y: points[i+1][1] };
+            let p2 = { x: points[i + 1][0], y: points[i + 1][1] };
             const p1_is_compressed = p1.y >= y_clip;
             const p2_is_compressed = p2.y >= y_clip;
             if (p1_is_compressed && p2_is_compressed) {
@@ -784,7 +784,7 @@ const concreteBeamCalculator = (() => {
         }
         return Math.abs(compressed_area / 2);
     }
-    
+
     function calculateCompressedAreaProperties(vertices, compression_depth_cm, y_max_cm) {
         if (compression_depth_cm <= 0) return { area: 0, static_moment_y: 0, centroid_y: y_max_cm };
         const y_clip = y_max_cm - compression_depth_cm;
@@ -793,7 +793,7 @@ const concreteBeamCalculator = (() => {
         const points = [...vertices, vertices[0]];
         for (let i = 0; i < vertices.length; i++) {
             let p1 = { x: points[i][0], y: points[i][1] };
-            let p2 = { x: points[i+1][0], y: points[i+1][1] };
+            let p2 = { x: points[i + 1][0], y: points[i + 1][1] };
             const p1_is_compressed = p1.y >= y_clip;
             const p2_is_compressed = p2.y >= y_clip;
             let v1 = p1_is_compressed ? p1 : { x: p1.x + (p2.x - p1.x) * (y_clip - p1.y) / (p2.y - p1.y), y: y_clip };
@@ -873,7 +873,7 @@ function renderResults(results) {
             h('button', { id: 'download-word-btn', className: 'bg-blue-800 text-white py-1 px-3 rounded text-xs hover:bg-blue-900' }, ['Word']),
             h('button', { id: 'download-pdf-btn', className: 'bg-red-600 text-white py-1 px-3 rounded text-xs hover:bg-red-700' }, ['PDF'])
         ]),
-        h('h1', { id:'main-title', className: 'text-xl font-bold text-center border-b pb-2' }, [reportTitle]),
+        h('h1', { id: 'main-title', className: 'text-xl font-bold text-center border-b pb-2' }, [reportTitle]),
         renderInputSummary(inputs, checks),
         renderCalculatedProperties(checks, inputs),
         renderPrestressEstimation(checks),
@@ -912,20 +912,20 @@ function renderInputSummary(inputs, checks) {
     ];
 
     const cablesTable = h('table', { className: 'w-full mt-2 text-sm text-center border' }, [
-        h('thead', {className:'bg-gray-100 dark:bg-gray-700'}, [h('tr', {}, ['Grupo', 'Idade (dias)', 'Cordoalhas'].map(t=>h('th', {className:'p-1'}, [t])))]),
+        h('thead', { className: 'bg-gray-100 dark:bg-gray-700' }, [h('tr', {}, ['Grupo', 'Idade (dias)', 'Cordoalhas'].map(t => h('th', { className: 'p-1' }, [t])))]),
         h('tbody', {}, cables.map((c, i) => h('tr', {}, [
-            h('td', {}, [`Cabo ${i+1}`]),
+            h('td', {}, [`Cabo ${i + 1}`]),
             h('td', {}, [`${c.age_at_prestress}`]),
             h('td', {}, [`${c.num_strands}`])
         ])))
     ]);
 
     return createReportSection('input-summary-section', 'Resumo dos Dados de Entrada', [
-        h('div', {className:'grid grid-cols-1 md:grid-cols-2 gap-4'}, [
+        h('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' }, [
             createSummaryTable('Parâmetros Gerais e Materiais', generalRows),
             createSummaryTable('Cargas de Serviço (ELS)', loadRows),
         ]),
-        h('h4', {className:'font-bold mt-4 text-sm'}, ['Configuração dos Cabos']),
+        h('h4', { className: 'font-bold mt-4 text-sm' }, ['Configuração dos Cabos']),
         cablesTable
     ]);
 }
@@ -933,7 +933,7 @@ function renderInputSummary(inputs, checks) {
 function renderCalculatedProperties(checks, inputs) {
     const { properties, materials, loads, moments } = checks;
     const fmt = (val, dec = 2) => (val !== undefined && val !== null && !isNaN(val)) ? val.toFixed(dec) : 'N/A';
-    
+
     const geometricRows = [
         ['Área da Seção (A)', `${fmt(properties.area, 2)} cm²`],
         ['Centroide (ycg)', `${fmt(properties.centroid.y, 2)} cm`],
@@ -989,31 +989,31 @@ function renderPrestressEstimation(checks) {
 function renderDetailedLossCalculations(loss_results) {
     if (!loss_results || !loss_results.detailed_calcs) return document.createDocumentFragment();
     const { detailed_calcs } = loss_results;
-    
+
     const createCalcLine = (text) => h('div', { className: 'font-mono text-xs py-1 border-b border-gray-100 dark:border-gray-700', innerHTML: text });
-    
+
     const frictionContent = detailed_calcs.friction.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: σ<sub>p</sub> = <b>${c.value.toFixed(1)} MPa</b>`));
-    
+
     const anchorRows = detailed_calcs.anchorage.sigma_prime.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: σ'<sub>p</sub> = <b>${c.value.toFixed(1)} MPa</b>`));
-    
+
     const elasticContent = detailed_calcs.elastic_shortening.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: Δσ<sub>ee</sub> = <b>${c.value.toFixed(1)} MPa</b>`));
-    
+
     const timeDependentContent = detailed_calcs.interaction.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: Δσ<sub>dif</sub> = <b>${c.value.toFixed(1)} MPa</b> <span class="text-gray-400 ml-2">${c.calc}</span>`));
 
     return createReportSection('detailed-losses-section', 'Memória de Cálculo das Perdas de Protensão (Média Ponderada)', [
         h('h4', { className: 'font-bold mt-2 text-sm' }, ['1. Perdas Imediatas']),
-        h('h5', {className:'text-xs font-bold mt-2'}, ['5.1 Perda por Atrito (σp)']),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.1 Perda por Atrito (σp)']),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, frictionContent),
-        
-        h('h5', {className:'text-xs font-bold mt-2'}, ['5.2 Perda por Acomodação da Ancoragem (σ\'p)']),
+
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.2 Perda por Acomodação da Ancoragem (σ\'p)']),
         createCalcLine(`Distância de Acomodação Média (x<sub>a</sub>) = <b>${detailed_calcs.anchorage.x_a.toFixed(2)} m</b>`),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, anchorRows),
 
-        h('h5', {className:'text-xs font-bold mt-2'}, ['5.3 Perda por Encurtamento Elástico (Δσee)']),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.3 Perda por Encurtamento Elástico (Δσee)']),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, elasticContent),
-        
+
         h('h4', { className: 'font-bold mt-4 text-sm' }, ['2. Perdas Diferidas']),
-        h('h5', {className:'text-xs font-bold mt-2'}, ['5.4 - 5.7 Interação (Δσdif)']),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.4 - 5.7 Interação (Δσdif)']),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, timeDependentContent),
     ]);
 }
@@ -1029,7 +1029,7 @@ function renderLossesTableAndChart(loss_results) {
 function renderPrestressChecks(checks) {
     const { prestress_checks } = checks;
     const fmt = (val) => (val !== undefined && !isNaN(val)) ? val.toFixed(1) : '-';
-    
+
     const P_adopt_kN = prestress_checks.P_total_i_mid_MN; // Agora isso vem em MN se o cálculo anterior dividiu por 1000? Não, o cálculo anterior gera P em kN direto.
     // Espera, no cálculo corrigido:
     // const Pi_cabo    = sigma_i    * Ap_m2 * 1000;  (MPa * m² = MN -> *1000 = kN)
@@ -1037,19 +1037,19 @@ function renderPrestressChecks(checks) {
     // Então P_adopt_kN (que é P_total_i_mid_MN) está em MN.
     // P_kN = P_adopt_kN * 1000 = kN.
     // Está correto.
-    
+
     const P_kN = P_adopt_kN * 1000;
-    
+
     const P_min_tens_i_val = prestress_checks.P_min_tens_i.value * 1000;
     const P_max_comp_i_val = prestress_checks.P_max_comp_i.value * 1000;
-    
+
     return createReportSection('prestress-checks-section', 'Verificação da Força (Meio do Vão)', [
         h('p', { className: 'text-center font-bold text-lg mb-2' }, [`Força Total Equivalente (P<sub>i</sub>) = ${fmt(P_kN)} kN`]),
         h('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' }, [
             h('div', {}, [
-                 h('h4', { className: 'font-bold text-sm' }, ['Limites de Força']),
-                 h('p', {className:'text-sm'}, [`Máx Compressão Inicial: ${fmt(P_max_comp_i_val)} kN`]),
-                 h('p', {className:'text-sm'}, [`Min Tração Inicial: ${fmt(P_min_tens_i_val)} kN`])
+                h('h4', { className: 'font-bold text-sm' }, ['Limites de Força']),
+                h('p', { className: 'text-sm' }, [`Máx Compressão Inicial: ${fmt(P_max_comp_i_val)} kN`]),
+                h('p', { className: 'text-sm' }, [`Min Tração Inicial: ${fmt(P_min_tens_i_val)} kN`])
             ]),
             h('div', {}, [
                 h('h4', { className: 'font-bold text-sm' }, ['Diagrama de Tensões (Seção)']),
@@ -1061,19 +1061,19 @@ function renderPrestressChecks(checks) {
 
 function renderUlsChecks(checks) {
     const { uls_checks } = checks;
-    if (!uls_checks || uls_checks.ratio === Infinity || isNaN(uls_checks.ratio)) return createReportSection('uls', 'ELU', [h('p',{},['Erro no cálculo ELU'])]);
-    
+    if (!uls_checks || uls_checks.ratio === Infinity || isNaN(uls_checks.ratio)) return createReportSection('uls', 'ELU', [h('p', {}, ['Erro no cálculo ELU'])]);
+
     const is_valid = uls_checks.ratio <= 1.0;
     const colorClass = is_valid ? 'text-green-600' : 'text-red-600';
-    
+
     const rows = [
         ['M<sub>Sd</sub> (Solicitante)', `${uls_checks.Md_kNm.toFixed(1)} kNm`],
         ['M<sub>Rd</sub> (Resistente)', `${uls_checks.MRd_kNm.toFixed(1)} kNm`],
-        ['Linha Neutra (x)', `${(uls_checks.x_m*100).toFixed(1)} cm`],
-        ['Altura Útil (d<sub>p</sub>)', `${(uls_checks.d_p*100).toFixed(1)} cm`],
+        ['Linha Neutra (x)', `${(uls_checks.x_m * 100).toFixed(1)} cm`],
+        ['Altura Útil (d<sub>p</sub>)', `${(uls_checks.d_p * 100).toFixed(1)} cm`],
         ['Relação M<sub>Sd</sub>/M<sub>Rd</sub>', `<b class="${colorClass}">${uls_checks.ratio.toFixed(3)}</b>`]
     ];
-    
+
     return createReportSection('uls-checks-section', 'Verificação ELU (Estado Limite Último)', [
         createSummaryTable('Flexão', rows)
     ]);
@@ -1095,17 +1095,17 @@ function handleCustomSave() {
 function handleCustomLoad(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
             const data = JSON.parse(e.target.result);
-            
+
             // 1. Populate Standard Fields
             inputManager.inputIds.forEach(id => {
-                if(data[id] !== undefined) document.getElementById(id).value = data[id];
+                if (data[id] !== undefined) document.getElementById(id).value = data[id];
             });
-            if(data.beam_coords) document.getElementById('beam_coords').value = data.beam_coords;
+            if (data.beam_coords) document.getElementById('beam_coords').value = data.beam_coords;
 
             // 2. Rebuild Cables
             if (data.cables && Array.isArray(data.cables)) {
@@ -1115,9 +1115,9 @@ function handleCustomLoad(event) {
             }
 
             // 3. Trigger Draw/Calc
-            window.dispatchEvent(new Event('input')); 
+            window.dispatchEvent(new Event('input'));
             document.getElementById('run-check-btn').click(); // Auto-run
-            
+
         } catch (err) {
             alert("Erro ao carregar arquivo: " + err.message);
         }
@@ -1148,7 +1148,7 @@ function addCableGroup(containerId, data = null) {
         <button class="add-point-btn mt-2 text-xs w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 py-1 rounded text-gray-600 dark:text-gray-300">+ Adicionar Ponto ao Cabo ${index}</button>
     `;
     const pointsContainer = card.querySelector('.cable-points-container');
-    const initialPoints = data ? data.path : [{x:0, y:0.35, type:'Parabolic'}, {x:9, y:0.10, type:'Straight'}];
+    const initialPoints = data ? data.path : [{ x: 0, y: 0.35, type: 'Parabolic' }, { x: 9, y: 0.10, type: 'Straight' }];
     initialPoints.forEach(p => addPointRow(pointsContainer, p));
     card.querySelector('.add-point-btn').addEventListener('click', () => addPointRow(pointsContainer));
     card.querySelector('.remove-group-btn').addEventListener('click', () => { card.remove(); window.dispatchEvent(new Event('input')); });
@@ -1156,7 +1156,7 @@ function addCableGroup(containerId, data = null) {
     container.appendChild(card);
 }
 
-function addPointRow(container, point = {x:0, y:0.35, type:'Parabolic'}) {
+function addPointRow(container, point = { x: 0, y: 0.35, type: 'Parabolic' }) {
     const row = document.createElement('div');
     row.className = 'cable-path-row grid grid-cols-[1.1fr_1fr_1.2fr_auto] gap-2 items-center';
     row.innerHTML = `
@@ -1196,7 +1196,7 @@ function drawCrossSectionDiagram(canvasId, vertices) {
                 label: 'CG', data: [{ x: props.centroid.x, y: props.centroid.y }], pointBackgroundColor: 'red', pointRadius: 4
             }]
         },
-        options: { maintainAspectRatio: false, scales: { x: { type: 'linear', min: props.centroid.x - maxRange/2, max: props.centroid.x + maxRange/2 }, y: { min: props.centroid.y - maxRange/2, max: props.centroid.y + maxRange/2 } }, plugins: { legend: { display: false } } }
+        options: { maintainAspectRatio: false, scales: { x: { type: 'linear', min: props.centroid.x - maxRange / 2, max: props.centroid.x + maxRange / 2 }, y: { min: props.centroid.y - maxRange / 2, max: props.centroid.y + maxRange / 2 } }, plugins: { legend: { display: false } } }
     });
 }
 
@@ -1213,13 +1213,13 @@ function drawLongitudinalDiagram(canvasId, inputs) {
     inputs.cables.forEach((cable, idx) => {
         const cablePoints = [];
         const numSegments = 100;
-        const cable_path_abs = cable.path.map(p => ({ ...p, y: p.y + Math.min(...inputs.vertices.map(v=>v[1]))/100 }));
+        const cable_path_abs = cable.path.map(p => ({ ...p, y: p.y + Math.min(...inputs.vertices.map(v => v[1])) / 100 }));
         for (let i = 0; i <= numSegments; i++) {
             const x = (i / numSegments) * inputs.beam_length;
             const y = concreteBeamCalculator.getCablePositionAt(x, cable_path_abs, inputs.beam_length);
             cablePoints.push({ x, y: y * 100 });
         }
-        datasets.push({ label: `Cabo ${idx+1}`, data: cablePoints, borderColor: cableColors[idx % cableColors.length], borderWidth: 2, pointRadius: 0, fill: false, tension: 0.1 });
+        datasets.push({ label: `Cabo ${idx + 1}`, data: cablePoints, borderColor: cableColors[idx % cableColors.length], borderWidth: 2, pointRadius: 0, fill: false, tension: 0.1 });
     });
     new Chart(canvas, { type: 'line', data: { datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'linear', max: inputs.beam_length * 1.05 }, y: { min: props.y_min - 10, max: props.y_max + 10 } } } });
 }
@@ -1230,8 +1230,8 @@ function drawLossesChart(canvasId, loss_data) {
     let existingChart = Chart.getChart(chartCanvas);
     if (existingChart) existingChart.destroy();
     const datasets = [
-        { label: 'Inicial (Média)', data: loss_data.sigma_p_ime.map(p=>({x:p.x, y:p.value})), borderColor: '#3b82f6', pointRadius: 0 },
-        { label: 'Final (Média)', data: loss_data.sigma_p_inf.map(p=>({x:p.x, y:p.value})), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0 }
+        { label: 'Inicial (Média)', data: loss_data.sigma_p_ime.map(p => ({ x: p.x, y: p.value })), borderColor: '#3b82f6', pointRadius: 0 },
+        { label: 'Final (Média)', data: loss_data.sigma_p_inf.map(p => ({ x: p.x, y: p.value })), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0 }
     ];
     new Chart(chartCanvas, { type: 'line', data: { datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'linear' }, y: { title: { display: true, text: 'Tensão Média (MPa)' } } } } });
 }
@@ -1250,14 +1250,13 @@ function drawStressDiagram(canvasId, results) {
         { label: 'Inicial', data: [{ x: initial.bottom, y: properties.y_min }, { x: initial.top, y: properties.y_max }], borderColor: '#3b82f6', showLine: true },
         { label: 'Final', data: [{ x: final_stress.bottom, y: properties.y_min }, { x: final_stress.top, y: properties.y_max }], borderColor: '#ef4444', showLine: true }
     ];
-    new Chart(chartCanvas, { type: 'scatter', data: { datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display:true, text: 'Tensão (MPa)'} } } } });
+    new Chart(chartCanvas, { type: 'scatter', data: { datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: 'Tensão (MPa)' } } } } });
 }
 
 // --- INITIALIZATION ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof injectHeader === 'function') injectHeader({ activePage: 'viga-protendida', pageTitle: 'Verificador de Viga Protendida (NBR 6118)', headerPlaceholderId: 'header-placeholder' });
-    if (typeof injectFooter === 'function') injectFooter({ footerPlaceholderId: 'footer-placeholder' });
+
     if (typeof initializeSharedUI === 'function') initializeSharedUI();
 
     // Initial UI State
@@ -1276,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return acc;
         }, {});
         inputs.vertices = inputManager._parseVertices(document.getElementById('beam_coords')?.value);
-        inputs.cables = inputManager._gatherCables(); 
+        inputs.cables = inputManager._gatherCables();
         return inputs;
     };
 
