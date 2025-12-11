@@ -1,6 +1,7 @@
 /**
  * Beam Selector Logic (AISC Table 3-10 Simulator)
  * Iterates through AISC W-Shapes to find the lightest section for a given Moment and Unbraced Length.
+ * Supports LRFD, ASD, and OSHA (F.S.=4) design methods.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,7 +38,7 @@ function updateMomentPreview() {
 
 async function findLightestBeam() {
     // 1. Gather Inputs
-    const method = document.getElementById('design_method').value; // LRFD or ASD
+    const method = document.getElementById('design_method').value; // LRFD, ASD, or OSHA
     const Fy = parseFloat(document.getElementById('Fy').value) || 50;
     const E = 29000;
     const Lb_ft = parseFloat(document.getElementById('Lb').value) || 0;
@@ -46,16 +47,11 @@ async function findLightestBeam() {
 
     // Determine Required Moment
     let M_req = parseFloat(document.getElementById('Mu_direct').value);
-    console.log("Raw Mu_direct value:", document.getElementById('Mu_direct').value);
-    console.log("Parsed M_req (direct):", M_req);
-
     if (isNaN(M_req) || M_req === 0) {
         // Fallback to calculation
         const L = parseFloat(document.getElementById('span_calc').value) || 0;
         const w = parseFloat(document.getElementById('w_load').value) || 0;
-        console.log(`Fallback calculation inputs - L: ${L}, w: ${w}`);
         M_req = (w * L * L) / 8;
-        console.log("Calculated M_req:", M_req);
     }
 
     // Depth Limit
@@ -63,12 +59,10 @@ async function findLightestBeam() {
     const maxDepth = parseFloat(document.getElementById('max_depth').value);
 
     // 2. Fetch Database
-    // Using the shared AISC_SPEC utility if available, otherwise direct access
     let shapes = {};
     if (typeof AISC_SPEC !== 'undefined' && AISC_SPEC.getShapesByType) {
         shapes = await AISC_SPEC.getShapesByType('W-Shape');
     } else if (typeof AISC_SHAPES_DATABASE !== 'undefined') {
-        // Fallback if database.js helper isn't loaded but the JSON is
         for (let key in AISC_SHAPES_DATABASE) {
             if (AISC_SHAPES_DATABASE[key].type === 'W-Shape') shapes[key] = AISC_SHAPES_DATABASE[key];
         }
@@ -84,17 +78,14 @@ async function findLightestBeam() {
         // Basic filtering
         if (useDepthLimit && props.d > maxDepth) continue;
 
-        // Parse weight from name (e.g., W12X26 -> 26)
         const weight = parseFloat(name.split('X')[1]);
         if (isNaN(weight)) continue;
 
-        // Ensure we have necessary props (some might be missing in simplified DBs)
-        if (!props.Zx || !props.Sx || !props.ry || !props.J || !props.cw && props.cw !== 0) continue;
+        if (!props.Zx || !props.Sx || !props.ry || !props.J || (!props.cw && props.cw !== 0)) continue;
 
         // --- AISC F2 Calculation Logic ---
 
         // 1. Geometric Constants
-        // rts calculation if missing (AISC Eq. F2-7)
         let rts = props.rts;
         if (!rts) {
             const ho = props.d - props.tf; // approx if ho missing
@@ -118,49 +109,51 @@ async function findLightestBeam() {
         const Lr_ft = Lr_in / 12;
 
         // 4. Calculate Nominal Capacity Mn
-        const Mp = Fy * props.Zx; // Plastic Moment (in-kips)
+        const Mp_nominal = Fy * props.Zx; // Nominal Plastic Moment
+        const Mr_nominal = 0.7 * Fy * Sx; // Nominal Yield Moment (Buckling Limit)
+
         let Mn = 0;
         let mode = "";
 
         if (Lb_in <= Lp_in) {
-            // Zone 1: Plastic
-            Mn = Mp;
+            Mn = Mp_nominal;
             mode = "Plastic (Z1)";
         } else if (Lb_in <= Lr_in) {
-            // Zone 2: Inelastic LTB
-            // Mn = Cb [Mp - (Mp - 0.7FySx)((Lb-Lp)/(Lr-Lp))] <= Mp
-            const Mr = 0.7 * Fy * Sx;
             const term = (Lb_in - Lp_in) / (Lr_in - Lp_in);
-            Mn = Cb * (Mp - (Mp - Mr) * term);
-            Mn = Math.min(Mn, Mp);
+            Mn = Cb * (Mp_nominal - (Mp_nominal - Mr_nominal) * term);
+            Mn = Math.min(Mn, Mp_nominal);
             mode = "Inelastic LTB (Z2)";
         } else {
-            // Zone 3: Elastic LTB
-            // Fcr = ...
             const fcr_term1 = (Cb * Math.PI * Math.PI * E) / Math.pow(Lb_in / rts, 2);
             const fcr_term2 = Math.sqrt(1 + 0.078 * (J * c / (Sx * ho)) * Math.pow(Lb_in / rts, 2));
             const Fcr = fcr_term1 * fcr_term2;
-
-            // Limit Fcr to Mp stress equivalent isn't usually done here directly, 
-            // but Mn cannot exceed Mp.
             Mn = Fcr * Sx;
-            Mn = Math.min(Mn, Mp);
+            Mn = Math.min(Mn, Mp_nominal);
             mode = "Elastic LTB (Z3)";
         }
 
-        // 5. Convert to Design Strength
+        // 5. Apply Safety Factors (Design Strength)
         let capacity = 0; // in k-ft
+        let Mp_avail = 0; // Available Plastic Moment (for table)
+        let Mr_avail = 0; // Available Yield Moment (for table)
+
         if (method === 'LRFD') {
-            capacity = (0.9 * Mn) / 12;
-        } else {
-            capacity = (Mn / 1.67) / 12;
+            const phi = 0.9;
+            capacity = (phi * Mn) / 12;
+            Mp_avail = (phi * Mp_nominal) / 12;
+            Mr_avail = (phi * Mr_nominal) / 12;
+        } else if (method === 'ASD') {
+            const omega = 1.67;
+            capacity = (Mn / omega) / 12;
+            Mp_avail = (Mp_nominal / omega) / 12;
+            Mr_avail = (Mr_nominal / omega) / 12;
+        } else if (method === 'OSHA') {
+            const omega_osha = 4.0;
+            capacity = (Mn / omega_osha) / 12;
+            Mp_avail = (Mp_nominal / omega_osha) / 12;
+            Mr_avail = (Mr_nominal / omega_osha) / 12;
         }
 
-        if (isNaN(capacity)) {
-            console.warn(`NaN Capacity for ${name}. Mn: ${Mn}, method: ${method}, Fy: ${Fy}, Sx: ${props.Sx}, Zx: ${props.Zx}`);
-        }
-
-        // 6. Check Demand
         const ratio = M_req / capacity;
 
         if (capacity >= M_req) {
@@ -172,6 +165,9 @@ async function findLightestBeam() {
                 ratio,
                 Lp: Lp_ft,
                 Lr: Lr_ft,
+                Mp: Mp_avail,
+                Mr: Mr_avail,
+                Ix: props.Ix,
                 mode,
                 rawProp: props
             });
@@ -179,8 +175,6 @@ async function findLightestBeam() {
     }
 
     // 4. Sort Results
-    // Primary Sort: Weight (Ascending)
-    // Secondary Sort: Depth (Ascending) for same weight
     validCandidates.sort((a, b) => {
         if (Math.abs(a.weight - b.weight) > 0.1) return a.weight - b.weight;
         return a.depth - b.depth;
@@ -207,7 +201,6 @@ function renderResults(candidates, demand) {
     noResults.classList.add('hidden');
     container.classList.remove('hidden');
 
-    // Top Result
     const winner = candidates[0];
     winnerName.textContent = winner.name;
     winnerStats.textContent = `Weight: ${winner.weight} lb/ft • Depth: ${winner.depth}" • Mode: ${winner.mode}`;
@@ -230,11 +223,13 @@ function renderResults(candidates, demand) {
                     ${(beam.ratio).toFixed(2)}
                 </div>
             </td>
+            <td class="px-6 py-4 text-gray-600 dark:text-gray-400">${beam.Mp.toFixed(1)}</td>
+            <td class="px-6 py-4 text-gray-600 dark:text-gray-400">${beam.Mr.toFixed(1)}</td>
             <td class="px-6 py-4 text-xs text-gray-500">
                 ${beam.Lp.toFixed(1)} / ${beam.Lr.toFixed(1)}
             </td>
-            <td class="px-6 py-4 text-xs italic">
-                ${beam.mode}
+            <td class="px-6 py-4 text-xs text-gray-500">
+                ${beam.Ix}
             </td>
         </tr>
     `).join('');
