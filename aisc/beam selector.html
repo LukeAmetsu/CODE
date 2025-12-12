@@ -27,7 +27,8 @@
                 <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Beam Selector (AISC Table 3-10)</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Finds the lightest W-shape based on Unbraced Length ($L_b$) and Required Moment ($M_u$).
+                        Finds the lightest W-shape based on Unbraced Length (L<sub>b</sub>) and Required Moment
+                        (M<sub>u</sub>).
                         Calculates capacities per AISC 360-16/22 Chapter F.
                     </p>
                 </div>
@@ -46,7 +47,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Steel Yield ($F_y$)</label>
+                            <label class="block text-sm font-medium mb-1">Steel Yield (F<sub>y</sub>)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="Fy" value="50"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
@@ -58,7 +59,7 @@
                     <div class="space-y-4">
                         <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">Stability</h3>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Unbraced Length ($L_b$)</label>
+                            <label class="block text-sm font-medium mb-1">Unbraced Length (L<sub>b</sub>)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="Lb" value="5" step="0.5"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-bold text-blue-700 dark:text-blue-300">
@@ -67,8 +68,8 @@
                             <p class="text-xs text-gray-400 mt-1">Distance between purlins/braces.</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Moment Gradient ($C_b$)</label>
-                            <input type="number" id="Cb" value="1.0" step="0.01"
+                            <label class="block text-sm font-medium mb-1">Moment Gradient (C<sub>b</sub>)</label>
+                            <input type="number" id="Cb" value="1.14" step="0.01"
                                 class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                             <p class="text-xs text-gray-400 mt-1">1.0 = Conservative. 1.14 = Simple Span Uniform Load.
                             </p>
@@ -79,7 +80,7 @@
                         <h3 class="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">Option A: Known
                             Moment</h3>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Required Moment ($M_{req}$)</label>
+                            <label class="block text-sm font-medium mb-1">Required Moment (M<sub>req</sub>)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="Mu_direct" value="" placeholder="e.g. 45"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
@@ -93,7 +94,7 @@
                         <h3 class="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase">Option B: Calc from
                             Load</h3>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Beam Span ($L$)</label>
+                            <label class="block text-sm font-medium mb-1">Beam Span (L)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="span_calc" value="20"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
@@ -101,7 +102,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Uniform Load ($w$)</label>
+                            <label class="block text-sm font-medium mb-1">Uniform Load (w)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="w_load" value="0.6" step="0.1"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
@@ -123,8 +124,9 @@
                             <div
                                 class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
                             </div>
-                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Max Depth
-                                Limit</span>
+                            <span
+                                class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 whitespace-nowrap">Max
+                                Depth Limit</span>
                         </label>
                         <input type="number" id="max_depth" value="14" class="w-20 p-1 text-sm border rounded hidden"
                             placeholder="in">

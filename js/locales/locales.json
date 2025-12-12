@@ -163,7 +163,7 @@
         "pcalc": "PCALC",
         "mn_diagram": "M-N Interaction Diagram",
         "beam_selector": "Beam Selector",
-        "beam_selector_desc": "Select optimal steel beams based on load and span requirements using AISC standards.",
+        "beam_selector_desc": "Finds the lightest W-shape based on Unbraced Length (Lb) and Required Moment (Mu). Calculates capacities per AISC 360-16/22 Chapter F.",
         "go_to_beam_selector": "Go to Beam Selector",
         "angle_support": "Angle Support",
         "angle_support_desc": "Design and check steel angle supports for various loading conditions.",

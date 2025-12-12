@@ -59,6 +59,64 @@
                     <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
                         <h3
                             class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1">
+                            Angle Properties</h3>
+                        <div class="mb-2">
+                            <label class="block text-sm font-medium mb-1">Configuration</label>
+                            <select id="angle_config"
+                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <option value="single">Single (L)</option>
+                                <option value="double">Double (2L)</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Leg Size (in)</label>
+                                <select id="angle_leg"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                    <option value="2">2</option>
+                                    <option value="2.5">2.5</option>
+                                    <option value="3">3</option>
+                                    <option value="3.5">3.5</option>
+                                    <option value="4" selected>4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                    <option value="8">8</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Thickness (in)</label>
+                                <select id="angle_thick"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                    <option value="0.125">1/8"</option>
+                                    <option value="0.1875">3/16"</option>
+                                    <option value="0.25">1/4"</option>
+                                    <option value="0.3125">5/16"</option>
+                                    <option value="0.375" selected>3/8"</option>
+                                    <option value="0.5">1/2"</option>
+                                    <option value="0.625">5/8"</option>
+                                    <option value="0.75">3/4"</option>
+                                    <option value="1.0">1"</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Length (in)</label>
+                                <input type="number" id="angle_len" value="8"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Fy (ksi)</label>
+                                <input type="number" id="angle_fy" value="36"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Symmetrical angles assumed (e.g. L4x4).</p>
+                    </div>
+
+                    <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                        <h3
+                            class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1">
                             Connection Details</h3>
                         <div>
                             <label class="block text-sm font-medium mb-1">Number of Bolts</label>
@@ -73,6 +131,13 @@
                                 <option value="0.5" selected>1/2"</option>
                                 <option value="0.625">5/8"</option>
                                 <option value="0.75">3/4"</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Embedment Depth (h<sub>nom</sub>)</label>
+                            <select id="embedment"
+                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <!-- Populated by JS -->
                             </select>
                         </div>
                         <div>
@@ -110,30 +175,38 @@
                     <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                         <h3 class="font-bold text-lg">Calculation Breakdown</h3>
                     </div>
-                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
 
                         <div>
                             <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Load Demand</h4>
                             <table class="w-full text-sm">
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Linear Load (w)</td>
-                                    <td class="py-2 text-right font-mono" id="res-w">0.25 klf</td>
+                                    <td class="py-2 text-right font-mono" id="res-w">--</td>
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Beam Reaction (V<sub>total</sub>)</td>
-                                    <td class="py-2 text-right font-mono font-bold" id="res-reaction">1.88 kips</td>
+                                    <td class="py-2 text-right font-mono font-bold" id="res-reaction">--</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Total Bolts</td>
+                                    <td class="py-2 text-right font-mono" id="res-total-bolts">--</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Bolts per Angle</td>
+                                    <td class="py-2 text-right font-mono" id="res-bolts-angle">--</td>
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Shear per Bolt (v)</td>
-                                    <td class="py-2 text-right font-mono" id="res-v-bolt">0.94 kips</td>
+                                    <td class="py-2 text-right font-mono" id="res-v-bolt">--</td>
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Tension per Bolt (t) <span class="text-xs text-gray-400">*User
-                                            Specified</span></td>
-                                    <td class="py-2 text-right font-mono" id="res-t-bolt">0.94 kips</td>
+                                    <td class="py-2">Tension per Bolt (t)</td>
+                                    <td class="py-2 text-right font-mono" id="res-t-bolt">--</td>
                                 </tr>
                             </table>
-                            <p class="text-xs text-gray-400 mt-2 italic">* Logic: Tension = Reaction / N_bolts</p>
+                            <p class="text-xs text-gray-400 mt-2 italic" id="logic-note">* Logic: Single = R/n. Double =
+                                (Mu/Leg)/n.</p>
                         </div>
 
                         <div>
@@ -146,7 +219,11 @@
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Diameter</td>
-                                    <td class="py-2 text-right" id="res-dia">1/2"</td>
+                                    <td class="py-2 text-right" id="res-dia">--</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Embedment (h<sub>nom</sub>)</td>
+                                    <td class="py-2 text-right" id="res-embed">--</td>
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Allowable Shear (V<sub>all</sub>)</td>
@@ -155,6 +232,39 @@
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Allowable Tension (T<sub>all</sub>)</td>
                                     <td class="py-2 text-right font-mono text-green-600" id="res-t-allow">--</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div>
+                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Angle Leg Bending
+                            </h4>
+                            <table class="w-full text-sm">
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Moment Arm (e)</td>
+                                    <td class="py-2 text-right font-mono" id="res-arm">--</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Required Moment (M<sub>u</sub>)</td>
+                                    <td class="py-2 text-right font-mono font-bold" id="res-mu">--</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Plastic Modulus (Z)</td>
+                                    <td class="py-2 text-right font-mono" id="res-z">--</td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Capacity (M<sub>a</sub> = M<sub>n</sub>/&Omega;)</td>
+                                    <td class="py-2 text-right font-mono text-green-600 font-bold" id="res-phimn">--
+                                    </td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">Length Spec</td>
+                                    <td class="py-2 text-right font-mono font-bold text-blue-600" id="spec-string">--
+                                    </td>
+                                </tr>
+                                <tr class="border-b dark:border-gray-700">
+                                    <td class="py-2">D/C Ratio</td>
+                                    <td class="py-2 text-right font-bold" id="res-ratio-bend">--</td>
                                 </tr>
                             </table>
                         </div>
