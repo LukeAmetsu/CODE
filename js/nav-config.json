@@ -55,6 +55,11 @@
                     "key": "beam_selector",
                     "textKey": "beam_selector",
                     "href": "aisc/beam selector.html"
+                },
+                {
+                    "key": "angle_support",
+                    "textKey": "angle_support",
+                    "href": "aisc/angle_support.html"
                 }
             ]
         },

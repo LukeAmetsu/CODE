@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         // Lógica de Tema Imediata para evitar o "flash"
-        (function() {
-            if (localStorage.getItem('theme') === 'dark' || 
-               (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
@@ -22,6 +23,7 @@
     <script src="js/shared-utils.js" defer></script>
     <script src="js/template.js" defer></script>
 </head>
+
 <body>
 
     <div class="container mx-auto p-4 md:p-8 max-w-5xl">
@@ -31,104 +33,181 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
                 <!-- US Codes Section -->
                 <div class="flex flex-col">
-                    <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6" data-i18n="us_codes">US Codes</h2>
+                    <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6"
+                        data-i18n="us_codes">US Codes</h2>
                     <div class="flex-grow grid grid-auto-rows-fr gap-y-9" id="us-codes-container">
                         <!-- ASCE Loads Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="asce_loads">ASCE Loads</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="asce_loads">ASCE Loads</h3>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="asce_desc">Calculate wind, snow, and rain loads according to ASCE 7 standards. Generate load combinations for structural design.</p>
-                            <a href="asce/wind.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_load_calcs">Go to Load Calcs</a>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="asce_desc">Calculate
+                                wind, snow, and rain loads according to ASCE 7 standards. Generate load combinations for
+                                structural design.</p>
+                            <a href="asce/wind.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_load_calcs">Go to Load Calcs</a>
                         </div>
 
                         <!-- AISC Steel Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="aisc_steel">AISC Steel Design</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="aisc_steel">AISC Steel Design</h3>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="aisc_desc">Check steel members and connections based on the AISC Steel Construction Manual. Includes member checks, base plates, and splices.</p>
-                            <a href="aisc/steel check.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_steel_design">Go to Steel Design</a>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="aisc_desc">Check
+                                steel members and connections based on the AISC Steel Construction Manual. Includes
+                                member checks, base plates, and splices.</p>
+                            <a href="aisc/steel check.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_steel_design">Go to Steel Design</a>
                         </div>
 
                         <!-- AISC Base Plate Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="base_plate">Base Plate</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="base_plate">Base Plate</h3>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="base_plate_desc">Design and check column base plates and anchor bolts for combined axial load and biaxial bending according to AISC Design Guide 1.</p>
-                            <a href="aisc/base plate.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_steel_design">Go to Steel Design</a>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="base_plate_desc">
+                                Design and check column base plates and anchor bolts for combined axial load and biaxial
+                                bending according to AISC Design Guide 1.</p>
+                            <a href="aisc/base plate.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_steel_design">Go to Steel Design</a>
                         </div>
 
                         <!-- AISC Splice Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="splice">Splice</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="splice">
+                                    Splice</h3>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="splice_desc">Design and check bolted flange plate and web plate splices for wide-flange members under moment and shear.</p>
-                            <a href="aisc/splice.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_steel_design">Go to Steel Design</a>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="splice_desc">Design
+                                and check bolted flange plate and web plate splices for wide-flange members under moment
+                                and shear.</p>
+                            <a href="aisc/splice.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_steel_design">Go to Steel Design</a>
                         </div>
 
                         <!-- NDS Wood Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="nds_wood">NDS Wood</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="nds_wood">NDS Wood</h3>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nds_desc">Design and check wood members for bending, shear, and compression according to the National Design Specification for Wood Construction.</p>
-                            <a href="nds/nds wood design.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_wood_design">Go to Wood Design</a>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nds_desc">Design and
+                                check wood members for bending, shear, and compression according to the National Design
+                                Specification for Wood Construction.</p>
+                            <a href="nds/nds wood design.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_wood_design">Go to Wood Design</a>
+                        </div>
+                        <!-- Beam Selector Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="beam_selector">Beam Selector</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="beam_selector_desc">
+                                Select optimal steel beams based on load and span requirements using AISC standards.</p>
+                            <a href="aisc/beam selector.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_beam_selector">Go to Beam Selector</a>
+                        </div>
+
+                        <!-- Angle Support Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="angle_support">Angle Support</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="angle_support_desc">
+                                Design and check steel angle supports for various loading conditions.</p>
+                            <a href="aisc/angle_support.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_angle_support">Go to Angle Support</a>
                         </div>
                     </div>
                 </div>
 
                 <!-- Brazilian Codes (NBR) Section -->
                 <div class="flex flex-col">
-                    <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6" data-i18n="brazilian_codes">Brazilian Codes (NBR)</h2>
+                    <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6"
+                        data-i18n="brazilian_codes">Brazilian Codes (NBR)</h2>
                     <div class="flex-grow grid grid-auto-rows-fr gap-y-9" id="nbr-codes-container">
-                    <!-- NBR Combinations Card -->
-                    <div class="form-section flex flex-col group">
-                        <div class="flex items-center mb-3">
-                            <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="nbr_combos">NBR Load Combinations</h3>
+                        <!-- NBR Combinations Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="nbr_combos">NBR Load Combinations</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_combos_desc">
+                                Generate ultimate (ELU) and serviceability (ELS) load combinations based on NBR 8681 and
+                                NBR 6118.</p>
+                            <a href="nbr/comb nbr 6118.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_nbr_combos">Go to NBR Combos</a>
                         </div>
-                        <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_combos_desc">Generate ultimate (ELU) and serviceability (ELS) load combinations based on NBR 8681 and NBR 6118.</p>
-                        <a href="nbr/comb nbr 6118.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_nbr_combos">Go to NBR Combos</a>
-                    </div>
-                    <!-- NBR 6118 Concrete Card -->
-                    <div class="form-section flex flex-col group">
-                        <div class="flex items-center mb-3">
-                            <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="nbr_concrete">NBR 6118 Concrete Beam</h3>
+                        <!-- NBR 6118 Concrete Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="nbr_concrete">NBR 6118 Concrete Beam</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_concrete_desc">
+                                Check reinforced concrete beams for flexure and shear according to Brazilian standard
+                                NBR 6118.</p>
+                            <a href="nbr/nbr 6118 concreto.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_concrete_checker">Go to Concrete Checker</a>
                         </div>
-                        <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_concrete_desc">Check reinforced concrete beams for flexure and shear according to Brazilian standard NBR 6118.</p>
-                        <a href="nbr/nbr 6118 concreto.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_concrete_checker">Go to Concrete Checker</a>
-                    </div>
-                    <!-- NBR 6118 Prestressed Beam Card -->
-                    <div class="form-section flex flex-col group">
-                        <div class="flex items-center mb-3">
-                            <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="nbr_prestressed">NBR 6118 Prestressed Beam</h3>
+                        <!-- NBR 6118 Prestressed Beam Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="nbr_prestressed">NBR 6118 Prestressed Beam</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow"
+                                data-i18n="nbr_prestressed_desc">Analyze prestressed concrete beams, including detailed
+                                calculations for prestressing losses over time.</p>
+                            <a href="nbr/viga_protendida.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_prestressed_beam">Go to Prestressed Beam</a>
                         </div>
-                        <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_prestressed_desc">Analyze prestressed concrete beams, including detailed calculations for prestressing losses over time.</p>
-                        <a href="nbr/viga_protendida.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_prestressed_beam">Go to Prestressed Beam</a>
-                    </div>
-                    <!-- NBR 8800 Steel Card -->
-                    <div class="form-section flex flex-col group">
-                        <div class="flex items-center mb-3">
-                            <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="nbr_steel">NBR 8800 Steel Structures</h3>
+                        <!-- NBR 8800 Steel Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="nbr_steel">NBR 8800 Steel Structures</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_steel_desc">
+                                Check steel members for combined axial force and bending according to Brazilian standard
+                                NBR 8800.</p>
+                            <a href="nbr/nbr 8080 estruturas de aço.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_steel_checker">Go to Steel Checker</a>
                         </div>
-                        <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_steel_desc">Check steel members for combined axial force and bending according to Brazilian standard NBR 8800.</p>
-                        <a href="nbr/nbr 8080 estruturas de aço.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_steel_checker">Go to Steel Checker</a>
-                    </div>
-                     <!-- PCALC Card -->
-                     <div class="form-section flex flex-col group">
-                        <div class="flex items-center mb-3">
-                            <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="pcalc">PCALC</h3>
+                        <!-- PCALC Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="pcalc">
+                                    PCALC</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="pcalc_desc">Calcular
+                                a capacidade de carga axial de um pilar de concreto armado de acordo com a NBR 6118.</p>
+                            <a href="nbr/PCALC.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                data-i18n="go_to_pcalc">Go to PCALC</a>
                         </div>
-                        <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="pcalc_desc">Calcular a capacidade de carga axial de um pilar de concreto armado de acordo com a NBR 6118.</p>
-                        <a href="nbr/PCALC.html" class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start" data-i18n="go_to_pcalc">Go to PCALC</a>
                     </div>
                 </div>
-            </div>
         </main>
 
         <div id="footer-placeholder"></div>
     </div>
 </body>
+
 </html>

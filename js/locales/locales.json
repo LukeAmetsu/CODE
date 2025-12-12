@@ -161,7 +161,13 @@
         "seismic_load_e": "Seismic Load (E)",
         "run_load_combinations": "Run Load Combinations",
         "pcalc": "PCALC",
-        "mn_diagram": "M-N Interaction Diagram"
+        "mn_diagram": "M-N Interaction Diagram",
+        "beam_selector": "Beam Selector",
+        "beam_selector_desc": "Select optimal steel beams based on load and span requirements using AISC standards.",
+        "go_to_beam_selector": "Go to Beam Selector",
+        "angle_support": "Angle Support",
+        "angle_support_desc": "Design and check steel angle supports for various loading conditions.",
+        "go_to_angle_support": "Go to Angle Support"
     },
     "es": {
         "engineering_hub": "Centro de Ingeniería",

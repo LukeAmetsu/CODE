@@ -10674,7 +10674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.414,
         "yp": 0
     },
-    "L12X12X1-3\\/8": {
+    "L12X12X1-3/8": {
         "type": "Angle",
         "d": 12.0,
         "bf": 0,
@@ -10699,7 +10699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 1.3,
         "yp": 1.3
     },
-    "L12X12X1-1\\/4": {
+    "L12X12X1-1/4": {
         "type": "Angle",
         "d": 12.0,
         "bf": 0,
@@ -10724,7 +10724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 1.18,
         "yp": 1.18
     },
-    "L12X12X1-1\\/8": {
+    "L12X12X1-1/8": {
         "type": "Angle",
         "d": 12.0,
         "bf": 0,
@@ -10774,7 +10774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.958,
         "yp": 0.958
     },
-    "L10X10X1-3\\/8": {
+    "L10X10X1-3/8": {
         "type": "Angle",
         "d": 10.0,
         "bf": 0,
@@ -10799,7 +10799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 1.28,
         "yp": 1.28
     },
-    "L10X10X1-1\\/4": {
+    "L10X10X1-1/4": {
         "type": "Angle",
         "d": 10.0,
         "bf": 0,
@@ -10824,7 +10824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 1.17,
         "yp": 1.17
     },
-    "L10X10X1-1\\/8": {
+    "L10X10X1-1/8": {
         "type": "Angle",
         "d": 10.0,
         "bf": 0,
@@ -10874,7 +10874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.95,
         "yp": 0.95
     },
-    "L10X10X7\\/8": {
+    "L10X10X7/8": {
         "type": "Angle",
         "d": 10.0,
         "bf": 0,
@@ -10899,7 +10899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.84,
         "yp": 0.84
     },
-    "L10X10X3\\/4": {
+    "L10X10X3/4": {
         "type": "Angle",
         "d": 10.0,
         "bf": 0,
@@ -10924,7 +10924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.725,
         "yp": 0.725
     },
-    "L8X8X1-1\\/8": {
+    "L8X8X1-1/8": {
         "type": "Angle",
         "d": 8.0,
         "bf": 0,
@@ -10974,7 +10974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.944,
         "yp": 0.944
     },
-    "L8X8X7\\/8": {
+    "L8X8X7/8": {
         "type": "Angle",
         "d": 8.0,
         "bf": 0,
@@ -10999,7 +10999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.831,
         "yp": 0.831
     },
-    "L8X8X3\\/4": {
+    "L8X8X3/4": {
         "type": "Angle",
         "d": 8.0,
         "bf": 0,
@@ -11024,7 +11024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.719,
         "yp": 0.719
     },
-    "L8X8X5\\/8": {
+    "L8X8X5/8": {
         "type": "Angle",
         "d": 8.0,
         "bf": 0,
@@ -11049,7 +11049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.606,
         "yp": 0.606
     },
-    "L8X8X9\\/16": {
+    "L8X8X9/16": {
         "type": "Angle",
         "d": 8.0,
         "bf": 0,
@@ -11074,7 +11074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.548,
         "yp": 0.548
     },
-    "L8X8X1\\/2": {
+    "L8X8X1/2": {
         "type": "Angle",
         "d": 8.0,
         "bf": 0,
@@ -11124,7 +11124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.819,
         "yp": 1.45
     },
-    "L8X6X7\\/8": {
+    "L8X6X7/8": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11149,7 +11149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.719,
         "yp": 1.43
     },
-    "L8X6X3\\/4": {
+    "L8X6X3/4": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11174,7 +11174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.624,
         "yp": 1.34
     },
-    "L8X6X5\\/8": {
+    "L8X6X5/8": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11199,7 +11199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.526,
         "yp": 1.27
     },
-    "L8X6X9\\/16": {
+    "L8X6X9/16": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11224,7 +11224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.476,
         "yp": 1.24
     },
-    "L8X6X1\\/2": {
+    "L8X6X1/2": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11249,7 +11249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.425,
         "yp": 1.2
     },
-    "L8X6X7\\/16": {
+    "L8X6X7/16": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11299,7 +11299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.694,
         "yp": 2.45
     },
-    "L8X4X7\\/8": {
+    "L8X4X7/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11324,7 +11324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.612,
         "yp": 2.41
     },
-    "L8X4X3\\/4": {
+    "L8X4X3/4": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11349,7 +11349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.531,
         "yp": 2.34
     },
-    "L8X4X5\\/8": {
+    "L8X4X5/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11374,7 +11374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.448,
         "yp": 2.27
     },
-    "L8X4X9\\/16": {
+    "L8X4X9/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11399,7 +11399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.406,
         "yp": 2.23
     },
-    "L8X4X1\\/2": {
+    "L8X4X1/2": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11424,7 +11424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.363,
         "yp": 2.2
     },
-    "L8X4X7\\/16": {
+    "L8X4X7/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11449,7 +11449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.319,
         "yp": 2.16
     },
-    "L7X4X3\\/4": {
+    "L7X4X3/4": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11474,7 +11474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.553,
         "yp": 1.84
     },
-    "L7X4X5\\/8": {
+    "L7X4X5/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11499,7 +11499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.464,
         "yp": 1.8
     },
-    "L7X4X1\\/2": {
+    "L7X4X1/2": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11524,7 +11524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.376,
         "yp": 1.74
     },
-    "L7X4X7\\/16": {
+    "L7X4X7/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11549,7 +11549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.331,
         "yp": 1.71
     },
-    "L7X4X3\\/8": {
+    "L7X4X3/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11599,7 +11599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.917,
         "yp": 0.917
     },
-    "L6X6X7\\/8": {
+    "L6X6X7/8": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11624,7 +11624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.813,
         "yp": 0.813
     },
-    "L6X6X3\\/4": {
+    "L6X6X3/4": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11649,7 +11649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.705,
         "yp": 0.705
     },
-    "L6X6X5\\/8": {
+    "L6X6X5/8": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11674,7 +11674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.594,
         "yp": 0.594
     },
-    "L6X6X9\\/16": {
+    "L6X6X9/16": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11699,7 +11699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.538,
         "yp": 0.538
     },
-    "L6X6X1\\/2": {
+    "L6X6X1/2": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11724,7 +11724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.481,
         "yp": 0.481
     },
-    "L6X6X7\\/16": {
+    "L6X6X7/16": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11749,7 +11749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.423,
         "yp": 0.423
     },
-    "L6X6X3\\/8": {
+    "L6X6X3/8": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11774,7 +11774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.365,
         "yp": 0.365
     },
-    "L6X6X5\\/16": {
+    "L6X6X5/16": {
         "type": "Angle",
         "d": 6.0,
         "bf": 0,
@@ -11799,7 +11799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.306,
         "yp": 0.306
     },
-    "L6X4X7\\/8": {
+    "L6X4X7/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11824,7 +11824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.667,
         "yp": 1.43
     },
-    "L6X4X3\\/4": {
+    "L6X4X3/4": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11849,7 +11849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.578,
         "yp": 1.37
     },
-    "L6X4X5\\/8": {
+    "L6X4X5/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11874,7 +11874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.488,
         "yp": 1.31
     },
-    "L6X4X9\\/16": {
+    "L6X4X9/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11899,7 +11899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.443,
         "yp": 1.28
     },
-    "L6X4X1\\/2": {
+    "L6X4X1/2": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11924,7 +11924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.396,
         "yp": 1.25
     },
-    "L6X4X7\\/16": {
+    "L6X4X7/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11949,7 +11949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.348,
         "yp": 1.22
     },
-    "L6X4X3\\/8": {
+    "L6X4X3/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11974,7 +11974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.301,
         "yp": 1.19
     },
-    "L6X4X5\\/16": {
+    "L6X4X5/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -11999,7 +11999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.253,
         "yp": 1.15
     },
-    "L6X3-1\\/2X1\\/2": {
+    "L6X3-1/2X1/2": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12024,7 +12024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.375,
         "yp": 1.5
     },
-    "L6X3-1\\/2X3\\/8": {
+    "L6X3-1/2X3/8": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12049,7 +12049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.287,
         "yp": 1.41
     },
-    "L6X3-1\\/2X5\\/16": {
+    "L6X3-1/2X5/16": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12074,7 +12074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.241,
         "yp": 1.38
     },
-    "L5X5X7\\/8": {
+    "L5X5X7/8": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12099,7 +12099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.8,
         "yp": 0.8
     },
-    "L5X5X3\\/4": {
+    "L5X5X3/4": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12124,7 +12124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.698,
         "yp": 0.698
     },
-    "L5X5X5\\/8": {
+    "L5X5X5/8": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12149,7 +12149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.59,
         "yp": 0.59
     },
-    "L5X5X1\\/2": {
+    "L5X5X1/2": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12174,7 +12174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.479,
         "yp": 0.479
     },
-    "L5X5X7\\/16": {
+    "L5X5X7/16": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12199,7 +12199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.422,
         "yp": 0.422
     },
-    "L5X5X3\\/8": {
+    "L5X5X3/8": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12224,7 +12224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.365,
         "yp": 0.365
     },
-    "L5X5X5\\/16": {
+    "L5X5X5/16": {
         "type": "Angle",
         "d": 5.0,
         "bf": 0,
@@ -12249,7 +12249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.307,
         "yp": 0.307
     },
-    "L5X3-1\\/2X3\\/4": {
+    "L5X3-1/2X3/4": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12274,7 +12274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.585,
         "yp": 1.1
     },
-    "L5X3-1\\/2X5\\/8": {
+    "L5X3-1/2X5/8": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12299,7 +12299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.493,
         "yp": 1.06
     },
-    "L5X3-1\\/2X1\\/2": {
+    "L5X3-1/2X1/2": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12324,7 +12324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.4,
         "yp": 1.0
     },
-    "L5X3-1\\/2X3\\/8": {
+    "L5X3-1/2X3/8": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12349,7 +12349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.305,
         "yp": 0.933
     },
-    "L5X3-1\\/2X5\\/16": {
+    "L5X3-1/2X5/16": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12374,7 +12374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.256,
         "yp": 0.904
     },
-    "L5X3-1\\/2X1\\/4": {
+    "L5X3-1/2X1/4": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12399,7 +12399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.207,
         "yp": 0.86
     },
-    "L5X3X1\\/2": {
+    "L5X3X1/2": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12424,7 +12424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.375,
         "yp": 1.25
     },
-    "L5X3X7\\/16": {
+    "L5X3X7/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12449,7 +12449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.331,
         "yp": 1.22
     },
-    "L5X3X3\\/8": {
+    "L5X3X3/8": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12474,7 +12474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.286,
         "yp": 1.19
     },
-    "L5X3X5\\/16": {
+    "L5X3X5/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12499,7 +12499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.241,
         "yp": 1.14
     },
-    "L5X3X1\\/4": {
+    "L5X3X1/4": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12524,7 +12524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.194,
         "yp": 1.12
     },
-    "L4X4X3\\/4": {
+    "L4X4X3/4": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12549,7 +12549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.68,
         "yp": 0.68
     },
-    "L4X4X5\\/8": {
+    "L4X4X5/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12574,7 +12574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.576,
         "yp": 0.576
     },
-    "L4X4X1\\/2": {
+    "L4X4X1/2": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12599,7 +12599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.469,
         "yp": 0.469
     },
-    "L4X4X7\\/16": {
+    "L4X4X7/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12624,7 +12624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.413,
         "yp": 0.413
     },
-    "L4X4X3\\/8": {
+    "L4X4X3/8": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12649,7 +12649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.358,
         "yp": 0.358
     },
-    "L4X4X5\\/16": {
+    "L4X4X5/16": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12674,7 +12674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.3,
         "yp": 0.3
     },
-    "L4X4X1\\/4": {
+    "L4X4X1/4": {
         "type": "Angle",
         "d": 4.0,
         "bf": 0,
@@ -12699,7 +12699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.241,
         "yp": 0.241
     },
-    "L4X3-1\\/2X1\\/2": {
+    "L4X3-1/2X1/2": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12724,7 +12724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.438,
         "yp": 0.5
     },
-    "L4X3-1\\/2X3\\/8": {
+    "L4X3-1/2X3/8": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12749,7 +12749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.335,
         "yp": 0.427
     },
-    "L4X3-1\\/2X5\\/16": {
+    "L4X3-1/2X5/16": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12774,7 +12774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.281,
         "yp": 0.4
     },
-    "L4X3-1\\/2X1\\/4": {
+    "L4X3-1/2X1/4": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12799,7 +12799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.228,
         "yp": 0.36
     },
-    "L4X3X5\\/8": {
+    "L4X3X5/8": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12824,7 +12824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.499,
         "yp": 0.808
     },
-    "L4X3X1\\/2": {
+    "L4X3X1/2": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12849,7 +12849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.406,
         "yp": 0.75
     },
-    "L4X3X3\\/8": {
+    "L4X3X3/8": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12874,7 +12874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.311,
         "yp": 0.68
     },
-    "L4X3X5\\/16": {
+    "L4X3X5/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12899,7 +12899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.261,
         "yp": 0.656
     },
-    "L4X3X1\\/4": {
+    "L4X3X1/4": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -12924,7 +12924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.211,
         "yp": 0.62
     },
-    "L3-1\\/2X3-1\\/2X1\\/2": {
+    "L3-1/2X3-1/2X1/2": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12949,7 +12949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.464,
         "yp": 0.464
     },
-    "L3-1\\/2X3-1\\/2X7\\/16": {
+    "L3-1/2X3-1/2X7/16": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12974,7 +12974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.413,
         "yp": 0.413
     },
-    "L3-1\\/2X3-1\\/2X3\\/8": {
+    "L3-1/2X3-1/2X3/8": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -12999,7 +12999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.357,
         "yp": 0.357
     },
-    "L3-1\\/2X3-1\\/2X5\\/16": {
+    "L3-1/2X3-1/2X5/16": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -13024,7 +13024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.3,
         "yp": 0.3
     },
-    "L3-1\\/2X3-1\\/2X1\\/4": {
+    "L3-1/2X3-1/2X1/4": {
         "type": "Angle",
         "d": 3.5,
         "bf": 0,
@@ -13049,7 +13049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.243,
         "yp": 0.243
     },
-    "L3-1\\/2X3X1\\/2": {
+    "L3-1/2X3X1/2": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13074,7 +13074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.431,
         "yp": 0.48
     },
-    "L3-1\\/2X3X7\\/16": {
+    "L3-1/2X3X7/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13099,7 +13099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.381,
         "yp": 0.449
     },
-    "L3-1\\/2X3X3\\/8": {
+    "L3-1/2X3X3/8": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13124,7 +13124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.331,
         "yp": 0.407
     },
-    "L3-1\\/2X3X5\\/16": {
+    "L3-1/2X3X5/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13149,7 +13149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.279,
         "yp": 0.38
     },
-    "L3-1\\/2X3X1\\/4": {
+    "L3-1/2X3X1/4": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13174,7 +13174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.226,
         "yp": 0.34
     },
-    "L3-1\\/2X2-1\\/2X1\\/2": {
+    "L3-1/2X2-1/2X1/2": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13199,7 +13199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.396,
         "yp": 0.73
     },
-    "L3-1\\/2X2-1\\/2X3\\/8": {
+    "L3-1/2X2-1/2X3/8": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13224,7 +13224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.303,
         "yp": 0.673
     },
-    "L3-1\\/2X2-1\\/2X5\\/16": {
+    "L3-1/2X2-1/2X5/16": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13249,7 +13249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.256,
         "yp": 0.636
     },
-    "L3-1\\/2X2-1\\/2X1\\/4": {
+    "L3-1/2X2-1/2X1/4": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13274,7 +13274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.207,
         "yp": 0.6
     },
-    "L3X3X1\\/2": {
+    "L3X3X1/2": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13299,7 +13299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.46,
         "yp": 0.46
     },
-    "L3X3X7\\/16": {
+    "L3X3X7/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13324,7 +13324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.405,
         "yp": 0.405
     },
-    "L3X3X3\\/8": {
+    "L3X3X3/8": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13349,7 +13349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.352,
         "yp": 0.352
     },
-    "L3X3X5\\/16": {
+    "L3X3X5/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13374,7 +13374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.297,
         "yp": 0.297
     },
-    "L3X3X1\\/4": {
+    "L3X3X1/4": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13399,7 +13399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.24,
         "yp": 0.24
     },
-    "L3X3X3\\/16": {
+    "L3X3X3/16": {
         "type": "Angle",
         "d": 3.0,
         "bf": 0,
@@ -13424,7 +13424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.182,
         "yp": 0.182
     },
-    "L3X2-1\\/2X1\\/2": {
+    "L3X2-1/2X1/2": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13449,7 +13449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.417,
         "yp": 0.5
     },
-    "L3X2-1\\/2X7\\/16": {
+    "L3X2-1/2X7/16": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13474,7 +13474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.37,
         "yp": 0.463
     },
-    "L3X2-1\\/2X3\\/8": {
+    "L3X2-1/2X3/8": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13499,7 +13499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.322,
         "yp": 0.427
     },
-    "L3X2-1\\/2X5\\/16": {
+    "L3X2-1/2X5/16": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13524,7 +13524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.272,
         "yp": 0.392
     },
-    "L3X2-1\\/2X1\\/4": {
+    "L3X2-1/2X1/4": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13549,7 +13549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.22,
         "yp": 0.36
     },
-    "L3X2-1\\/2X3\\/16": {
+    "L3X2-1/2X3/16": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13574,7 +13574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.167,
         "yp": 0.333
     },
-    "L3X2X1\\/2": {
+    "L3X2X1/2": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13599,7 +13599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.377,
         "yp": 0.74
     },
-    "L3X2X3\\/8": {
+    "L3X2X3/8": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13624,7 +13624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.292,
         "yp": 0.667
     },
-    "L3X2X5\\/16": {
+    "L3X2X5/16": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13649,7 +13649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.247,
         "yp": 0.632
     },
-    "L3X2X1\\/4": {
+    "L3X2X1/4": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13674,7 +13674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.2,
         "yp": 0.6
     },
-    "L3X2X3\\/16": {
+    "L3X2X3/16": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13699,7 +13699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.153,
         "yp": 0.555
     },
-    "L2-1\\/2X2-1\\/2X1\\/2": {
+    "L2-1/2X2-1/2X1/2": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13724,7 +13724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.452,
         "yp": 0.452
     },
-    "L2-1\\/2X2-1\\/2X3\\/8": {
+    "L2-1/2X2-1/2X3/8": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13749,7 +13749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.346,
         "yp": 0.346
     },
-    "L2-1\\/2X2-1\\/2X5\\/16": {
+    "L2-1/2X2-1/2X5/16": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13774,7 +13774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.292,
         "yp": 0.292
     },
-    "L2-1\\/2X2-1\\/2X1\\/4": {
+    "L2-1/2X2-1/2X1/4": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13799,7 +13799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.238,
         "yp": 0.238
     },
-    "L2-1\\/2X2-1\\/2X3\\/16": {
+    "L2-1/2X2-1/2X3/16": {
         "type": "Angle",
         "d": 2.5,
         "bf": 0,
@@ -13824,7 +13824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.18,
         "yp": 0.18
     },
-    "L2-1\\/2X2X3\\/8": {
+    "L2-1/2X2X3/8": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13849,7 +13849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.31,
         "yp": 0.433
     },
-    "L2-1\\/2X2X5\\/16": {
+    "L2-1/2X2X5/16": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13874,7 +13874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.264,
         "yp": 0.388
     },
-    "L2-1\\/2X2X1\\/4": {
+    "L2-1/2X2X1/4": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13899,7 +13899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.214,
         "yp": 0.36
     },
-    "L2-1\\/2X2X3\\/16": {
+    "L2-1/2X2X3/16": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13924,7 +13924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.164,
         "yp": 0.319
     },
-    "L2-1\\/2X1-1\\/2X1\\/4": {
+    "L2-1/2X1-1/2X1/4": {
         "type": "Angle",
         "d": 1.5,
         "bf": 0,
@@ -13949,7 +13949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.189,
         "yp": 0.606
     },
-    "L2-1\\/2X1-1\\/2X3\\/16": {
+    "L2-1/2X1-1/2X3/16": {
         "type": "Angle",
         "d": 1.5,
         "bf": 0,
@@ -13974,7 +13974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.145,
         "yp": 0.569
     },
-    "L2X2X3\\/8": {
+    "L2X2X3/8": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -13999,7 +13999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.343,
         "yp": 0.343
     },
-    "L2X2X5\\/16": {
+    "L2X2X5/16": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -14024,7 +14024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.29,
         "yp": 0.29
     },
-    "L2X2X1\\/4": {
+    "L2X2X1/4": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -14049,7 +14049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.236,
         "yp": 0.236
     },
-    "L2X2X3\\/16": {
+    "L2X2X3/16": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -14074,7 +14074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0.181,
         "yp": 0.181
     },
-    "L2X2X1\\/8": {
+    "L2X2X1/8": {
         "type": "Angle",
         "d": 2.0,
         "bf": 0,
@@ -22374,7 +22374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "2L12X12X1-3\\/8": {
+    "2L12X12X1-3/8": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22399,7 +22399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.3
     },
-    "2L12X12X1-3\\/8X3\\/4": {
+    "2L12X12X1-3/8X3/4": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22424,7 +22424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.3
     },
-    "2L12X12X1-3\\/8X1-1\\/2": {
+    "2L12X12X1-3/8X1-1/2": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22449,7 +22449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.3
     },
-    "2L12X12X1-1\\/4": {
+    "2L12X12X1-1/4": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22474,7 +22474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.18
     },
-    "2L12X12X1-1\\/4X3\\/4": {
+    "2L12X12X1-1/4X3/4": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22499,7 +22499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.18
     },
-    "2L12X12X1-1\\/4X1-1\\/2": {
+    "2L12X12X1-1/4X1-1/2": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22524,7 +22524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.18
     },
-    "2L12X12X1-1\\/8": {
+    "2L12X12X1-1/8": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22549,7 +22549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.08
     },
-    "2L12X12X1-1\\/8X3\\/4": {
+    "2L12X12X1-1/8X3/4": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22574,7 +22574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.08
     },
-    "2L12X12X1-1\\/8X1-1\\/2": {
+    "2L12X12X1-1/8X1-1/2": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22624,7 +22624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.958
     },
-    "2L12X12X1X3\\/4": {
+    "2L12X12X1X3/4": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22649,7 +22649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.958
     },
-    "2L12X12X1X1-1\\/2": {
+    "2L12X12X1X1-1/2": {
         "type": "2L",
         "d": 12.0,
         "bf": 0,
@@ -22674,7 +22674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.958
     },
-    "2L10X10X1-3\\/8": {
+    "2L10X10X1-3/8": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22699,7 +22699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.28
     },
-    "2L10X10X1-3\\/8X3\\/4": {
+    "2L10X10X1-3/8X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22724,7 +22724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.28
     },
-    "2L10X10X1-3\\/8X1-1\\/2": {
+    "2L10X10X1-3/8X1-1/2": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22749,7 +22749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.28
     },
-    "2L10X10X1-1\\/4": {
+    "2L10X10X1-1/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22774,7 +22774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.17
     },
-    "2L10X10X1-1\\/4X3\\/4": {
+    "2L10X10X1-1/4X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22799,7 +22799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.17
     },
-    "2L10X10X1-1\\/4X1-1\\/2": {
+    "2L10X10X1-1/4X1-1/2": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22824,7 +22824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.17
     },
-    "2L10X10X1-1\\/8": {
+    "2L10X10X1-1/8": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22849,7 +22849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.07
     },
-    "2L10X10X1-1\\/8X3\\/4": {
+    "2L10X10X1-1/8X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22874,7 +22874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.07
     },
-    "2L10X10X1-1\\/8X1-1\\/2": {
+    "2L10X10X1-1/8X1-1/2": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22924,7 +22924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.95
     },
-    "2L10X10X1X3\\/4": {
+    "2L10X10X1X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22949,7 +22949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.95
     },
-    "2L10X10X1X1-1\\/2": {
+    "2L10X10X1X1-1/2": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22974,7 +22974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.95
     },
-    "2L10X10X7\\/8": {
+    "2L10X10X7/8": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -22999,7 +22999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.84
     },
-    "2L10X10X7\\/8X3\\/4": {
+    "2L10X10X7/8X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -23024,7 +23024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.84
     },
-    "2L10X10X7\\/8X1-1\\/2": {
+    "2L10X10X7/8X1-1/2": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -23049,7 +23049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.84
     },
-    "2L10X10X3\\/4": {
+    "2L10X10X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -23074,7 +23074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.725
     },
-    "2L10X10X3\\/4X3\\/4": {
+    "2L10X10X3/4X3/4": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -23099,7 +23099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.725
     },
-    "2L10X10X3\\/4X1-1\\/2": {
+    "2L10X10X3/4X1-1/2": {
         "type": "2L",
         "d": 10.0,
         "bf": 0,
@@ -23124,7 +23124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.725
     },
-    "2L8X8X1-1\\/8": {
+    "2L8X8X1-1/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23149,7 +23149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.05
     },
-    "2L8X8X1-1\\/8X3\\/8": {
+    "2L8X8X1-1/8X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23174,7 +23174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.05
     },
-    "2L8X8X1-1\\/8X3\\/4": {
+    "2L8X8X1-1/8X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23224,7 +23224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.944
     },
-    "2L8X8X1X3\\/8": {
+    "2L8X8X1X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23249,7 +23249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.944
     },
-    "2L8X8X1X3\\/4": {
+    "2L8X8X1X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23274,7 +23274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.944
     },
-    "2L8X8X7\\/8": {
+    "2L8X8X7/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23299,7 +23299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.831
     },
-    "2L8X8X7\\/8X3\\/8": {
+    "2L8X8X7/8X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23324,7 +23324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.831
     },
-    "2L8X8X7\\/8X3\\/4": {
+    "2L8X8X7/8X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23349,7 +23349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.831
     },
-    "2L8X8X3\\/4": {
+    "2L8X8X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23374,7 +23374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.719
     },
-    "2L8X8X3\\/4X3\\/8": {
+    "2L8X8X3/4X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23399,7 +23399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.719
     },
-    "2L8X8X3\\/4X3\\/4": {
+    "2L8X8X3/4X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23424,7 +23424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.719
     },
-    "2L8X8X5\\/8": {
+    "2L8X8X5/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23449,7 +23449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.606
     },
-    "2L8X8X5\\/8X3\\/8": {
+    "2L8X8X5/8X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23474,7 +23474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.606
     },
-    "2L8X8X5\\/8X3\\/4": {
+    "2L8X8X5/8X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23499,7 +23499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.606
     },
-    "2L8X8X9\\/16": {
+    "2L8X8X9/16": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23524,7 +23524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.548
     },
-    "2L8X8X9\\/16X3\\/8": {
+    "2L8X8X9/16X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23549,7 +23549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.548
     },
-    "2L8X8X9\\/16X3\\/4": {
+    "2L8X8X9/16X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23574,7 +23574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.548
     },
-    "2L8X8X1\\/2": {
+    "2L8X8X1/2": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23599,7 +23599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.49
     },
-    "2L8X8X1\\/2X3\\/8": {
+    "2L8X8X1/2X3/8": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23624,7 +23624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.49
     },
-    "2L8X8X1\\/2X3\\/4": {
+    "2L8X8X1/2X3/4": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -23674,7 +23674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.917
     },
-    "2L6X6X1X3\\/8": {
+    "2L6X6X1X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23699,7 +23699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.917
     },
-    "2L6X6X1X3\\/4": {
+    "2L6X6X1X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23724,7 +23724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.917
     },
-    "2L6X6X7\\/8": {
+    "2L6X6X7/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23749,7 +23749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.813
     },
-    "2L6X6X7\\/8X3\\/8": {
+    "2L6X6X7/8X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23774,7 +23774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.813
     },
-    "2L6X6X7\\/8X3\\/4": {
+    "2L6X6X7/8X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23799,7 +23799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.813
     },
-    "2L6X6X3\\/4": {
+    "2L6X6X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23824,7 +23824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.705
     },
-    "2L6X6X3\\/4X3\\/8": {
+    "2L6X6X3/4X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23849,7 +23849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.705
     },
-    "2L6X6X3\\/4X3\\/4": {
+    "2L6X6X3/4X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23874,7 +23874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.705
     },
-    "2L6X6X5\\/8": {
+    "2L6X6X5/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23899,7 +23899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.594
     },
-    "2L6X6X5\\/8X3\\/8": {
+    "2L6X6X5/8X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23924,7 +23924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.594
     },
-    "2L6X6X5\\/8X3\\/4": {
+    "2L6X6X5/8X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23949,7 +23949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.594
     },
-    "2L6X6X9\\/16": {
+    "2L6X6X9/16": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23974,7 +23974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.538
     },
-    "2L6X6X9\\/16X3\\/8": {
+    "2L6X6X9/16X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -23999,7 +23999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.538
     },
-    "2L6X6X9\\/16X3\\/4": {
+    "2L6X6X9/16X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24024,7 +24024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.538
     },
-    "2L6X6X1\\/2": {
+    "2L6X6X1/2": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24049,7 +24049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.481
     },
-    "2L6X6X1\\/2X3\\/8": {
+    "2L6X6X1/2X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24074,7 +24074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.481
     },
-    "2L6X6X1\\/2X3\\/4": {
+    "2L6X6X1/2X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24099,7 +24099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.481
     },
-    "2L6X6X7\\/16": {
+    "2L6X6X7/16": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24124,7 +24124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.423
     },
-    "2L6X6X7\\/16X3\\/8": {
+    "2L6X6X7/16X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24149,7 +24149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.423
     },
-    "2L6X6X7\\/16X3\\/4": {
+    "2L6X6X7/16X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24174,7 +24174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.423
     },
-    "2L6X6X3\\/8": {
+    "2L6X6X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24199,7 +24199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.365
     },
-    "2L6X6X3\\/8X3\\/8": {
+    "2L6X6X3/8X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24224,7 +24224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.365
     },
-    "2L6X6X3\\/8X3\\/4": {
+    "2L6X6X3/8X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24249,7 +24249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.365
     },
-    "2L6X6X5\\/16": {
+    "2L6X6X5/16": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24274,7 +24274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.306
     },
-    "2L6X6X5\\/16X3\\/8": {
+    "2L6X6X5/16X3/8": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24299,7 +24299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.306
     },
-    "2L6X6X5\\/16X3\\/4": {
+    "2L6X6X5/16X3/4": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -24324,7 +24324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.306
     },
-    "2L5X5X7\\/8": {
+    "2L5X5X7/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24349,7 +24349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.8
     },
-    "2L5X5X7\\/8X3\\/8": {
+    "2L5X5X7/8X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24374,7 +24374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.8
     },
-    "2L5X5X7\\/8X3\\/4": {
+    "2L5X5X7/8X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24399,7 +24399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.8
     },
-    "2L5X5X3\\/4": {
+    "2L5X5X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24424,7 +24424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.698
     },
-    "2L5X5X3\\/4X3\\/8": {
+    "2L5X5X3/4X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24449,7 +24449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.698
     },
-    "2L5X5X3\\/4X3\\/4": {
+    "2L5X5X3/4X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24474,7 +24474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.698
     },
-    "2L5X5X5\\/8": {
+    "2L5X5X5/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24499,7 +24499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.59
     },
-    "2L5X5X5\\/8X3\\/8": {
+    "2L5X5X5/8X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24524,7 +24524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.59
     },
-    "2L5X5X5\\/8X3\\/4": {
+    "2L5X5X5/8X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24549,7 +24549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.59
     },
-    "2L5X5X1\\/2": {
+    "2L5X5X1/2": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24574,7 +24574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.479
     },
-    "2L5X5X1\\/2X3\\/8": {
+    "2L5X5X1/2X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24599,7 +24599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.479
     },
-    "2L5X5X1\\/2X3\\/4": {
+    "2L5X5X1/2X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24624,7 +24624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.479
     },
-    "2L5X5X7\\/16": {
+    "2L5X5X7/16": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24649,7 +24649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.422
     },
-    "2L5X5X7\\/16X3\\/8": {
+    "2L5X5X7/16X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24674,7 +24674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.422
     },
-    "2L5X5X7\\/16X3\\/4": {
+    "2L5X5X7/16X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24699,7 +24699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.422
     },
-    "2L5X5X3\\/8": {
+    "2L5X5X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24724,7 +24724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.365
     },
-    "2L5X5X3\\/8X3\\/8": {
+    "2L5X5X3/8X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24749,7 +24749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.365
     },
-    "2L5X5X3\\/8X3\\/4": {
+    "2L5X5X3/8X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24774,7 +24774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.365
     },
-    "2L5X5X5\\/16": {
+    "2L5X5X5/16": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24799,7 +24799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.307
     },
-    "2L5X5X5\\/16X3\\/8": {
+    "2L5X5X5/16X3/8": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24824,7 +24824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.307
     },
-    "2L5X5X5\\/16X3\\/4": {
+    "2L5X5X5/16X3/4": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -24849,7 +24849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.307
     },
-    "2L4X4X3\\/4": {
+    "2L4X4X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -24874,7 +24874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.68
     },
-    "2L4X4X3\\/4X3\\/8": {
+    "2L4X4X3/4X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -24899,7 +24899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.68
     },
-    "2L4X4X3\\/4X3\\/4": {
+    "2L4X4X3/4X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -24924,7 +24924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.68
     },
-    "2L4X4X5\\/8": {
+    "2L4X4X5/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -24949,7 +24949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.576
     },
-    "2L4X4X5\\/8X3\\/8": {
+    "2L4X4X5/8X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -24974,7 +24974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.576
     },
-    "2L4X4X5\\/8X3\\/4": {
+    "2L4X4X5/8X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -24999,7 +24999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.576
     },
-    "2L4X4X1\\/2": {
+    "2L4X4X1/2": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25024,7 +25024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.469
     },
-    "2L4X4X1\\/2X3\\/8": {
+    "2L4X4X1/2X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25049,7 +25049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.469
     },
-    "2L4X4X1\\/2X3\\/4": {
+    "2L4X4X1/2X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25074,7 +25074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.469
     },
-    "2L4X4X7\\/16": {
+    "2L4X4X7/16": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25099,7 +25099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.413
     },
-    "2L4X4X7\\/16X3\\/8": {
+    "2L4X4X7/16X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25124,7 +25124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.413
     },
-    "2L4X4X7\\/16X3\\/4": {
+    "2L4X4X7/16X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25149,7 +25149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.413
     },
-    "2L4X4X3\\/8": {
+    "2L4X4X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25174,7 +25174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.358
     },
-    "2L4X4X3\\/8X3\\/8": {
+    "2L4X4X3/8X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25199,7 +25199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.358
     },
-    "2L4X4X3\\/8X3\\/4": {
+    "2L4X4X3/8X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25224,7 +25224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.358
     },
-    "2L4X4X5\\/16": {
+    "2L4X4X5/16": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25249,7 +25249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.3
     },
-    "2L4X4X5\\/16X3\\/8": {
+    "2L4X4X5/16X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25274,7 +25274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.3
     },
-    "2L4X4X5\\/16X3\\/4": {
+    "2L4X4X5/16X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25299,7 +25299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.3
     },
-    "2L4X4X1\\/4": {
+    "2L4X4X1/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25324,7 +25324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L4X4X1\\/4X3\\/8": {
+    "2L4X4X1/4X3/8": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25349,7 +25349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L4X4X1\\/4X3\\/4": {
+    "2L4X4X1/4X3/4": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -25374,7 +25374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L3-1\\/2X3-1\\/2X1\\/2": {
+    "2L3-1/2X3-1/2X1/2": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25399,7 +25399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.464
     },
-    "2L3-1\\/2X3-1\\/2X1\\/2X3\\/8": {
+    "2L3-1/2X3-1/2X1/2X3/8": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25424,7 +25424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.464
     },
-    "2L3-1\\/2X3-1\\/2X1\\/2X3\\/4": {
+    "2L3-1/2X3-1/2X1/2X3/4": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25449,7 +25449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.464
     },
-    "2L3-1\\/2X3-1\\/2X7\\/16": {
+    "2L3-1/2X3-1/2X7/16": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25474,7 +25474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.413
     },
-    "2L3-1\\/2X3-1\\/2X7\\/16X3\\/8": {
+    "2L3-1/2X3-1/2X7/16X3/8": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25499,7 +25499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.413
     },
-    "2L3-1\\/2X3-1\\/2X7\\/16X3\\/4": {
+    "2L3-1/2X3-1/2X7/16X3/4": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25524,7 +25524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.413
     },
-    "2L3-1\\/2X3-1\\/2X3\\/8": {
+    "2L3-1/2X3-1/2X3/8": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25549,7 +25549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.357
     },
-    "2L3-1\\/2X3-1\\/2X3\\/8X3\\/8": {
+    "2L3-1/2X3-1/2X3/8X3/8": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25574,7 +25574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.357
     },
-    "2L3-1\\/2X3-1\\/2X3\\/8X3\\/4": {
+    "2L3-1/2X3-1/2X3/8X3/4": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25599,7 +25599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.357
     },
-    "2L3-1\\/2X3-1\\/2X5\\/16": {
+    "2L3-1/2X3-1/2X5/16": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25624,7 +25624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.3
     },
-    "2L3-1\\/2X3-1\\/2X5\\/16X3\\/8": {
+    "2L3-1/2X3-1/2X5/16X3/8": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25649,7 +25649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.3
     },
-    "2L3-1\\/2X3-1\\/2X5\\/16X3\\/4": {
+    "2L3-1/2X3-1/2X5/16X3/4": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25674,7 +25674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.3
     },
-    "2L3-1\\/2X3-1\\/2X1\\/4": {
+    "2L3-1/2X3-1/2X1/4": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25699,7 +25699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.243
     },
-    "2L3-1\\/2X3-1\\/2X1\\/4X3\\/8": {
+    "2L3-1/2X3-1/2X1/4X3/8": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25724,7 +25724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.243
     },
-    "2L3-1\\/2X3-1\\/2X1\\/4X3\\/4": {
+    "2L3-1/2X3-1/2X1/4X3/4": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -25749,7 +25749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.243
     },
-    "2L3X3X1\\/2": {
+    "2L3X3X1/2": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25774,7 +25774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.46
     },
-    "2L3X3X1\\/2X3\\/8": {
+    "2L3X3X1/2X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25799,7 +25799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.46
     },
-    "2L3X3X1\\/2X3\\/4": {
+    "2L3X3X1/2X3/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25824,7 +25824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.46
     },
-    "2L3X3X7\\/16": {
+    "2L3X3X7/16": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25849,7 +25849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.405
     },
-    "2L3X3X7\\/16X3\\/8": {
+    "2L3X3X7/16X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25874,7 +25874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.405
     },
-    "2L3X3X7\\/16X3\\/4": {
+    "2L3X3X7/16X3/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25899,7 +25899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.405
     },
-    "2L3X3X3\\/8": {
+    "2L3X3X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25924,7 +25924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.352
     },
-    "2L3X3X3\\/8X3\\/8": {
+    "2L3X3X3/8X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25949,7 +25949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.352
     },
-    "2L3X3X3\\/8X3\\/4": {
+    "2L3X3X3/8X3/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25974,7 +25974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.352
     },
-    "2L3X3X5\\/16": {
+    "2L3X3X5/16": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -25999,7 +25999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.297
     },
-    "2L3X3X5\\/16X3\\/8": {
+    "2L3X3X5/16X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26024,7 +26024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.297
     },
-    "2L3X3X5\\/16X3\\/4": {
+    "2L3X3X5/16X3/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26049,7 +26049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.297
     },
-    "2L3X3X1\\/4": {
+    "2L3X3X1/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26074,7 +26074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.24
     },
-    "2L3X3X1\\/4X3\\/8": {
+    "2L3X3X1/4X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26099,7 +26099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.24
     },
-    "2L3X3X1\\/4X3\\/4": {
+    "2L3X3X1/4X3/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26124,7 +26124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.24
     },
-    "2L3X3X3\\/16": {
+    "2L3X3X3/16": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26149,7 +26149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.182
     },
-    "2L3X3X3\\/16X3\\/8": {
+    "2L3X3X3/16X3/8": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26174,7 +26174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.182
     },
-    "2L3X3X3\\/16X3\\/4": {
+    "2L3X3X3/16X3/4": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -26199,7 +26199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.182
     },
-    "2L2-1\\/2X2-1\\/2X1\\/2": {
+    "2L2-1/2X2-1/2X1/2": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26224,7 +26224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.452
     },
-    "2L2-1\\/2X2-1\\/2X1\\/2X3\\/8": {
+    "2L2-1/2X2-1/2X1/2X3/8": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26249,7 +26249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.452
     },
-    "2L2-1\\/2X2-1\\/2X1\\/2X3\\/4": {
+    "2L2-1/2X2-1/2X1/2X3/4": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26274,7 +26274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.452
     },
-    "2L2-1\\/2X2-1\\/2X3\\/8": {
+    "2L2-1/2X2-1/2X3/8": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26299,7 +26299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.346
     },
-    "2L2-1\\/2X2-1\\/2X3\\/8X3\\/8": {
+    "2L2-1/2X2-1/2X3/8X3/8": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26324,7 +26324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.346
     },
-    "2L2-1\\/2X2-1\\/2X3\\/8X3\\/4": {
+    "2L2-1/2X2-1/2X3/8X3/4": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26349,7 +26349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.346
     },
-    "2L2-1\\/2X2-1\\/2X5\\/16": {
+    "2L2-1/2X2-1/2X5/16": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26374,7 +26374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.292
     },
-    "2L2-1\\/2X2-1\\/2X5\\/16X3\\/8": {
+    "2L2-1/2X2-1/2X5/16X3/8": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26399,7 +26399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.292
     },
-    "2L2-1\\/2X2-1\\/2X5\\/16X3\\/4": {
+    "2L2-1/2X2-1/2X5/16X3/4": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26424,7 +26424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.292
     },
-    "2L2-1\\/2X2-1\\/2X1\\/4": {
+    "2L2-1/2X2-1/2X1/4": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26449,7 +26449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.238
     },
-    "2L2-1\\/2X2-1\\/2X1\\/4X3\\/8": {
+    "2L2-1/2X2-1/2X1/4X3/8": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26474,7 +26474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.238
     },
-    "2L2-1\\/2X2-1\\/2X1\\/4X3\\/4": {
+    "2L2-1/2X2-1/2X1/4X3/4": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26499,7 +26499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.238
     },
-    "2L2-1\\/2X2-1\\/2X3\\/16": {
+    "2L2-1/2X2-1/2X3/16": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26524,7 +26524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.18
     },
-    "2L2-1\\/2X2-1\\/2X3\\/16X3\\/8": {
+    "2L2-1/2X2-1/2X3/16X3/8": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26549,7 +26549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.18
     },
-    "2L2-1\\/2X2-1\\/2X3\\/16X3\\/4": {
+    "2L2-1/2X2-1/2X3/16X3/4": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -26574,7 +26574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.18
     },
-    "2L2X2X3\\/8": {
+    "2L2X2X3/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26599,7 +26599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.343
     },
-    "2L2X2X3\\/8X3\\/8": {
+    "2L2X2X3/8X3/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26624,7 +26624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.343
     },
-    "2L2X2X3\\/8X3\\/4": {
+    "2L2X2X3/8X3/4": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26649,7 +26649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.343
     },
-    "2L2X2X5\\/16": {
+    "2L2X2X5/16": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26674,7 +26674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.29
     },
-    "2L2X2X5\\/16X3\\/8": {
+    "2L2X2X5/16X3/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26699,7 +26699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.29
     },
-    "2L2X2X5\\/16X3\\/4": {
+    "2L2X2X5/16X3/4": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26724,7 +26724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.29
     },
-    "2L2X2X1\\/4": {
+    "2L2X2X1/4": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26749,7 +26749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.236
     },
-    "2L2X2X1\\/4X3\\/8": {
+    "2L2X2X1/4X3/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26774,7 +26774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.236
     },
-    "2L2X2X1\\/4X3\\/4": {
+    "2L2X2X1/4X3/4": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26799,7 +26799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.236
     },
-    "2L2X2X3\\/16": {
+    "2L2X2X3/16": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26824,7 +26824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.181
     },
-    "2L2X2X3\\/16X3\\/8": {
+    "2L2X2X3/16X3/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26849,7 +26849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.181
     },
-    "2L2X2X3\\/16X3\\/4": {
+    "2L2X2X3/16X3/4": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26874,7 +26874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.181
     },
-    "2L2X2X1\\/8": {
+    "2L2X2X1/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26899,7 +26899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.123
     },
-    "2L2X2X1\\/8X3\\/8": {
+    "2L2X2X1/8X3/8": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26924,7 +26924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.123
     },
-    "2L2X2X1\\/8X3\\/4": {
+    "2L2X2X1/8X3/4": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -26974,7 +26974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.45
     },
-    "2L8X6X1X3\\/8LLBB": {
+    "2L8X6X1X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -26999,7 +26999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.45
     },
-    "2L8X6X1X3\\/4LLBB": {
+    "2L8X6X1X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27024,7 +27024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.45
     },
-    "2L8X6X7\\/8LLBB": {
+    "2L8X6X7/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27049,7 +27049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.43
     },
-    "2L8X6X7\\/8X3\\/8LLBB": {
+    "2L8X6X7/8X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27074,7 +27074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.43
     },
-    "2L8X6X7\\/8X3\\/4LLBB": {
+    "2L8X6X7/8X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27099,7 +27099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.43
     },
-    "2L8X6X3\\/4LLBB": {
+    "2L8X6X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27124,7 +27124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.34
     },
-    "2L8X6X3\\/4X3\\/8LLBB": {
+    "2L8X6X3/4X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27149,7 +27149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.34
     },
-    "2L8X6X3\\/4X3\\/4LLBB": {
+    "2L8X6X3/4X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27174,7 +27174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.34
     },
-    "2L8X6X5\\/8LLBB": {
+    "2L8X6X5/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27199,7 +27199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.27
     },
-    "2L8X6X5\\/8X3\\/8LLBB": {
+    "2L8X6X5/8X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27224,7 +27224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.27
     },
-    "2L8X6X5\\/8X3\\/4LLBB": {
+    "2L8X6X5/8X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27249,7 +27249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.27
     },
-    "2L8X6X9\\/16LLBB": {
+    "2L8X6X9/16LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27274,7 +27274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.24
     },
-    "2L8X6X9\\/16X3\\/8LLBB": {
+    "2L8X6X9/16X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27299,7 +27299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.24
     },
-    "2L8X6X9\\/16X3\\/4LLBB": {
+    "2L8X6X9/16X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27324,7 +27324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.24
     },
-    "2L8X6X1\\/2LLBB": {
+    "2L8X6X1/2LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27349,7 +27349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.2
     },
-    "2L8X6X1\\/2X3\\/8LLBB": {
+    "2L8X6X1/2X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27374,7 +27374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.2
     },
-    "2L8X6X1\\/2X3\\/4LLBB": {
+    "2L8X6X1/2X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27399,7 +27399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.2
     },
-    "2L8X6X7\\/16LLBB": {
+    "2L8X6X7/16LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27424,7 +27424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.15
     },
-    "2L8X6X7\\/16X3\\/8LLBB": {
+    "2L8X6X7/16X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27449,7 +27449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.15
     },
-    "2L8X6X7\\/16X3\\/4LLBB": {
+    "2L8X6X7/16X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27499,7 +27499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.45
     },
-    "2L8X4X1X3\\/8LLBB": {
+    "2L8X4X1X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27524,7 +27524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.45
     },
-    "2L8X4X1X3\\/4LLBB": {
+    "2L8X4X1X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27549,7 +27549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.45
     },
-    "2L8X4X7\\/8LLBB": {
+    "2L8X4X7/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27574,7 +27574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.41
     },
-    "2L8X4X7\\/8X3\\/8LLBB": {
+    "2L8X4X7/8X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27599,7 +27599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.41
     },
-    "2L8X4X7\\/8X3\\/4LLBB": {
+    "2L8X4X7/8X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27624,7 +27624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.41
     },
-    "2L8X4X3\\/4LLBB": {
+    "2L8X4X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27649,7 +27649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.34
     },
-    "2L8X4X3\\/4X3\\/8LLBB": {
+    "2L8X4X3/4X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27674,7 +27674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.34
     },
-    "2L8X4X3\\/4X3\\/4LLBB": {
+    "2L8X4X3/4X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27699,7 +27699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.34
     },
-    "2L8X4X5\\/8LLBB": {
+    "2L8X4X5/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27724,7 +27724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.27
     },
-    "2L8X4X5\\/8X3\\/8LLBB": {
+    "2L8X4X5/8X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27749,7 +27749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.27
     },
-    "2L8X4X5\\/8X3\\/4LLBB": {
+    "2L8X4X5/8X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27774,7 +27774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.27
     },
-    "2L8X4X9\\/16LLBB": {
+    "2L8X4X9/16LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27799,7 +27799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.23
     },
-    "2L8X4X9\\/16X3\\/8LLBB": {
+    "2L8X4X9/16X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27824,7 +27824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.23
     },
-    "2L8X4X9\\/16X3\\/4LLBB": {
+    "2L8X4X9/16X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27849,7 +27849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.23
     },
-    "2L8X4X1\\/2LLBB": {
+    "2L8X4X1/2LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27874,7 +27874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.2
     },
-    "2L8X4X1\\/2X3\\/8LLBB": {
+    "2L8X4X1/2X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27899,7 +27899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.2
     },
-    "2L8X4X1\\/2X3\\/4LLBB": {
+    "2L8X4X1/2X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27924,7 +27924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.2
     },
-    "2L8X4X7\\/16LLBB": {
+    "2L8X4X7/16LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27949,7 +27949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.16
     },
-    "2L8X4X7\\/16X3\\/8LLBB": {
+    "2L8X4X7/16X3/8LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27974,7 +27974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.16
     },
-    "2L8X4X7\\/16X3\\/4LLBB": {
+    "2L8X4X7/16X3/4LLBB": {
         "type": "2L",
         "d": 8.0,
         "bf": 0,
@@ -27999,7 +27999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 2.16
     },
-    "2L7X4X3\\/4LLBB": {
+    "2L7X4X3/4LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28024,7 +28024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.84
     },
-    "2L7X4X3\\/4X3\\/8LLBB": {
+    "2L7X4X3/4X3/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28049,7 +28049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.84
     },
-    "2L7X4X3\\/4X3\\/4LLBB": {
+    "2L7X4X3/4X3/4LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28074,7 +28074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.84
     },
-    "2L7X4X5\\/8LLBB": {
+    "2L7X4X5/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28099,7 +28099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.8
     },
-    "2L7X4X5\\/8X3\\/8LLBB": {
+    "2L7X4X5/8X3/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28124,7 +28124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.8
     },
-    "2L7X4X5\\/8X3\\/4LLBB": {
+    "2L7X4X5/8X3/4LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28149,7 +28149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.8
     },
-    "2L7X4X1\\/2LLBB": {
+    "2L7X4X1/2LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28174,7 +28174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.74
     },
-    "2L7X4X1\\/2X3\\/8LLBB": {
+    "2L7X4X1/2X3/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28199,7 +28199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.74
     },
-    "2L7X4X1\\/2X3\\/4LLBB": {
+    "2L7X4X1/2X3/4LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28224,7 +28224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.74
     },
-    "2L7X4X7\\/16LLBB": {
+    "2L7X4X7/16LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28249,7 +28249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.71
     },
-    "2L7X4X7\\/16X3\\/8LLBB": {
+    "2L7X4X7/16X3/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28274,7 +28274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.71
     },
-    "2L7X4X7\\/16X3\\/4LLBB": {
+    "2L7X4X7/16X3/4LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28299,7 +28299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.71
     },
-    "2L7X4X3\\/8LLBB": {
+    "2L7X4X3/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28324,7 +28324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.67
     },
-    "2L7X4X3\\/8X3\\/8LLBB": {
+    "2L7X4X3/8X3/8LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28349,7 +28349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.67
     },
-    "2L7X4X3\\/8X3\\/4LLBB": {
+    "2L7X4X3/8X3/4LLBB": {
         "type": "2L",
         "d": 7.0,
         "bf": 0,
@@ -28374,7 +28374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.67
     },
-    "2L6X4X7\\/8LLBB": {
+    "2L6X4X7/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28399,7 +28399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.43
     },
-    "2L6X4X7\\/8X3\\/8LLBB": {
+    "2L6X4X7/8X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28424,7 +28424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.43
     },
-    "2L6X4X7\\/8X3\\/4LLBB": {
+    "2L6X4X7/8X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28449,7 +28449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.43
     },
-    "2L6X4X3\\/4LLBB": {
+    "2L6X4X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28474,7 +28474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.37
     },
-    "2L6X4X3\\/4X3\\/8LLBB": {
+    "2L6X4X3/4X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28499,7 +28499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.37
     },
-    "2L6X4X3\\/4X3\\/4LLBB": {
+    "2L6X4X3/4X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28524,7 +28524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.37
     },
-    "2L6X4X5\\/8LLBB": {
+    "2L6X4X5/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28549,7 +28549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.31
     },
-    "2L6X4X5\\/8X3\\/8LLBB": {
+    "2L6X4X5/8X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28574,7 +28574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.31
     },
-    "2L6X4X5\\/8X3\\/4LLBB": {
+    "2L6X4X5/8X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28599,7 +28599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.31
     },
-    "2L6X4X9\\/16LLBB": {
+    "2L6X4X9/16LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28624,7 +28624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.28
     },
-    "2L6X4X9\\/16X3\\/8LLBB": {
+    "2L6X4X9/16X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28649,7 +28649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.28
     },
-    "2L6X4X9\\/16X3\\/4LLBB": {
+    "2L6X4X9/16X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28674,7 +28674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.28
     },
-    "2L6X4X1\\/2LLBB": {
+    "2L6X4X1/2LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28699,7 +28699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.25
     },
-    "2L6X4X1\\/2X3\\/8LLBB": {
+    "2L6X4X1/2X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28724,7 +28724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.25
     },
-    "2L6X4X1\\/2X3\\/4LLBB": {
+    "2L6X4X1/2X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28749,7 +28749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.25
     },
-    "2L6X4X7\\/16LLBB": {
+    "2L6X4X7/16LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28774,7 +28774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.22
     },
-    "2L6X4X7\\/16X3\\/8LLBB": {
+    "2L6X4X7/16X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28799,7 +28799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.22
     },
-    "2L6X4X7\\/16X3\\/4LLBB": {
+    "2L6X4X7/16X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28824,7 +28824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.22
     },
-    "2L6X4X3\\/8LLBB": {
+    "2L6X4X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28849,7 +28849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.19
     },
-    "2L6X4X3\\/8X3\\/8LLBB": {
+    "2L6X4X3/8X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28874,7 +28874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.19
     },
-    "2L6X4X3\\/8X3\\/4LLBB": {
+    "2L6X4X3/8X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28899,7 +28899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.19
     },
-    "2L6X4X5\\/16LLBB": {
+    "2L6X4X5/16LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28924,7 +28924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.15
     },
-    "2L6X4X5\\/16X3\\/8LLBB": {
+    "2L6X4X5/16X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28949,7 +28949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.15
     },
-    "2L6X4X5\\/16X3\\/4LLBB": {
+    "2L6X4X5/16X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28974,7 +28974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.15
     },
-    "2L6X3-1\\/2X1\\/2LLBB": {
+    "2L6X3-1/2X1/2LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -28999,7 +28999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.5
     },
-    "2L6X3-1\\/2X1\\/2X3\\/8LLBB": {
+    "2L6X3-1/2X1/2X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29024,7 +29024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.5
     },
-    "2L6X3-1\\/2X1\\/2X3\\/4LLBB": {
+    "2L6X3-1/2X1/2X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29049,7 +29049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.5
     },
-    "2L6X3-1\\/2X3\\/8LLBB": {
+    "2L6X3-1/2X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29074,7 +29074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.41
     },
-    "2L6X3-1\\/2X3\\/8X3\\/8LLBB": {
+    "2L6X3-1/2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29099,7 +29099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.41
     },
-    "2L6X3-1\\/2X3\\/8X3\\/4LLBB": {
+    "2L6X3-1/2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29124,7 +29124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.41
     },
-    "2L6X3-1\\/2X5\\/16LLBB": {
+    "2L6X3-1/2X5/16LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29149,7 +29149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.38
     },
-    "2L6X3-1\\/2X5\\/16X3\\/8LLBB": {
+    "2L6X3-1/2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29174,7 +29174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.38
     },
-    "2L6X3-1\\/2X5\\/16X3\\/4LLBB": {
+    "2L6X3-1/2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -29199,7 +29199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.38
     },
-    "2L5X3-1\\/2X3\\/4LLBB": {
+    "2L5X3-1/2X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29224,7 +29224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.1
     },
-    "2L5X3-1\\/2X3\\/4X3\\/8LLBB": {
+    "2L5X3-1/2X3/4X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29249,7 +29249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.1
     },
-    "2L5X3-1\\/2X3\\/4X3\\/4LLBB": {
+    "2L5X3-1/2X3/4X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29274,7 +29274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.1
     },
-    "2L5X3-1\\/2X5\\/8LLBB": {
+    "2L5X3-1/2X5/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29299,7 +29299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.06
     },
-    "2L5X3-1\\/2X5\\/8X3\\/8LLBB": {
+    "2L5X3-1/2X5/8X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29324,7 +29324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.06
     },
-    "2L5X3-1\\/2X5\\/8X3\\/4LLBB": {
+    "2L5X3-1/2X5/8X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29349,7 +29349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.06
     },
-    "2L5X3-1\\/2X1\\/2LLBB": {
+    "2L5X3-1/2X1/2LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29374,7 +29374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.0
     },
-    "2L5X3-1\\/2X1\\/2X3\\/8LLBB": {
+    "2L5X3-1/2X1/2X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29399,7 +29399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.0
     },
-    "2L5X3-1\\/2X1\\/2X3\\/4LLBB": {
+    "2L5X3-1/2X1/2X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29424,7 +29424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.0
     },
-    "2L5X3-1\\/2X3\\/8LLBB": {
+    "2L5X3-1/2X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29449,7 +29449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.933
     },
-    "2L5X3-1\\/2X3\\/8X3\\/8LLBB": {
+    "2L5X3-1/2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29474,7 +29474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.933
     },
-    "2L5X3-1\\/2X3\\/8X3\\/4LLBB": {
+    "2L5X3-1/2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29499,7 +29499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.933
     },
-    "2L5X3-1\\/2X5\\/16LLBB": {
+    "2L5X3-1/2X5/16LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29524,7 +29524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.904
     },
-    "2L5X3-1\\/2X5\\/16X3\\/8LLBB": {
+    "2L5X3-1/2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29549,7 +29549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.904
     },
-    "2L5X3-1\\/2X5\\/16X3\\/4LLBB": {
+    "2L5X3-1/2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29574,7 +29574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.904
     },
-    "2L5X3-1\\/2X1\\/4LLBB": {
+    "2L5X3-1/2X1/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29599,7 +29599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.86
     },
-    "2L5X3-1\\/2X1\\/4X3\\/8LLBB": {
+    "2L5X3-1/2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29624,7 +29624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.86
     },
-    "2L5X3-1\\/2X1\\/4X3\\/4LLBB": {
+    "2L5X3-1/2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29649,7 +29649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.86
     },
-    "2L5X3X1\\/2LLBB": {
+    "2L5X3X1/2LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29674,7 +29674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.25
     },
-    "2L5X3X1\\/2X3\\/8LLBB": {
+    "2L5X3X1/2X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29699,7 +29699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.25
     },
-    "2L5X3X1\\/2X3\\/4LLBB": {
+    "2L5X3X1/2X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29724,7 +29724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.25
     },
-    "2L5X3X7\\/16LLBB": {
+    "2L5X3X7/16LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29749,7 +29749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.22
     },
-    "2L5X3X7\\/16X3\\/8LLBB": {
+    "2L5X3X7/16X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29774,7 +29774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.22
     },
-    "2L5X3X7\\/16X3\\/4LLBB": {
+    "2L5X3X7/16X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29799,7 +29799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.22
     },
-    "2L5X3X3\\/8LLBB": {
+    "2L5X3X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29824,7 +29824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.19
     },
-    "2L5X3X3\\/8X3\\/8LLBB": {
+    "2L5X3X3/8X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29849,7 +29849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.19
     },
-    "2L5X3X3\\/8X3\\/4LLBB": {
+    "2L5X3X3/8X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29874,7 +29874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.19
     },
-    "2L5X3X5\\/16LLBB": {
+    "2L5X3X5/16LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29899,7 +29899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.14
     },
-    "2L5X3X5\\/16X3\\/8LLBB": {
+    "2L5X3X5/16X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29924,7 +29924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.14
     },
-    "2L5X3X5\\/16X3\\/4LLBB": {
+    "2L5X3X5/16X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29949,7 +29949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.14
     },
-    "2L5X3X1\\/4LLBB": {
+    "2L5X3X1/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29974,7 +29974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.12
     },
-    "2L5X3X1\\/4X3\\/8LLBB": {
+    "2L5X3X1/4X3/8LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -29999,7 +29999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.12
     },
-    "2L5X3X1\\/4X3\\/4LLBB": {
+    "2L5X3X1/4X3/4LLBB": {
         "type": "2L",
         "d": 5.0,
         "bf": 0,
@@ -30024,7 +30024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 1.12
     },
-    "2L4X3-1\\/2X1\\/2LLBB": {
+    "2L4X3-1/2X1/2LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30049,7 +30049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.5
     },
-    "2L4X3-1\\/2X1\\/2X3\\/8LLBB": {
+    "2L4X3-1/2X1/2X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30074,7 +30074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.5
     },
-    "2L4X3-1\\/2X1\\/2X3\\/4LLBB": {
+    "2L4X3-1/2X1/2X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30099,7 +30099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.5
     },
-    "2L4X3-1\\/2X3\\/8LLBB": {
+    "2L4X3-1/2X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30124,7 +30124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.427
     },
-    "2L4X3-1\\/2X3\\/8X3\\/8LLBB": {
+    "2L4X3-1/2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30149,7 +30149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.427
     },
-    "2L4X3-1\\/2X3\\/8X3\\/4LLBB": {
+    "2L4X3-1/2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30174,7 +30174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.427
     },
-    "2L4X3-1\\/2X5\\/16LLBB": {
+    "2L4X3-1/2X5/16LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30199,7 +30199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.4
     },
-    "2L4X3-1\\/2X5\\/16X3\\/8LLBB": {
+    "2L4X3-1/2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30224,7 +30224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.4
     },
-    "2L4X3-1\\/2X5\\/16X3\\/4LLBB": {
+    "2L4X3-1/2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30249,7 +30249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.4
     },
-    "2L4X3-1\\/2X1\\/4LLBB": {
+    "2L4X3-1/2X1/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30274,7 +30274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L4X3-1\\/2X1\\/4X3\\/8LLBB": {
+    "2L4X3-1/2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30299,7 +30299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L4X3-1\\/2X1\\/4X3\\/4LLBB": {
+    "2L4X3-1/2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30324,7 +30324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L4X3X5\\/8LLBB": {
+    "2L4X3X5/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30349,7 +30349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.808
     },
-    "2L4X3X5\\/8X3\\/8LLBB": {
+    "2L4X3X5/8X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30374,7 +30374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.808
     },
-    "2L4X3X5\\/8X3\\/4LLBB": {
+    "2L4X3X5/8X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30399,7 +30399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.808
     },
-    "2L4X3X1\\/2LLBB": {
+    "2L4X3X1/2LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30424,7 +30424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.75
     },
-    "2L4X3X1\\/2X3\\/8LLBB": {
+    "2L4X3X1/2X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30449,7 +30449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.75
     },
-    "2L4X3X1\\/2X3\\/4LLBB": {
+    "2L4X3X1/2X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30474,7 +30474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.75
     },
-    "2L4X3X3\\/8LLBB": {
+    "2L4X3X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30499,7 +30499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.68
     },
-    "2L4X3X3\\/8X3\\/8LLBB": {
+    "2L4X3X3/8X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30524,7 +30524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.68
     },
-    "2L4X3X3\\/8X3\\/4LLBB": {
+    "2L4X3X3/8X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30549,7 +30549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.68
     },
-    "2L4X3X5\\/16LLBB": {
+    "2L4X3X5/16LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30574,7 +30574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.656
     },
-    "2L4X3X5\\/16X3\\/8LLBB": {
+    "2L4X3X5/16X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30599,7 +30599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.656
     },
-    "2L4X3X5\\/16X3\\/4LLBB": {
+    "2L4X3X5/16X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30624,7 +30624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.656
     },
-    "2L4X3X1\\/4LLBB": {
+    "2L4X3X1/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30649,7 +30649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.62
     },
-    "2L4X3X1\\/4X3\\/8LLBB": {
+    "2L4X3X1/4X3/8LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30674,7 +30674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.62
     },
-    "2L4X3X1\\/4X3\\/4LLBB": {
+    "2L4X3X1/4X3/4LLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -30699,7 +30699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.62
     },
-    "2L3-1\\/2X3X1\\/2LLBB": {
+    "2L3-1/2X3X1/2LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30724,7 +30724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.48
     },
-    "2L3-1\\/2X3X1\\/2X3\\/8LLBB": {
+    "2L3-1/2X3X1/2X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30749,7 +30749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.48
     },
-    "2L3-1\\/2X3X1\\/2X3\\/4LLBB": {
+    "2L3-1/2X3X1/2X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30774,7 +30774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.48
     },
-    "2L3-1\\/2X3X7\\/16LLBB": {
+    "2L3-1/2X3X7/16LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30799,7 +30799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.449
     },
-    "2L3-1\\/2X3X7\\/16X3\\/8LLBB": {
+    "2L3-1/2X3X7/16X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30824,7 +30824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.449
     },
-    "2L3-1\\/2X3X7\\/16X3\\/4LLBB": {
+    "2L3-1/2X3X7/16X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30849,7 +30849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.449
     },
-    "2L3-1\\/2X3X3\\/8LLBB": {
+    "2L3-1/2X3X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30874,7 +30874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.407
     },
-    "2L3-1\\/2X3X3\\/8X3\\/8LLBB": {
+    "2L3-1/2X3X3/8X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30899,7 +30899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.407
     },
-    "2L3-1\\/2X3X3\\/8X3\\/4LLBB": {
+    "2L3-1/2X3X3/8X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30924,7 +30924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.407
     },
-    "2L3-1\\/2X3X5\\/16LLBB": {
+    "2L3-1/2X3X5/16LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30949,7 +30949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.38
     },
-    "2L3-1\\/2X3X5\\/16X3\\/8LLBB": {
+    "2L3-1/2X3X5/16X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30974,7 +30974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.38
     },
-    "2L3-1\\/2X3X5\\/16X3\\/4LLBB": {
+    "2L3-1/2X3X5/16X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -30999,7 +30999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.38
     },
-    "2L3-1\\/2X3X1\\/4LLBB": {
+    "2L3-1/2X3X1/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31024,7 +31024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.34
     },
-    "2L3-1\\/2X3X1\\/4X3\\/8LLBB": {
+    "2L3-1/2X3X1/4X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31049,7 +31049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.34
     },
-    "2L3-1\\/2X3X1\\/4X3\\/4LLBB": {
+    "2L3-1/2X3X1/4X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31074,7 +31074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.34
     },
-    "2L3-1\\/2X2-1\\/2X1\\/2LLBB": {
+    "2L3-1/2X2-1/2X1/2LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31099,7 +31099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.73
     },
-    "2L3-1\\/2X2-1\\/2X1\\/2X3\\/8LLBB": {
+    "2L3-1/2X2-1/2X1/2X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31124,7 +31124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.73
     },
-    "2L3-1\\/2X2-1\\/2X1\\/2X3\\/4LLBB": {
+    "2L3-1/2X2-1/2X1/2X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31149,7 +31149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.73
     },
-    "2L3-1\\/2X2-1\\/2X3\\/8LLBB": {
+    "2L3-1/2X2-1/2X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31174,7 +31174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.673
     },
-    "2L3-1\\/2X2-1\\/2X3\\/8X3\\/8LLBB": {
+    "2L3-1/2X2-1/2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31199,7 +31199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.673
     },
-    "2L3-1\\/2X2-1\\/2X3\\/8X3\\/4LLBB": {
+    "2L3-1/2X2-1/2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31224,7 +31224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.673
     },
-    "2L3-1\\/2X2-1\\/2X5\\/16LLBB": {
+    "2L3-1/2X2-1/2X5/16LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31249,7 +31249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.636
     },
-    "2L3-1\\/2X2-1\\/2X5\\/16X3\\/8LLBB": {
+    "2L3-1/2X2-1/2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31274,7 +31274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.636
     },
-    "2L3-1\\/2X2-1\\/2X5\\/16X3\\/4LLBB": {
+    "2L3-1/2X2-1/2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31299,7 +31299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.636
     },
-    "2L3-1\\/2X2-1\\/2X1\\/4LLBB": {
+    "2L3-1/2X2-1/2X1/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31324,7 +31324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.6
     },
-    "2L3-1\\/2X2-1\\/2X1\\/4X3\\/8LLBB": {
+    "2L3-1/2X2-1/2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31349,7 +31349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.6
     },
-    "2L3-1\\/2X2-1\\/2X1\\/4X3\\/4LLBB": {
+    "2L3-1/2X2-1/2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -31374,7 +31374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.6
     },
-    "2L3X2-1\\/2X1\\/2LLBB": {
+    "2L3X2-1/2X1/2LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31399,7 +31399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.5
     },
-    "2L3X2-1\\/2X1\\/2X3\\/8LLBB": {
+    "2L3X2-1/2X1/2X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31424,7 +31424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.5
     },
-    "2L3X2-1\\/2X1\\/2X3\\/4LLBB": {
+    "2L3X2-1/2X1/2X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31449,7 +31449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.5
     },
-    "2L3X2-1\\/2X7\\/16LLBB": {
+    "2L3X2-1/2X7/16LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31474,7 +31474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.463
     },
-    "2L3X2-1\\/2X7\\/16X3\\/8LLBB": {
+    "2L3X2-1/2X7/16X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31499,7 +31499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.463
     },
-    "2L3X2-1\\/2X7\\/16X3\\/4LLBB": {
+    "2L3X2-1/2X7/16X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31524,7 +31524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.463
     },
-    "2L3X2-1\\/2X3\\/8LLBB": {
+    "2L3X2-1/2X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31549,7 +31549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.427
     },
-    "2L3X2-1\\/2X3\\/8X3\\/8LLBB": {
+    "2L3X2-1/2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31574,7 +31574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.427
     },
-    "2L3X2-1\\/2X3\\/8X3\\/4LLBB": {
+    "2L3X2-1/2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31599,7 +31599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.427
     },
-    "2L3X2-1\\/2X5\\/16LLBB": {
+    "2L3X2-1/2X5/16LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31624,7 +31624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.392
     },
-    "2L3X2-1\\/2X5\\/16X3\\/8LLBB": {
+    "2L3X2-1/2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31649,7 +31649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.392
     },
-    "2L3X2-1\\/2X5\\/16X3\\/4LLBB": {
+    "2L3X2-1/2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31674,7 +31674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.392
     },
-    "2L3X2-1\\/2X1\\/4LLBB": {
+    "2L3X2-1/2X1/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31699,7 +31699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L3X2-1\\/2X1\\/4X3\\/8LLBB": {
+    "2L3X2-1/2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31724,7 +31724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L3X2-1\\/2X1\\/4X3\\/4LLBB": {
+    "2L3X2-1/2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31749,7 +31749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L3X2-1\\/2X3\\/16LLBB": {
+    "2L3X2-1/2X3/16LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31774,7 +31774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.333
     },
-    "2L3X2-1\\/2X3\\/16X3\\/8LLBB": {
+    "2L3X2-1/2X3/16X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31799,7 +31799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.333
     },
-    "2L3X2-1\\/2X3\\/16X3\\/4LLBB": {
+    "2L3X2-1/2X3/16X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31824,7 +31824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.333
     },
-    "2L3X2X1\\/2LLBB": {
+    "2L3X2X1/2LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31849,7 +31849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.74
     },
-    "2L3X2X1\\/2X3\\/8LLBB": {
+    "2L3X2X1/2X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31874,7 +31874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.74
     },
-    "2L3X2X1\\/2X3\\/4LLBB": {
+    "2L3X2X1/2X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31899,7 +31899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.74
     },
-    "2L3X2X3\\/8LLBB": {
+    "2L3X2X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31924,7 +31924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.667
     },
-    "2L3X2X3\\/8X3\\/8LLBB": {
+    "2L3X2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31949,7 +31949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.667
     },
-    "2L3X2X3\\/8X3\\/4LLBB": {
+    "2L3X2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31974,7 +31974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.667
     },
-    "2L3X2X5\\/16LLBB": {
+    "2L3X2X5/16LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -31999,7 +31999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.632
     },
-    "2L3X2X5\\/16X3\\/8LLBB": {
+    "2L3X2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32024,7 +32024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.632
     },
-    "2L3X2X5\\/16X3\\/4LLBB": {
+    "2L3X2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32049,7 +32049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.632
     },
-    "2L3X2X1\\/4LLBB": {
+    "2L3X2X1/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32074,7 +32074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.6
     },
-    "2L3X2X1\\/4X3\\/8LLBB": {
+    "2L3X2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32099,7 +32099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.6
     },
-    "2L3X2X1\\/4X3\\/4LLBB": {
+    "2L3X2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32124,7 +32124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.6
     },
-    "2L3X2X3\\/16LLBB": {
+    "2L3X2X3/16LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32149,7 +32149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.555
     },
-    "2L3X2X3\\/16X3\\/8LLBB": {
+    "2L3X2X3/16X3/8LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32174,7 +32174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.555
     },
-    "2L3X2X3\\/16X3\\/4LLBB": {
+    "2L3X2X3/16X3/4LLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -32199,7 +32199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.555
     },
-    "2L2-1\\/2X2X3\\/8LLBB": {
+    "2L2-1/2X2X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32224,7 +32224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.433
     },
-    "2L2-1\\/2X2X3\\/8X3\\/8LLBB": {
+    "2L2-1/2X2X3/8X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32249,7 +32249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.433
     },
-    "2L2-1\\/2X2X3\\/8X3\\/4LLBB": {
+    "2L2-1/2X2X3/8X3/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32274,7 +32274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.433
     },
-    "2L2-1\\/2X2X5\\/16LLBB": {
+    "2L2-1/2X2X5/16LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32299,7 +32299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.388
     },
-    "2L2-1\\/2X2X5\\/16X3\\/8LLBB": {
+    "2L2-1/2X2X5/16X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32324,7 +32324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.388
     },
-    "2L2-1\\/2X2X5\\/16X3\\/4LLBB": {
+    "2L2-1/2X2X5/16X3/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32349,7 +32349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.388
     },
-    "2L2-1\\/2X2X1\\/4LLBB": {
+    "2L2-1/2X2X1/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32374,7 +32374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L2-1\\/2X2X1\\/4X3\\/8LLBB": {
+    "2L2-1/2X2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32399,7 +32399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L2-1\\/2X2X1\\/4X3\\/4LLBB": {
+    "2L2-1/2X2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32424,7 +32424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.36
     },
-    "2L2-1\\/2X2X3\\/16LLBB": {
+    "2L2-1/2X2X3/16LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32449,7 +32449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.319
     },
-    "2L2-1\\/2X2X3\\/16X3\\/8LLBB": {
+    "2L2-1/2X2X3/16X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32474,7 +32474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.319
     },
-    "2L2-1\\/2X2X3\\/16X3\\/4LLBB": {
+    "2L2-1/2X2X3/16X3/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32499,7 +32499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.319
     },
-    "2L2-1\\/2X1-1\\/2X1\\/4LLBB": {
+    "2L2-1/2X1-1/2X1/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32524,7 +32524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.606
     },
-    "2L2-1\\/2X1-1\\/2X1\\/4X3\\/8LLBB": {
+    "2L2-1/2X1-1/2X1/4X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32549,7 +32549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.606
     },
-    "2L2-1\\/2X1-1\\/2X1\\/4X3\\/4LLBB": {
+    "2L2-1/2X1-1/2X1/4X3/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32574,7 +32574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.606
     },
-    "2L2-1\\/2X1-1\\/2X3\\/16LLBB": {
+    "2L2-1/2X1-1/2X3/16LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32599,7 +32599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.569
     },
-    "2L2-1\\/2X1-1\\/2X3\\/16X3\\/8LLBB": {
+    "2L2-1/2X1-1/2X3/16X3/8LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32624,7 +32624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.569
     },
-    "2L2-1\\/2X1-1\\/2X3\\/16X3\\/4LLBB": {
+    "2L2-1/2X1-1/2X3/16X3/4LLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -32674,7 +32674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.819
     },
-    "2L8X6X1X3\\/8SLBB": {
+    "2L8X6X1X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32699,7 +32699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.819
     },
-    "2L8X6X1X3\\/4SLBB": {
+    "2L8X6X1X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32724,7 +32724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.819
     },
-    "2L8X6X7\\/8SLBB": {
+    "2L8X6X7/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32749,7 +32749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.719
     },
-    "2L8X6X7\\/8X3\\/8SLBB": {
+    "2L8X6X7/8X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32774,7 +32774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.719
     },
-    "2L8X6X7\\/8X3\\/4SLBB": {
+    "2L8X6X7/8X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32799,7 +32799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.719
     },
-    "2L8X6X3\\/4SLBB": {
+    "2L8X6X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32824,7 +32824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.624
     },
-    "2L8X6X3\\/4X3\\/8SLBB": {
+    "2L8X6X3/4X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32849,7 +32849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.624
     },
-    "2L8X6X3\\/4X3\\/4SLBB": {
+    "2L8X6X3/4X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32874,7 +32874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.624
     },
-    "2L8X6X5\\/8SLBB": {
+    "2L8X6X5/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32899,7 +32899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.526
     },
-    "2L8X6X5\\/8X3\\/8SLBB": {
+    "2L8X6X5/8X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32924,7 +32924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.526
     },
-    "2L8X6X5\\/8X3\\/4SLBB": {
+    "2L8X6X5/8X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32949,7 +32949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.526
     },
-    "2L8X6X9\\/16SLBB": {
+    "2L8X6X9/16SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32974,7 +32974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.476
     },
-    "2L8X6X9\\/16X3\\/8SLBB": {
+    "2L8X6X9/16X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -32999,7 +32999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.476
     },
-    "2L8X6X9\\/16X3\\/4SLBB": {
+    "2L8X6X9/16X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33024,7 +33024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.476
     },
-    "2L8X6X1\\/2SLBB": {
+    "2L8X6X1/2SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33049,7 +33049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.425
     },
-    "2L8X6X1\\/2X3\\/8SLBB": {
+    "2L8X6X1/2X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33074,7 +33074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.425
     },
-    "2L8X6X1\\/2X3\\/4SLBB": {
+    "2L8X6X1/2X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33099,7 +33099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.425
     },
-    "2L8X6X7\\/16SLBB": {
+    "2L8X6X7/16SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33124,7 +33124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.374
     },
-    "2L8X6X7\\/16X3\\/8SLBB": {
+    "2L8X6X7/16X3/8SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33149,7 +33149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.374
     },
-    "2L8X6X7\\/16X3\\/4SLBB": {
+    "2L8X6X7/16X3/4SLBB": {
         "type": "2L",
         "d": 6.0,
         "bf": 0,
@@ -33199,7 +33199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.694
     },
-    "2L8X4X1X3\\/8SLBB": {
+    "2L8X4X1X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33224,7 +33224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.694
     },
-    "2L8X4X1X3\\/4SLBB": {
+    "2L8X4X1X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33249,7 +33249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.694
     },
-    "2L8X4X7\\/8SLBB": {
+    "2L8X4X7/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33274,7 +33274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.612
     },
-    "2L8X4X7\\/8X3\\/8SLBB": {
+    "2L8X4X7/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33299,7 +33299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.612
     },
-    "2L8X4X7\\/8X3\\/4SLBB": {
+    "2L8X4X7/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33324,7 +33324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.612
     },
-    "2L8X4X3\\/4SLBB": {
+    "2L8X4X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33349,7 +33349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.531
     },
-    "2L8X4X3\\/4X3\\/8SLBB": {
+    "2L8X4X3/4X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33374,7 +33374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.531
     },
-    "2L8X4X3\\/4X3\\/4SLBB": {
+    "2L8X4X3/4X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33399,7 +33399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.531
     },
-    "2L8X4X5\\/8SLBB": {
+    "2L8X4X5/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33424,7 +33424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.448
     },
-    "2L8X4X5\\/8X3\\/8SLBB": {
+    "2L8X4X5/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33449,7 +33449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.448
     },
-    "2L8X4X5\\/8X3\\/4SLBB": {
+    "2L8X4X5/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33474,7 +33474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.448
     },
-    "2L8X4X9\\/16SLBB": {
+    "2L8X4X9/16SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33499,7 +33499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.406
     },
-    "2L8X4X9\\/16X3\\/8SLBB": {
+    "2L8X4X9/16X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33524,7 +33524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.406
     },
-    "2L8X4X9\\/16X3\\/4SLBB": {
+    "2L8X4X9/16X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33549,7 +33549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.406
     },
-    "2L8X4X1\\/2SLBB": {
+    "2L8X4X1/2SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33574,7 +33574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.363
     },
-    "2L8X4X1\\/2X3\\/8SLBB": {
+    "2L8X4X1/2X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33599,7 +33599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.363
     },
-    "2L8X4X1\\/2X3\\/4SLBB": {
+    "2L8X4X1/2X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33624,7 +33624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.363
     },
-    "2L8X4X7\\/16SLBB": {
+    "2L8X4X7/16SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33649,7 +33649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.319
     },
-    "2L8X4X7\\/16X3\\/8SLBB": {
+    "2L8X4X7/16X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33674,7 +33674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.319
     },
-    "2L8X4X7\\/16X3\\/4SLBB": {
+    "2L8X4X7/16X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33699,7 +33699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.319
     },
-    "2L7X4X3\\/4SLBB": {
+    "2L7X4X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33724,7 +33724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.553
     },
-    "2L7X4X3\\/4X3\\/8SLBB": {
+    "2L7X4X3/4X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33749,7 +33749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.553
     },
-    "2L7X4X3\\/4X3\\/4SLBB": {
+    "2L7X4X3/4X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33774,7 +33774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.553
     },
-    "2L7X4X5\\/8SLBB": {
+    "2L7X4X5/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33799,7 +33799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.464
     },
-    "2L7X4X5\\/8X3\\/8SLBB": {
+    "2L7X4X5/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33824,7 +33824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.464
     },
-    "2L7X4X5\\/8X3\\/4SLBB": {
+    "2L7X4X5/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33849,7 +33849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.464
     },
-    "2L7X4X1\\/2SLBB": {
+    "2L7X4X1/2SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33874,7 +33874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.376
     },
-    "2L7X4X1\\/2X3\\/8SLBB": {
+    "2L7X4X1/2X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33899,7 +33899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.376
     },
-    "2L7X4X1\\/2X3\\/4SLBB": {
+    "2L7X4X1/2X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33924,7 +33924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.376
     },
-    "2L7X4X7\\/16SLBB": {
+    "2L7X4X7/16SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33949,7 +33949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L7X4X7\\/16X3\\/8SLBB": {
+    "2L7X4X7/16X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33974,7 +33974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L7X4X7\\/16X3\\/4SLBB": {
+    "2L7X4X7/16X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -33999,7 +33999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L7X4X3\\/8SLBB": {
+    "2L7X4X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34024,7 +34024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.286
     },
-    "2L7X4X3\\/8X3\\/8SLBB": {
+    "2L7X4X3/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34049,7 +34049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.286
     },
-    "2L7X4X3\\/8X3\\/4SLBB": {
+    "2L7X4X3/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34074,7 +34074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.286
     },
-    "2L6X4X7\\/8SLBB": {
+    "2L6X4X7/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34099,7 +34099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.667
     },
-    "2L6X4X7\\/8X3\\/8SLBB": {
+    "2L6X4X7/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34124,7 +34124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.667
     },
-    "2L6X4X7\\/8X3\\/4SLBB": {
+    "2L6X4X7/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34149,7 +34149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.667
     },
-    "2L6X4X3\\/4SLBB": {
+    "2L6X4X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34174,7 +34174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.578
     },
-    "2L6X4X3\\/4X3\\/8SLBB": {
+    "2L6X4X3/4X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34199,7 +34199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.578
     },
-    "2L6X4X3\\/4X3\\/4SLBB": {
+    "2L6X4X3/4X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34224,7 +34224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.578
     },
-    "2L6X4X5\\/8SLBB": {
+    "2L6X4X5/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34249,7 +34249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.488
     },
-    "2L6X4X5\\/8X3\\/8SLBB": {
+    "2L6X4X5/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34274,7 +34274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.488
     },
-    "2L6X4X5\\/8X3\\/4SLBB": {
+    "2L6X4X5/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34299,7 +34299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.488
     },
-    "2L6X4X9\\/16SLBB": {
+    "2L6X4X9/16SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34324,7 +34324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.443
     },
-    "2L6X4X9\\/16X3\\/8SLBB": {
+    "2L6X4X9/16X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34349,7 +34349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.443
     },
-    "2L6X4X9\\/16X3\\/4SLBB": {
+    "2L6X4X9/16X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34374,7 +34374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.443
     },
-    "2L6X4X1\\/2SLBB": {
+    "2L6X4X1/2SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34399,7 +34399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.396
     },
-    "2L6X4X1\\/2X3\\/8SLBB": {
+    "2L6X4X1/2X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34424,7 +34424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.396
     },
-    "2L6X4X1\\/2X3\\/4SLBB": {
+    "2L6X4X1/2X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34449,7 +34449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.396
     },
-    "2L6X4X7\\/16SLBB": {
+    "2L6X4X7/16SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34474,7 +34474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.348
     },
-    "2L6X4X7\\/16X3\\/8SLBB": {
+    "2L6X4X7/16X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34499,7 +34499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.348
     },
-    "2L6X4X7\\/16X3\\/4SLBB": {
+    "2L6X4X7/16X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34524,7 +34524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.348
     },
-    "2L6X4X3\\/8SLBB": {
+    "2L6X4X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34549,7 +34549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.301
     },
-    "2L6X4X3\\/8X3\\/8SLBB": {
+    "2L6X4X3/8X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34574,7 +34574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.301
     },
-    "2L6X4X3\\/8X3\\/4SLBB": {
+    "2L6X4X3/8X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34599,7 +34599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.301
     },
-    "2L6X4X5\\/16SLBB": {
+    "2L6X4X5/16SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34624,7 +34624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.253
     },
-    "2L6X4X5\\/16X3\\/8SLBB": {
+    "2L6X4X5/16X3/8SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34649,7 +34649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.253
     },
-    "2L6X4X5\\/16X3\\/4SLBB": {
+    "2L6X4X5/16X3/4SLBB": {
         "type": "2L",
         "d": 4.0,
         "bf": 0,
@@ -34674,7 +34674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.253
     },
-    "2L6X3-1\\/2X1\\/2SLBB": {
+    "2L6X3-1/2X1/2SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34699,7 +34699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.375
     },
-    "2L6X3-1\\/2X1\\/2X3\\/8SLBB": {
+    "2L6X3-1/2X1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34724,7 +34724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.375
     },
-    "2L6X3-1\\/2X1\\/2X3\\/4SLBB": {
+    "2L6X3-1/2X1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34749,7 +34749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.375
     },
-    "2L6X3-1\\/2X3\\/8SLBB": {
+    "2L6X3-1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34774,7 +34774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.287
     },
-    "2L6X3-1\\/2X3\\/8X3\\/8SLBB": {
+    "2L6X3-1/2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34799,7 +34799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.287
     },
-    "2L6X3-1\\/2X3\\/8X3\\/4SLBB": {
+    "2L6X3-1/2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34824,7 +34824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.287
     },
-    "2L6X3-1\\/2X5\\/16SLBB": {
+    "2L6X3-1/2X5/16SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34849,7 +34849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L6X3-1\\/2X5\\/16X3\\/8SLBB": {
+    "2L6X3-1/2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34874,7 +34874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L6X3-1\\/2X5\\/16X3\\/4SLBB": {
+    "2L6X3-1/2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34899,7 +34899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L5X3-1\\/2X3\\/4SLBB": {
+    "2L5X3-1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34924,7 +34924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.585
     },
-    "2L5X3-1\\/2X3\\/4X3\\/8SLBB": {
+    "2L5X3-1/2X3/4X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34949,7 +34949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.585
     },
-    "2L5X3-1\\/2X3\\/4X3\\/4SLBB": {
+    "2L5X3-1/2X3/4X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34974,7 +34974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.585
     },
-    "2L5X3-1\\/2X5\\/8SLBB": {
+    "2L5X3-1/2X5/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -34999,7 +34999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.493
     },
-    "2L5X3-1\\/2X5\\/8X3\\/8SLBB": {
+    "2L5X3-1/2X5/8X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35024,7 +35024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.493
     },
-    "2L5X3-1\\/2X5\\/8X3\\/4SLBB": {
+    "2L5X3-1/2X5/8X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35049,7 +35049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.493
     },
-    "2L5X3-1\\/2X1\\/2SLBB": {
+    "2L5X3-1/2X1/2SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35074,7 +35074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.4
     },
-    "2L5X3-1\\/2X1\\/2X3\\/8SLBB": {
+    "2L5X3-1/2X1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35099,7 +35099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.4
     },
-    "2L5X3-1\\/2X1\\/2X3\\/4SLBB": {
+    "2L5X3-1/2X1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35124,7 +35124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.4
     },
-    "2L5X3-1\\/2X3\\/8SLBB": {
+    "2L5X3-1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35149,7 +35149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.305
     },
-    "2L5X3-1\\/2X3\\/8X3\\/8SLBB": {
+    "2L5X3-1/2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35174,7 +35174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.305
     },
-    "2L5X3-1\\/2X3\\/8X3\\/4SLBB": {
+    "2L5X3-1/2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35199,7 +35199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.305
     },
-    "2L5X3-1\\/2X5\\/16SLBB": {
+    "2L5X3-1/2X5/16SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35224,7 +35224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.256
     },
-    "2L5X3-1\\/2X5\\/16X3\\/8SLBB": {
+    "2L5X3-1/2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35249,7 +35249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.256
     },
-    "2L5X3-1\\/2X5\\/16X3\\/4SLBB": {
+    "2L5X3-1/2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35274,7 +35274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.256
     },
-    "2L5X3-1\\/2X1\\/4SLBB": {
+    "2L5X3-1/2X1/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35299,7 +35299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.207
     },
-    "2L5X3-1\\/2X1\\/4X3\\/8SLBB": {
+    "2L5X3-1/2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35324,7 +35324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.207
     },
-    "2L5X3-1\\/2X1\\/4X3\\/4SLBB": {
+    "2L5X3-1/2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35349,7 +35349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.207
     },
-    "2L5X3X1\\/2SLBB": {
+    "2L5X3X1/2SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35374,7 +35374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.375
     },
-    "2L5X3X1\\/2X3\\/8SLBB": {
+    "2L5X3X1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35399,7 +35399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.375
     },
-    "2L5X3X1\\/2X3\\/4SLBB": {
+    "2L5X3X1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35424,7 +35424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.375
     },
-    "2L5X3X7\\/16SLBB": {
+    "2L5X3X7/16SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35449,7 +35449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L5X3X7\\/16X3\\/8SLBB": {
+    "2L5X3X7/16X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35474,7 +35474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L5X3X7\\/16X3\\/4SLBB": {
+    "2L5X3X7/16X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35499,7 +35499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L5X3X3\\/8SLBB": {
+    "2L5X3X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35524,7 +35524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.286
     },
-    "2L5X3X3\\/8X3\\/8SLBB": {
+    "2L5X3X3/8X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35549,7 +35549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.286
     },
-    "2L5X3X3\\/8X3\\/4SLBB": {
+    "2L5X3X3/8X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35574,7 +35574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.286
     },
-    "2L5X3X5\\/16SLBB": {
+    "2L5X3X5/16SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35599,7 +35599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L5X3X5\\/16X3\\/8SLBB": {
+    "2L5X3X5/16X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35624,7 +35624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L5X3X5\\/16X3\\/4SLBB": {
+    "2L5X3X5/16X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35649,7 +35649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.241
     },
-    "2L5X3X1\\/4SLBB": {
+    "2L5X3X1/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35674,7 +35674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.194
     },
-    "2L5X3X1\\/4X3\\/8SLBB": {
+    "2L5X3X1/4X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35699,7 +35699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.194
     },
-    "2L5X3X1\\/4X3\\/4SLBB": {
+    "2L5X3X1/4X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -35724,7 +35724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.194
     },
-    "2L4X3-1\\/2X1\\/2SLBB": {
+    "2L4X3-1/2X1/2SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35749,7 +35749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.438
     },
-    "2L4X3-1\\/2X1\\/2X3\\/8SLBB": {
+    "2L4X3-1/2X1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35774,7 +35774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.438
     },
-    "2L4X3-1\\/2X1\\/2X3\\/4SLBB": {
+    "2L4X3-1/2X1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35799,7 +35799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.438
     },
-    "2L4X3-1\\/2X3\\/8SLBB": {
+    "2L4X3-1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35824,7 +35824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.335
     },
-    "2L4X3-1\\/2X3\\/8X3\\/8SLBB": {
+    "2L4X3-1/2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35849,7 +35849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.335
     },
-    "2L4X3-1\\/2X3\\/8X3\\/4SLBB": {
+    "2L4X3-1/2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35874,7 +35874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.335
     },
-    "2L4X3-1\\/2X5\\/16SLBB": {
+    "2L4X3-1/2X5/16SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35899,7 +35899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.281
     },
-    "2L4X3-1\\/2X5\\/16X3\\/8SLBB": {
+    "2L4X3-1/2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35924,7 +35924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.281
     },
-    "2L4X3-1\\/2X5\\/16X3\\/4SLBB": {
+    "2L4X3-1/2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35949,7 +35949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.281
     },
-    "2L4X3-1\\/2X1\\/4SLBB": {
+    "2L4X3-1/2X1/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35974,7 +35974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.228
     },
-    "2L4X3-1\\/2X1\\/4X3\\/8SLBB": {
+    "2L4X3-1/2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -35999,7 +35999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.228
     },
-    "2L4X3-1\\/2X1\\/4X3\\/4SLBB": {
+    "2L4X3-1/2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 3.5,
         "bf": 0,
@@ -36024,7 +36024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.228
     },
-    "2L4X3X5\\/8SLBB": {
+    "2L4X3X5/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36049,7 +36049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.499
     },
-    "2L4X3X5\\/8X3\\/8SLBB": {
+    "2L4X3X5/8X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36074,7 +36074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.499
     },
-    "2L4X3X5\\/8X3\\/4SLBB": {
+    "2L4X3X5/8X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36099,7 +36099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.499
     },
-    "2L4X3X1\\/2SLBB": {
+    "2L4X3X1/2SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36124,7 +36124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.406
     },
-    "2L4X3X1\\/2X3\\/8SLBB": {
+    "2L4X3X1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36149,7 +36149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.406
     },
-    "2L4X3X1\\/2X3\\/4SLBB": {
+    "2L4X3X1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36174,7 +36174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.406
     },
-    "2L4X3X3\\/8SLBB": {
+    "2L4X3X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36199,7 +36199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.311
     },
-    "2L4X3X3\\/8X3\\/8SLBB": {
+    "2L4X3X3/8X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36224,7 +36224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.311
     },
-    "2L4X3X3\\/8X3\\/4SLBB": {
+    "2L4X3X3/8X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36249,7 +36249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.311
     },
-    "2L4X3X5\\/16SLBB": {
+    "2L4X3X5/16SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36274,7 +36274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.261
     },
-    "2L4X3X5\\/16X3\\/8SLBB": {
+    "2L4X3X5/16X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36299,7 +36299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.261
     },
-    "2L4X3X5\\/16X3\\/4SLBB": {
+    "2L4X3X5/16X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36324,7 +36324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.261
     },
-    "2L4X3X1\\/4SLBB": {
+    "2L4X3X1/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36349,7 +36349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.211
     },
-    "2L4X3X1\\/4X3\\/8SLBB": {
+    "2L4X3X1/4X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36374,7 +36374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.211
     },
-    "2L4X3X1\\/4X3\\/4SLBB": {
+    "2L4X3X1/4X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36399,7 +36399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.211
     },
-    "2L3-1\\/2X3X1\\/2SLBB": {
+    "2L3-1/2X3X1/2SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36424,7 +36424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.431
     },
-    "2L3-1\\/2X3X1\\/2X3\\/8SLBB": {
+    "2L3-1/2X3X1/2X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36449,7 +36449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.431
     },
-    "2L3-1\\/2X3X1\\/2X3\\/4SLBB": {
+    "2L3-1/2X3X1/2X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36474,7 +36474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.431
     },
-    "2L3-1\\/2X3X7\\/16SLBB": {
+    "2L3-1/2X3X7/16SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36499,7 +36499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.381
     },
-    "2L3-1\\/2X3X7\\/16X3\\/8SLBB": {
+    "2L3-1/2X3X7/16X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36524,7 +36524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.381
     },
-    "2L3-1\\/2X3X7\\/16X3\\/4SLBB": {
+    "2L3-1/2X3X7/16X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36549,7 +36549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.381
     },
-    "2L3-1\\/2X3X3\\/8SLBB": {
+    "2L3-1/2X3X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36574,7 +36574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L3-1\\/2X3X3\\/8X3\\/8SLBB": {
+    "2L3-1/2X3X3/8X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36599,7 +36599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L3-1\\/2X3X3\\/8X3\\/4SLBB": {
+    "2L3-1/2X3X3/8X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36624,7 +36624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.331
     },
-    "2L3-1\\/2X3X5\\/16SLBB": {
+    "2L3-1/2X3X5/16SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36649,7 +36649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.279
     },
-    "2L3-1\\/2X3X5\\/16X3\\/8SLBB": {
+    "2L3-1/2X3X5/16X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36674,7 +36674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.279
     },
-    "2L3-1\\/2X3X5\\/16X3\\/4SLBB": {
+    "2L3-1/2X3X5/16X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36699,7 +36699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.279
     },
-    "2L3-1\\/2X3X1\\/4SLBB": {
+    "2L3-1/2X3X1/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36724,7 +36724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.226
     },
-    "2L3-1\\/2X3X1\\/4X3\\/8SLBB": {
+    "2L3-1/2X3X1/4X3/8SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36749,7 +36749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.226
     },
-    "2L3-1\\/2X3X1\\/4X3\\/4SLBB": {
+    "2L3-1/2X3X1/4X3/4SLBB": {
         "type": "2L",
         "d": 3.0,
         "bf": 0,
@@ -36774,7 +36774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.226
     },
-    "2L3-1\\/2X2-1\\/2X1\\/2SLBB": {
+    "2L3-1/2X2-1/2X1/2SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36799,7 +36799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.396
     },
-    "2L3-1\\/2X2-1\\/2X1\\/2X3\\/8SLBB": {
+    "2L3-1/2X2-1/2X1/2X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36824,7 +36824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.396
     },
-    "2L3-1\\/2X2-1\\/2X1\\/2X3\\/4SLBB": {
+    "2L3-1/2X2-1/2X1/2X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36849,7 +36849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.396
     },
-    "2L3-1\\/2X2-1\\/2X3\\/8SLBB": {
+    "2L3-1/2X2-1/2X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36874,7 +36874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.303
     },
-    "2L3-1\\/2X2-1\\/2X3\\/8X3\\/8SLBB": {
+    "2L3-1/2X2-1/2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36899,7 +36899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.303
     },
-    "2L3-1\\/2X2-1\\/2X3\\/8X3\\/4SLBB": {
+    "2L3-1/2X2-1/2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36924,7 +36924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.303
     },
-    "2L3-1\\/2X2-1\\/2X5\\/16SLBB": {
+    "2L3-1/2X2-1/2X5/16SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36949,7 +36949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.256
     },
-    "2L3-1\\/2X2-1\\/2X5\\/16X3\\/8SLBB": {
+    "2L3-1/2X2-1/2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36974,7 +36974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.256
     },
-    "2L3-1\\/2X2-1\\/2X5\\/16X3\\/4SLBB": {
+    "2L3-1/2X2-1/2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -36999,7 +36999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.256
     },
-    "2L3-1\\/2X2-1\\/2X1\\/4SLBB": {
+    "2L3-1/2X2-1/2X1/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37024,7 +37024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.207
     },
-    "2L3-1\\/2X2-1\\/2X1\\/4X3\\/8SLBB": {
+    "2L3-1/2X2-1/2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37049,7 +37049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.207
     },
-    "2L3-1\\/2X2-1\\/2X1\\/4X3\\/4SLBB": {
+    "2L3-1/2X2-1/2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37074,7 +37074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.207
     },
-    "2L3X2-1\\/2X1\\/2SLBB": {
+    "2L3X2-1/2X1/2SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37099,7 +37099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.417
     },
-    "2L3X2-1\\/2X1\\/2X3\\/8SLBB": {
+    "2L3X2-1/2X1/2X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37124,7 +37124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.417
     },
-    "2L3X2-1\\/2X1\\/2X3\\/4SLBB": {
+    "2L3X2-1/2X1/2X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37149,7 +37149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.417
     },
-    "2L3X2-1\\/2X7\\/16SLBB": {
+    "2L3X2-1/2X7/16SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37174,7 +37174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.37
     },
-    "2L3X2-1\\/2X7\\/16X3\\/8SLBB": {
+    "2L3X2-1/2X7/16X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37199,7 +37199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.37
     },
-    "2L3X2-1\\/2X7\\/16X3\\/4SLBB": {
+    "2L3X2-1/2X7/16X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37224,7 +37224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.37
     },
-    "2L3X2-1\\/2X3\\/8SLBB": {
+    "2L3X2-1/2X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37249,7 +37249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.322
     },
-    "2L3X2-1\\/2X3\\/8X3\\/8SLBB": {
+    "2L3X2-1/2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37274,7 +37274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.322
     },
-    "2L3X2-1\\/2X3\\/8X3\\/4SLBB": {
+    "2L3X2-1/2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37299,7 +37299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.322
     },
-    "2L3X2-1\\/2X5\\/16SLBB": {
+    "2L3X2-1/2X5/16SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37324,7 +37324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.272
     },
-    "2L3X2-1\\/2X5\\/16X3\\/8SLBB": {
+    "2L3X2-1/2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37349,7 +37349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.272
     },
-    "2L3X2-1\\/2X5\\/16X3\\/4SLBB": {
+    "2L3X2-1/2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37374,7 +37374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.272
     },
-    "2L3X2-1\\/2X1\\/4SLBB": {
+    "2L3X2-1/2X1/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37399,7 +37399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.22
     },
-    "2L3X2-1\\/2X1\\/4X3\\/8SLBB": {
+    "2L3X2-1/2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37424,7 +37424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.22
     },
-    "2L3X2-1\\/2X1\\/4X3\\/4SLBB": {
+    "2L3X2-1/2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37449,7 +37449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.22
     },
-    "2L3X2-1\\/2X3\\/16SLBB": {
+    "2L3X2-1/2X3/16SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37474,7 +37474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.167
     },
-    "2L3X2-1\\/2X3\\/16X3\\/8SLBB": {
+    "2L3X2-1/2X3/16X3/8SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37499,7 +37499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.167
     },
-    "2L3X2-1\\/2X3\\/16X3\\/4SLBB": {
+    "2L3X2-1/2X3/16X3/4SLBB": {
         "type": "2L",
         "d": 2.5,
         "bf": 0,
@@ -37524,7 +37524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.167
     },
-    "2L3X2X1\\/2SLBB": {
+    "2L3X2X1/2SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37549,7 +37549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.377
     },
-    "2L3X2X1\\/2X3\\/8SLBB": {
+    "2L3X2X1/2X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37574,7 +37574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.377
     },
-    "2L3X2X1\\/2X3\\/4SLBB": {
+    "2L3X2X1/2X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37599,7 +37599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.377
     },
-    "2L3X2X3\\/8SLBB": {
+    "2L3X2X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37624,7 +37624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.292
     },
-    "2L3X2X3\\/8X3\\/8SLBB": {
+    "2L3X2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37649,7 +37649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.292
     },
-    "2L3X2X3\\/8X3\\/4SLBB": {
+    "2L3X2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37674,7 +37674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.292
     },
-    "2L3X2X5\\/16SLBB": {
+    "2L3X2X5/16SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37699,7 +37699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.247
     },
-    "2L3X2X5\\/16X3\\/8SLBB": {
+    "2L3X2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37724,7 +37724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.247
     },
-    "2L3X2X5\\/16X3\\/4SLBB": {
+    "2L3X2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37749,7 +37749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.247
     },
-    "2L3X2X1\\/4SLBB": {
+    "2L3X2X1/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37774,7 +37774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.2
     },
-    "2L3X2X1\\/4X3\\/8SLBB": {
+    "2L3X2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37799,7 +37799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.2
     },
-    "2L3X2X1\\/4X3\\/4SLBB": {
+    "2L3X2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37824,7 +37824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.2
     },
-    "2L3X2X3\\/16SLBB": {
+    "2L3X2X3/16SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37849,7 +37849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.153
     },
-    "2L3X2X3\\/16X3\\/8SLBB": {
+    "2L3X2X3/16X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37874,7 +37874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.153
     },
-    "2L3X2X3\\/16X3\\/4SLBB": {
+    "2L3X2X3/16X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37899,7 +37899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.153
     },
-    "2L2-1\\/2X2X3\\/8SLBB": {
+    "2L2-1/2X2X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37924,7 +37924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.31
     },
-    "2L2-1\\/2X2X3\\/8X3\\/8SLBB": {
+    "2L2-1/2X2X3/8X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37949,7 +37949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.31
     },
-    "2L2-1\\/2X2X3\\/8X3\\/4SLBB": {
+    "2L2-1/2X2X3/8X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37974,7 +37974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.31
     },
-    "2L2-1\\/2X2X5\\/16SLBB": {
+    "2L2-1/2X2X5/16SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -37999,7 +37999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.264
     },
-    "2L2-1\\/2X2X5\\/16X3\\/8SLBB": {
+    "2L2-1/2X2X5/16X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38024,7 +38024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.264
     },
-    "2L2-1\\/2X2X5\\/16X3\\/4SLBB": {
+    "2L2-1/2X2X5/16X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38049,7 +38049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.264
     },
-    "2L2-1\\/2X2X1\\/4SLBB": {
+    "2L2-1/2X2X1/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38074,7 +38074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.214
     },
-    "2L2-1\\/2X2X1\\/4X3\\/8SLBB": {
+    "2L2-1/2X2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38099,7 +38099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.214
     },
-    "2L2-1\\/2X2X1\\/4X3\\/4SLBB": {
+    "2L2-1/2X2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38124,7 +38124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.214
     },
-    "2L2-1\\/2X2X3\\/16SLBB": {
+    "2L2-1/2X2X3/16SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38149,7 +38149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.164
     },
-    "2L2-1\\/2X2X3\\/16X3\\/8SLBB": {
+    "2L2-1/2X2X3/16X3/8SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38174,7 +38174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.164
     },
-    "2L2-1\\/2X2X3\\/16X3\\/4SLBB": {
+    "2L2-1/2X2X3/16X3/4SLBB": {
         "type": "2L",
         "d": 2.0,
         "bf": 0,
@@ -38199,7 +38199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.164
     },
-    "2L2-1\\/2X1-1\\/2X1\\/4SLBB": {
+    "2L2-1/2X1-1/2X1/4SLBB": {
         "type": "2L",
         "d": 1.5,
         "bf": 0,
@@ -38224,7 +38224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.189
     },
-    "2L2-1\\/2X1-1\\/2X1\\/4X3\\/8SLBB": {
+    "2L2-1/2X1-1/2X1/4X3/8SLBB": {
         "type": "2L",
         "d": 1.5,
         "bf": 0,
@@ -38249,7 +38249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.189
     },
-    "2L2-1\\/2X1-1\\/2X1\\/4X3\\/4SLBB": {
+    "2L2-1/2X1-1/2X1/4X3/4SLBB": {
         "type": "2L",
         "d": 1.5,
         "bf": 0,
@@ -38274,7 +38274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.189
     },
-    "2L2-1\\/2X1-1\\/2X3\\/16SLBB": {
+    "2L2-1/2X1-1/2X3/16SLBB": {
         "type": "2L",
         "d": 1.5,
         "bf": 0,
@@ -38299,7 +38299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.145
     },
-    "2L2-1\\/2X1-1\\/2X3\\/16X3\\/8SLBB": {
+    "2L2-1/2X1-1/2X3/16X3/8SLBB": {
         "type": "2L",
         "d": 1.5,
         "bf": 0,
@@ -38324,7 +38324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0.145
     },
-    "2L2-1\\/2X1-1\\/2X3\\/16X3\\/4SLBB": {
+    "2L2-1/2X1-1/2X3/16X3/4SLBB": {
         "type": "2L",
         "d": 1.5,
         "bf": 0,
@@ -38374,7 +38374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS34X10X7\\/8": {
+    "HSS34X10X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38399,7 +38399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS34X10X3\\/4": {
+    "HSS34X10X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38424,7 +38424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS34X10X5\\/8": {
+    "HSS34X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38474,7 +38474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS30X10X7\\/8": {
+    "HSS30X10X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38499,7 +38499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS30X10X3\\/4": {
+    "HSS30X10X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38524,7 +38524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS30X10X5\\/8": {
+    "HSS30X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38549,7 +38549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS30X10X1\\/2": {
+    "HSS30X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38574,7 +38574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X20X3\\/4": {
+    "HSS24X20X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38599,7 +38599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X20X5\\/8": {
+    "HSS24X20X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38624,7 +38624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X20X1\\/2": {
+    "HSS24X20X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38649,7 +38649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X20X3\\/8": {
+    "HSS24X20X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38674,7 +38674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X20X5\\/16": {
+    "HSS24X20X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38699,7 +38699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X18X3\\/4": {
+    "HSS24X18X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38724,7 +38724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X18X5\\/8": {
+    "HSS24X18X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38749,7 +38749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X18X1\\/2": {
+    "HSS24X18X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38774,7 +38774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X18X3\\/8": {
+    "HSS24X18X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38799,7 +38799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X18X5\\/16": {
+    "HSS24X18X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38824,7 +38824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X16X3\\/4": {
+    "HSS24X16X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38849,7 +38849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X16X5\\/8": {
+    "HSS24X16X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38874,7 +38874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X16X1\\/2": {
+    "HSS24X16X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38899,7 +38899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X16X3\\/8": {
+    "HSS24X16X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38924,7 +38924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X16X5\\/16": {
+    "HSS24X16X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38949,7 +38949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X14X3\\/4": {
+    "HSS24X14X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38974,7 +38974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X14X5\\/8": {
+    "HSS24X14X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -38999,7 +38999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X14X1\\/2": {
+    "HSS24X14X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39024,7 +39024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X14X3\\/8": {
+    "HSS24X14X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39049,7 +39049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X14X5\\/16": {
+    "HSS24X14X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39074,7 +39074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X14X1\\/4": {
+    "HSS24X14X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39124,7 +39124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X7\\/8": {
+    "HSS24X12X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39149,7 +39149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X3\\/4": {
+    "HSS24X12X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39174,7 +39174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X5\\/8": {
+    "HSS24X12X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39199,7 +39199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X1\\/2": {
+    "HSS24X12X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39224,7 +39224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X3\\/8": {
+    "HSS24X12X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39249,7 +39249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X5\\/16": {
+    "HSS24X12X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39274,7 +39274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X12X1\\/4": {
+    "HSS24X12X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39299,7 +39299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X8X1\\/2": {
+    "HSS24X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39324,7 +39324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X8X3\\/8": {
+    "HSS24X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39349,7 +39349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X8X5\\/16": {
+    "HSS24X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39374,7 +39374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS24X8X1\\/4": {
+    "HSS24X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39424,7 +39424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X22X7\\/8": {
+    "HSS22X22X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39449,7 +39449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X22X3\\/4": {
+    "HSS22X22X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39474,7 +39474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X22X5\\/8": {
+    "HSS22X22X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39499,7 +39499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X22X1\\/2": {
+    "HSS22X22X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39524,7 +39524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X20X3\\/4": {
+    "HSS22X20X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39549,7 +39549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X20X5\\/8": {
+    "HSS22X20X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39574,7 +39574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X20X1\\/2": {
+    "HSS22X20X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39599,7 +39599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X20X3\\/8": {
+    "HSS22X20X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39624,7 +39624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X20X5\\/16": {
+    "HSS22X20X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39649,7 +39649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X18X3\\/4": {
+    "HSS22X18X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39674,7 +39674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X18X5\\/8": {
+    "HSS22X18X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39699,7 +39699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X18X1\\/2": {
+    "HSS22X18X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39724,7 +39724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X18X3\\/8": {
+    "HSS22X18X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39749,7 +39749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X18X5\\/16": {
+    "HSS22X18X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39774,7 +39774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X16X3\\/4": {
+    "HSS22X16X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39799,7 +39799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X16X5\\/8": {
+    "HSS22X16X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39824,7 +39824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X16X1\\/2": {
+    "HSS22X16X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39849,7 +39849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X16X3\\/8": {
+    "HSS22X16X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39874,7 +39874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X16X5\\/16": {
+    "HSS22X16X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39899,7 +39899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X16X1\\/4": {
+    "HSS22X16X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39924,7 +39924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X14X3\\/4": {
+    "HSS22X14X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39949,7 +39949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X14X5\\/8": {
+    "HSS22X14X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39974,7 +39974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X14X1\\/2": {
+    "HSS22X14X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -39999,7 +39999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X14X3\\/8": {
+    "HSS22X14X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40024,7 +40024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X14X5\\/16": {
+    "HSS22X14X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40049,7 +40049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X14X1\\/4": {
+    "HSS22X14X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40074,7 +40074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X10X5\\/8": {
+    "HSS22X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40099,7 +40099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X10X1\\/2": {
+    "HSS22X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40124,7 +40124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X10X3\\/8": {
+    "HSS22X10X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40149,7 +40149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X10X5\\/16": {
+    "HSS22X10X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40174,7 +40174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS22X10X1\\/4": {
+    "HSS22X10X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40224,7 +40224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X20X7\\/8": {
+    "HSS20X20X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40249,7 +40249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X20X3\\/4": {
+    "HSS20X20X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40274,7 +40274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X20X5\\/8": {
+    "HSS20X20X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40299,7 +40299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X20X1\\/2": {
+    "HSS20X20X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40324,7 +40324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X20X3\\/8": {
+    "HSS20X20X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40349,7 +40349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X20X5\\/16": {
+    "HSS20X20X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40374,7 +40374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X16X3\\/4": {
+    "HSS20X16X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40399,7 +40399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X16X5\\/8": {
+    "HSS20X16X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40424,7 +40424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X16X1\\/2": {
+    "HSS20X16X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40449,7 +40449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X16X3\\/8": {
+    "HSS20X16X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40474,7 +40474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X16X5\\/16": {
+    "HSS20X16X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40499,7 +40499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X16X1\\/4": {
+    "HSS20X16X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40549,7 +40549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X12X7\\/8": {
+    "HSS20X12X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40574,7 +40574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X12X3\\/4": {
+    "HSS20X12X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40599,7 +40599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X12X5\\/8": {
+    "HSS20X12X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40624,7 +40624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X12X1\\/2": {
+    "HSS20X12X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40649,7 +40649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X12X3\\/8": {
+    "HSS20X12X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40674,7 +40674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X12X5\\/16": {
+    "HSS20X12X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40724,7 +40724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X8X7\\/8": {
+    "HSS20X8X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40749,7 +40749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X8X3\\/4": {
+    "HSS20X8X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40774,7 +40774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X8X5\\/8": {
+    "HSS20X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40799,7 +40799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X8X1\\/2": {
+    "HSS20X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40824,7 +40824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X8X3\\/8": {
+    "HSS20X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40849,7 +40849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X8X5\\/16": {
+    "HSS20X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40874,7 +40874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X6X5\\/8": {
+    "HSS20X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40899,7 +40899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X6X1\\/2": {
+    "HSS20X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40924,7 +40924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X6X3\\/8": {
+    "HSS20X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40949,7 +40949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X6X5\\/16": {
+    "HSS20X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40974,7 +40974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X6X1\\/4": {
+    "HSS20X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -40999,7 +40999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X4X1\\/2": {
+    "HSS20X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41024,7 +41024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X4X3\\/8": {
+    "HSS20X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41049,7 +41049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X4X5\\/16": {
+    "HSS20X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41074,7 +41074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS20X4X1\\/4": {
+    "HSS20X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41124,7 +41124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X7\\/8": {
+    "HSS18X18X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41149,7 +41149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X3\\/4": {
+    "HSS18X18X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41174,7 +41174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X5\\/8": {
+    "HSS18X18X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41199,7 +41199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X1\\/2": {
+    "HSS18X18X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41224,7 +41224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X3\\/8": {
+    "HSS18X18X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41249,7 +41249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X5\\/16": {
+    "HSS18X18X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41274,7 +41274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X18X1\\/4": {
+    "HSS18X18X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41299,7 +41299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X10X5\\/8": {
+    "HSS18X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41324,7 +41324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X10X1\\/2": {
+    "HSS18X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41349,7 +41349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X10X3\\/8": {
+    "HSS18X10X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41374,7 +41374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X10X5\\/16": {
+    "HSS18X10X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41399,7 +41399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X10X1\\/4": {
+    "HSS18X10X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41424,7 +41424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X8X5\\/8": {
+    "HSS18X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41449,7 +41449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X8X1\\/2": {
+    "HSS18X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41474,7 +41474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X8X3\\/8": {
+    "HSS18X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41499,7 +41499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X8X5\\/16": {
+    "HSS18X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41524,7 +41524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X8X1\\/4": {
+    "HSS18X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41549,7 +41549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X6X3\\/4": {
+    "HSS18X6X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41574,7 +41574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X6X5\\/8": {
+    "HSS18X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41599,7 +41599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X6X1\\/2": {
+    "HSS18X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41624,7 +41624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X6X3\\/8": {
+    "HSS18X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41649,7 +41649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X6X5\\/16": {
+    "HSS18X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41674,7 +41674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS18X6X1\\/4": {
+    "HSS18X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41724,7 +41724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X7\\/8": {
+    "HSS16X16X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41749,7 +41749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X3\\/4": {
+    "HSS16X16X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41774,7 +41774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X5\\/8": {
+    "HSS16X16X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41799,7 +41799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X1\\/2": {
+    "HSS16X16X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41824,7 +41824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X3\\/8": {
+    "HSS16X16X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41849,7 +41849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X5\\/16": {
+    "HSS16X16X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41874,7 +41874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X16X1\\/4": {
+    "HSS16X16X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41924,7 +41924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X12X7\\/8": {
+    "HSS16X12X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41949,7 +41949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X12X3\\/4": {
+    "HSS16X12X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41974,7 +41974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X12X5\\/8": {
+    "HSS16X12X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -41999,7 +41999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X12X1\\/2": {
+    "HSS16X12X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42024,7 +42024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X12X3\\/8": {
+    "HSS16X12X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42049,7 +42049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X12X5\\/16": {
+    "HSS16X12X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42074,7 +42074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X10X5\\/8": {
+    "HSS16X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42099,7 +42099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X10X1\\/2": {
+    "HSS16X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42124,7 +42124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X10X3\\/8": {
+    "HSS16X10X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42149,7 +42149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X10X5\\/16": {
+    "HSS16X10X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42174,7 +42174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X10X1\\/4": {
+    "HSS16X10X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42199,7 +42199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X7\\/8": {
+    "HSS16X8X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42224,7 +42224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X3\\/4": {
+    "HSS16X8X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42249,7 +42249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X5\\/8": {
+    "HSS16X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42274,7 +42274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X1\\/2": {
+    "HSS16X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42299,7 +42299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X3\\/8": {
+    "HSS16X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42324,7 +42324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X5\\/16": {
+    "HSS16X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42349,7 +42349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X8X1\\/4": {
+    "HSS16X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42374,7 +42374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X6X5\\/8": {
+    "HSS16X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42399,7 +42399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X6X1\\/2": {
+    "HSS16X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42424,7 +42424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X6X3\\/8": {
+    "HSS16X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42449,7 +42449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X6X5\\/16": {
+    "HSS16X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42474,7 +42474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X6X1\\/4": {
+    "HSS16X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42499,7 +42499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X6X3\\/16": {
+    "HSS16X6X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42524,7 +42524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X4X5\\/8": {
+    "HSS16X4X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42549,7 +42549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X4X1\\/2": {
+    "HSS16X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42574,7 +42574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X4X3\\/8": {
+    "HSS16X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42599,7 +42599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X4X5\\/16": {
+    "HSS16X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42624,7 +42624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X4X1\\/4": {
+    "HSS16X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42649,7 +42649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS16X4X3\\/16": {
+    "HSS16X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42699,7 +42699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X7\\/8": {
+    "HSS14X14X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42724,7 +42724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X3\\/4": {
+    "HSS14X14X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42749,7 +42749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X5\\/8": {
+    "HSS14X14X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42774,7 +42774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X1\\/2": {
+    "HSS14X14X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42799,7 +42799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X3\\/8": {
+    "HSS14X14X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42824,7 +42824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X5\\/16": {
+    "HSS14X14X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42849,7 +42849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X14X1\\/4": {
+    "HSS14X14X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42874,7 +42874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X12X5\\/8": {
+    "HSS14X12X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42899,7 +42899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X12X1\\/2": {
+    "HSS14X12X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42924,7 +42924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X12X3\\/8": {
+    "HSS14X12X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42949,7 +42949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X12X5\\/16": {
+    "HSS14X12X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42974,7 +42974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X12X1\\/4": {
+    "HSS14X12X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -42999,7 +42999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X7\\/8": {
+    "HSS14X10X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43024,7 +43024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X3\\/4": {
+    "HSS14X10X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43049,7 +43049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X5\\/8": {
+    "HSS14X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43074,7 +43074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X1\\/2": {
+    "HSS14X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43099,7 +43099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X3\\/8": {
+    "HSS14X10X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43124,7 +43124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X5\\/16": {
+    "HSS14X10X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43149,7 +43149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X10X1\\/4": {
+    "HSS14X10X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43174,7 +43174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X8X5\\/8": {
+    "HSS14X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43199,7 +43199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X8X1\\/2": {
+    "HSS14X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43224,7 +43224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X8X3\\/8": {
+    "HSS14X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43249,7 +43249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X8X5\\/16": {
+    "HSS14X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43274,7 +43274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X8X1\\/4": {
+    "HSS14X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43299,7 +43299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X8X3\\/16": {
+    "HSS14X8X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43324,7 +43324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X6X5\\/8": {
+    "HSS14X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43349,7 +43349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X6X1\\/2": {
+    "HSS14X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43374,7 +43374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X6X3\\/8": {
+    "HSS14X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43399,7 +43399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X6X5\\/16": {
+    "HSS14X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43424,7 +43424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X6X1\\/4": {
+    "HSS14X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43449,7 +43449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X6X3\\/16": {
+    "HSS14X6X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43474,7 +43474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X4X5\\/8": {
+    "HSS14X4X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43499,7 +43499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X4X1\\/2": {
+    "HSS14X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43524,7 +43524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X4X3\\/8": {
+    "HSS14X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43549,7 +43549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X4X5\\/16": {
+    "HSS14X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43574,7 +43574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X4X1\\/4": {
+    "HSS14X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43599,7 +43599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS14X4X3\\/16": {
+    "HSS14X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43649,7 +43649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X7\\/8": {
+    "HSS12X12X7/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43674,7 +43674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X3\\/4": {
+    "HSS12X12X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43699,7 +43699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X5\\/8": {
+    "HSS12X12X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43724,7 +43724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X1\\/2": {
+    "HSS12X12X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43749,7 +43749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X3\\/8": {
+    "HSS12X12X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43774,7 +43774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X5\\/16": {
+    "HSS12X12X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43799,7 +43799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X1\\/4": {
+    "HSS12X12X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43824,7 +43824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X12X3\\/16": {
+    "HSS12X12X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43849,7 +43849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X10X5\\/8": {
+    "HSS12X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43874,7 +43874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X10X1\\/2": {
+    "HSS12X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43899,7 +43899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X10X3\\/8": {
+    "HSS12X10X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43924,7 +43924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X10X5\\/16": {
+    "HSS12X10X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43949,7 +43949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X10X1\\/4": {
+    "HSS12X10X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43974,7 +43974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X10X3\\/16": {
+    "HSS12X10X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -43999,7 +43999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X8X5\\/8": {
+    "HSS12X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44024,7 +44024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X8X1\\/2": {
+    "HSS12X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44049,7 +44049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X8X3\\/8": {
+    "HSS12X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44074,7 +44074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X8X5\\/16": {
+    "HSS12X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44099,7 +44099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X8X1\\/4": {
+    "HSS12X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44124,7 +44124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X8X3\\/16": {
+    "HSS12X8X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44149,7 +44149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X6X5\\/8": {
+    "HSS12X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44174,7 +44174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X6X1\\/2": {
+    "HSS12X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44199,7 +44199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X6X3\\/8": {
+    "HSS12X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44224,7 +44224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X6X5\\/16": {
+    "HSS12X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44249,7 +44249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X6X1\\/4": {
+    "HSS12X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44274,7 +44274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X6X3\\/16": {
+    "HSS12X6X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44299,7 +44299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X4X5\\/8": {
+    "HSS12X4X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44324,7 +44324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X4X1\\/2": {
+    "HSS12X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44349,7 +44349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X4X3\\/8": {
+    "HSS12X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44374,7 +44374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X4X5\\/16": {
+    "HSS12X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44399,7 +44399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X4X1\\/4": {
+    "HSS12X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44424,7 +44424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X4X3\\/16": {
+    "HSS12X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44449,7 +44449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X3X5\\/16": {
+    "HSS12X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44474,7 +44474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X3X1\\/4": {
+    "HSS12X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44499,7 +44499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X3X3\\/16": {
+    "HSS12X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44524,7 +44524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X2X5\\/16": {
+    "HSS12X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44549,7 +44549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X2X1\\/4": {
+    "HSS12X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44574,7 +44574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS12X2X3\\/16": {
+    "HSS12X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44599,7 +44599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X3\\/4": {
+    "HSS10X10X3/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44624,7 +44624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X5\\/8": {
+    "HSS10X10X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44649,7 +44649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X1\\/2": {
+    "HSS10X10X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44674,7 +44674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X3\\/8": {
+    "HSS10X10X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44699,7 +44699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X5\\/16": {
+    "HSS10X10X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44724,7 +44724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X1\\/4": {
+    "HSS10X10X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44749,7 +44749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X10X3\\/16": {
+    "HSS10X10X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44774,7 +44774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X8X5\\/8": {
+    "HSS10X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44799,7 +44799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X8X1\\/2": {
+    "HSS10X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44824,7 +44824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X8X3\\/8": {
+    "HSS10X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44849,7 +44849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X8X5\\/16": {
+    "HSS10X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44874,7 +44874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X8X1\\/4": {
+    "HSS10X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44899,7 +44899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X8X3\\/16": {
+    "HSS10X8X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44924,7 +44924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X6X5\\/8": {
+    "HSS10X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44949,7 +44949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X6X1\\/2": {
+    "HSS10X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44974,7 +44974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X6X3\\/8": {
+    "HSS10X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -44999,7 +44999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X6X5\\/16": {
+    "HSS10X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45024,7 +45024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X6X1\\/4": {
+    "HSS10X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45049,7 +45049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X6X3\\/16": {
+    "HSS10X6X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45074,7 +45074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X5X3\\/8": {
+    "HSS10X5X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45099,7 +45099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X5X5\\/16": {
+    "HSS10X5X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45124,7 +45124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X5X1\\/4": {
+    "HSS10X5X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45149,7 +45149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X5\\/8": {
+    "HSS10X4X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45174,7 +45174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X1\\/2": {
+    "HSS10X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45199,7 +45199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X3\\/8": {
+    "HSS10X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45224,7 +45224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X5\\/16": {
+    "HSS10X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45249,7 +45249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X1\\/4": {
+    "HSS10X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45274,7 +45274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X3\\/16": {
+    "HSS10X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45299,7 +45299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X4X1\\/8": {
+    "HSS10X4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45324,7 +45324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3-1\\/2X3\\/8": {
+    "HSS10X3-1/2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45349,7 +45349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3-1\\/2X5\\/16": {
+    "HSS10X3-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45374,7 +45374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3-1\\/2X1\\/4": {
+    "HSS10X3-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45399,7 +45399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3-1\\/2X3\\/16": {
+    "HSS10X3-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45424,7 +45424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3X3\\/8": {
+    "HSS10X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45449,7 +45449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3X5\\/16": {
+    "HSS10X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45474,7 +45474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3X1\\/4": {
+    "HSS10X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45499,7 +45499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3X3\\/16": {
+    "HSS10X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45524,7 +45524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X3X1\\/8": {
+    "HSS10X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45549,7 +45549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X2X3\\/8": {
+    "HSS10X2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45574,7 +45574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X2X5\\/16": {
+    "HSS10X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45599,7 +45599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X2X1\\/4": {
+    "HSS10X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45624,7 +45624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X2X3\\/16": {
+    "HSS10X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45649,7 +45649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS10X2X1\\/8": {
+    "HSS10X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45674,7 +45674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X5\\/8": {
+    "HSS9X9X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45699,7 +45699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X1\\/2": {
+    "HSS9X9X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45724,7 +45724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X3\\/8": {
+    "HSS9X9X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45749,7 +45749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X5\\/16": {
+    "HSS9X9X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45774,7 +45774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X1\\/4": {
+    "HSS9X9X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45799,7 +45799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X3\\/16": {
+    "HSS9X9X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45824,7 +45824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X9X1\\/8": {
+    "HSS9X9X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45849,7 +45849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X7X5\\/8": {
+    "HSS9X7X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45874,7 +45874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X7X1\\/2": {
+    "HSS9X7X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45899,7 +45899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X7X3\\/8": {
+    "HSS9X7X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45924,7 +45924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X7X5\\/16": {
+    "HSS9X7X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45949,7 +45949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X7X1\\/4": {
+    "HSS9X7X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45974,7 +45974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X7X3\\/16": {
+    "HSS9X7X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -45999,7 +45999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X5X5\\/8": {
+    "HSS9X5X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46024,7 +46024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X5X1\\/2": {
+    "HSS9X5X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46049,7 +46049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X5X3\\/8": {
+    "HSS9X5X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46074,7 +46074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X5X5\\/16": {
+    "HSS9X5X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46099,7 +46099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X5X1\\/4": {
+    "HSS9X5X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46124,7 +46124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X5X3\\/16": {
+    "HSS9X5X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46149,7 +46149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X3X1\\/2": {
+    "HSS9X3X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46174,7 +46174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X3X3\\/8": {
+    "HSS9X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46199,7 +46199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X3X5\\/16": {
+    "HSS9X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46224,7 +46224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X3X1\\/4": {
+    "HSS9X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46249,7 +46249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS9X3X3\\/16": {
+    "HSS9X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46274,7 +46274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X5\\/8": {
+    "HSS8X8X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46299,7 +46299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X1\\/2": {
+    "HSS8X8X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46324,7 +46324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X3\\/8": {
+    "HSS8X8X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46349,7 +46349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X5\\/16": {
+    "HSS8X8X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46374,7 +46374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X1\\/4": {
+    "HSS8X8X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46399,7 +46399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X3\\/16": {
+    "HSS8X8X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46424,7 +46424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X8X1\\/8": {
+    "HSS8X8X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46449,7 +46449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X6X5\\/8": {
+    "HSS8X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46474,7 +46474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X6X1\\/2": {
+    "HSS8X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46499,7 +46499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X6X3\\/8": {
+    "HSS8X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46524,7 +46524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X6X5\\/16": {
+    "HSS8X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46549,7 +46549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X6X1\\/4": {
+    "HSS8X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46574,7 +46574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X6X3\\/16": {
+    "HSS8X6X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46599,7 +46599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X5\\/8": {
+    "HSS8X4X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46624,7 +46624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X1\\/2": {
+    "HSS8X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46649,7 +46649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X3\\/8": {
+    "HSS8X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46674,7 +46674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X5\\/16": {
+    "HSS8X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46699,7 +46699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X1\\/4": {
+    "HSS8X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46724,7 +46724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X3\\/16": {
+    "HSS8X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46749,7 +46749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X4X1\\/8": {
+    "HSS8X4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46774,7 +46774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X3X1\\/2": {
+    "HSS8X3X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46799,7 +46799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X3X3\\/8": {
+    "HSS8X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46824,7 +46824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X3X5\\/16": {
+    "HSS8X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46849,7 +46849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X3X1\\/4": {
+    "HSS8X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46874,7 +46874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X3X3\\/16": {
+    "HSS8X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46899,7 +46899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X3X1\\/8": {
+    "HSS8X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46924,7 +46924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X2X1\\/2": {
+    "HSS8X2X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46949,7 +46949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X2X3\\/8": {
+    "HSS8X2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46974,7 +46974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X2X5\\/16": {
+    "HSS8X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -46999,7 +46999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X2X1\\/4": {
+    "HSS8X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47024,7 +47024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X2X3\\/16": {
+    "HSS8X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47049,7 +47049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS8X2X1\\/8": {
+    "HSS8X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47074,7 +47074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X5\\/8": {
+    "HSS7X7X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47099,7 +47099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X1\\/2": {
+    "HSS7X7X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47124,7 +47124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X3\\/8": {
+    "HSS7X7X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47149,7 +47149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X5\\/16": {
+    "HSS7X7X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47174,7 +47174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X1\\/4": {
+    "HSS7X7X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47199,7 +47199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X3\\/16": {
+    "HSS7X7X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47224,7 +47224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X7X1\\/8": {
+    "HSS7X7X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47249,7 +47249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X5X1\\/2": {
+    "HSS7X5X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47274,7 +47274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X5X3\\/8": {
+    "HSS7X5X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47299,7 +47299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X5X5\\/16": {
+    "HSS7X5X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47324,7 +47324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X5X1\\/4": {
+    "HSS7X5X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47349,7 +47349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X5X3\\/16": {
+    "HSS7X5X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47374,7 +47374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X5X1\\/8": {
+    "HSS7X5X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47399,7 +47399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X4X1\\/2": {
+    "HSS7X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47424,7 +47424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X4X3\\/8": {
+    "HSS7X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47449,7 +47449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X4X5\\/16": {
+    "HSS7X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47474,7 +47474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X4X1\\/4": {
+    "HSS7X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47499,7 +47499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X4X3\\/16": {
+    "HSS7X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47524,7 +47524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X4X1\\/8": {
+    "HSS7X4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47549,7 +47549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X3X1\\/2": {
+    "HSS7X3X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47574,7 +47574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X3X3\\/8": {
+    "HSS7X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47599,7 +47599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X3X5\\/16": {
+    "HSS7X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47624,7 +47624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X3X1\\/4": {
+    "HSS7X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47649,7 +47649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X3X3\\/16": {
+    "HSS7X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47674,7 +47674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X3X1\\/8": {
+    "HSS7X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47699,7 +47699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X2X1\\/4": {
+    "HSS7X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47724,7 +47724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X2X3\\/16": {
+    "HSS7X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47749,7 +47749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS7X2X1\\/8": {
+    "HSS7X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47774,7 +47774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X5\\/8": {
+    "HSS6X6X5/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47799,7 +47799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X1\\/2": {
+    "HSS6X6X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47824,7 +47824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X3\\/8": {
+    "HSS6X6X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47849,7 +47849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X5\\/16": {
+    "HSS6X6X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47874,7 +47874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X1\\/4": {
+    "HSS6X6X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47899,7 +47899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X3\\/16": {
+    "HSS6X6X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47924,7 +47924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X6X1\\/8": {
+    "HSS6X6X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47949,7 +47949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X5X1\\/2": {
+    "HSS6X5X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47974,7 +47974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X5X3\\/8": {
+    "HSS6X5X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -47999,7 +47999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X5X5\\/16": {
+    "HSS6X5X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48024,7 +48024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X5X1\\/4": {
+    "HSS6X5X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48049,7 +48049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X5X3\\/16": {
+    "HSS6X5X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48074,7 +48074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X5X1\\/8": {
+    "HSS6X5X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48099,7 +48099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X4X1\\/2": {
+    "HSS6X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48124,7 +48124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X4X3\\/8": {
+    "HSS6X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48149,7 +48149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X4X5\\/16": {
+    "HSS6X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48174,7 +48174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X4X1\\/4": {
+    "HSS6X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48199,7 +48199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X4X3\\/16": {
+    "HSS6X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48224,7 +48224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X4X1\\/8": {
+    "HSS6X4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48249,7 +48249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X3X1\\/2": {
+    "HSS6X3X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48274,7 +48274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X3X3\\/8": {
+    "HSS6X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48299,7 +48299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X3X5\\/16": {
+    "HSS6X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48324,7 +48324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X3X1\\/4": {
+    "HSS6X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48349,7 +48349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X3X3\\/16": {
+    "HSS6X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48374,7 +48374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X3X1\\/8": {
+    "HSS6X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48399,7 +48399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X2X3\\/8": {
+    "HSS6X2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48424,7 +48424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X2X5\\/16": {
+    "HSS6X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48449,7 +48449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X2X1\\/4": {
+    "HSS6X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48474,7 +48474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X2X3\\/16": {
+    "HSS6X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48499,7 +48499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS6X2X1\\/8": {
+    "HSS6X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48524,7 +48524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5-1\\/2X5-1\\/2X3\\/8": {
+    "HSS5-1/2X5-1/2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48549,7 +48549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5-1\\/2X5-1\\/2X5\\/16": {
+    "HSS5-1/2X5-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48574,7 +48574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5-1\\/2X5-1\\/2X1\\/4": {
+    "HSS5-1/2X5-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48599,7 +48599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5-1\\/2X5-1\\/2X3\\/16": {
+    "HSS5-1/2X5-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48624,7 +48624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5-1\\/2X5-1\\/2X1\\/8": {
+    "HSS5-1/2X5-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48649,7 +48649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X5X1\\/2": {
+    "HSS5X5X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48674,7 +48674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X5X3\\/8": {
+    "HSS5X5X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48699,7 +48699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X5X5\\/16": {
+    "HSS5X5X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48724,7 +48724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X5X1\\/4": {
+    "HSS5X5X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48749,7 +48749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X5X3\\/16": {
+    "HSS5X5X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48774,7 +48774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X5X1\\/8": {
+    "HSS5X5X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48799,7 +48799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X4X1\\/2": {
+    "HSS5X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48824,7 +48824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X4X3\\/8": {
+    "HSS5X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48849,7 +48849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X4X5\\/16": {
+    "HSS5X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48874,7 +48874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X4X1\\/4": {
+    "HSS5X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48899,7 +48899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X4X3\\/16": {
+    "HSS5X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48924,7 +48924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X4X1\\/8": {
+    "HSS5X4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48949,7 +48949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X3X1\\/2": {
+    "HSS5X3X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48974,7 +48974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X3X3\\/8": {
+    "HSS5X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -48999,7 +48999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X3X5\\/16": {
+    "HSS5X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49024,7 +49024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X3X1\\/4": {
+    "HSS5X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49049,7 +49049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X3X3\\/16": {
+    "HSS5X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49074,7 +49074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X3X1\\/8": {
+    "HSS5X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49099,7 +49099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2-1\\/2X1\\/4": {
+    "HSS5X2-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49124,7 +49124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2-1\\/2X3\\/16": {
+    "HSS5X2-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49149,7 +49149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2-1\\/2X1\\/8": {
+    "HSS5X2-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49174,7 +49174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2X3\\/8": {
+    "HSS5X2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49199,7 +49199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2X5\\/16": {
+    "HSS5X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49224,7 +49224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2X1\\/4": {
+    "HSS5X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49249,7 +49249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2X3\\/16": {
+    "HSS5X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49274,7 +49274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS5X2X1\\/8": {
+    "HSS5X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49299,7 +49299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4-1\\/2X4-1\\/2X1\\/2": {
+    "HSS4-1/2X4-1/2X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49324,7 +49324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4-1\\/2X4-1\\/2X3\\/8": {
+    "HSS4-1/2X4-1/2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49349,7 +49349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4-1\\/2X4-1\\/2X5\\/16": {
+    "HSS4-1/2X4-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49374,7 +49374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4-1\\/2X4-1\\/2X1\\/4": {
+    "HSS4-1/2X4-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49399,7 +49399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4-1\\/2X4-1\\/2X3\\/16": {
+    "HSS4-1/2X4-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49424,7 +49424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4-1\\/2X4-1\\/2X1\\/8": {
+    "HSS4-1/2X4-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49449,7 +49449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X4X1\\/2": {
+    "HSS4X4X1/2": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49474,7 +49474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X4X3\\/8": {
+    "HSS4X4X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49499,7 +49499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X4X5\\/16": {
+    "HSS4X4X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49524,7 +49524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X4X1\\/4": {
+    "HSS4X4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49549,7 +49549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X4X3\\/16": {
+    "HSS4X4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49574,7 +49574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X4X1\\/8": {
+    "HSS4X4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49599,7 +49599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X3X3\\/8": {
+    "HSS4X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49624,7 +49624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X3X5\\/16": {
+    "HSS4X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49649,7 +49649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X3X1\\/4": {
+    "HSS4X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49674,7 +49674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X3X3\\/16": {
+    "HSS4X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49699,7 +49699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X3X1\\/8": {
+    "HSS4X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49724,7 +49724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2-1\\/2X1\\/4": {
+    "HSS4X2-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49749,7 +49749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2-1\\/2X3\\/16": {
+    "HSS4X2-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49774,7 +49774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2-1\\/2X1\\/8": {
+    "HSS4X2-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49799,7 +49799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2X3\\/8": {
+    "HSS4X2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49824,7 +49824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2X5\\/16": {
+    "HSS4X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49849,7 +49849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2X1\\/4": {
+    "HSS4X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49874,7 +49874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2X3\\/16": {
+    "HSS4X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49899,7 +49899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X2X1\\/8": {
+    "HSS4X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49924,7 +49924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X1-1\\/2X1\\/4": {
+    "HSS4X1-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49949,7 +49949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X1-1\\/2X3\\/16": {
+    "HSS4X1-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49974,7 +49974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS4X1-1\\/2X1\\/8": {
+    "HSS4X1-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -49999,7 +49999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X3-1\\/2X3\\/8": {
+    "HSS3-1/2X3-1/2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50024,7 +50024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X3-1\\/2X5\\/16": {
+    "HSS3-1/2X3-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50049,7 +50049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X3-1\\/2X1\\/4": {
+    "HSS3-1/2X3-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50074,7 +50074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X3-1\\/2X3\\/16": {
+    "HSS3-1/2X3-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50099,7 +50099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X3-1\\/2X1\\/8": {
+    "HSS3-1/2X3-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50124,7 +50124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2-1\\/2X3\\/8": {
+    "HSS3-1/2X2-1/2X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50149,7 +50149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2-1\\/2X5\\/16": {
+    "HSS3-1/2X2-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50174,7 +50174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2-1\\/2X1\\/4": {
+    "HSS3-1/2X2-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50199,7 +50199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2-1\\/2X3\\/16": {
+    "HSS3-1/2X2-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50224,7 +50224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2-1\\/2X1\\/8": {
+    "HSS3-1/2X2-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50249,7 +50249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2X1\\/4": {
+    "HSS3-1/2X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50274,7 +50274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2X3\\/16": {
+    "HSS3-1/2X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50299,7 +50299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X2X1\\/8": {
+    "HSS3-1/2X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50324,7 +50324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X1-1\\/2X1\\/4": {
+    "HSS3-1/2X1-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50349,7 +50349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X1-1\\/2X3\\/16": {
+    "HSS3-1/2X1-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50374,7 +50374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3-1\\/2X1-1\\/2X1\\/8": {
+    "HSS3-1/2X1-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50399,7 +50399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X3X3\\/8": {
+    "HSS3X3X3/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50424,7 +50424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X3X5\\/16": {
+    "HSS3X3X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50449,7 +50449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X3X1\\/4": {
+    "HSS3X3X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50474,7 +50474,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X3X3\\/16": {
+    "HSS3X3X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50499,7 +50499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X3X1\\/8": {
+    "HSS3X3X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50524,7 +50524,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2-1\\/2X5\\/16": {
+    "HSS3X2-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50549,7 +50549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2-1\\/2X1\\/4": {
+    "HSS3X2-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50574,7 +50574,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2-1\\/2X3\\/16": {
+    "HSS3X2-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50599,7 +50599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2-1\\/2X1\\/8": {
+    "HSS3X2-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50624,7 +50624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2X5\\/16": {
+    "HSS3X2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50649,7 +50649,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2X1\\/4": {
+    "HSS3X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50674,7 +50674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2X3\\/16": {
+    "HSS3X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50699,7 +50699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X2X1\\/8": {
+    "HSS3X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50724,7 +50724,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X1-1\\/2X1\\/4": {
+    "HSS3X1-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50749,7 +50749,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X1-1\\/2X3\\/16": {
+    "HSS3X1-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50774,7 +50774,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X1-1\\/2X1\\/8": {
+    "HSS3X1-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50799,7 +50799,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X1X3\\/16": {
+    "HSS3X1X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50824,7 +50824,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS3X1X1\\/8": {
+    "HSS3X1X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50849,7 +50849,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2-1\\/2X5\\/16": {
+    "HSS2-1/2X2-1/2X5/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50874,7 +50874,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2-1\\/2X1\\/4": {
+    "HSS2-1/2X2-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50899,7 +50899,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2-1\\/2X3\\/16": {
+    "HSS2-1/2X2-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50924,7 +50924,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2-1\\/2X1\\/8": {
+    "HSS2-1/2X2-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50949,7 +50949,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2X1\\/4": {
+    "HSS2-1/2X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50974,7 +50974,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2X3\\/16": {
+    "HSS2-1/2X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -50999,7 +50999,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X2X1\\/8": {
+    "HSS2-1/2X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51024,7 +51024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X1-1\\/2X1\\/4": {
+    "HSS2-1/2X1-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51049,7 +51049,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X1-1\\/2X3\\/16": {
+    "HSS2-1/2X1-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51074,7 +51074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X1-1\\/2X1\\/8": {
+    "HSS2-1/2X1-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51099,7 +51099,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X1X3\\/16": {
+    "HSS2-1/2X1X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51124,7 +51124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/2X1X1\\/8": {
+    "HSS2-1/2X1X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51149,7 +51149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/4X2-1\\/4X1\\/4": {
+    "HSS2-1/4X2-1/4X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51174,7 +51174,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/4X2-1\\/4X3\\/16": {
+    "HSS2-1/4X2-1/4X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51199,7 +51199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2-1\\/4X2-1\\/4X1\\/8": {
+    "HSS2-1/4X2-1/4X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51224,7 +51224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X2X1\\/4": {
+    "HSS2X2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51249,7 +51249,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X2X3\\/16": {
+    "HSS2X2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51274,7 +51274,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X2X1\\/8": {
+    "HSS2X2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51299,7 +51299,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X1-1\\/2X3\\/16": {
+    "HSS2X1-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51324,7 +51324,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X1-1\\/2X1\\/8": {
+    "HSS2X1-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51349,7 +51349,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X1X3\\/16": {
+    "HSS2X1X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51374,7 +51374,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS2X1X1\\/8": {
+    "HSS2X1X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51399,7 +51399,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS1-1\\/2X1-1\\/2X1\\/4": {
+    "HSS1-1/2X1-1/2X1/4": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51424,7 +51424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS1-1\\/2X1-1\\/2X3\\/16": {
+    "HSS1-1/2X1-1/2X3/16": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -51449,7 +51449,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "HSS1-1\\/2X1-1\\/2X1\\/8": {
+    "HSS1-1/2X1-1/2X1/8": {
         "type": "HSS",
         "d": 0,
         "bf": 0,
@@ -56499,7 +56499,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe3-1\\/2STD": {
+    "Pipe3-1/2STD": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -56549,7 +56549,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe2-1\\/2STD": {
+    "Pipe2-1/2STD": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -56599,7 +56599,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe1-1\\/2STD": {
+    "Pipe1-1/2STD": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -56624,7 +56624,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe1-1\\/4STD": {
+    "Pipe1-1/4STD": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -56674,7 +56674,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe3\\/4STD": {
+    "Pipe3/4STD": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -56699,7 +56699,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe1\\/2STD": {
+    "Pipe1/2STD": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57024,7 +57024,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe3-1\\/2XS": {
+    "Pipe3-1/2XS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57074,7 +57074,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe2-1\\/2XS": {
+    "Pipe2-1/2XS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57124,7 +57124,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe1-1\\/2XS": {
+    "Pipe1-1/2XS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57149,7 +57149,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe1-1\\/4XS": {
+    "Pipe1-1/4XS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57199,7 +57199,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe3\\/4XS": {
+    "Pipe3/4XS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57224,7 +57224,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe1\\/2XS": {
+    "Pipe1/2XS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
@@ -57424,7 +57424,7 @@ const AISC_SHAPES_DATABASE = {
         "xp": 0,
         "yp": 0
     },
-    "Pipe2-1\\/2XXS": {
+    "Pipe2-1/2XXS": {
         "type": "PIPE",
         "d": 0,
         "bf": 0,
