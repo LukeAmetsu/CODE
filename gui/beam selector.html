@@ -14,7 +14,7 @@
             document.documentElement.classList.toggle('dark', isDark);
         })();
     </script>
-    <link rel="stylesheet" href="../styles.min.css">
+    <link rel="stylesheet" href="styles.min.css">
 </head>
 
 <body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200">
@@ -198,10 +198,8 @@
     </div>
 
     <script type="text/javascript" src="/eel.js"></script>
-    <script src="../js/template.js" defer></script>
-    <script src="../js/shared-utils.js" defer></script>
-    <script src="aisc-shapes-database-v16.0.js" defer></script>
-    <script src="database.js" defer></script>
+    <script src="js/template.js" defer></script>
+    <script src="js/shared-utils.js" defer></script>
     <script src="beam selector.js" defer></script>
 
     <script>
@@ -211,7 +209,7 @@
                     activePage: 'beam_selector',
                     pageTitle: 'beam_selector',
                     headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: '../'
+                    pathPrefix: './'
                 });
             }
             if (typeof injectFooter === 'function') {

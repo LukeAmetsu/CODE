@@ -1,0 +1,327 @@
+/* === BASE & THEME === */
+:root {
+    --color-bg-primary: #f9fafb; /* gray-50 */
+    --color-bg-secondary: #f3f4f6; /* gray-100 */
+    --color-bg-tertiary: #e5e7eb; /* gray-200 */
+    --color-bg-quaternary: #f3f4f6; /* gray-100, for table headers in light mode */
+    --color-bg-hover: #f3f4f6; /* gray-100 */
+    --color-text-primary: #1f2937; /* gray-800 */
+    --color-text-secondary: #4b5563; /* gray-600 */
+    --color-border-primary: #e5e7eb; /* gray-200 */
+    --color-border-secondary: #d1d5db; /* gray-300 */
+    --color-accent: #3b82f6; /* blue-500 */
+}
+
+.dark {
+    --color-bg-primary: #111827; /* gray-900 */
+    --color-bg-secondary: #1f2937; /* gray-800 */
+    --color-bg-tertiary: #374151; /* gray-700 */
+    --color-bg-quaternary: #374151; /* gray-700, for table headers in dark mode */
+    --color-bg-hover: #374151; /* gray-700 */
+    --color-text-primary: #d1d5db; /* gray-300 */
+    --color-text-secondary: #9ca3af; /* gray-400 */
+    --color-border-primary: #374151; /* gray-700 */
+    --color-border-secondary: #4b5563; /* gray-600 */
+    --color-accent: #3b82f6; /* blue-500 */
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Language Selector */
+#language-selector {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+}
+.dark #language-selector {
+    background-color: #374151; /* dark:bg-gray-700 */
+    color: #d1d5db; /* dark:text-gray-300 */
+    border-color: #4b5563; /* dark:border-gray-600 */
+}
+
+/* Main Navigation Links */
+.main-nav-link {
+    color: var(--color-text-secondary);
+}
+.main-nav-link:hover {
+    background-color: var(--color-bg-hover);
+}
+.main-nav-link.active {
+    background-color: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.main-nav-link.active-main {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-accent);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Navigation Ribbon Container */
+.nav-ribbon {
+    background-color: var(--color-bg-quaternary);
+    border-radius: 0.5rem;
+    padding: 0.25rem;
+}
+.dark .nav-ribbon {
+    background-color: #374151;
+}
+
+/* === FORM & INPUTS === */
+.form-section {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: .75rem;
+    box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
+    margin-bottom: 1.5rem;
+}
+.dark .form-section {
+    background-color: #1f2937;
+}
+.form-section h2 {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: .75rem;
+    margin-bottom: 1rem;
+}
+.dark .form-section h2 {
+    border-color: #374151;
+}
+label {
+    font-weight: 500;
+}
+input[type=number], input[type=text], select {
+    width: 100%;
+    min-width: 6rem;
+    padding: .5rem .75rem;
+    border: 1px solid #d1d5db;
+    border-radius: .375rem;
+    transition: border-color .2s;
+    background-color: #fff;
+}
+.dark input[type=number], .dark input[type=text], .dark select {
+    background-color: #374151;
+    border-color: #4b5563;
+}
+input[type=number]:focus, input[type=text]:focus, select:focus {
+    outline: 0;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #3b82f666;
+}
+
+/* Theme-aware selector for language dropdown */
+.theme-aware-selector {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+}
+
+/* === Required Field Indicator === */
+.label-required::after {
+    content: ' *';
+    color: #dc2626; /* red-600 */
+    font-weight: bold;
+}
+
+/* === RESULTS & TABLES === */
+.results-container table {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+}
+.results-container th, .results-container td {
+    padding: .5rem;
+    border: 1px solid var(--color-border-secondary);
+    text-align: left;
+    font-size: .875rem;
+}
+.results-container th {
+    background-color: var(--color-bg-quaternary);
+    font-weight: 600;
+}
+.results-container caption {
+    font-size: 1rem;
+    font-weight: 600;
+    caption-side: top;
+    padding: .75rem;
+    text-align: center;
+    background-color: var(--color-bg-tertiary);
+}
+.pass { color: #16a34a; font-weight: 700; }
+.fail { color: #dc2626; font-weight: 700; }
+
+/* === UI COMPONENTS === */
+.toggle-active { background-color: #3b82f6; color: #fff; }
+.dark .toggle-active {
+    background-color: #2563eb; /* A slightly brighter blue for dark mode */
+    color: #f9fafb;
+}
+.toggle-inactive { background-color: transparent; color: #4b5563; }
+.details-row {
+    display: none;
+    background-color: var(--color-bg-primary); /* Light gray background for visibility */
+}
+.details-row.is-visible {
+    display: table-row;
+}
+.details-row.is-visible { display: table-row; }
+.toggle-details-btn {
+    color: #3b82f6;
+    font-size: .75rem;
+    margin-left: .5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.report-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--color-border-secondary);
+    padding-bottom: .5rem;
+    margin-bottom: 1rem;
+}
+.validation-message {
+    border-radius: .5rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem; /* This was a duplicate, removed for cleanliness */
+}
+.validation-message.error {
+    background-color: #fef2f2;
+    color: #991b1b;
+}
+.validation-message.warning {
+    background-color: #fffbeb;
+    color: #92400e;
+}
+.validation-message svg { color: currentColor; } /* This applies the text color to the SVG icon */
+
+/* === DIAGRAMS & BREAKDOWNS === */
+.diagram {
+    border: 1px solid var(--color-border-primary);
+    border-radius: .5rem;
+    padding: 1rem;
+    background-color: var(--color-bg-primary);
+    margin-bottom: 1.5rem;
+}
+.calc-breakdown {
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border-primary);
+    padding: 1rem;
+    border-radius: .5rem;
+    margin-top: 1rem;
+    font-size: .875rem;
+}
+.calc-breakdown h4 {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: .5rem;
+}
+.calc-breakdown ul {
+    list-style-type: disc;
+    margin-left: 20px;
+}
+
+/* --- Interactive Diagram Styles --- */
+.diagram svg {
+    cursor: grab;
+}
+.diagram svg.is-grabbing {
+    cursor: grabbing;
+}
+
+/* --- SVG Diagram Styles --- */
+.svg-dim { stroke: var(--color-text-secondary); stroke-width: 1; fill: none; }
+.svg-dim-text { font-size: 16px; fill: var(--color-text-primary); font-family: sans-serif; text-anchor: middle; dominant-baseline: middle; }
+.svg-dim text {
+    paint-order: stroke;
+    stroke: var(--color-bg-primary);
+    stroke-width: 4px;
+    stroke-linecap: butt;
+    stroke-linejoin: miter;
+}
+.svg-label { font-size: 12px; fill: var(--color-text-primary); font-family: sans-serif; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+.svg-plate-flange { fill: #dbeafe; stroke: #60a5fa; stroke-width: 1.5; } /* blue-100 / blue-500 */
+.svg-plate-web { fill: #ffedd5; stroke: #f97316; stroke-width: 1.5; } /* orange-100 / orange-500 */
+.svg-member { fill: var(--color-bg-tertiary); stroke: var(--color-text-secondary); stroke-width: 1; }
+.svg-member-outline { fill: none; stroke: var(--color-text-secondary); stroke-width: 1; }
+.svg-member-line { fill: none; stroke: var(--color-text-secondary); stroke-width: 0.5; }
+.svg-bolt { fill: var(--color-text-secondary); stroke: var(--color-text-primary); stroke-width: 1.5; }
+.svg-weld { fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 4 3; }
+
+/* --- Weld Specific Styles --- */
+.svg-weld-line { fill: none; stroke: #f97316; stroke-dasharray: 3 2; }
+
+/* --- Load Arrow Styles --- */
+.svg-load-arrow { stroke: #ef4444; stroke-width: 1.5; fill: none; marker-end: url(#arrow-marker); }
+
+
+/* --- 3D Diagram Container --- */
+#3d-diagram-container {
+    position: relative; /* This is crucial for positioning children */
+    width: 100%;
+    height: 400px; /* Fixed height to contain */
+    overflow: hidden; /* Prevent overflow floating */
+    border-radius: 0.5rem; /* Optional: matches card rounding */
+    background: #1a1a1a; /* Dark background for better contrast */
+}
+
+/* New class for 3D labels */
+.three-label {
+    font-size: 12px;
+    color: #ffffff;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap; /* Prevent wrapping */
+    transform: translate(-50%, -50%); /* Center on position */
+    pointer-events: none; /* Allow mouse events to pass through */
+}
+
+/* This targets BOTH the 3D canvas and the label div */
+#3d-diagram-container > canvas, #3d-diagram-container > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* === COPY & PRINT STYLES === */
+.copy-friendly { font-family: 'Times New Roman', Times, serif !important; font-size: 12pt !important; color: #000 !important; background: #fff !important; }
+.copy-friendly * { font-family: inherit !important; color: inherit !important; border-color: #000 !important; background-color: transparent !important; }
+.copy-friendly h2, .copy-friendly h3, .copy-friendly h4, .copy-friendly .font-bold, .copy-friendly .font-semibold, .copy-friendly caption { font-weight: 700 !important; }
+.copy-friendly h2 { font-size: 14pt !important; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px; }
+.copy-friendly h3 { font-size: 13pt !important; }
+.copy-friendly h4 { font-size: 12pt !important; }
+.copy-friendly table { border-collapse: collapse; width: 100%; margin: 10px 0; display: table !important; }
+.copy-friendly th, .copy-friendly td { border: 1px solid #000; padding: 4px 8px; text-align: left; display: table-cell !important; }
+.copy-friendly thead { display: table-header-group !important; }
+.copy-friendly tbody { display: table-row-group !important; }
+.copy-friendly tr { display: table-row !important; }
+.copy-friendly button, .copy-friendly .diagram, .copy-friendly header { display: none !important; }
+.copy-friendly th { background-color: #f0f0f0; font-weight: 700; }
+
+@media print {
+    @page { margin: .5in; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body, html { background: #fff !important; color: #000 !important; font-family: Georgia, serif; font-size: 10pt; }
+    header, main, footer, .diagram, button, #feedback-message { display: none; }
+    body .container { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+    .results-container { display: block !important; margin-top: 0 !important; }
+    .results-container * { visibility: visible; color: #000 !important; background: transparent !important; box-shadow: none !important; }
+    .results-container table { page-break-inside: auto; width: 100%; border-collapse: collapse; }
+    .results-container tr { page-break-inside: avoid; page-break-after: auto; }
+    .results-container thead { display: table-header-group; }
+    .results-container th, .results-container td { border: 1px solid #000; padding: .25rem .5rem; }
+    .results-container th { background-color: #e5e7eb !important; font-weight: 700; }
+    .results-container caption { font-weight: 700; background-color: #e5e7eb !important; }
+    .results-container .pass { color: #000 !important; font-weight: 400; }
+    .results-container .fail { color: #000 !important; font-weight: 700; }
+    .results-container .details-row { display: table-row !important; }
+    .results-container .toggle-details-btn { display: none !important; }
+    .results-container .calc-breakdown { border: 1px solid #ccc !important; margin-top: .5rem !important; padding: .5rem !important; }
+}

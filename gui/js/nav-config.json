@@ -1,0 +1,104 @@
+{
+    "mainNav": [
+        {
+            "key": "home",
+            "href": "index.html",
+            "textKey": "engineering_hub",
+            "subNav": []
+        },
+        {
+            "key": "us",
+            "href": "asce/wind.html",
+            "textKey": "us_codes",
+            "subNav": [
+                {
+                    "key": "wind",
+                    "href": "asce/wind.html",
+                    "textKey": "wind"
+                },
+                {
+                    "key": "snow",
+                    "href": "asce/snow.html",
+                    "textKey": "snow"
+                },
+                {
+                    "key": "rain",
+                    "href": "asce/rain.html",
+                    "textKey": "rain"
+                },
+                {
+                    "key": "combos",
+                    "href": "asce/combos.html",
+                    "textKey": "combinations"
+                },
+                {
+                    "key": "steel-check",
+                    "href": "aisc/steel check.html",
+                    "textKey": "steel_check"
+                },
+                {
+                    "key": "base-plate",
+                    "href": "aisc/base plate.html",
+                    "textKey": "base_plate"
+                },
+                {
+                    "key": "splice",
+                    "href": "aisc/splice.html",
+                    "textKey": "splice"
+                },
+                {
+                    "key": "nds",
+                    "href": "nds/nds wood design.html",
+                    "textKey": "nds_wood"
+                },
+                {
+                    "key": "beam_selector",
+                    "textKey": "beam_selector",
+                    "href": "beam selector.html"
+                },
+                {
+                    "key": "angle_support",
+                    "textKey": "angle_support",
+                    "href": "angle_support.html"
+                }
+            ]
+        },
+        {
+            "key": "nbr",
+            "href": "nbr/comb nbr 6118.html",
+            "textKey": "nbr_brazil",
+            "subNav": [
+                {
+                    "key": "comb-nbr",
+                    "href": "nbr/comb nbr 6118.html",
+                    "textKey": "combinations"
+                },
+                {
+                    "key": "viga-concreto",
+                    "href": "nbr/nbr 6118 concreto.html",
+                    "textKey": "concrete_beam"
+                },
+                {
+                    "key": "viga-protendida",
+                    "href": "nbr/viga_protendida.html",
+                    "textKey": "prestressed_beam"
+                },
+                {
+                    "key": "nbr-aco",
+                    "href": "nbr/nbr 8080 estruturas de aço.html",
+                    "textKey": "steel"
+                },
+                {
+                    "key": "pcalc",
+                    "href": "nbr/PCALC.html",
+                    "textKey": "pcalc"
+                },
+                {
+                    "key": "mn-diagram",
+                    "href": "nbr/M-N.html",
+                    "textKey": "mn_diagram"
+                }
+            ]
+        }
+    ]
+}
