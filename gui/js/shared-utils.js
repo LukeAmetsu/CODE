@@ -27,7 +27,7 @@ function createCalculationHandler(config) { // This is the function being called
         console.warn(`[createCalculationHandler] A 'validationRuleKey' não foi fornecida na configuração. A validação de entrada e os botões de relatório (Copiar, PDF, etc.) não funcionarão.`);
     }
 
-    return async function() { // This function is already async, which is good.
+    return async function () { // This function is already async, which is good.
         console.log(`[${validationRuleKey}] Calculation triggered.`);
         // --- 1. SETUP & GATHER INPUTS ---
         if (buttonId) setLoadingState(true, buttonId);
@@ -112,19 +112,19 @@ function createCalculationHandler(config) { // This is the function being called
             // or is the first element inside the results container with a specific ID.
             const reportContentElement = resultsContainer.querySelector('[id$="-report-content"], .report-section-copyable');
             let reportContentId = reportContentElement ? reportContentElement.id : resultsContainerId;
-            
+
             // If the render function uses the ReportBuilder, the ID should be passed in.
             // For safety, we use the container ID if the internal report ID can't be found, 
             // but this relies on the render function correctly outputting the element.
 
             attachReportEventListeners(resultsContainerId, {
                 // Pass the containerId (where the ReportBuilder renders) for delegation, and the internal reportId for copy/download
-                reportId: reportContentId, 
+                reportId: reportContentId,
                 filenamePrefix: `${validationRuleKey || 'report'}-Report`,
                 onSendToCombos: config.onSendToCombos,
                 toggleTexts: config.toggleTexts || { show: '[Show]', hide: '[Hide]', showAll: 'Show All Details', hideAll: 'Hide All Details' }
             });
-            
+
             console.log(`[${validationRuleKey}] Event listeners attached to container #${resultsContainerId}. Targetting report content ID: #${reportContentId}`);
             showFeedback('Calculation complete!', false, feedbackElId);
         }
@@ -163,7 +163,7 @@ function gatherInputsFromIds(ids) {
 function highlightRequiredFields(key) {
     if (!window.validationRules || !window.validationRules[key]) return;
     const rules = window.validationRules[key];
-    
+
     // Simple implementation: find labels for required fields and add a class or marker
     Object.keys(rules).forEach(fieldId => {
         if (rules[fieldId].required) {
@@ -188,7 +188,7 @@ function highlightRequiredFields(key) {
 function setLoadingState(isLoading, buttonId) {
     const btn = document.getElementById(buttonId);
     if (!btn) return;
-    
+
     if (isLoading) {
         btn.disabled = true;
         btn.dataset.originalText = btn.textContent;
@@ -209,18 +209,18 @@ function setLoadingState(isLoading, buttonId) {
 function showFeedback(message, isError, elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    
+
     el.textContent = message;
     el.className = isError ? 'feedback-error' : 'feedback-success';
     el.style.display = 'block';
-    
+
     // Auto-hide success messages after 3 seconds
     if (!isError) {
         setTimeout(() => {
             el.style.opacity = '0';
-            setTimeout(() => { 
-                el.style.display = 'none'; 
-                el.style.opacity = '1'; 
+            setTimeout(() => {
+                el.style.display = 'none';
+                el.style.opacity = '1';
             }, 500);
         }, 3000);
     }
@@ -231,16 +231,16 @@ function showFeedback(message, isError, elementId) {
  */
 function renderValidationResults(validation, container) {
     if (!container) return;
-    
+
     let html = '<div class="validation-summary error-box">';
     html += '<h4>Please correct the following errors:</h4><ul>';
-    
+
     if (validation.errors) {
         validation.errors.forEach(err => {
             html += `<li>${err}</li>`;
         });
     }
-    
+
     html += '</ul></div>';
     container.innerHTML = html;
 }
@@ -305,7 +305,7 @@ function copyReportToClipboard(elementId) {
         console.warn('Report element not found for copying.');
         return;
     }
-    
+
     // Create a temporary textarea to copy text
     const textarea = document.createElement('textarea');
     textarea.value = el.innerText;
@@ -324,7 +324,7 @@ function copyReportToClipboard(elementId) {
 function printReport(elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
-    
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write('<html><head><title>Print Report</title>');
     // Include styles if necessary
@@ -336,16 +336,45 @@ function printReport(elementId) {
 }
 
 /**
+ * Safely evaluates a mathematical expression string.
+ * Allows basic operators: +, -, *, /, (, ), and decimal numbers.
+ * @param {string|number} expression - The expression to evaluate.
+ * @returns {number|null} The evaluated number or null if invalid.
+ */
+function safeMathEval(expression) {
+    if (expression === null || expression === undefined || expression === '') return null;
+    if (typeof expression === 'number') return expression;
+
+    // Convert to string and sanitize
+    const str = String(expression);
+    // Allow digits, dots, spaces, and operators +, -, *, /, (, )
+    if (!/^[0-9+\-*/().\s]+$/.test(str)) {
+        // Fallback for simple parse if invalid chars found (though input type usually restricts this)
+        const val = parseFloat(str);
+        return isNaN(val) ? null : val;
+    }
+
+    try {
+        // Use Function constructor to evaluate safely-ish (sandboxed by regex check)
+        // "return " + str
+        const func = new Function('return ' + str);
+        const result = func();
+        return isFinite(result) ? result : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
  * Retrieves the numeric value of an input element by its ID.
- * If the value is empty or non-numeric, it returns 0 or null as appropriate.
+ * Supports mathematical equations (e.g. "2+2").
  * @param {string} id The ID of the input element.
  * @returns {number|null} The numeric value, or null if conversion fails.
  */
 function getInputValue(id) {
     const element = document.getElementById(id);
     if (element) {
-        const value = parseFloat(element.value);
-        return isNaN(value) ? null : value;
+        return safeMathEval(element.value);
     }
     return null;
 }
@@ -885,12 +914,12 @@ async function handleDownloadPdf(containerId, filename, feedbackElId = 'feedback
 
     // --- Configure PDF Options ---
     const opt = {
-        margin:        0.5,
-        filename:      filename,
-        image:         { type: 'jpeg', quality: 0.98 },
-        html2canvas:   { scale: 2, useCORS: true },
-        jsPDF:         { unit: 'in', format: 'letter', orientation: 'portrait' },
-        pagebreak:     { mode: ['avoid-all', 'css', 'legacy'] }
+        margin: 0.5,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     // --- Generate PDF with Custom Header ---
@@ -931,7 +960,7 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
     const clone = reportContainer.cloneNode(true);
     clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
     clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
-    
+
     clone.querySelectorAll('tr').forEach(tr => {
         if (tr.innerText.trim() === '') {
             tr.remove();
@@ -1084,7 +1113,7 @@ function saveInputsToFile(data, filename, appVersion = '1.0') {
         ...data
     };
     const dataStr = JSON.stringify(dataToSave, null, 2);
-    const blob = new Blob([dataStr], {type: "text/plain;charset=utf-8"});
+    const blob = new Blob([dataStr], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1111,7 +1140,7 @@ function initiateLoadInputsFromFile(fileInputId = 'file-input') {
  * @returns {function} An event handler function.
  */
 function createSaveInputsHandler(inputIds, filename, feedbackElId = 'feedback-message') {
-    return function() {
+    return function () {
         const inputs = gatherInputsFromIds(inputIds);
         // Pass a version number when saving
         saveInputsToFile(inputs, filename, '1.1');
@@ -1149,7 +1178,7 @@ function applyInputsToDOM(inputs, inputIds) {
  * @returns {function} An event handler function that takes the file input event.
  */
 function createLoadInputsHandler(inputIds, onComplete, feedbackElId = 'feedback-message', appVersion = '1.1') {
-    return function(event) {
+    return function (event) {
         const displayEl = document.getElementById('file-name-display');
         const file = event.target.files[0];
         if (!file) {
@@ -1305,9 +1334,9 @@ async function initializeApp(config) { // This function is already async
         if (match && match[1]) {
             pathPrefix = match[1]; // e.g., "../" or "./" or ""
         } else if (src.includes('shared-utils.js')) {
-             // Fallback if 'js/' isn't explicitly in the src (e.g. flat structure)
-             // We just strip the filename
-             pathPrefix = src.replace('shared-utils.js', '');
+            // Fallback if 'js/' isn't explicitly in the src (e.g. flat structure)
+            // We just strip the filename
+            pathPrefix = src.replace('shared-utils.js', '');
         }
     }
 
@@ -1320,14 +1349,14 @@ async function initializeApp(config) { // This function is already async
         const response = await fetch(navConfigPath);
         // Check if response is okay before attempting to parse JSON
         if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status} while fetching ${navConfigPath}`);
+            throw new Error(`HTTP error! status: ${response.status} while fetching ${navConfigPath}`);
         }
         navConfig = await response.json();
         window.NAV_CONFIG = navConfig; // Make it globally available
     } catch (error) {
         console.error(`Failed to load nav-config.json from path: ${navConfigPath}`, error);
         // Fallback or stop initialization if nav config fails
-        return; 
+        return;
     }
 
     const pageConfig = navConfig.mainNav.flatMap(item => item.subNav.length > 0 ? item.subNav : [item]).find(link => link.href.endsWith(pageName))
@@ -1340,20 +1369,20 @@ async function initializeApp(config) { // This function is already async
     // Inject Header and Footer (Assuming injectHeader/injectFooter are available from template.js)
     if (typeof injectHeader === 'function' && typeof injectFooter === 'function') {
         // Pass the calculated pathPrefix to the template functions if they need it for static assets
-        await injectHeader({ 
-            activePage: activePageKey, 
-            pageTitle: pageTitleKey, 
+        await injectHeader({
+            activePage: activePageKey,
+            pageTitle: pageTitleKey,
             headerPlaceholderId: 'header-placeholder',
             pathPrefix: pathPrefix // Explicitly pass the prefix
         });
-        await injectFooter({ 
+        await injectFooter({
             footerPlaceholderId: 'footer-placeholder',
             pathPrefix: pathPrefix // Explicitly pass the prefix
         });
     } else {
-          console.warn("Template injection functions (injectHeader/injectFooter) are missing. Navigation will not load.");
+        console.warn("Template injection functions (injectHeader/injectFooter) are missing. Navigation will not load.");
     }
-    
+
     const effectiveStorageKey = storageKey || `${activePageKey}-inputs`;
 
     // 2. Initialize Shared UI Components
@@ -1537,14 +1566,14 @@ class ReportBuilder {
                         // Add a top border to all data rows
                         const trClasses = [];
                         if (rowIndex > 0) trClasses.push('border-t', 'dark:border-gray-700');
-                        
+
                         // Apply the grey background if isHeader is true, regardless of position.
                         if (row.isHeader) {
                             trClasses.push('bg-gray-100', 'dark:bg-gray-700', 'font-semibold');
                         }
                         const detailId = `${sectionId}-detail-${rowIndex}`;
                         const detailsButton = row.details ? createDOMElement('button', { className: 'toggle-details-btn text-blue-600 dark:text-blue-400 hover:underline text-xs', dataset: { toggleId: detailId } }, ['[Show]']) : null;
-                        
+
                         const tr = createDOMElement('tr', { className: trClasses.join(' ') });
                         row.cells.forEach((cell, cellIndex) => {
                             const td = createDOMElement('td');
@@ -1879,7 +1908,7 @@ function getUnits(unit_system) {
 function initializeGlobalInputSteps() {
     // Seleciona todos os inputs do tipo número na página
     const numberInputs = document.querySelectorAll('input[type="number"]');
-    
+
     numberInputs.forEach(input => {
         // Só aplica se o input ainda não tiver um atributo 'step' definido manualmente
         if (!input.hasAttribute('step')) {
@@ -1919,6 +1948,6 @@ function interpolate(x, x_points, y_values) {
             return y0 + (x - x0) * ((y1 - y0) / (x1 - x0));
         }
     }
-    
+
     return y_values[y_values.length - 1]; // Should not be reached
 }

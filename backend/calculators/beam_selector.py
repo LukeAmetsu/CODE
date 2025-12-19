@@ -14,7 +14,47 @@ def find_lightest_beam(inputs):
     - span_ft (float): Span in ft (for fallback Mu calc)
     - w_load (float): Load in k/ft (for fallback Mu calc)
     - max_depth (float): Max depth in inches (optional)
+    - batch_loads (list): List of dicts {span_ft, w_load} for batch processing
     """
+    
+    # 0. Check for Batch Processing
+    batch_loads = inputs.get('batch_loads', [])
+    if batch_loads:
+        results = []
+        # Reuse this functions core logic by calling passing a modified input
+        # Problem: recursion with 'batch_loads' in inputs -> Infinite loop?
+        # Fix: Remove 'batch_loads' from copy.
+        
+        base_inputs = inputs.copy()
+        del base_inputs['batch_loads']
+        
+        for case in batch_loads:
+            # Parse case: "20, 1.2" (str) or {span: 20, load: 1.2} (obj)
+            # Assuming logic handles parsing or prepared inputs
+            span_val = float(case.get('span', 0))
+            load_val = float(case.get('load', 0))
+            
+            case_input = base_inputs.copy()
+            case_input['span_ft'] = span_val
+            case_input['w_load'] = load_val
+            case_input['mu_req'] = 0 # Force recalc
+            
+            # Run core
+            res = find_lightest_beam(case_input)
+            
+            # Extract Winner
+            winner = None
+            if res.get('candidates'):
+                winner = res['candidates'][0]
+                
+            results.append({
+                "span": span_val,
+                "load": load_val,
+                "winner": winner
+            })
+            
+        return results
+
     
     # 1. Gather Inputs
     method = inputs.get('design_method', 'ASD')
@@ -37,11 +77,16 @@ def find_lightest_beam(inputs):
     shapes = db.get_shapes_by_type('W')
     
     valid_candidates = []
+    desired_result = None
+    desired_shape = inputs.get('desired_shape', '').upper()
     
     # 3. Iterate
+    print(f"DEBUG: Processing {len(shapes)} shapes from DB.")
+    
     for name, props in shapes.items():
         # Metric check filter (some DBs have metric)
-        if 'W' not in name: continue 
+        if 'W' not in name: 
+            continue 
         
         # Parse Weight from name W12x26 -> 26
         try:
@@ -52,9 +97,6 @@ def find_lightest_beam(inputs):
             
         d = props.get('d', 0)
         
-        if d > max_depth:
-            continue
-            
         # Check required props
         if not all(k in props for k in ['Zx', 'Sx', 'ry', 'J']):
             continue
@@ -65,18 +107,15 @@ def find_lightest_beam(inputs):
         zx = props['Zx']
         j = props['J']
         iy = props['Iy']
-        cw = props.get('Cw', 0) # Some might be missing
+        cw = props.get('Cw', 0)
         
         # rts Calculation
         rts = props.get('rts')
         if not rts:
             tf = props.get('tf', 0)
-            ho_calc = d - tf
-            # Safe fallback if Cw present
             if cw > 0:
                 rts = math.sqrt(math.sqrt(iy * cw) / sx)
             else:
-                # Approximation if Cw missing (shouldn't happen for W shapes)
                 rts = ry 
         
         ho = props.get('ho')
@@ -140,22 +179,98 @@ def find_lightest_beam(inputs):
             mp_avail = (mp_nominal / omega_osha) / 12.0
             mr_avail = (mr_nominal / omega_osha) / 12.0
             
-        if capacity >= m_req:
-            ratio = m_req / capacity
-            valid_candidates.append({
-                "name": name,
-                "weight": weight,
-                "depth": d,
-                "capacity": capacity,
-                "ratio": ratio,
-                "lp": lp_ft,
-                "lr": lr_ft,
-                "mp": mp_avail,
-                "mr": mr_avail,
-                "mode": mode
-            })
+        ratio = m_req / capacity if capacity > 0 else 999
+        
+        result_obj = {
+            "name": name,
+            "weight": weight,
+            "depth": d,
+            "capacity": capacity,
+            "ratio": ratio,
+            "Mp": mp_avail,
+            "Mr": mr_avail,
+            "Lp": lp_ft,
+            "Lr": lr_ft,
+            "Ix": props.get('Ix', 0),
+            "mode": mode,
+            "pass": capacity >= m_req
+        }
+        
+        # Capture Desired Shape (ignore depth limit)
+        if name == desired_shape:
+            desired_result = result_obj
+
+        # Filter for Candidates (apply depth limit, pass check, and optional deflection check)
+        is_valid = True
+        
+        # 1. Nominal Depth Check (Desired Family)
+        nominal_target = float(inputs.get('nominal_depth', 0))
+        if nominal_target > 0:
+            # Check if beam name matches family (e.g. W12...)
+            # We already parsed 'weight' from 'W12x26', but we need the first part 'W12'
+            # Let's re-parse or use regex. 
+            # Name format is W[Depth]X[Weight]
+            try:
+                # Remove W, split by X
+                depth_str = name.upper().replace('W', '').split('X')[0]
+                nominal_actual = float(depth_str)
+                # Check match (tolerance? No, nominal is exact integer usually, but float safe)
+                if abs(nominal_actual - nominal_target) > 0.1:
+                    is_valid = False
+            except:
+                is_valid = False
             
-    # Sort: Weight then Depth
+        # 2. Capacity Check
+        if capacity < m_req:
+            is_valid = False
+            
+        # 3. Deflection Check (Optional)
+        check_deflection = inputs.get('check_deflection', False)
+        defl_val = 0.0
+        defl_limit = 0.0
+        defl_ratio = 0.0
+        
+        if check_deflection:
+            # Need w_load and span. 
+            # If M_req was entered directly, we might not have reliable w/span unless user entered them.
+            # We will use the ones from inputs if available.
+            w = float(inputs.get('w_load', 0))
+            span = float(inputs.get('span_ft', 0))
+            
+            if w > 0 and span > 0:
+                # Delta = 5 * w * L^4 / (384 * E * I)
+                # w in k/ft -> convert to k/in: w / 12
+                # L in ft -> convert to in: L * 12
+                w_in = w / 12.0
+                L_in = span * 12.0
+                ix_val = props.get('Ix', 0)
+                
+                if ix_val > 0:
+                    numerator = 5 * w_in * (L_in ** 4)
+                    denominator = 384 * E * ix_val
+                    defl_val = numerator / denominator
+                    
+                    defl_limit = L_in / 240.0
+                    if defl_limit > 0:
+                        defl_ratio = defl_val / defl_limit
+                        
+                    if defl_val > defl_limit:
+                        is_valid = False
+                        result_obj['mode'] += " (Fail Defl)" # Append fail reason
+        
+        result_obj['deflection'] = defl_val
+        result_obj['defl_limit'] = defl_limit
+        result_obj['defl_ratio'] = defl_ratio
+        
+        if is_valid:
+            valid_candidates.append(result_obj)
+            
     valid_candidates.sort(key=lambda x: (x['weight'], x['depth']))
     
-    return valid_candidates[:20] # Return top 20
+    top_results = valid_candidates[:20]
+    print(f"DEBUG: Found {len(top_results)} valid candidates. Desired found: {desired_result is not None}")
+    
+    return {
+        "candidates": top_results,
+        "desired": desired_result
+    }

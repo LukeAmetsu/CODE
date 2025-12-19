@@ -10,17 +10,7 @@
 const MASONRY_TABLE = {
     "0.375": [
         { h_nom: 3.5, end: 2.5, T_allow: 720, V_allow: 900 },
-        { h_nom: 3.5, end: 6.0, T_allow: 1170, V_allow: 915 }, // Using the conservative 6" end dist row for different values? Table has duplicate 3.5 with diff End Dist. 
-        // Logic: Should probably pick the one based on End Distance available? 
-        // User request: "add the user input for the allowable embedment". 
-        // If user picks 3.5 embedment, which Capacity do we use? The lower one is safer (End 2.5). The higher one requires End=6. 
-        // I will assume the user provides Embedment. I should probably show "3.5 (End 2.5")" and "3.5 (End 6")" in the dropdown?
-        // Or simplified: Just store them and let dynamic logic handle it. 
-        // For now, I'll distinguish by including End Dist in label or Just assume standard conservative? 
-        // User table has: 
-        // 1. 3/8, 3.5, End 2.5 --> T=720, V=900
-        // 2. 3/8, 3.5, End 6.0 --> T=1170, V=915
-        // 3. 3/8, 6.0, End 6.0 --> T=2085, V=915
+        { h_nom: 3.5, end: 6.0, T_allow: 1170, V_allow: 915 },
         { h_nom: 3.5, end: 6.0, label: "3.5\" (High Capacity - Min End 6\")", T_allow: 1170, V_allow: 915 },
         { h_nom: 6.0, end: 6.0, T_allow: 2085, V_allow: 915 }
     ],
@@ -50,12 +40,36 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('calc-btn').addEventListener('click', calculateAngleSupport);
     document.getElementById('bolt_diameter').addEventListener('change', updateEmbedmentOptions);
 
+    document.getElementById('bolt_diameter').addEventListener('change', updateEmbedmentOptions);
+
+    // Toggle Batch
+    const batchBtn = document.getElementById('toggle-batch-btn');
+    const batchSec = document.getElementById('batch-section');
+    if (batchBtn) {
+        batchBtn.addEventListener('click', () => {
+            batchSec.classList.toggle('hidden');
+            const isHidden = batchSec.classList.contains('hidden');
+            batchBtn.querySelector('span').textContent = isHidden ? "▶ Batch Load Check (Optional)" : "▼ Batch Load Check (Optional)";
+        });
+    }
+
     // Auto-calc on enter in inputs
     const inputs = document.querySelectorAll('input, select');
     inputs.forEach(input => {
+        // Hide results on change
         input.addEventListener('change', () => {
             if (input.id !== 'bolt_diameter') document.getElementById('results-area').classList.add('hidden');
         });
+
+        // Add blur listener for equation evaluation on text inputs
+        if (input.type === 'text' || input.type === 'number') {
+            input.addEventListener('blur', () => {
+                const val = safeMathEval(input.value);
+                if (val !== null) {
+                    input.value = val % 1 !== 0 ? val.toFixed(3).replace(/\.?0+$/, '') : val;
+                }
+            });
+        }
     });
 });
 
@@ -92,18 +106,37 @@ function updateEmbedmentOptions() {
 async function calculateAngleSupport() {
     // 1. Get Inputs
     const inputs = {
-        beam_span: parseFloat(document.getElementById('beam_span').value) || 0,
-        beam_spacing: parseFloat(document.getElementById('beam_spacing').value) || 0,
-        area_load: parseFloat(document.getElementById('area_load').value) || 0,
-        num_bolts: parseInt(document.getElementById('num_bolts').value) || 1,
+        beam_span: safeMathEval(document.getElementById('beam_span').value) || 0,
+        beam_spacing: safeMathEval(document.getElementById('beam_spacing').value) || 0,
+        area_load: safeMathEval(document.getElementById('area_load').value) || 0,
+        num_bolts: Math.floor(safeMathEval(document.getElementById('num_bolts').value) || 1),
         bolt_diameter: document.getElementById('bolt_diameter').value,
         embedment_index: parseInt(document.getElementById('embedment').value),
         angle_leg: parseFloat(document.getElementById('angle_leg').value) || 4,
         angle_thick: parseFloat(document.getElementById('angle_thick').value) || 0.375,
-        angle_len: parseFloat(document.getElementById('angle_len').value) || 8,
-        angle_fy: parseFloat(document.getElementById('angle_fy').value) || 36,
-        angle_config: document.getElementById('angle_config').value
+        // angle_len removed
+        angle_fy: safeMathEval(document.getElementById('angle_fy').value) || 36,
+        angle_config: document.getElementById('angle_config').value,
+        design_method: document.getElementById('angle_method').value
     };
+
+    // Batch Input Parsing
+    const batchText = document.getElementById('batch-input').value.trim();
+    let batchLoads = [];
+    if (batchText) {
+        const lines = batchText.split('\n');
+        lines.forEach(line => {
+            const parts = line.split(',');
+            if (parts.length >= 2) {
+                const s = safeMathEval(parts[0]);
+                const l = safeMathEval(parts[1]);
+                if (s !== null && l !== null) {
+                    batchLoads.push({ span: s, load: l });
+                }
+            }
+        });
+    }
+    if (batchLoads.length > 0) inputs.batch_loads = batchLoads;
 
     // 2. Call Python Backend (Eel)
     try {
@@ -122,7 +155,14 @@ async function calculateAngleSupport() {
         if (data.spec_string) data.specString = data.spec_string;
         if (data.pass_all !== undefined) data.passAll = data.pass_all;
 
-        renderResults(data);
+        if (data.spec_string) data.specString = data.spec_string;
+        if (data.pass_all !== undefined) data.passAll = data.pass_all;
+
+        if (Array.isArray(data)) {
+            renderBatchResults(data);
+        } else {
+            renderResults(data);
+        }
 
     } catch (e) {
         console.error(e);
@@ -171,7 +211,8 @@ function renderResults(data) {
 
         let failReasons = [];
         if (data.interaction > 1.0) failReasons.push("Anchors");
-        if (data.ratio_bend > 1.0) failReasons.push("Bending");
+        if (data.ratio_bend > 1.0) failReasons.push("Loc. Bend");
+        if (data.ratio_long > 1.0) failReasons.push("Long. Bend");
         desc.textContent = "Fail: " + failReasons.join(", ");
 
         statusText = "FAIL";
@@ -179,7 +220,7 @@ function renderResults(data) {
     }
 
     // Show worst ratio in quick status
-    const maxRatio = Math.max(data.interaction, data.ratio_bend);
+    const maxRatio = Math.max(data.interaction, data.ratio_bend, data.ratio_long || 0);
     quickStatus.textContent = statusText + " (" + maxRatio.toFixed(2) + ")";
 
     quickStatus.classList.remove('hidden');
@@ -188,8 +229,8 @@ function renderResults(data) {
     // Update Tables
     document.getElementById('res-w').textContent = data.w_klf.toFixed(2) + " klf";
     document.getElementById('res-reaction').textContent = data.V_total.toFixed(2) + " kips";
-    document.getElementById('res-total-bolts').textContent = data.nBoltsTotal;
-    document.getElementById('res-bolts-angle').textContent = data.nBoltsAngle;
+    document.getElementById('res-total-bolts').textContent = data.n_bolts_total;
+    document.getElementById('res-bolts-angle').textContent = data.n_bolts_angle;
     document.getElementById('res-v-bolt').textContent = data.v_bolt.toFixed(3) + " kips";
     document.getElementById('res-t-bolt').textContent = data.t_bolt.toFixed(3) + " kips";
 
@@ -219,6 +260,21 @@ function renderResults(data) {
     const specEl = document.getElementById('spec-string');
     if (specEl) specEl.textContent = data.specString;
 
+    // Longitudinal Bending Results
+    document.getElementById('res-span-long').textContent = (data.span_long || 0).toFixed(2) + '"';
+    document.getElementById('res-m-long').textContent = (data.M_long || 0).toFixed(2) + " k-in";
+    document.getElementById('res-zx-long').textContent = (data.section_modulus || 0).toFixed(2) + " in³";
+    document.getElementById('res-ma-long').textContent = (data.Ma_long_allow || 0).toFixed(2) + " k-in";
+
+    const ratioLongEl = document.getElementById('res-ratio-long');
+    const dlVal = data.ratio_long || 0;
+    ratioLongEl.textContent = dlVal.toFixed(2);
+    if (dlVal > 1.0) {
+        ratioLongEl.className = "py-2 text-right font-bold text-red-600";
+    } else {
+        ratioLongEl.className = "py-2 text-right font-bold text-green-600";
+    }
+
     // Equation Terms
     document.getElementById('eq-v-term').textContent = data.ratio_v.toFixed(2);
     document.getElementById('eq-t-term').textContent = data.ratio_t.toFixed(2);
@@ -233,4 +289,38 @@ function renderResults(data) {
         eqTotalEl.classList.add('text-green-600');
         eqTotalEl.classList.remove('text-red-600', 'text-gray-800', 'dark:text-white');
     }
+}
+
+function renderBatchResults(data) {
+    const container = document.getElementById('batch-results-container');
+    const tbody = document.getElementById('batch-results-body');
+
+    container.classList.remove('hidden');
+    tbody.innerHTML = "";
+
+    data.forEach(row => {
+        if (row.error) return;
+
+        const pass = row.pass;
+        const ratio = row.max_ratio.toFixed(2);
+
+        let resultHtml = pass ?
+            '<span class="text-green-600 font-bold">PASS</span>' :
+            '<span class="text-red-600 font-bold">FAIL</span>';
+
+        let ratioHtml = `<span class="${pass ? 'text-green-600' : 'text-red-600'}">${ratio}</span>`;
+
+        const tr = document.createElement('tr');
+        tr.className = "bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600";
+        tr.innerHTML = `
+            <td class="px-4 py-2">${row.span.toFixed(2)}</td>
+            <td class="px-4 py-2">${row.load.toFixed(2)}</td>
+            <td class="px-4 py-2">${resultHtml}</td>
+            <td class="px-4 py-2">${ratioHtml}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Scroll to batch results
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

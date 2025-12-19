@@ -22,7 +22,7 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 # Initialize DB on startup
-db_path = resource_path('aisc-shapes-database-v16.0.json')
+db_path = resource_path('aisc-shapes-database-v16.0.xlsx')
 print(f"Server loading DB from: {db_path}")
 try:
     db.load_database(db_path)
@@ -45,6 +45,27 @@ def find_lightest_beam(inputs):
         return py_find_lightest(inputs)
     except Exception as e:
         return {"error": str(e)}
+
+@eel.expose
+def get_w_shapes():
+    try:
+        # DB is loaded on startup
+        shapes = db.get_shapes_by_type('W')
+        # Return sorted keys (sorting logic: W{Deep}X{Weight})
+        # Simple string sort is okay, but numerical is better. 
+        # For simplicity in this step, assume standard sorting or just return keys. 
+        # Actually, let's try to be smart about sorting.
+        def sort_key(k):
+            try:
+                parts = k.upper().replace('W', '').split('X')
+                return (float(parts[0]), float(parts[1]))
+            except:
+                return (0, 0)
+        
+        return sorted(list(shapes.keys()), key=sort_key, reverse=True)
+    except Exception as e:
+        print(f"Error getting shapes: {e}")
+        return []
 
 if __name__ == '__main__':
     # Initialize with the absolute path to gui folder

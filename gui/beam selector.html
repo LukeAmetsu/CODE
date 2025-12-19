@@ -49,10 +49,18 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Steel Yield (F<sub>y</sub>)</label>
                             <div class="flex gap-2">
-                                <input type="number" id="Fy" value="50"
+                                <input type="text" id="Fy" value="50"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                                 <span class="flex items-center text-sm text-gray-500">ksi</span>
                             </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Desired Section (Optional)</label>
+                            <select id="desired_section"
+                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <option value="">-- Check Specific Beam --</option>
+                            </select>
                         </div>
                     </div>
 
@@ -61,7 +69,7 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Unbraced Length (L<sub>b</sub>)</label>
                             <div class="flex gap-2">
-                                <input type="number" id="Lb" value="5" step="0.5"
+                                <input type="text" id="Lb" value="5"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-bold text-blue-700 dark:text-blue-300">
                                 <span class="flex items-center text-sm text-gray-500">ft</span>
                             </div>
@@ -69,7 +77,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Moment Gradient (C<sub>b</sub>)</label>
-                            <input type="number" id="Cb" value="1.14" step="0.01"
+                            <input type="text" id="Cb" value="1.14"
                                 class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                             <p class="text-xs text-gray-400 mt-1">1.0 = Conservative. 1.14 = Simple Span Uniform Load.
                             </p>
@@ -82,7 +90,7 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Required Moment (M<sub>req</sub>)</label>
                             <div class="flex gap-2">
-                                <input type="number" id="Mu_direct" value="" placeholder="e.g. 45"
+                                <input type="text" id="Mu_direct" value="" placeholder="e.g. 45"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                                 <span class="flex items-center text-sm text-gray-500">k-ft</span>
                             </div>
@@ -96,18 +104,35 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Beam Span (L)</label>
                             <div class="flex gap-2">
-                                <input type="number" id="span_calc" value="20"
+                                <input type="text" id="span_calc" value="20"
                                     class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                                 <span class="flex items-center text-sm text-gray-500">ft</span>
                             </div>
                         </div>
                         <div>
+                            <label class="block text-sm font-medium mb-1">Tributary Width / Spacing (ft)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="beam_spacing" value="" placeholder="Optional (e.g. 5 or 2+3)"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <span class="flex items-center text-sm text-gray-500">ft</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Area Load (psf)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="area_load" value="" placeholder="Optional"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <span class="flex items-center text-sm text-gray-500">psf</span>
+                            </div>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium mb-1">Uniform Load (w)</label>
                             <div class="flex gap-2">
-                                <input type="number" id="w_load" value="0.6" step="0.1"
-                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <input type="text" id="w_load" value="0.6"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 bg-gray-50 dark:bg-gray-600">
                                 <span class="flex items-center text-sm text-gray-500">klf</span>
                             </div>
+                            <p class="text-xs text-gray-400 mt-1">Auto-calculated if Area Load & Spacing set.</p>
                         </div>
                         <div class="text-xs text-center text-gray-500" id="calc_preview">
                             M = wL²/8 = <span id="moment_preview">30.0</span> k-ft
@@ -119,17 +144,28 @@
                 <div
                     class="mt-8 flex flex-wrap gap-4 justify-center md:justify-end border-t border-gray-200 dark:border-gray-700 pt-6">
                     <div class="flex items-center gap-2 mr-auto">
-                        <label class="inline-flex items-center cursor-pointer">
+                        <label class="inline-flex items-center cursor-pointer mr-6">
                             <input type="checkbox" id="depth_limit_check" class="sr-only peer">
                             <div
                                 class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
                             </div>
                             <span
-                                class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 whitespace-nowrap">Max
-                                Depth Limit</span>
+                                class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 whitespace-nowrap">Desired
+                                Depth</span>
                         </label>
-                        <input type="number" id="max_depth" value="14" class="w-20 p-1 text-sm border rounded hidden"
-                            placeholder="in">
+                        <input type="text" id="nominal_depth" value="14"
+                            class="w-16 p-1 text-sm border rounded hidden mr-4" placeholder="in">
+
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="check_deflection" class="sr-only peer">
+                            <div
+                                class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+                            </div>
+                            <span
+                                class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 whitespace-nowrap">Prop.
+                                Deflection
+                                (L/240)</span>
+                        </label>
                     </div>
 
                     <button id="run-selector-btn"
@@ -140,6 +176,23 @@
             </div>
 
             <div id="results-container" class="hidden space-y-6">
+
+                <!-- Desired Section Result (Hidden by default) -->
+                <div id="desired-result-block"
+                    class="hidden bg-white dark:bg-gray-800 border-l-4 p-4 rounded shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase text-gray-500">Desired Section Check</h2>
+                        <div class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1" id="desired-name">W14x22
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400" id="desired-stats">...</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-bold" id="desired-ratio">
+                            --
+                        </div>
+                        <div class="text-sm font-bold mt-1" id="desired-status">PASS</div>
+                    </div>
+                </div>
 
                 <div
                     class="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 p-4 rounded shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
@@ -170,6 +223,7 @@
                                     <th class="px-6 py-3">Depth (in)</th>
                                     <th class="px-6 py-3">Capacity (k-ft)</th>
                                     <th class="px-6 py-3">Ratio (D/C)</th>
+                                    <th class="px-6 py-3">Defl. (in)</th>
                                     <th class="px-6 py-3" title="Available Plastic Moment">M<sub>p</sub> (k-ft)</th>
                                     <th class="px-6 py-3" title="Available Yield Moment">M<sub>r</sub> (k-ft)</th>
                                     <th class="px-6 py-3">L<sub>p</sub> / L<sub>r</sub> (ft)</th>

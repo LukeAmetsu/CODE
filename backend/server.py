@@ -20,7 +20,7 @@ def index():
     return "<h1>Engineering Tools Backend Running</h1><p>Go to <a href='/aisc/angle_support.html'>Angle Support Calculator</a></p><p>Go to <a href='/aisc/beam selector.html'>Beam Selector</a></p>"
 
 # Initialize DB on startup
-db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../aisc-shapes-database-v16.0.json'))
+db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../aisc-shapes-database-v16.0.xlsx'))
 print(f"Server loading DB from: {db_path}")
 try:
     db.load_database(db_path)
