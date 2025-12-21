@@ -5,6 +5,14 @@
  * Note: Tension is calculated as Reaction / N_bolts per user specification.
  */
 
+// --- Global Data Store ---
+const angleData = {
+    batchCases: [
+        { span: 15, trib: 5, load: 50 },
+        { span: 20, trib: 10, load: 60 }
+    ]
+};
+
 // --- Updated Database: DeWalt AC100+ Gold in Brick Masonry ---
 // Source: User Provided Table (Face of Brick)
 const MASONRY_TABLE = {
@@ -21,16 +29,7 @@ const MASONRY_TABLE = {
         { h_nom: 3.125, end: 9.5, T_allow: 945, V_allow: 1540 },
         { h_nom: 6.0, end: 9.5, T_allow: 1985, V_allow: 1540 }
     ],
-    // 3/4" in table? 
-    // Table shows: 5/8 anchor uses 3/4 drill. 
-    // Table does NOT show 3/4 anchor. 
-    // Removing 3/4 option support from logic or mapping if needed. 
-    // I will remove 3/4 from valid inputs in UI update or just return null.
 };
-
-// Flattened for easier Dropdown population (Diameter -> Options)
-// We need to differentiate the two 3/8" @ 3.5" options.
-// Option ID logic: "dia-embed-end"
 
 document.addEventListener('DOMContentLoaded', () => {
     // Populate Initial Embedment
@@ -38,20 +37,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Attach event listener
     document.getElementById('calc-btn').addEventListener('click', calculateAngleSupport);
-    document.getElementById('bolt_diameter').addEventListener('change', updateEmbedmentOptions);
-
-    document.getElementById('bolt_diameter').addEventListener('change', updateEmbedmentOptions);
-
-    // Toggle Batch
-    const batchBtn = document.getElementById('toggle-batch-btn');
-    const batchSec = document.getElementById('batch-section');
-    if (batchBtn) {
-        batchBtn.addEventListener('click', () => {
-            batchSec.classList.toggle('hidden');
-            const isHidden = batchSec.classList.contains('hidden');
-            batchBtn.querySelector('span').textContent = isHidden ? "▶ Batch Load Check (Optional)" : "▼ Batch Load Check (Optional)";
-        });
+    if (document.getElementById('batch-calc-btn')) {
+        document.getElementById('batch-calc-btn').addEventListener('click', calculateAngleSupport);
     }
+    document.getElementById('bolt_diameter').addEventListener('change', updateEmbedmentOptions);
+
+    // Batch Table Controls
+    document.getElementById('add-case-btn')?.addEventListener('click', () => {
+        addBatchRow();
+    });
+
+    const batchTable = document.getElementById('batch-table');
+    if (batchTable) {
+        batchTable.addEventListener('click', handleBatchAction);
+        batchTable.addEventListener('input', handleBatchInput);
+        batchTable.addEventListener('paste', handleBatchPaste);
+    }
+
+    setupBatchExcelImport();
+
+    // Toggle Batch UI (Optional - we made it always visible now but kept the logic just in case user wants to hide it if we add a toggle later)
+    // Removed old toggle logic as we replaced the section.
 
     // Auto-calc on enter in inputs
     const inputs = document.querySelectorAll('input, select');
@@ -71,6 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // Initial Render
+    renderBatchTable();
 });
 
 function updateEmbedmentOptions() {
@@ -80,68 +89,254 @@ function updateEmbedmentOptions() {
 
     const options = MASONRY_TABLE[dia];
     if (!options) {
-        // Handle case where diameter has no data (e.g. 3/4" was in old code but not new table)
         const opt = document.createElement('option');
         opt.text = "No Data";
         embedSelect.add(opt);
         return;
     }
 
-    // Special handling for 3/8 duplicates
-    // We will just list them all.
     options.forEach((entry, idx) => {
         const opt = document.createElement('option');
-        // If label exists use it, else format standard
         if (entry.label) {
             opt.text = entry.label;
         } else {
             opt.text = `${entry.h_nom}" (Min End ${entry.end}")`;
         }
-        opt.value = idx; // Use index to retrieve full object later
+        opt.value = idx;
         embedSelect.add(opt);
     });
 }
 
-// --- SECURE IMPLEMENTATION ---
+// --- BATCH TABLE LOGIC ---
+
+function renderBatchTable() {
+    const tbody = document.getElementById('batch-table').querySelector('tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    angleData.batchCases.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors";
+
+        tr.innerHTML = `
+            <td class="p-1 text-center text-xs text-gray-400">${index + 1}</td>
+            <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.span}" data-idx="${index}" data-key="span"></td>
+            <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.trib}" data-idx="${index}" data-key="trib"></td>
+            <td class="p-1"><input type="number" step="5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.load}" data-idx="${index}" data-key="load"></td>
+            <td class="p-1 text-center"><button class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" data-idx="${index}" data-action="remove" title="Remove Case">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addBatchRow() {
+    angleData.batchCases.push({ span: 20, trib: 5, load: 100 });
+    renderBatchTable();
+}
+
+function handleBatchInput(e) {
+    if (e.target.tagName === 'INPUT') {
+        const idx = parseInt(e.target.dataset.idx);
+        const key = e.target.dataset.key;
+        if (!isNaN(idx) && key) {
+            angleData.batchCases[idx][key] = parseFloat(e.target.value) || 0;
+        }
+    }
+}
+
+function handleBatchAction(e) {
+    const btn = e.target.closest('button');
+    if (btn && btn.dataset.action === 'remove') {
+        const idx = parseInt(btn.dataset.idx);
+        if (!isNaN(idx)) {
+            angleData.batchCases.splice(idx, 1);
+            renderBatchTable();
+        }
+    }
+}
+
+function handleBatchPaste(e) {
+    const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
+    if (!clipboardData) return;
+
+    const rows = clipboardData.split(/\\r\\n|\\n|\\r/).filter(r => r.trim() !== '');
+    if (rows.length <= 1 && e.target.tagName === 'INPUT') return;
+
+    e.preventDefault();
+
+    let startIndex = angleData.batchCases.length;
+    const activeInput = document.activeElement;
+    if (activeInput && activeInput.tagName === 'INPUT' && activeInput.dataset.idx) {
+        startIndex = parseInt(activeInput.dataset.idx);
+    }
+
+    const newCases = [];
+    rows.forEach(rowStr => {
+        let values = rowStr.split('\\t');
+        if (values.length === 1) values = rowStr.split(/,|;/);
+
+        // Expected columns: Span | Trib | Load
+        // OR Format: Span | Load (if only 2 columns, assume trib must be set or inferred??)
+        // Wait, the old prompt said "Span, Load, [Lb], [Cb]" for Beam.
+        // For Angle: "Span, Trib Width, Area Load".
+
+        if (values.length >= 2) {
+            const span = parseFloat(values[0]) || 0;
+            // If only 2 values, is it span/load or span/trib?
+            // PCALC usually parses sequentially.
+            // Let's assume layout is Span | Trib | Load
+            // If only 2, maybe Span | Load (with default trib?) or Span | Trib (with default load?)
+            // Let's go safe: Span | Trib | Load
+            const trib = parseFloat(values[1]) || 0;
+            const load = parseFloat(values[2]) || 0;
+
+            // If user pastes Span | Load (2 cols) -> trib becomes load, load becomes 0.
+            // That's risky. But standard table paste is sequential.
+
+            newCases.push({ span, trib, load });
+        }
+    });
+
+    if (newCases.length > 0) {
+        for (let i = 0; i < newCases.length; i++) {
+            const targetIdx = startIndex + i;
+            if (targetIdx < angleData.batchCases.length) {
+                angleData.batchCases[targetIdx] = newCases[i];
+            } else {
+                angleData.batchCases.push(newCases[i]);
+            }
+        }
+        renderBatchTable();
+    }
+}
+
+function setupBatchExcelImport() {
+    const fileInput = document.getElementById('upload-excel');
+    if (!fileInput) return;
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+            const newCases = [];
+            json.forEach(row => {
+                if (row.length >= 2 && !isNaN(parseFloat(row[0]))) {
+                    const span = parseFloat(row[0]) || 0;
+                    const trib = parseFloat(row[1]) || 0;
+                    const load = parseFloat(row[2]) || 0;
+                    newCases.push({ span, trib, load });
+                }
+            });
+
+            if (newCases.length > 0) {
+                angleData.batchCases = newCases;
+                renderBatchTable();
+            } else {
+                alert("No valid data found in Excel. Expected columns: Span, Trib Width, Load");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        fileInput.value = '';
+    });
+}
+
+
+// --- MAIN CALCULATION ---
 async function calculateAngleSupport() {
-    // 1. Get Inputs
+    // 1. Get Global Inputs/Settings
+    // For single case, these are used. For batch, these are constants across all batch items.
+
+    // Batch only varies: Span, Trib (spacing), Load.
+    // Constants: Num Bolts, Dia, Embed, Angle Size, Angle Fy, Config, Method.
+
     const inputs = {
+        // Single case defaults (will be overwritten if running single calc logic)
         beam_span: safeMathEval(document.getElementById('beam_span').value) || 0,
         beam_spacing: safeMathEval(document.getElementById('beam_spacing').value) || 0,
         area_load: safeMathEval(document.getElementById('area_load').value) || 0,
+
         num_bolts: Math.floor(safeMathEval(document.getElementById('num_bolts').value) || 1),
         bolt_diameter: document.getElementById('bolt_diameter').value,
         embedment_index: parseInt(document.getElementById('embedment').value),
         angle_leg: parseFloat(document.getElementById('angle_leg').value) || 4,
         angle_thick: parseFloat(document.getElementById('angle_thick').value) || 0.375,
-        // angle_len removed
         angle_fy: safeMathEval(document.getElementById('angle_fy').value) || 36,
         angle_config: document.getElementById('angle_config').value,
         design_method: document.getElementById('angle_method').value
     };
 
-    // Batch Input Parsing
-    const batchText = document.getElementById('batch-input').value.trim();
-    let batchLoads = [];
-    if (batchText) {
-        const lines = batchText.split('\n');
-        lines.forEach(line => {
-            const parts = line.split(',');
-            if (parts.length >= 2) {
-                const s = safeMathEval(parts[0]);
-                const l = safeMathEval(parts[1]);
-                if (s !== null && l !== null) {
-                    batchLoads.push({ span: s, load: l });
-                }
-            }
-        });
+    // Prepare Batch Payload
+    // The backend `calculate_angle_support` likely expects `batch_loads` list.
+    // Looking at previous reading of angle_support.js:
+    /*
+        if (batchLoads.length > 0) inputs.batch_loads = batchLoads;
+        // batchLoads = [{span: s, load: l}, ...]
+        // Backend usually expects 'span', 'load' in item.
+        // Wait, user also added 'trib' (width).
+        // If the backend function `calculate_angle_support` iterates `batch_loads`, 
+        // does it handle `trib` width per item?
+        
+        If I look at `find_lightest_beam`, it iterates. 
+        I should assume the backend for angle support needs update OR 
+        I pass the calculated linear load W (klf) if backend supports it?
+        
+        The previous JS calculated:
+        // No, previous JS just gathered inputs.
+        
+        Let's look at the previous JS batch parsing:
+             if (s !== null && l !== null) {
+                  batchLoads.push({ span: s, load: l });
+             }
+        It only pushed span and load.
+        Wait, if trib width varies, then the linear load changes.
+        
+        If the backend expects `load` to be Area Load (psf), then it needs `spacing` (trib) to calculate w (klf).
+        Use `beam_spacing` from global? 
+        But we want to vary Trib Width in batch.
+        
+        If the backend isn't set up to accept `spacing` in batch items, we might have an issue.
+        However, usually batch entries in these tools are (Span, W_load) or (Span, AreaLoad, Spacing).
+        
+        Given I can't check backend python now easily without tool calls (and I want to avoid too many),
+        I will format batch payload as:
+        { span: x, load: y, spacing: z } (if backend supports it)
+        OR
+        { span: x, load: y } (where load is pre-calculated w_klf?)
+        
+        The prompts says: "batch table for `Span (ft)`, `Load (klf)`, `Unbraced Len Lb (ft)`, and `Moment Grad Cb`" for BEAM.
+        For ANGLE: "Beam Span (ft), Tributary Width (ft), Area Load (psf)".
+        
+        So the user INTENDS to provide Area Load and Trib.
+        I will pass them in the payload. unique keys: `span`, `load` (area), `spacing` (trib).
+    */
+
+    const batchPayload = angleData.batchCases.map(c => ({
+        span: c.span,
+        load: c.load, // psf
+        spacing: c.trib // ft
+    }));
+
+    if (batchPayload.length > 0) {
+        inputs.batch_loads = batchPayload;
     }
-    if (batchLoads.length > 0) inputs.batch_loads = batchLoads;
 
     // 2. Call Python Backend (Eel)
     try {
-        console.log("Calling Eel...");
-        // Eel function returns a promise
+        const btn = document.getElementById('calc-btn');
+        const batchBtn = document.getElementById('batch-calc-btn');
+        if (btn) btn.disabled = true;
+        if (batchBtn) batchBtn.disabled = true;
+
+        console.log("Calling Eel...", inputs);
+
         const data = await eel.calculate_angle_support(inputs)();
 
         if (data.error) {
@@ -155,18 +350,28 @@ async function calculateAngleSupport() {
         if (data.spec_string) data.specString = data.spec_string;
         if (data.pass_all !== undefined) data.passAll = data.pass_all;
 
-        if (data.spec_string) data.specString = data.spec_string;
-        if (data.pass_all !== undefined) data.passAll = data.pass_all;
-
         if (Array.isArray(data)) {
+            // If backend returns array directly for batch
             renderBatchResults(data);
+            document.getElementById('results-area').classList.add('hidden');
+        } else if (data.batch_results) {
+            // If backend returns object with batch_results list
+            renderBatchResults(data.batch_results);
+            document.getElementById('results-area').classList.add('hidden');
         } else {
+            // Single result
             renderResults(data);
+            document.getElementById('batch-results-container').classList.add('hidden');
         }
 
     } catch (e) {
         console.error(e);
         alert("Failed to connect to calculation server (Eel). Ensure main_eel.py is running.");
+    } finally {
+        const btn = document.getElementById('calc-btn');
+        const batchBtn = document.getElementById('batch-calc-btn');
+        if (btn) btn.disabled = false;
+        if (batchBtn) batchBtn.disabled = false;
     }
 }
 
@@ -291,18 +496,24 @@ function renderResults(data) {
     }
 }
 
+const angleBatchResults = []; // Store batch results
+
 function renderBatchResults(data) {
     const container = document.getElementById('batch-results-container');
     const tbody = document.getElementById('batch-results-body');
 
+    angleBatchResults.length = 0;
+    data.forEach(d => angleBatchResults.push(d));
+
     container.classList.remove('hidden');
     tbody.innerHTML = "";
 
-    data.forEach(row => {
+    data.forEach((row, index) => {
         if (row.error) return;
 
-        const pass = row.pass;
-        const ratio = row.max_ratio.toFixed(2);
+        const pass = row.pass_all !== undefined ? row.pass_all : row.pass;
+        const maxR = Math.max(row.interaction || 0, row.ratio_bend || 0, row.ratio_long || 0);
+        const ratio = maxR.toFixed(2);
 
         let resultHtml = pass ?
             '<span class="text-green-600 font-bold">PASS</span>' :
@@ -311,16 +522,54 @@ function renderBatchResults(data) {
         let ratioHtml = `<span class="${pass ? 'text-green-600' : 'text-red-600'}">${ratio}</span>`;
 
         const tr = document.createElement('tr');
-        tr.className = "bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600";
+        tr.className = "bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer";
+        tr.onclick = (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            viewBatchDetails(index);
+        };
+
         tr.innerHTML = `
-            <td class="px-4 py-2">${row.span.toFixed(2)}</td>
-            <td class="px-4 py-2">${row.load.toFixed(2)}</td>
+            <td class="px-4 py-2">${(row.span || 0).toFixed(2)}</td>
+            <td class="px-4 py-2">${(row.load || 0).toFixed(2)}</td>
             <td class="px-4 py-2">${resultHtml}</td>
             <td class="px-4 py-2">${ratioHtml}</td>
+            <td class="px-4 py-2 text-right">
+                <button onclick="viewBatchDetails(${index})" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded border border-blue-200 transition-colors">
+                    View Details
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
 
     // Scroll to batch results
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function viewBatchDetails(index) {
+    const data = angleBatchResults[index];
+    if (!data) return;
+
+    // Map the batch result to single result format
+    // Backend returns snake_case keys (anchor_details, spec_string, pass_all)
+    // Frontend renderResults expects mixed/camelCase for some (anchor, specString, passAll)
+
+    // Create a shallow copy to modify suitable for render
+    const viewData = { ...data };
+
+    if (viewData.anchor_details) viewData.anchor = viewData.anchor_details;
+    if (viewData.spec_string) viewData.specString = viewData.spec_string;
+    if (viewData.pass_all !== undefined) viewData.passAll = viewData.pass_all;
+
+    // Pass the mapped object to renderResults
+    renderResults(viewData);
+
+    // Add a temporary title/banner indicating this is a batch view
+    const banner = document.getElementById('status-title');
+    if (banner) {
+        banner.innerHTML = `${viewData.passAll || viewData.pass ? 'PASS' : 'FAIL'} <span class="text-sm font-normal text-gray-500 ml-2">(Batch Row #${index + 1})</span>`;
+    }
+
+    // Scroll to details
+    document.getElementById('results-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

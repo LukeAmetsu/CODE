@@ -66,12 +66,12 @@ def calculate_angle_support(inputs):
                  results.append({"span": span_val, "load": load_val, "error": res["error"]})
                  continue
 
-             results.append({
+             # Merge full results for "View Details" functionality
+             res.update({
                  "span": span_val,
-                 "load": load_val,
-                 "pass": res.get("pass_all", False),
-                 "max_ratio": max(res.get("interaction", 0), res.get("ratio_bend", 0), res.get("ratio_long", 0))
+                 "load": load_val
              })
+             results.append(res)
              
         return results
 

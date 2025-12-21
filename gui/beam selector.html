@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AISC Beam Selector (Table 3-10)</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         // Dark mode init
@@ -172,6 +173,82 @@
                         class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
                         Find Lightest Beam
                     </button>
+                </div>
+            </div>
+
+            <!-- Main Input: Batch Loads -->
+            <div id="batch-section"
+                class="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-blue-600">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        Input Loads (Batch)
+                    </h2>
+                    <div class="flex gap-2 items-center">
+                        <label for="upload-excel"
+                            class="cursor-pointer py-2 px-3 text-xs font-semibold bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition-colors flex items-center gap-1">
+                            <span>Import Excel</span>
+                        </label>
+                        <input type="file" id="upload-excel" accept=".xlsx, .xls" class="hidden">
+                        <button type="button" id="add-case-btn"
+                            class="text-blue-600 hover:text-blue-800 text-xs font-semibold px-3 py-2 border border-blue-200 rounded hover:bg-blue-50 transition-colors">+
+                            Add Case</button>
+                    </div>
+                </div>
+
+                <div class="overflow-y-auto max-h-[400px] border rounded-md dark:border-gray-700 mb-4">
+                    <table id="batch-table" class="w-full text-sm text-left text-gray-700 dark:text-gray-300">
+                        <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-3 py-2 font-semibold w-12 text-center">#</th>
+                                <th class="px-3 py-2 font-semibold">Span (ft)</th>
+                                <th class="px-3 py-2 font-semibold">Load (klf)</th>
+                                <th class="px-3 py-2 font-semibold">Unbraced Len Lb (ft)</th>
+                                <th class="px-3 py-2 font-semibold">Moment Grad Cb</th>
+                                <th class="px-3 py-2 w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="text-xs text-gray-500 italic">
+                        <span class="font-bold text-yellow-600 dark:text-yellow-500">Tip:</span> click the table and
+                        paste (Ctrl+V) from Excel.<br>
+                        Format columns: Span | Load | Lb | Cb
+                    </div>
+                    <button id="batch-run-selector-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
+                        Run Batch Selection
+                    </button>
+                </div>
+            </div>
+
+            <div id="batch-results-container" class="hidden mb-12">
+                <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200">Results Table</h3>
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden max-h-[500px] overflow-y-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
+                            <tr>
+                                <th class="px-4 py-3">Span (ft)</th>
+                                <th class="px-4 py-3">Load (klf)</th>
+                                <th class="px-4 py-3">Winner</th>
+                                <th class="px-4 py-3">Weight</th>
+                                <th class="px-4 py-3">Ratio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-results-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
