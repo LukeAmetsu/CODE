@@ -93,6 +93,10 @@ function getBoltComponents(inputs, cx, cy, scale) {
 
     for (let r = 0; r < inputs.num_bolts_N; r++) {
         for (let c = 0; c < inputs.num_bolts_B; c++) {
+            // Skip inner bolts (create perimeter pattern)
+            if (inputs.num_bolts_N > 2 && inputs.num_bolts_B > 2) {
+                if (r > 0 && r < inputs.num_bolts_N - 1 && c > 0 && c < inputs.num_bolts_B - 1) continue;
+            }
             components.push({
                 tag: 'circle',
                 attrs: {
@@ -356,7 +360,7 @@ function draw3dBasePlateDiagram(currentInputs) {
             weldLabelAnchor.position = new BABYLON.Vector3(column_radius + w, inputs.provided_plate_thickness_tp / 2 + w / 2, 0);
             createLabel(`${w}" Weld`, weldLabelAnchor, isDarkMode);
         }
-    } else if (inputs.column_type === 'Wide Flange' && inputs.column_depth_d > 0) {
+    } else if ((inputs.column_type === 'W-Shape' || inputs.column_type === 'S-Shape') && inputs.column_depth_d > 0) {
         const { column_depth_d: d, column_flange_width_bf: bf, column_flange_tf: tf, column_web_tw: tw } = inputs;
 
         const topFlange = BABYLON.MeshBuilder.CreateBox("tf", { width: bf, height: colHeight, depth: tf }, bjsScene);
@@ -371,7 +375,7 @@ function draw3dBasePlateDiagram(currentInputs) {
             column.receiveShadows = true;
             column.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
         }
-
+        // ... (Weld logic assumed same for S) ...
         if (inputs.weld_size > 0 && inputs.weld_type === 'Fillet') {
             const weldSize = inputs.weld_size;
             const weldY = inputs.provided_plate_thickness_tp / 2;
@@ -385,6 +389,52 @@ function draw3dBasePlateDiagram(currentInputs) {
             createWeld("weld_tw1", d - 2 * tf, new BABYLON.Vector3(0, Math.PI / 2, 0), new BABYLON.Vector3(tw / 2 + weldSize, weldY, 0));
             createWeld("weld_tw2", d - 2 * tf, new BABYLON.Vector3(0, -Math.PI / 2, 0), new BABYLON.Vector3(-tw / 2 - weldSize, weldY, 0));
         }
+
+    } else if (inputs.column_type === 'Rectangular HSS' && inputs.column_depth_d > 0) {
+        // Box Profile
+        const d = inputs.column_depth_d;
+        const b = inputs.column_flange_width_bf; // Using bf as width for HSS
+        const t = inputs.column_web_tw; // Using tw as thickness
+
+        // Create outer box
+        const outerBox = BABYLON.MeshBuilder.CreateBox("outer", { width: b, height: colHeight, depth: d }, bjsScene);
+        // Create inner box to subtract (for visual hollow effect, or just use solid for simplicity if CSG is expensive)
+        // For simple viz, a solid box is fine, but maybe let's just make 4 plates to look hollow.
+
+        const side1 = BABYLON.MeshBuilder.CreateBox("s1", { width: t, height: colHeight, depth: d }, bjsScene);
+        side1.position.x = (b - t) / 2;
+        const side2 = side1.clone("s2");
+        side2.position.x = -(b - t) / 2;
+
+        const side3 = BABYLON.MeshBuilder.CreateBox("s3", { width: b - 2 * t, height: colHeight, depth: t }, bjsScene);
+        side3.position.z = (d - t) / 2;
+        const side4 = side3.clone("s4");
+        side4.position.z = -(d - t) / 2;
+
+        const column = BABYLON.Mesh.MergeMeshes([side1, side2, side3, side4], true, true, undefined, false, true);
+        if (column) {
+            column.material = columnMaterial;
+            shadowGenerator.addShadowCaster(column);
+            column.receiveShadows = true;
+            column.position.y = colHeight / 2 + inputs.provided_plate_thickness_tp / 2;
+        }
+
+        // Rect HSS Welds (perimeter)
+        if (inputs.weld_size > 0 && inputs.weld_type === 'Fillet') {
+            const weldSize = inputs.weld_size;
+            const weldY = inputs.provided_plate_thickness_tp / 2;
+
+            // Simple 4-sided weld path might be easier
+            const createWeld = (name, len, rot, pos) => {
+                const weldShape = [new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(weldSize, 0, 0), new BABYLON.Vector3(0, weldSize, 0)];
+                const weld = BABYLON.MeshBuilder.ExtrudeShape(name, { shape: weldShape, path: [new BABYLON.Vector3(0, 0, -len / 2), new BABYLON.Vector3(0, 0, len / 2)] }, bjsScene);
+                weld.material = weldMaterial; weld.rotation = rot; weld.position = pos; shadowGenerator.addShadowCaster(weld);
+            }
+            createWeld("w_s1", d, new BABYLON.Vector3(0, Math.PI / 2, 0), new BABYLON.Vector3(b / 2 + weldSize, weldY, 0)); // Right
+            createWeld("w_s2", d, new BABYLON.Vector3(0, -Math.PI / 2, 0), new BABYLON.Vector3(-b / 2 - weldSize, weldY, 0)); // Left
+            createWeld("w_s3", b, new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(0, weldY, d / 2 + weldSize)); // Top (Z+)
+            createWeld("w_s4", b, new BABYLON.Vector3(0, Math.PI, 0), new BABYLON.Vector3(0, weldY, -d / 2 - weldSize)); // Bot (Z-)
+        }
     }
 
     // --- Bolts, Dimensions, and Camera logic remains the same ---
@@ -392,6 +442,10 @@ function draw3dBasePlateDiagram(currentInputs) {
     const startZ = -(inputs.num_bolts_N - 1) * inputs.bolt_spacing_N / 2;
     for (let r = 0; r < inputs.num_bolts_N; r++) {
         for (let c = 0; c < inputs.num_bolts_B; c++) {
+            // Skip inner bolts
+            if (inputs.num_bolts_N > 2 && inputs.num_bolts_B > 2) {
+                if (r > 0 && r < inputs.num_bolts_N - 1 && c > 0 && c < inputs.num_bolts_B - 1) continue;
+            }
             const bolt = BABYLON.MeshBuilder.CreateCylinder(`bolt_${r}_${c}`, { diameter: inputs.anchor_bolt_diameter, height: inputs.anchor_embedment_hef }, bjsScene);
             bolt.material = boltMaterial;
             shadowGenerator.addShadowCaster(bolt);
@@ -443,7 +497,7 @@ var basePlateInputIds = [ // FIX: Corrected variable name
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx',
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
-    'anchor_embedment_hef',
+    'anchor_embedment_hef', 'total_anchors',
     'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_type', 'weld_size', 'weld_effective_throat', 'axial_load_P_in',
     'moment_Mx_in', 'moment_My_in', 'shear_V_in', 'assume_cracked_concrete', 'concrete_edge_dist_ca1'
 ];
@@ -646,15 +700,10 @@ var basePlateCalculator = (() => {
                         if (Math.abs(1 - ratio) < 0.01) break;
 
                         // damping
-                        // If Ratio < 1 (M_app < M_res), we need M_res to decrease -> Y Increase.
-                        // Y_new = Y / Ratio ? 
-                        // M_res approx proportional to (Offset - Y/3).
-                        // Let's use simple increment/adjustment for robustness.
-
-                        Y_curr = Y_curr * (1 + 0.5 * (1 - ratio));
-                        // If ratio < 1 (e.g. 0.8), (1-ratio) = 0.2. Y_new = Y * 1.1. Y increases. Correct.
+                        // If Ratio < 1 (e.g. 0.8), (1-ratio) = 0.2. Y_new = Y * 1.1. Y increases. Correct.
                         // If ratio > 1 (e.g. 1.2), (1-ratio) = -0.2. Y_new = Y * 0.9. Y decreases. M_res increases. Correct.
 
+                        Y_curr = Y_curr * (1 + 0.5 * (1 - ratio));
                         Y_curr = Math.max(0.1, Math.min(N, Y_curr)); // Clamp
                     }
                     Y = Y_curr;
@@ -1339,7 +1388,7 @@ var basePlateCalculator = (() => {
      * @param {object} inputs - The user inputs object.
      * @returns {object} An object containing the max tension value and the data for the breakdown.
      */
-    return { run };
+    return { run, validateBasePlateInputs };
 })();
 
 function generateAnchorTensionBreakdown(Pu, Mux, Muy, bolt_coords, inputs) {
@@ -1421,7 +1470,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
         const factor_char = design_method === 'LRFD' ? '&phi;' : '&Omega;';
         let breakdown_items = [];
 
-        if (column_type === 'Wide Flange') {
+        if (column_type === 'Wide Flange' || column_type === 'W-Shape' || column_type === 'W' || column_type === 'S-Shape' || column_type === 'S') {
             if (m === undefined || n === undefined || n_prime === undefined || l === undefined) {
                 return 'Breakdown not available due to missing calculation details for Wide Flange column.';
             }
@@ -1839,15 +1888,23 @@ async function populateShapeDropdown() {
     if (!shapeSelect) return;
 
     const shapeTypeMap = {
-        'W-Shape': 'W-Shape', // Maps UI selection to JSON type
-        'Round HSS': 'Round HSS',
-        'Pipe': 'Pipe'
+        'W-Shape': 'W',
+        'S-Shape': 'S',
+        'Round HSS': 'HSS', // Backend might mix Round/Rect in HSS, usually distinct by dimensions
+        'Rectangular HSS': 'HSS',
+        'Pipe': 'PIPE'
     };
     const aiscShapeType = shapeTypeMap[columnType];
 
+    // Clear immediately to indicate loading/change
+    shapeSelect.innerHTML = '<option value="">Loading...</option>';
+
     try {
-        const shapes = await AISC_SPEC.getShapesByType(aiscShapeType);
-        const shapeNames = Object.keys(shapes).sort();
+        // Call backend via Eel
+        const shapes = await eel.get_shapes_by_type(aiscShapeType)();
+
+        // Backend returns a list of keys (sorted)
+        const shapeNames = Array.isArray(shapes) ? shapes : Object.keys(shapes).sort();
 
         const currentVal = shapeSelect.value;
         shapeSelect.innerHTML = '<option value="">-- Manual Input --</option>'; // Reset
@@ -1860,6 +1917,8 @@ async function populateShapeDropdown() {
 
         if (shapeNames.includes(currentVal)) {
             shapeSelect.value = currentVal;
+        } else {
+            shapeSelect.value = ""; // Reset if mismatch
         }
 
     } catch (error) {
@@ -1880,11 +1939,30 @@ async function handleShapeSelection() {
         return;
     }
 
-    const shape = await AISC_SPEC.getShape(shapeName);
+    const shape = await eel.get_shape_details(shapeName)();
     if (!shape) return;
+    console.log("Shape Details from Backend:", shape); // DEBUG
+
+    // Helper to safely get a value from the shape object
+    const getVal = (prop) => shape[prop] !== undefined ? parseFloat(shape[prop]) : undefined;
+
+    // Common properties for W/S shapes
+    const d = getVal('d');
+    const bf = getVal('bf');
+    const tf = getVal('tf');
+    const tw = getVal('tw');
+
+    // For HSS/Pipe: 'OD', 'tdes' or 'ht', 'b', 'tdes'
+    const od = getVal('OD');
+    const ht = getVal('Ht'); // Height/Depth for Rect HSS
+    const b_hss = getVal('B'); // Width for Rect HSS
+    const tdes = getVal('tdes');
 
     const propertyMap = {
-        'column_depth_d': shape.d, 'column_flange_width_bf': shape.bf, 'column_flange_tf': shape.tf, 'column_web_tw': shape.tw
+        'column_depth_d': d || ht || od,
+        'column_flange_width_bf': bf || b_hss || od, // For Round, bf is effectively D. For Rect, it's B.
+        'column_flange_tf': tf || tdes,
+        'column_web_tw': tw || tdes
     };
 
     Object.keys(propertyMap).forEach(id => {
@@ -1911,28 +1989,96 @@ async function handleShapeSelection() {
         tf_container.style.display = 'none';
         tw_container.style.display = 'none';
         document.getElementById('label_column_dim2').textContent = 'Column bf'; // Reset label
-    } else { // W-Shape
+    } else if (columnType === 'Rectangular HSS') {
         label1.textContent = 'Column Depth (d)';
         dim2_container.style.display = 'block';
+        document.getElementById('label_column_dim2').textContent = 'Column Width (b)';
+        tf_container.style.display = 'none'; // Simplify: Assume uniform wall thickness for now, or use tw as thick
+        tw_container.style.display = 'block';
+        document.getElementById('label_column_tw').textContent = 'Design Wall Thk (t)';
+    } else { // W-Shape or S-Shape
+        label1.textContent = 'Column Depth (d)';
+        dim2_container.style.display = 'block';
+        document.getElementById('label_column_dim2').textContent = 'Column bf';
         tf_container.style.display = 'block';
         tw_container.style.display = 'block';
+        document.getElementById('label_column_tw').textContent = 'Column tw';
     }
     populateShapeDropdown();
     drawBasePlateDiagram(gatherInputsFromIds(basePlateInputIds));
 }
 // Attach listener for column type change
 document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
-var handleRunBasePlateCheck = createCalculationHandler({
-    inputIds: basePlateInputIds,
-    storageKey: 'baseplate-inputs',
-    validationRuleKey: 'baseplate',
-    validatorFunction: basePlateCalculator.validateBasePlateInputs,
-    calculatorFunction: (inputs, validation) => basePlateCalculator.run(inputs, validation),
-    renderFunction: renderResults,
-    resultsContainerId: 'steel-results-container', // FIX: Added missing results container ID
-    buttonId: 'run-steel-check-btn',
-    feedbackElId: 'feedback-message'
-});
+// --- BACKEND CONNECTION ---
+// Replaced createCalculationHandler with custom async handler to call Python
+async function handleRunBasePlateCheck() {
+    console.log("[Base Plate] Starting Backend Analysis...");
+    const btnId = 'run-steel-check-btn';
+    const feedbackId = 'feedback-message';
+    const containerId = 'steel-results-container';
+
+    setLoadingState(true, btnId);
+    showFeedback('Gathering inputs...', false, feedbackId);
+
+    try {
+        // 1. Gather Inputs
+        const inputs = gatherInputsFromIds(basePlateInputIds);
+
+        // 2. Validate (Client-Side)
+        // We still use the JS validator for immediate feedback
+        const validation = basePlateCalculator.validateBasePlateInputs(inputs);
+
+        // Clear previous results if validation fails
+        const resultsContainer = document.getElementById(containerId);
+        if (validation.errors.length > 0) {
+            renderValidationResults(validation, resultsContainer);
+            showFeedback('Validation failed.', true, feedbackId);
+            setLoadingState(false, btnId);
+            return;
+        }
+
+        // 3. Call Python Backend
+        showFeedback('Calculating on server...', false, feedbackId);
+
+        // Ensure eel is available
+        if (typeof eel === 'undefined' || !eel.calculate_base_plate) {
+            throw new Error("Server connection (Eel) is not available.");
+        }
+
+        // Call exposed Python function
+        const result = await eel.calculate_base_plate(inputs)();
+
+        // 4. Process Results
+        if (result.error) {
+            console.error("Backend Error:", result.error);
+            renderValidationResults({ errors: [result.error, ...(result.trace ? [result.trace] : [])] }, resultsContainer);
+            showFeedback('Calculation error occurred on server.', true, feedbackId);
+        } else {
+            console.log("Backend Result:", result);
+            showFeedback('Rendering results...', false, feedbackId);
+
+            // Render the results using the existing render function
+            // result structure matched: { checks: ..., details: ..., inputs: ... }
+            // Use inputs FROM BACKEND (result.inputs) which might contain calculated geometry
+            renderResults(result, result.inputs || inputs);
+
+            showFeedback('Calculation complete!', false, feedbackId);
+
+            // Re-attach listeners for reports
+            attachReportEventListeners(containerId, {
+                reportId: containerId,
+                filenamePrefix: 'BasePlate-Report',
+                toggleTexts: { show: '[Show]', hide: '[Hide]' }
+            });
+        }
+
+    } catch (e) {
+        console.error("Calculation Flow Error:", e);
+        showFeedback('An error occurred: ' + e.message, true, feedbackId);
+    } finally {
+        setLoadingState(false, btnId);
+    }
+}
 initializeApp({
     inputIds: basePlateInputIds,
     // The calculationHandler is now attached manually to the button in onReady
@@ -2021,5 +2167,60 @@ initializeApp({
             svg2d.addEventListener('mouseup', stopPanning);
             svg2d.addEventListener('mouseleave', stopPanning);
         }
+
+        syncBoltInputs();
     }
 });
+
+function syncBoltInputs() {
+    const totalEl = document.getElementById('total_anchors');
+    const nEl = document.getElementById('num_bolts_N');
+    const bEl = document.getElementById('num_bolts_B');
+
+    if (!totalEl || !nEl || !bEl) return;
+
+    // 1. Total Change -> Update B (Keep N constant)
+    totalEl.addEventListener('input', () => {
+        const total = parseInt(totalEl.value) || 0;
+        const n = parseInt(nEl.value) || 0;
+        // Formula: Total = 2N + 2B - 4  =>  2B = Total - 2N + 4
+        if (total > 0 && n > 0) {
+            const b = (total - 2 * n + 4) / 2;
+            if (Number.isInteger(b) && b >= 2) {
+                bEl.value = b;
+                bEl.dispatchEvent(new Event('input')); // Redraw diagrams
+            }
+        }
+    });
+
+    // 2. N Change -> Update B (Keep Total constant)
+    nEl.addEventListener('input', () => {
+        const total = parseInt(totalEl.value) || 0;
+        const n = parseInt(nEl.value) || 0;
+        if (total > 0 && n > 0) {
+            const b = (total - 2 * n + 4) / 2;
+            if (Number.isInteger(b) && b >= 2) {
+                bEl.value = b;
+                bEl.dispatchEvent(new Event('input'));
+            }
+        }
+    });
+
+    // 3. B Change -> Update Total (Keep N constant)
+    bEl.addEventListener('input', () => {
+        const n = parseInt(nEl.value) || 0;
+        const b = parseInt(bEl.value) || 0;
+        if (n >= 2 && b >= 2) {
+            const total = 2 * n + 2 * b - 4;
+            totalEl.value = total;
+            // No need to dispatch input on totalEl unless we want circular logic (avoid it)
+        }
+    });
+
+    // Initial Sync (if Total is empty but N/B are set)
+    const n = parseInt(nEl.value) || 0;
+    const b = parseInt(bEl.value) || 0;
+    if (n >= 2 && b >= 2 && !totalEl.value) {
+        totalEl.value = 2 * n + 2 * b - 4;
+    }
+}

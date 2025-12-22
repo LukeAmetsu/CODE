@@ -26,6 +26,7 @@
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
+    <script type="text/javascript" src="../eel.js"></script>
     <script src="aisc-shapes-database-v16.0.js" defer></script>
     <script src="database.js" defer></script>
 </head>
@@ -199,7 +200,9 @@
                                             Type</label>
                                         <select id="column_type">
                                             <option value="W-Shape">W-Shape</option>
+                                            <option value="S-Shape">S-Shape</option>
                                             <option value="Round HSS" selected>Round HSS</option>
+                                            <option value="Rectangular HSS">Rectangular HSS</option>
                                             <option value="Pipe">Pipe</option>
                                         </select>
                                     </div>
@@ -228,7 +231,7 @@
                                         <input type="number" id="column_flange_tf" value="0.25">
                                     </div>
                                     <div id="container_column_tw">
-                                        <label for="column_web_tw" class="block text-sm">Web Thick
+                                        <label for="column_web_tw" id="label_column_tw" class="block text-sm">Web Thick
                                             (t<sub>w</sub>)</label>
                                         <input type="number" id="column_web_tw" value="0.17">
                                     </div>
@@ -240,6 +243,9 @@
                                     <div><label for="anchor_bolt_diameter" class="block text-sm">Diameter</label><input
                                             type="number" id="anchor_bolt_diameter" value="0.375"
                                             data-validate="positive"></div>
+                                    <div><label for="total_anchors" class="block text-sm">Total Bolts</label><input
+                                            type="number" id="total_anchors" value="4" data-validate="integer,positive">
+                                    </div>
                                     <div><label for="anchor_embedment_hef" class="block text-sm">h_ef</label><input
                                             type="number" id="anchor_embedment_hef" value="2.88"
                                             data-validate="positive"></div>

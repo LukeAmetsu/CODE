@@ -47,18 +47,25 @@ def find_lightest_beam(inputs):
         return {"error": str(e)}
 
 @eel.expose
-def get_w_shapes():
+def calculate_base_plate(inputs):
     try:
-        # DB is loaded on startup
-        shapes = db.get_shapes_by_type('W')
-        # Return sorted keys (sorting logic: W{Deep}X{Weight})
-        # Simple string sort is okay, but numerical is better. 
-        # For simplicity in this step, assume standard sorting or just return keys. 
-        # Actually, let's try to be smart about sorting.
+        from backend.calculators.base_plate import calculate_base_plate as py_calculate_base_plate
+        return py_calculate_base_plate(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_shapes_by_type(shape_type):
+    try:
+        shapes = db.get_shapes_by_type(shape_type)
+        # Sort logic
         def sort_key(k):
             try:
-                parts = k.upper().replace('W', '').split('X')
-                return (float(parts[0]), float(parts[1]))
+                parts = k.upper().replace(shape_type, '').split('X')
+                if len(parts) >= 2:
+                    return (float(parts[0]), float(parts[1]))
+                return (float(parts[0]), 0)
             except:
                 return (0, 0)
         
@@ -67,19 +74,30 @@ def get_w_shapes():
         print(f"Error getting shapes: {e}")
         return []
 
+@eel.expose
+def get_shape_details(shape_name):
+    try:
+        # Assuming db._shapes is a dict {name: details}
+        if db._shapes and shape_name in db._shapes:
+            return db._shapes[shape_name]
+        return None
+    except Exception as e:
+        print(f"Error getting shape details: {e}")
+        return None
+
 if __name__ == '__main__':
-    # Initialize with the absolute path to gui folder
-    gui_path = resource_path('gui')
-    print(f"Eel serving from: {gui_path}")
-    eel.init(gui_path)
+    # Initialize with the absolute path to the project root (CODE-2)
+    # This exposes 'gui', 'aisc', 'js', etc.
+    project_root = resource_path('.')
+    print(f"Eel serving from: {project_root}")
+    eel.init(project_root)
     
     print("Starting Eel App...")
-    # Start the app opening the angle calculator by default
-    # Start the app opening the main menu
+    # Start the app opening the index.html located in gui/
     try:
-        eel.start('index.html', size=(1200, 800), port=0)
+        eel.start('gui/index.html', size=(1200, 800), port=0)
     except EnvironmentError:
         # Fallback if Chrome/Edge not found (opens in default browser)
-        eel.start('index.html', mode='default', size=(1200, 800), port=0)
+        eel.start('gui/index.html', mode='default', size=(1200, 800), port=0)
     except (SystemExit, KeyboardInterrupt):
         pass
