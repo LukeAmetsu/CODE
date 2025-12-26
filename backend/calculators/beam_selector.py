@@ -37,6 +37,13 @@ def find_lightest_beam(inputs):
             case_input = base_inputs.copy()
             case_input['span_ft'] = span_val
             case_input['w_load'] = load_val
+            
+            # Map batch keys to input keys
+            if 'lb' in case:
+                case_input['lb_ft'] = float(case['lb'])
+            if 'cb' in case:
+                case_input['cb'] = float(case['cb'])
+                
             case_input['mu_req'] = 0 # Force recalc
             
             # Run core

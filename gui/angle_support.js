@@ -161,7 +161,7 @@ function handleBatchPaste(e) {
     const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
     if (!clipboardData) return;
 
-    const rows = clipboardData.split(/\\r\\n|\\n|\\r/).filter(r => r.trim() !== '');
+    const rows = clipboardData.split(/\r\n|\n|\r/).filter(r => r.trim() !== '');
     if (rows.length <= 1 && e.target.tagName === 'INPUT') return;
 
     e.preventDefault();
@@ -174,7 +174,7 @@ function handleBatchPaste(e) {
 
     const newCases = [];
     rows.forEach(rowStr => {
-        let values = rowStr.split('\\t');
+        let values = rowStr.split('\t');
         if (values.length === 1) values = rowStr.split(/,|;/);
 
         // Expected columns: Span | Trib | Load
@@ -269,6 +269,7 @@ async function calculateAngleSupport() {
         angle_leg: parseFloat(document.getElementById('angle_leg').value) || 4,
         angle_thick: parseFloat(document.getElementById('angle_thick').value) || 0.375,
         angle_fy: safeMathEval(document.getElementById('angle_fy').value) || 36,
+        moment_arm: safeMathEval(document.getElementById('moment_arm').value),
         angle_config: document.getElementById('angle_config').value,
         design_method: document.getElementById('angle_method').value
     };

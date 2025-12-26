@@ -4,10 +4,10 @@
  * Supports LRFD, ASD, and OSHA (F.S.=4) design methods.
  */
 
-const beamData = {
+var beamData = {
     batchCases: [
-        { span: 20, load: 1.0, lb: 20, cb: 1.0 },
-        { span: 24, load: 1.2, lb: 24, cb: 1.14 }
+        { span: 20, trib: 10, load: 100, lb: 20, cb: 1.0 }, // Example: 100 psf on 10' trib
+        { span: 24, trib: 0, load: 1.2, lb: 24, cb: 1.14 }   // Example: 1.2 klf direct (Trib=0)
     ]
 };
 
@@ -75,7 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function populateShapesDropdown() {
     try {
-        const shapes = await eel.get_w_shapes()();
+        // Use the generic get_shapes_by_type exposed in main_eel.py
+        const shapes = await eel.get_shapes_by_type('W')();
         const select = document.getElementById('desired_section');
         shapes.forEach(shape => {
             const opt = document.createElement('option');
@@ -125,6 +126,7 @@ function renderBatchTable() {
         tr.innerHTML = `
             <td class="p-1 text-center text-xs text-gray-400">${index + 1}</td>
             <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.span}" data-idx="${index}" data-key="span"></td>
+            <td class="p-1"><input type="number" step="0.5" placeholder="-" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.trib || ''}" data-idx="${index}" data-key="trib"></td>
             <td class="p-1"><input type="number" step="0.1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.load}" data-idx="${index}" data-key="load"></td>
             <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.lb}" data-idx="${index}" data-key="lb"></td>
             <td class="p-1"><input type="number" step="0.01" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.cb}" data-idx="${index}" data-key="cb"></td>
@@ -137,7 +139,7 @@ function renderBatchTable() {
 }
 
 function addBatchRow() {
-    beamData.batchCases.push({ span: 20, load: 1.0, lb: 20, cb: 1.0 });
+    beamData.batchCases.push({ span: 20, trib: 0, load: 1.0, lb: 20, cb: 1.0 });
     renderBatchTable();
 }
 
@@ -174,7 +176,7 @@ function handleBatchPaste(e) {
     const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
     if (!clipboardData) return;
 
-    const rows = clipboardData.split(/\\r\\n|\\n|\\r/).filter(r => r.trim() !== '');
+    const rows = clipboardData.split(/\r\n|\n|\r/).filter(r => r.trim() !== '');
 
     // If only one line/value and inside an input, let default behavior happen (or handle single cell)
     // But here we want to support excel copy-paste of multiple rows.
@@ -192,17 +194,19 @@ function handleBatchPaste(e) {
     const newCases = [];
     rows.forEach(rowStr => {
         // Support Tab or Comma (Excel uses Tab usually)
-        let values = rowStr.split('\\t');
+        let values = rowStr.split('\t');
         if (values.length === 1) values = rowStr.split(/,|;/);
 
-        // Expected columns: Span | Load | Lb | Cb
+        // Expected columns: Span | Trib | Load | Lb | Cb
         if (values.length >= 2) {
             const span = parseFloat(values[0]) || 0;
-            const load = parseFloat(values[1]) || 0;
-            const lb = values.length >= 3 ? (parseFloat(values[2]) || span) : span;
-            const cb = values.length >= 4 ? (parseFloat(values[3]) || 1.0) : 1.0;
+            const trib = values.length >= 2 ? (parseFloat(values[1]) || 0) : 0;
+            const load = values.length >= 3 ? (parseFloat(values[2]) || 0) : 0;
+            // No moment column
+            const lb = values.length >= 4 ? (parseFloat(values[3]) || span) : span;
+            const cb = values.length >= 5 ? (parseFloat(values[4]) || 1.0) : 1.0;
 
-            newCases.push({ span, load, lb, cb });
+            newCases.push({ span, trib, load, lb, cb });
         }
     });
 
@@ -239,12 +243,13 @@ function setupBatchExcelImport() {
             // Process JSON array of arrays
             const newCases = [];
             json.forEach(row => {
-                if (row.length >= 2 && !isNaN(parseFloat(row[0]))) {
+                if (row.length >= 1 && !isNaN(parseFloat(row[0]))) {
                     const span = parseFloat(row[0]) || 0;
-                    const load = parseFloat(row[1]) || 0;
-                    const lb = row.length >= 3 ? (parseFloat(row[2]) || span) : span;
-                    const cb = row.length >= 4 ? (parseFloat(row[3]) || 1.0) : 1.0;
-                    newCases.push({ span, load, lb, cb });
+                    const trib = row.length >= 2 ? (parseFloat(row[1]) || 0) : 0;
+                    const load = row.length >= 3 ? (parseFloat(row[2]) || 0) : 0;
+                    const lb = row.length >= 4 ? (parseFloat(row[3]) || span) : span;
+                    const cb = row.length >= 5 ? (parseFloat(row[4]) || 1.0) : 1.0;
+                    newCases.push({ span, trib, load, lb, cb });
                 }
             });
 
@@ -270,8 +275,11 @@ async function findLightestBeam() {
     const global_Lb = safeMathEval(document.getElementById('Lb').value) || 0;
     const global_Cb = safeMathEval(document.getElementById('Cb').value) || 1.0;
 
-    const nominalDepth = safeMathEval(document.getElementById('nominal_depth').value);
     const checkDeflection = document.getElementById('check_deflection').checked;
+
+    // Only send nominal depth limit if the checkbox is actually checked
+    const depthChecked = document.getElementById('depth_limit_check').checked;
+    const nominalDepth = depthChecked ? (safeMathEval(document.getElementById('nominal_depth').value) || 0) : 0;
     const desiredShape = document.getElementById('desired_section').value;
 
     // Check if triggered by Batch button
@@ -287,12 +295,28 @@ async function findLightestBeam() {
     // Let's update `inputs` to include `batch_loads` sourced from `beamData`.
 
     // Prepare Batch Payload
-    const batchPayload = beamData.batchCases.map(c => ({
-        span: c.span,
-        load: c.load,
-        lb: c.lb, // Explicit Lb per case
-        cb: c.cb
-    }));
+    const batchPayload = beamData.batchCases.map(c => {
+        // --- Calculate w and M based on inputs ---
+
+        // 1. Determine Linear Load (w)
+        let w_val = c.load; // Default assumption: KLF
+        if (c.trib > 0) {
+            // If Trib provided, Load is PSF -> Convert to KLF
+            w_val = (c.load * c.trib) / 1000.0;
+        }
+
+        // 2. Determine Moment (M_req)
+        // Always calc from wL^2/8
+        const m_req = (w_val * c.span * c.span) / 8.0;
+
+        return {
+            span: c.span,
+            load: w_val, // Pass the calculated linear load to backend (for logging/display)
+            mu_req: m_req, // Explicitly pass the calculated Moment
+            lb: c.lb,
+            cb: c.cb
+        };
+    });
 
     // Single case inputs (fallback or "Option B" usage)
     const span_calc = safeMathEval(document.getElementById('span_calc').value) || 0;
@@ -495,6 +519,7 @@ function renderBatchResults(data) {
         };
 
         tr.innerHTML = `
+            <td class="px-4 py-2 font-bold text-gray-400 text-xs">${index + 1}</td>
             <td class="px-4 py-2">${row.span.toFixed(2)}</td>
             <td class="px-4 py-2">${row.load.toFixed(2)}</td>
             <td class="px-4 py-2">${winnerHtml}</td>
@@ -513,25 +538,71 @@ function renderBatchResults(data) {
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function viewBatchDetails(index) {
-    const data = beamBatchResults[index];
-    if (!data || !data.winner) return;
+async function viewBatchDetails(index) {
+    // FIX: Use the SOURCE input data, not the result data (which lacks lb info)
+    const data = beamData.batchCases[index];
+    if (!data) return;
 
-    // Calculate demand for this specific case (Approximate based on span/load)
-    // M = wL^2/8
-    const M_req = (data.load * data.span * data.span) / 8;
+    // RE-RUN LOGIC For Details View
+    // Must match the batch logic above
 
-    // Construct a candidate list with just the winner for display
-    // The renderResults expects { candidates: [], desired: ... } or array.
-    // Since we only have the winner in the batch summary usually, we pass that.
+    // 1. Determine Linear Load (w)
+    let w_val = data.load;
+    if (data.trib > 0) {
+        w_val = (data.load * data.trib) / 1000.0;
+    }
 
-    const mockData = {
-        candidates: [data.winner],
-        desired: null // We don't have desired analysis for batch rows usually
+    // 2. Determine Moment (M_req)
+    // Always calc from wL^2/8
+    const m_req = (w_val * data.span * data.span) / 8.0;
+
+    // Calculate demand for display reference
+    const M_req = m_req;
+
+    // To show full details (all candidates), we need to re-run the calculation for this specific case.
+
+    // 1. Gather Inputs derived from this batch row
+    const method = document.getElementById('design_method').value;
+    const Fy = safeMathEval(document.getElementById('Fy').value) || 50;
+
+    const depthChecked = document.getElementById('depth_limit_check').checked;
+    const nominalDepth = depthChecked ? (safeMathEval(document.getElementById('nominal_depth').value) || 0) : 0;
+
+    const checkDeflection = document.getElementById('check_deflection').checked;
+    const desiredShape = document.getElementById('desired_section').value;
+
+    const singleInputs = {
+        design_method: method,
+        fy: Fy,
+        lb_ft: data.lb !== undefined ? data.lb : data.span,
+        cb: data.cb || 1.0,
+        mu_req: m_req,           // Pass explicit calculated moment
+        span_ft: data.span,
+        w_load: w_val,           // Pass calculated linear load
+        nominal_depth: nominalDepth,
+        desired_shape: desiredShape,
+        check_deflection: checkDeflection,
+        batch_loads: null
     };
 
-    renderResults(mockData, M_req);
+    try {
+        // Show loading state?
+        const container = document.getElementById('results-container');
+        container.classList.remove('hidden');
+        document.getElementById('results-body').innerHTML = '<tr><td colspan="10" class="text-center py-4">Loading details...</td></tr>';
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // Scroll to details
-    document.getElementById('results-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const result = await eel.find_lightest_beam(singleInputs)();
+
+        if (result && result.error) {
+            console.error(result.error);
+            document.getElementById('results-body').innerHTML = `<tr><td colspan="10" class="text-center py-4 text-red-500">Error: ${result.error}</td></tr>`;
+            return;
+        }
+
+        renderResults(result, M_req);
+
+    } catch (e) {
+        console.error("Error fetching detail view", e);
+    }
 }

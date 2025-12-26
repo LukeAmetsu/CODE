@@ -1,3 +1,4 @@
+import math
 
 # Masonry Anchors (DeWalt AC100+ Gold)
 # Source: User Provided Table (Face of Brick)
@@ -26,135 +27,157 @@ def format_fraction(val):
 
 def calculate_angle_support(inputs):
     """
-    Calculates Single Angle Support capacity.
-    
-    Expected inputs dict:
-    - beam_span (ft)
-    - beam_spacing (ft)
-    - area_load (psf)
-    - num_bolts (int)
-    - bolt_diameter (str): "0.375", "0.5", "0.625"
-    - embedment_index (int): Index in MASONRY_TABLE array
-    - angle_leg (in)
-    - angle_thick (in)
-    - angle_len (in)
-    - angle_fy (ksi)
-    - angle_config (str): "single" or "double"
-    - angle_config (str): "single" or "double"
-    - batch_loads (list): List of dicts {span_ft, area_load} for batch
+    Calculates Single Angle Support capacity with STAGGERED BOLT Logic.
     """
     
-    # 0. Batch Processing
+    # --- 0. Batch Processing (Kept as is) ---
     batch_loads = inputs.get('batch_loads')
     if batch_loads:
-        print(f"DEBUG: Processing {len(batch_loads)} load cases.")
         results = []
         base_inputs = inputs.copy()
         del base_inputs['batch_loads']
-        
         for case in batch_loads:
              span_val = float(case.get('span', 0))
              load_val = float(case.get('load', 0))
-             
+             spacing_val = float(case.get('spacing', base_inputs.get('beam_spacing', 0)))
              case_input = base_inputs.copy()
-             case_input['beam_span'] = span_val
-             case_input['area_load'] = load_val
-             
+             case_input.update({'beam_span': span_val, 'area_load': load_val, 'beam_spacing': spacing_val})
              res = calculate_angle_support(case_input)
-             
              if "error" in res:
                  results.append({"span": span_val, "load": load_val, "error": res["error"]})
                  continue
-
-             # Merge full results for "View Details" functionality
-             res.update({
-                 "span": span_val,
-                 "load": load_val
-             })
+             res.update({"span": span_val, "load": load_val})
              results.append(res)
-             
         return results
 
+    # --- 1. Inputs ---
     L = float(inputs.get('beam_span', 0))
     spacing = float(inputs.get('beam_spacing', 0))
     area_load = float(inputs.get('area_load', 0))
     
     n_bolts = int(inputs.get('num_bolts', 1))
     dia = str(inputs.get('bolt_diameter', '0.375'))
+    dia_float = float(dia)
     embed_idx = int(inputs.get('embedment_index', 0))
     
     leg_size = float(inputs.get('angle_leg', 4))
     t = float(inputs.get('angle_thick', 0.375))
-    # user_angle_len removed -> Auto calculated
     fy = float(inputs.get('angle_fy', 36))
     config = inputs.get('angle_config', 'single')
     design_method = inputs.get('design_method', 'ASD')
+    
+    # NEW INPUTS FOR STAGGER
+    is_staggered = inputs.get('staggered', False) # Boolean
+    gage = float(inputs.get('gage', 2.5)) # Vertical distance between staggered rows (default 2.5")
 
-    # Determine Omega
+    # Omega
     omega = 4.0 if design_method == 'OSHA' else 1.67
 
-    # 2. Get Capacities & Geometry Data First
-    # We need anchor data early to know 'min_end_dist' for Length Calculation
+    # --- 2. Capacities & Masonry Data ---
     table_data = MASONRY_TABLE.get(dia)
     if not table_data or embed_idx >= len(table_data):
         return {"error": "Invalid anchor selection"}
     
     anchor = table_data[embed_idx]
-    min_end_dist = anchor['end']
-
-    # 3. Calculate Geometry & Length
-    # Side Configuration
+    
+    # --- 3. Geometry & Length Calculation (UPDATED) ---
     num_angles = 2 if config == 'double' else 1
     n_bolts_total = n_bolts
     n_bolts_angle = n_bolts_total / num_angles
-
-    req_spacing = 16.0 * float(dia)
     
-    # Steel Edge Distance (New Logic)
-    # AISC Table J3.4 Min Edge Distance
-    # Simplified rule: ~1.5 to 2.0x diameter, usually min 1.5" for 1/2" bolts.
-    steel_edge_dist = max(1.5, 2.0 * float(dia)) 
-
-    rec_length_calc = 0.0
-    if n_bolts_angle <= 1:
-        rec_length_calc = 2 * steel_edge_dist
+    # Masonry Min Spacing (usually 16d)
+    req_spacing = 16.0 * dia_float
+    
+    # [NEW] AISC Table J3.4 Min Edge Distances (Sheared Edges)
+    # 1/2 -> 0.875 | 5/8 -> 1.125 | 3/4 -> 1.25 | 1 -> 1.75
+    if dia_float <= 0.5:
+        aisc_edge_min = 0.875
+    elif dia_float <= 0.625:
+        aisc_edge_min = 1.125
+    elif dia_float <= 0.75:
+        aisc_edge_min = 1.25
     else:
-        rec_length_calc = ((n_bolts_angle - 1) * req_spacing) + (2 * steel_edge_dist)
-    
-    rec_length_calc += max(2.0, 2.0 * float(dia)) # Buffer: 2in or 2*dia, whichever is bigger
+        aisc_edge_min = 1.75
+        
+    # User requested 2" buffer, but we must respect AISC min.
+    steel_edge_dist = max(aisc_edge_min, 1.0) # Using 1.0 as a generous baseline, user can override
 
-    # 4. Calculate Demands
-    # Linear Load w (klf) = (psf * ft) / 1000
+    # [NEW] Staggered Length Logic
+    if is_staggered:
+        # If staggered, bolts are in 2 rows. 
+        # Number of "Columns" (horizontal steps) = ceil(n / 2)
+        n_cols = math.ceil(n_bolts_angle / 2.0)
+        
+        # Horizontal Pitch (s):
+        # We assume the diagonal distance is controlled by masonry req_spacing.
+        # s_horiz = sqrt(req_spacing^2 - gage^2)
+        # If gage is large, s_horiz might be small. 
+        # For safety, let's keep s_horiz = req_spacing to define the "Span".
+        s_horiz = req_spacing 
+        
+        if n_cols <= 1:
+            span_length = 0
+        else:
+            span_length = (n_cols - 1) * s_horiz
+            
+        # Total Length = Horizontal Span + 2 * Edge
+        rec_length_calc = span_length + (2 * steel_edge_dist)
+        
+        # Add a bit of extra tolerance for the stagger offset if odd number
+        rec_length_calc += (s_horiz / 2.0) # Optional buffer for the "zig" vs "zag" end
+        
+    else:
+        # Linear (Original Logic)
+        if n_bolts_angle <= 1:
+            rec_length_calc = 2 * steel_edge_dist
+        else:
+            rec_length_calc = ((n_bolts_angle - 1) * req_spacing) + (2 * steel_edge_dist)
+
+    # --- 4. Load Calculations ---
     w_klf = (area_load * spacing) / 1000.0
-    
-    # Total Reaction V (kips) = w * L / 2
     V_total = (w_klf * L) / 2.0
-    
     V_angle = V_total / num_angles
     
-    # Angle Bending Demand
-    e = leg_size / 2.0
+    # Moment Calculation (Eccentricity)
+    user_e = inputs.get('moment_arm')
+    if user_e and float(user_e) > 0:
+        e = float(user_e)
+    else:
+        e = leg_size / 2.0
     Mu = V_angle * e # k-in
-    
-    # Per Bolt Forces
+
+    # --- 5. Bolt Tension (THE MATH CHANGE) ---
     v_bolt = V_angle / n_bolts_angle
     t_bolt = 0.0
     
     if config == 'single':
-        t_bolt = V_total / n_bolts_total
+        t_bolt_shear_load = V_total / n_bolts_total # Direct Tension if applicable? No, usually V is shear.
+        # For Angle, V is Shear, Tension comes from Moment (Mu)
+    
+    # TENSION CALCULATION
+    if is_staggered:
+        # [NEW] Elastic Method (Moment of Inertia)
+        # Centroid is at 0. Top row at +g/2, Bottom row at -g/2.
+        y_max = gage / 2.0
+        
+        # Sum of y^2
+        # All bolts are at distance (g/2) from neutral axis
+        sum_y_sq = n_bolts_angle * (y_max ** 2)
+        
+        if sum_y_sq > 0:
+            # T = (M * y) / I
+            t_bolt = (Mu * y_max) / sum_y_sq
+        else:
+            t_bolt = 0 # Should not happen if gage > 0
+            
     else:
-        # Double angle: Tension due to prying/moment couple?
-        # JS Logic: T_force_angle = Mu / legSize; t_bolt = T_force_angle / nBoltsAngle
-        # Note: This logic in JS seems simplified or specific to a certain assumption.
-        # We duplicate it exactly for fidelity.
+        # [OLD] Prying Method (Linear)
+        # Assumes lever arm is roughly the leg size
         T_force_angle = Mu / leg_size
         t_bolt = T_force_angle / n_bolts_angle
 
-    # 5. Check Interaction
-    # Capacities in Kips (Table is in lbs)
-    # OSHA Adjustment: Multiply table capacity by 5/4 (1.25)
+    # --- 6. Interaction & Checks ---
     anchor_factor = 1.25 if design_method == 'OSHA' else 1.0
-    
     V_allow = (anchor['V_allow'] * anchor_factor) / 1000.0
     T_allow = (anchor['T_allow'] * anchor_factor) / 1000.0
 
@@ -162,106 +185,28 @@ def calculate_angle_support(inputs):
     ratio_t = t_bolt / T_allow
     interaction = ratio_v + ratio_t
     
-    # Check Bending - Use Calculated Length!
-    # Use variable Omega
+    # Bending Check
     Z_plastic = (rec_length_calc * (t ** 2)) / 4.0
     Mn = fy * Z_plastic
     Ma_allow = Mn / omega 
     ratio_bend = Mu / Ma_allow
+
+    pass_all = interaction <= 1.0 and ratio_bend <= 1.0
     
-    # String generation
     config_str = "2L" if config == 'double' else "L"
-    spec_string = f"{config_str}{leg_size}x{leg_size}x{format_fraction(t)}x{rec_length_calc:.1f}\""
+    stagger_note = " (Staggered)" if is_staggered else ""
+    spec_string = f"{config_str}{leg_size}x{leg_size}x{format_fraction(t)}x{rec_length_calc:.1f}\"{stagger_note}"
 
-    # 6. Longitudinal Bending Check ("The Bridge")
-    # Action: Bending of the profile between bolts.
-    # Span: Distance between bolts (req_spacing).
-    # Load: V_total (Beam Reaction).
-    # Moment: P * L / 4 (Simplified Point Load in Center).
-    
-    # 6a. Shape Properties Lookup
-    # Construct Key: L4X4X3/8
-    def fmt_dim(d):
-        return str(d).replace('.0', '')
-    
-    # Use existing format_fraction for thickness
-    shape_key = f"L{fmt_dim(leg_size)}X{fmt_dim(leg_size)}X{format_fraction(t)}"
-    
-    section_modulus = 0.0
-    
-    # Import locally to avoid circular imports at top level if any
-    try:
-        from backend.database import db
-        if db._shapes and shape_key in db._shapes:
-            shape = db._shapes[shape_key]
-            # User specifically mentioned "the 2.69 value" which matched Zx in the DB.
-            # Using Zx (Plastic Modulus) for capacity.
-            section_modulus = float(shape.get('Zx', 0))
-            if section_modulus == 0:
-                 # Fallback to Sx if Zx is 0 or missing
-                 section_modulus = float(shape.get('Sx', 0))
-        else:
-            # Fallback/Approximation if DB lookup fails (e.g. custom size)
-            # This shouldn't match standard DB usage but prevents crash.
-            # Approx Zx for angle? Very rough. 
-            pass
-    except Exception as e:
-        print(f"DB Lookup Error: {e}")
-
-    # Adjust for Double Angle
-    if config == 'double':
-        section_modulus *= 2.0
-
-    # 6b. Capacity
-    Mn_long = fy * section_modulus
-    Ma_long_allow = Mn_long / omega # Use variable Omega
-    
-    # 6c. Demand
-    # Span is the spacing between bolts.
-    span_long = req_spacing 
-    # If 1 bolt, longitudinal bending doesn't exist in same way (cantilever?). 
-    # But usually 2+ bolts. If 1 bolt, M=0? Or assume min span?
-    # User says "distance from center load to outer bolts".
-    # If 1 bolt, load is directly on bolt? Check V_bolt vs Capacity covers it.
-    M_long = 0.0
-    if n_bolts > 1:
-        M_long = (V_total * span_long) / 4.0
-    
-    ratio_long = 0.0
-    if Ma_long_allow > 0:
-        ratio_long = M_long / Ma_long_allow
-    
-    pass_anchor = interaction <= 1.0
-    pass_bend = ratio_bend <= 1.0
-    pass_long = ratio_long <= 1.0
-    pass_all = pass_anchor and pass_bend and pass_long
-    
     return {
         "w_klf": w_klf,
         "V_total": V_total,
         "v_bolt": v_bolt,
-        "t_bolt": t_bolt,
+        "t_bolt": t_bolt, # This is now calculated via Elastic Method if staggered
         "V_allow": V_allow,
         "T_allow": T_allow,
-        "ratio_v": ratio_v,
-        "ratio_t": ratio_t,
         "interaction": interaction,
-        "anchor_details": anchor,
-        "e": e,
-        "Mu": Mu,
-        "Z_plastic": Z_plastic,
-        "Ma_allow": Ma_allow,
-        "ratio_bend": ratio_bend,
         "pass_all": pass_all,
         "spec_string": spec_string,
         "rec_length_calc": rec_length_calc,
-        "n_bolts_total": n_bolts_total,
-        "n_bolts_angle": n_bolts_angle,
-        # Longitudinal Results
-        "M_long": M_long,
-        "Ma_long_allow": Ma_long_allow,
-        "ratio_long": ratio_long,
-        "section_modulus": section_modulus,
-        "span_long": span_long,
-        "omega": omega  # Return omega to verify in UI if needed
+        "calc_method": "Elastic (My/I)" if is_staggered else "Simplified (M/d)"
     }

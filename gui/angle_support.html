@@ -112,7 +112,9 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <!-- Length input removed -->
+                                <label class="block text-sm font-medium mb-1">Moment Arm (e)</label>
+                                <input type="text" id="moment_arm" placeholder="Auto (Leg/2)"
+                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">Fy (ksi)</label>
@@ -231,7 +233,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <strong>Tip:</strong> You can copy multiple rows from Excel (Span, Trib Width, Load) and paste
+                        <strong>Tip:</strong> You can copy multiple rows from Excel (Span, Trib Width, Load) and
+                        paste
                         directly into the table.
                     </p>
                     <button id="batch-calc-btn"
@@ -279,7 +282,8 @@
                     <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
 
                         <div>
-                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Load Demand</h4>
+                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Load Demand
+                            </h4>
                             <table class="w-full text-sm">
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Linear Load (w)</td>
@@ -306,7 +310,8 @@
                                     <td class="py-2 text-right font-mono" id="res-t-bolt">--</td>
                                 </tr>
                             </table>
-                            <p class="text-xs text-gray-400 mt-2 italic" id="logic-note">* Logic: Single = R/n. Double =
+                            <p class="text-xs text-gray-400 mt-2 italic" id="logic-note">* Logic: Single = R/n.
+                                Double =
                                 (Mu/Leg)/n.</p>
                         </div>
 
@@ -360,7 +365,8 @@
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Length Spec</td>
-                                    <td class="py-2 text-right font-mono font-bold text-blue-600" id="spec-string">--
+                                    <td class="py-2 text-right font-mono font-bold text-blue-600" id="spec-string">
+                                        --
                                     </td>
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
@@ -388,7 +394,8 @@
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
                                     <td class="py-2">Capacity (M<sub>a</sub>)</td>
-                                    <td class="py-2 text-right font-mono text-green-600 font-bold" id="res-ma-long">--
+                                    <td class="py-2 text-right font-mono text-green-600 font-bold" id="res-ma-long">
+                                        --
                                     </td>
                                 </tr>
                                 <tr class="border-b dark:border-gray-700">
