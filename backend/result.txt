@@ -1,0 +1,10 @@
+--- Verification: Staggered Angle Support (Layout Msg Check) ---
+
+Case 1: Staggered (Gage 2.5)
+Layout: Zig-Zag: 3 Cols x 2 Rows (Vert 2.5", Horiz 7.60")
+
+Case 3: Linear
+Layout: Linear: 1 Row x 5 Bolts (Spacing 8.00")
+
+Case 4: Staggered (Gage 4.0)
+Layout: Zig-Zag: 3 Cols x 2 Rows (Vert 4.0", Horiz 6.93")

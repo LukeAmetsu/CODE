@@ -1,425 +1,694 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Single Angle Support (Masonry Anchors)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <script>
-        (function () {
-            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.classList.toggle('dark', isDark);
-        })();
+      (function () {
+        const isDark =
+          localStorage.getItem("color-theme") === "dark" ||
+          (!("color-theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", isDark);
+      })();
     </script>
-    <link rel="stylesheet" href="styles.min.css">
-</head>
+    <link rel="stylesheet" href="styles.min.css" />
+  </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200">
-
+  <body
+    class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200"
+  >
     <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <div id="header-placeholder" style="min-height: 110px;"></div>
+      <div id="header-placeholder" style="min-height: 110px"></div>
 
-        <main id="angle-support-main">
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
-                <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Single Angle Wall Support</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Checks masonry anchors for a single angle beam support using linear interaction.
-                        <br><strong>Anchor:</strong> DeWalt AC100+ Gold (Masonry)
-                    </p>
-                </div>
+      <main id="angle-support-main">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+          <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+              Single Angle Wall Support
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Checks masonry anchors for a single angle beam support using
+              linear interaction.
+              <br /><strong>Anchor:</strong> DeWalt AC100+ Gold (Masonry)
+            </p>
+          </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                    <div class="space-y-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                        <h3
-                            class="font-semibold text-blue-800 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 pb-1">
-                            Beam Geometry & Load</h3>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Beam Span (ft)</label>
-                            <input type="text" id="beam_span" value="15"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Tributary Width / Spacing (ft)</label>
-                            <input type="text" id="beam_spacing" value="5"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                            <p class="text-xs text-gray-500 mt-1">Width of deck supported by this beam.</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Area Load (psf)</label>
-                            <input type="text" id="area_load" value="50"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                            <p class="text-xs text-gray-500 mt-1">Total Dead + Live Load</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                        <h3
-                            class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1">
-                            Angle Properties</h3>
-
-                        <div class="mb-2">
-                            <label class="block text-sm font-medium mb-1">Design Method (FOS)</label>
-                            <select id="angle_method"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                                <option value="ASD">ASD (FOS = 1.67)</option>
-                                <option value="OSHA">OSHA (FOS = 4.0)</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-2">
-                            <label class="block text-sm font-medium mb-1">Configuration</label>
-                            <select id="angle_config"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                                <option value="single">Single (L)</option>
-                                <option value="double">Double (2L)</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Leg Size (in)</label>
-                                <select id="angle_leg"
-                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                                    <option value="2">2</option>
-                                    <option value="2.5">2.5</option>
-                                    <option value="3">3</option>
-                                    <option value="3.5">3.5</option>
-                                    <option value="4" selected>4</option>
-                                    <option value="5">5</option>
-                                    <option value="6">6</option>
-                                    <option value="8">8</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Thickness (in)</label>
-                                <select id="angle_thick"
-                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                                    <option value="0.125">1/8"</option>
-                                    <option value="0.1875">3/16"</option>
-                                    <option value="0.25">1/4"</option>
-                                    <option value="0.3125">5/16"</option>
-                                    <option value="0.375" selected>3/8"</option>
-                                    <option value="0.5">1/2"</option>
-                                    <option value="0.625">5/8"</option>
-                                    <option value="0.75">3/4"</option>
-                                    <option value="1.0">1"</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Moment Arm (e)</label>
-                                <input type="text" id="moment_arm" placeholder="Auto (Leg/2)"
-                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Fy (ksi)</label>
-                                <input type="text" id="angle_fy" value="36"
-                                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Symmetrical angles assumed (e.g. L4x4).</p>
-                    </div>
-
-                    <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                        <h3
-                            class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1">
-                            Connection Details</h3>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Number of Bolts</label>
-                            <input type="text" id="num_bolts" value="2"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Bolt Diameter</label>
-                            <select id="bolt_diameter"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                                <option value="0.375">3/8"</option>
-                                <option value="0.5" selected>1/2"</option>
-                                <option value="0.625">5/8"</option>
-                                <option value="0.75">3/4"</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Embedment Depth (h<sub>nom</sub>)</label>
-                            <select id="embedment"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                                <!-- Populated by JS -->
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Substrate</label>
-                            <select id="substrate"
-                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" disabled>
-                                <option value="masonry_grout" selected>Masonry (Grout Filled) - AC100+ Gold</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col justify-center space-y-4">
-                        <button id="calc-btn"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
-                            Calculate Capacity
-                        </button>
-                        <div id="quick-status" class="hidden text-center p-3 rounded font-bold"></div>
-                    </div>
-
-                </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div
+              class="space-y-4 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg"
+            >
+              <h3
+                class="font-semibold text-blue-800 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 pb-1"
+              >
+                Beam Geometry & Load
+              </h3>
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Beam Span (ft)</label
+                >
+                <input
+                  type="text"
+                  id="beam_span"
+                  value="15"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Tributary Width / Spacing (ft)</label
+                >
+                <input
+                  type="text"
+                  id="beam_spacing"
+                  value="5"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  Width of deck supported by this beam.
+                </p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Area Load (psf)</label
+                >
+                <input
+                  type="text"
+                  id="area_load"
+                  value="50"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                />
+                <p class="text-xs text-gray-500 mt-1">Total Dead + Live Load</p>
+              </div>
             </div>
 
-            <!-- Main Input: Batch Loads -->
-            <div id="batch-section"
-                class="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-blue-600">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        Batch Load Check
-                    </h2>
-                    <div class="flex gap-2">
-                        <label for="upload-excel"
-                            class="cursor-pointer py-2 px-4 bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 transition-colors font-semibold text-sm flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v16m8-8H4" />
-                            </svg>
-                            Import Excel
-                        </label>
-                        <input type="file" id="upload-excel" accept=".xlsx, .xls" class="hidden">
+            <div
+              class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg"
+            >
+              <h3
+                class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1"
+              >
+                Angle Properties
+              </h3>
 
-                        <button id="add-case-btn"
-                            class="py-2 px-4 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors font-semibold text-sm flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Add Case
-                        </button>
-                    </div>
-                </div>
+              <div class="mb-2">
+                <label class="block text-sm font-medium mb-1"
+                  >Design Method (FOS)</label
+                >
+                <select
+                  id="angle_method"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                >
+                  <option value="ASD">ASD (FOS = 1.67)</option>
+                  <option value="OSHA">OSHA (FOS = 4.0)</option>
+                </select>
+              </div>
 
-                <div class="overflow-x-auto border rounded-lg dark:border-gray-700 mb-4 bg-white dark:bg-gray-800">
-                    <table id="batch-table" class="w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                        <thead
-                            class="bg-gray-100 dark:bg-gray-700 uppercase text-xs font-semibold text-gray-600 dark:text-gray-400">
-                            <tr>
-                                <th class="px-3 py-3 w-12 text-center">#</th>
-                                <th class="px-3 py-3 min-w-[120px]">Beam Span (ft)</th>
-                                <th class="px-3 py-3 min-w-[120px]">Trib. Width (ft)</th>
-                                <th class="px-3 py-3 min-w-[120px]">Area Load (psf)</th>
-                                <th class="px-3 py-3 w-16 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            <!-- Rows populated by JS -->
-                        </tbody>
-                    </table>
+              <div class="mb-2">
+                <label class="block text-sm font-medium mb-1"
+                  >Configuration</label
+                >
+                <select
+                  id="angle_config"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                >
+                  <option value="single">Single (L)</option>
+                  <option value="double">Double (2L)</option>
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-sm font-medium mb-1"
+                    >Leg Size (in)</label
+                  >
+                  <select
+                    id="angle_leg"
+                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="2">2</option>
+                    <option value="2.5">2.5</option>
+                    <option value="3">3</option>
+                    <option value="3.5">3.5</option>
+                    <option value="4" selected>4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="8">8</option>
+                  </select>
                 </div>
-
-                <div
-                    class="flex justify-between items-center bg-gray-50 dark:bg-gray-700/30 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-yellow-500" fill="none"
-                            viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <strong>Tip:</strong> You can copy multiple rows from Excel (Span, Trib Width, Load) and
-                        paste
-                        directly into the table.
-                    </p>
-                    <button id="batch-calc-btn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-md transform transition hover:scale-105 text-sm">
-                        Run Batch Calculation
-                    </button>
+                <div>
+                  <label class="block text-sm font-medium mb-1"
+                    >Thickness (in)</label
+                  >
+                  <select
+                    id="angle_thick"
+                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  >
+                    <option value="0.125">1/8"</option>
+                    <option value="0.1875">3/16"</option>
+                    <option value="0.25">1/4"</option>
+                    <option value="0.3125">5/16"</option>
+                    <option value="0.375" selected>3/8"</option>
+                    <option value="0.5">1/2"</option>
+                    <option value="0.625">5/8"</option>
+                    <option value="0.75">3/4"</option>
+                    <option value="1.0">1"</option>
+                  </select>
                 </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-sm font-medium mb-1"
+                    >Moment Arm (e)</label
+                  >
+                  <input
+                    type="text"
+                    id="moment_arm"
+                    placeholder="Auto (Leg/2)"
+                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Fy (ksi)</label>
+                  <input
+                    type="text"
+                    id="angle_fy"
+                    value="36"
+                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">
+                Symmetrical angles assumed (e.g. L4x4).
+              </p>
             </div>
 
-            <div id="batch-results-container" class="hidden mb-12">
-                <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200">Results Table</h3>
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden max-h-[500px] overflow-y-auto custom-scrollbar">
-                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th class="px-4 py-3">Span (ft)</th>
-                                <th class="px-4 py-3">Load (psf)</th>
-                                <th class="px-4 py-3">Result</th>
-                                <th class="px-4 py-3">Max Ratio</th>
-                            </tr>
-                        </thead>
-                        <tbody id="batch-results-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
+            <div
+              class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg"
+            >
+              <h3
+                class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1"
+              >
+                Connection Details
+              </h3>
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Number of Bolts</label
+                >
+                <input
+                  type="text"
+                  id="num_bolts"
+                  value="2"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                />
+              </div>
+
+              <!-- NEW STAGGERED INPUTS -->
+              <div class="flex items-center gap-2 mb-2">
+                <input
+                  type="checkbox"
+                  id="staggered_check"
+                  class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label
+                  for="staggered_check"
+                  class="text-sm font-medium text-gray-900 dark:text-gray-300"
+                  >Staggered Pattern?</label
+                >
+              </div>
+              <div id="gage-container" class="hidden">
+                <label class="block text-sm font-medium mb-1"
+                  >Gage (Vertical Spacing in)</label
+                >
+                <input
+                  type="text"
+                  id="gage"
+                  value="2.5"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Bolt Diameter</label
+                >
+                <select
+                  id="bolt_diameter"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                >
+                  <option value="0.375">3/8"</option>
+                  <option value="0.5" selected>1/2"</option>
+                  <option value="0.625">5/8"</option>
+                  <option value="0.75">3/4"</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1"
+                  >Embedment Depth (h<sub>nom</sub>)</label
+                >
+                <select
+                  id="embedment"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                >
+                  <!-- Populated by JS -->
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Substrate</label>
+                <select
+                  id="substrate"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  disabled
+                >
+                  <option value="masonry_grout" selected>
+                    Masonry (Grout Filled) - AC100+ Gold
+                  </option>
+                </select>
+              </div>
             </div>
 
-            <div id="results-area" class="hidden space-y-6">
+            <div class="flex flex-col justify-center space-y-4">
+              <button
+                id="calc-btn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105"
+              >
+                Calculate Capacity
+              </button>
+              <div
+                id="quick-status"
+                class="hidden text-center p-3 rounded font-bold"
+              ></div>
+            </div>
+          </div>
+        </div>
 
-                <div id="status-banner"
-                    class="p-6 rounded-lg shadow-md border-l-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold" id="status-title">PASS</h2>
-                        <p class="text-sm opacity-90" id="status-desc">Interaction Equation < 1.0</p>
-                    </div>
-                    <div class="text-4xl font-extrabold" id="interaction-value">0.65</div>
-                </div>
+        <!-- Main Input: Batch Loads -->
+        <div
+          id="batch-section"
+          class="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg border-l-4 border-blue-600"
+        >
+          <div class="flex justify-between items-center mb-4">
+            <h2
+              class="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+              Batch Load Check
+            </h2>
+            <div class="flex gap-2">
+              <label
+                for="upload-excel"
+                class="cursor-pointer py-2 px-4 bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 transition-colors font-semibold text-sm flex items-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Import Excel
+              </label>
+              <input
+                type="file"
+                id="upload-excel"
+                accept=".xlsx, .xls"
+                class="hidden"
+              />
 
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                    <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                        <h3 class="font-bold text-lg">Calculation Breakdown</h3>
-                    </div>
-                    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <button
+                id="add-case-btn"
+                class="py-2 px-4 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors font-semibold text-sm flex items-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                Add Case
+              </button>
+            </div>
+          </div>
 
-                        <div>
-                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Load Demand
-                            </h4>
-                            <table class="w-full text-sm">
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Linear Load (w)</td>
-                                    <td class="py-2 text-right font-mono" id="res-w">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Beam Reaction (V<sub>total</sub>)</td>
-                                    <td class="py-2 text-right font-mono font-bold" id="res-reaction">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Total Bolts</td>
-                                    <td class="py-2 text-right font-mono" id="res-total-bolts">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Bolts per Angle</td>
-                                    <td class="py-2 text-right font-mono" id="res-bolts-angle">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Shear per Bolt (v)</td>
-                                    <td class="py-2 text-right font-mono" id="res-v-bolt">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Tension per Bolt (t)</td>
-                                    <td class="py-2 text-right font-mono" id="res-t-bolt">--</td>
-                                </tr>
-                            </table>
-                            <p class="text-xs text-gray-400 mt-2 italic" id="logic-note">* Logic: Single = R/n.
-                                Double =
-                                (Mu/Leg)/n.</p>
-                        </div>
+          <div
+            class="overflow-x-auto border rounded-lg dark:border-gray-700 mb-4 bg-white dark:bg-gray-800"
+          >
+            <table
+              id="batch-table"
+              class="w-full text-sm text-left text-gray-700 dark:text-gray-300"
+            >
+              <thead
+                class="bg-gray-100 dark:bg-gray-700 uppercase text-xs font-semibold text-gray-600 dark:text-gray-400"
+              >
+                <tr>
+                  <th class="px-3 py-3 w-12 text-center">#</th>
+                  <th class="px-3 py-3 min-w-[120px]">Beam Span (ft)</th>
+                  <th class="px-3 py-3 min-w-[120px]">Trib. Width (ft)</th>
+                  <th class="px-3 py-3 min-w-[120px]">Area Load (psf)</th>
+                  <th class="px-3 py-3 min-w-[80px]">Bolts</th>
+                  <th class="px-3 py-3 w-16 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <!-- Rows populated by JS -->
+              </tbody>
+            </table>
+          </div>
 
-                        <div>
-                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Anchor Capacity
-                                (Allowable)</h4>
-                            <table class="w-full text-sm">
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Anchor Type</td>
-                                    <td class="py-2 text-right">DeWalt AC100+ Gold</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Diameter</td>
-                                    <td class="py-2 text-right" id="res-dia">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Embedment (h<sub>nom</sub>)</td>
-                                    <td class="py-2 text-right" id="res-embed">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Allowable Shear (V<sub>all</sub>)</td>
-                                    <td class="py-2 text-right font-mono text-green-600" id="res-v-allow">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Allowable Tension (T<sub>all</sub>)</td>
-                                    <td class="py-2 text-right font-mono text-green-600" id="res-t-allow">--</td>
-                                </tr>
-                            </table>
-                        </div>
+          <div
+            class="flex justify-between items-center bg-gray-50 dark:bg-gray-700/30 p-3 rounded-lg border border-gray-100 dark:border-gray-700"
+          >
+            <p
+              class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 text-yellow-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <strong>Tip:</strong> You can copy multiple rows from Excel (Span,
+              Trib Width, Load) and paste directly into the table.
+            </p>
+            <button
+              id="batch-calc-btn"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-md transform transition hover:scale-105 text-sm"
+            >
+              Run Batch Calculation
+            </button>
+          </div>
+        </div>
 
-                        <div>
-                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Angle Bending
-                                (Local)</h4>
-                            <table class="w-full text-sm">
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Moment Arm (e)</td>
-                                    <td class="py-2 text-right font-mono" id="res-arm">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Required Moment (M<sub>u</sub>)</td>
-                                    <td class="py-2 text-right font-mono font-bold" id="res-mu">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Plastic Modulus (Z)</td>
-                                    <td class="py-2 text-right font-mono" id="res-z">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Capacity (M<sub>a</sub> = M<sub>n</sub>/&Omega;)</td>
-                                    <td class="py-2 text-right font-mono text-green-600 font-bold" id="res-phimn">--
-                                    </td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Length Spec</td>
-                                    <td class="py-2 text-right font-mono font-bold text-blue-600" id="spec-string">
-                                        --
-                                    </td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">D/C Ratio</td>
-                                    <td class="py-2 text-right font-bold" id="res-ratio-bend">--</td>
-                                </tr>
-                            </table>
-                        </div>
+        <div id="batch-results-container" class="hidden mb-12">
+          <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200">
+            Results Table
+          </h3>
+          <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden max-h-[500px] overflow-y-auto custom-scrollbar"
+          >
+            <table
+              class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
+            >
+              <thead
+                class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400"
+              >
+                <tr>
+                  <th class="px-4 py-3">#</th>
+                  <th class="px-4 py-3">Span (ft)</th>
+                  <th class="px-4 py-3">Load (psf)</th>
+                  <th class="px-4 py-3">Bolts</th>
+                  <th class="px-4 py-3">Result</th>
+                  <th class="px-4 py-3">Max Ratio</th>
+                </tr>
+              </thead>
+              <tbody id="batch-results-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-                        <div>
-                            <h4 class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3">Angle Bending
-                                (Longit.)</h4>
-                            <table class="w-full text-sm">
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Span (L)</td>
-                                    <td class="py-2 text-right font-mono" id="res-span-long">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Req. Moment (M<sub>long</sub>)</td>
-                                    <td class="py-2 text-right font-mono font-bold" id="res-m-long">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Modulus (Z<sub>x</sub>)</td>
-                                    <td class="py-2 text-right font-mono" id="res-zx-long">--</td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">Capacity (M<sub>a</sub>)</td>
-                                    <td class="py-2 text-right font-mono text-green-600 font-bold" id="res-ma-long">
-                                        --
-                                    </td>
-                                </tr>
-                                <tr class="border-b dark:border-gray-700">
-                                    <td class="py-2">D/C Ratio</td>
-                                    <td class="py-2 text-right font-bold" id="res-ratio-long">--</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
+        <div id="results-area" class="hidden space-y-6">
+          <div
+            id="status-banner"
+            class="p-6 rounded-lg shadow-md border-l-8 flex flex-col md:flex-row justify-between items-center gap-4"
+          >
+            <div>
+              <h2 class="text-2xl font-bold" id="status-title">PASS</h2>
+              <p class="text-sm opacity-90" id="status-desc">
+                Interaction Equation < 1.0
+              </p>
+            </div>
+            <div class="text-4xl font-extrabold" id="interaction-value">
+              0.65
+            </div>
+          </div>
 
-                    <div
-                        class="bg-gray-50 dark:bg-gray-700/30 p-4 border-t border-gray-200 dark:border-gray-700 text-center">
-                        <p class="font-mono text-lg">
-                            ( <span id="eq-v-term" class="font-bold">v/V</span> ) + ( <span id="eq-t-term"
-                                class="font-bold">t/T</span> ) = <span id="eq-total"
-                                class="font-bold text-xl">0.65</span> &le; 1.0
-                        </p>
-                    </div>
-                </div>
+          <div
+            class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+          >
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="font-bold text-lg">Calculation Breakdown</h3>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                <h4
+                  class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                >
+                  Load Demand
+                </h4>
+                <table class="w-full text-sm">
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Linear Load (w)</td>
+                    <td class="py-2 text-right font-mono" id="res-w">--</td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Beam Reaction (V<sub>total</sub>)</td>
+                    <td
+                      class="py-2 text-right font-mono font-bold"
+                      id="res-reaction"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Total Bolts</td>
+                    <td class="py-2 text-right font-mono" id="res-total-bolts">
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Bolts per Angle</td>
+                    <td class="py-2 text-right font-mono" id="res-bolts-angle">
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Shear per Bolt (v)</td>
+                    <td class="py-2 text-right font-mono" id="res-v-bolt">
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Tension per Bolt (t)</td>
+                    <td class="py-2 text-right font-mono" id="res-t-bolt">
+                      --
+                    </td>
+                  </tr>
+                </table>
+                <p class="text-xs text-gray-400 mt-2 italic" id="logic-note">
+                  * Logic: Single = R/n. Double = (Mu/Leg)/n.
+                </p>
+              </div>
+
+              <div>
+                <h4
+                  class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                >
+                  Anchor Capacity (Allowable)
+                </h4>
+                <table class="w-full text-sm">
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Anchor Type</td>
+                    <td class="py-2 text-right">DeWalt AC100+ Gold</td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Diameter</td>
+                    <td class="py-2 text-right" id="res-dia">--</td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Embedment (h<sub>nom</sub>)</td>
+                    <td class="py-2 text-right" id="res-embed">--</td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Allowable Shear (V<sub>all</sub>)</td>
+                    <td
+                      class="py-2 text-right font-mono text-green-600"
+                      id="res-v-allow"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Allowable Tension (T<sub>all</sub>)</td>
+                    <td
+                      class="py-2 text-right font-mono text-green-600"
+                      id="res-t-allow"
+                    >
+                      --
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <div>
+                <h4
+                  class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                >
+                  Angle Bending (Local)
+                </h4>
+                <table class="w-full text-sm">
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Moment Arm (e)</td>
+                    <td class="py-2 text-right font-mono" id="res-arm">--</td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Required Moment (M<sub>u</sub>)</td>
+                    <td class="py-2 text-right font-mono font-bold" id="res-mu">
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Plastic Modulus (Z)</td>
+                    <td class="py-2 text-right font-mono" id="res-z">--</td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">
+                      Capacity (M<sub>a</sub> = M<sub>n</sub>/&Omega;)
+                    </td>
+                    <td
+                      class="py-2 text-right font-mono text-green-600 font-bold"
+                      id="res-phimn"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Length Spec</td>
+                    <td
+                      class="py-2 text-right font-mono font-bold text-blue-600"
+                      id="spec-string"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Edge Distance</td>
+                    <td class="py-2 text-right font-mono" id="res-edge-dist">--</td>
+                  </tr>
+                  <!-- Layout Msg -->
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Layout</td>
+                    <td
+                      class="py-2 text-right font-mono text-xs text-gray-500"
+                      id="layout-msg"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">D/C Ratio</td>
+                    <td class="py-2 text-right font-bold" id="res-ratio-bend">
+                      --
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <div>
+                <h4
+                  class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                >
+                  Angle Bending (Longit.)
+                </h4>
+                <table class="w-full text-sm">
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Span (L)</td>
+                    <td class="py-2 text-right font-mono" id="res-span-long">
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Req. Moment (M<sub>long</sub>)</td>
+                    <td
+                      class="py-2 text-right font-mono font-bold"
+                      id="res-m-long"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Modulus (Z<sub>x</sub>)</td>
+                    <td class="py-2 text-right font-mono" id="res-zx-long">
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">Capacity (M<sub>a</sub>)</td>
+                    <td
+                      class="py-2 text-right font-mono text-green-600 font-bold"
+                      id="res-ma-long"
+                    >
+                      --
+                    </td>
+                  </tr>
+                  <tr class="border-b dark:border-gray-700">
+                    <td class="py-2">D/C Ratio</td>
+                    <td class="py-2 text-right font-bold" id="res-ratio-long">
+                      --
+                    </td>
+                  </tr>
+                </table>
+              </div>
             </div>
 
-        </main>
+            <div
+              class="bg-gray-50 dark:bg-gray-700/30 p-4 border-t border-gray-200 dark:border-gray-700 text-center"
+            >
+              <p class="font-mono text-lg">
+                ( <span id="eq-v-term" class="font-bold">v/V</span> ) + (
+                <span id="eq-t-term" class="font-bold">t/T</span> ) =
+                <span id="eq-total" class="font-bold text-xl">0.65</span> &le;
+                1.0
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
 
-        <div id="footer-placeholder" class="mt-12"></div>
+      <div id="footer-placeholder" class="mt-12"></div>
     </div>
 
     <script type="text/javascript" src="/eel.js"></script>
@@ -428,20 +697,19 @@
     <script src="angle_support.js" defer></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof injectHeader === 'function') {
-                injectHeader({
-                    activePage: 'angle_support',
-                    pageTitle: 'Angle Support',
-                    headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: './'
-                });
-            }
-            if (typeof injectFooter === 'function') {
-                injectFooter({ footerPlaceholderId: 'footer-placeholder' });
-            }
-        });
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof injectHeader === "function") {
+          injectHeader({
+            activePage: "angle_support",
+            pageTitle: "Angle Support",
+            headerPlaceholderId: "header-placeholder",
+            pathPrefix: "./",
+          });
+        }
+        if (typeof injectFooter === "function") {
+          injectFooter({ footerPlaceholderId: "footer-placeholder" });
+        }
+      });
     </script>
-</body>
-
+  </body>
 </html>

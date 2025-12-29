@@ -64,5 +64,16 @@ class AISCDatabase:
         # We assume the 'Type' column exists and matches AISC codes.
         return {k: v for k, v in self._shapes.items() if v.get('Type') == shape_type}
 
+    def get_shape_details(self, shape_name):
+        if self._shapes is None:
+             raise Exception("Database not loaded. Call load_database() first.")
+        
+        # Try exact match first
+        if shape_name in self._shapes:
+            return self._shapes[shape_name]
+        
+        # Try upper case
+        return self._shapes.get(shape_name.upper())
+
 # Global instance
 db = AISCDatabase()
