@@ -23,6 +23,23 @@
     <script src="js/i18n.js" defer></script>
     <script src="js/shared-utils.js" defer></script>
     <script src="js/template.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'home',
+                    pageTitle: 'engineering_hub',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../' // Point to ROOT
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder'
+                });
+            }
+        });
+    </script>
 </head>
 
 <body>

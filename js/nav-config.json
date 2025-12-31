@@ -2,7 +2,7 @@
     "mainNav": [
         {
             "key": "home",
-            "href": "index.html",
+            "href": "gui/index.html",
             "textKey": "engineering_hub",
             "subNav": []
         },
@@ -54,12 +54,12 @@
                 {
                     "key": "beam_selector",
                     "textKey": "beam_selector",
-                    "href": "aisc/beam selector.html"
+                    "href": "gui/beam selector.html"
                 },
                 {
                     "key": "angle_support",
                     "textKey": "angle_support",
-                    "href": "aisc/angle_support.html"
+                    "href": "gui/angle_support.html"
                 }
             ]
         },
