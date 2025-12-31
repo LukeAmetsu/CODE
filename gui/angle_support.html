@@ -31,13 +31,15 @@
       <main id="angle-support-main">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white" data-i18n="angle_support_title">
               Single Angle Wall Support
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" data-i18n="angle_support_subtitle">
               Checks masonry anchors for a single angle beam support using
               linear interaction.
-              <br /><strong>Anchor:</strong> DeWalt AC100+ Gold (Masonry)
+            </p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <strong data-i18n="anchor_type">Anchor:</strong> DeWalt AC100+ Gold (Masonry)
             </p>
           </div>
 
@@ -47,11 +49,12 @@
             >
               <h3
                 class="font-semibold text-blue-800 dark:text-blue-300 border-b border-blue-200 dark:border-blue-800 pb-1"
+                data-i18n="beam_geometry_load"
               >
                 Beam Geometry & Load
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="beam_span_ft"
                   >Beam Span (ft)</label
                 >
                 <input
@@ -62,7 +65,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="trib_width_spacing_ft"
                   >Tributary Width / Spacing (ft)</label
                 >
                 <input
@@ -71,12 +74,12 @@
                   value="5"
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                 />
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="text-xs text-gray-500 mt-1" data-i18n="trib_width_desc">
                   Width of deck supported by this beam.
                 </p>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="area_load_psf"
                   >Area Load (psf)</label
                 >
                 <input
@@ -85,7 +88,7 @@
                   value="50"
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                 />
-                <p class="text-xs text-gray-500 mt-1">Total Dead + Live Load</p>
+                <p class="text-xs text-gray-500 mt-1" data-i18n="total_dead_live_load">Total Dead + Live Load</p>
               </div>
             </div>
 
@@ -94,12 +97,13 @@
             >
               <h3
                 class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1"
+                data-i18n="angle_properties"
               >
                 Angle Properties
               </h3>
 
               <div class="mb-2">
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="design_method_fos"
                   >Design Method (FOS)</label
                 >
                 <select
@@ -112,7 +116,7 @@
               </div>
 
               <div class="mb-2">
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="configuration"
                   >Configuration</label
                 >
                 <select
@@ -125,7 +129,7 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-sm font-medium mb-1"
+                  <label class="block text-sm font-medium mb-1" data-i18n="leg_size_in"
                     >Leg Size (in)</label
                   >
                   <select
@@ -143,7 +147,7 @@
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1"
+                  <label class="block text-sm font-medium mb-1" data-i18n="thickness_in"
                     >Thickness (in)</label
                   >
                   <select
@@ -164,7 +168,7 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-sm font-medium mb-1"
+                  <label class="block text-sm font-medium mb-1" data-i18n="moment_arm_e"
                     >Moment Arm (e)</label
                   >
                   <input
@@ -175,7 +179,7 @@
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Fy (ksi)</label>
+                  <label class="block text-sm font-medium mb-1" data-i18n="fy_ksi">Fy (ksi)</label>
                   <input
                     type="text"
                     id="angle_fy"
@@ -184,7 +188,7 @@
                   />
                 </div>
               </div>
-              <p class="text-xs text-gray-500 mt-1">
+              <p class="text-xs text-gray-500 mt-1" data-i18n="sym_angles_assumed">
                 Symmetrical angles assumed (e.g. L4x4).
               </p>
             </div>
@@ -194,11 +198,12 @@
             >
               <h3
                 class="font-semibold text-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 pb-1"
+                data-i18n="connection_details"
               >
                 Connection Details
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="number_of_bolts"
                   >Number of Bolts</label
                 >
                 <input
@@ -219,11 +224,12 @@
                 <label
                   for="staggered_check"
                   class="text-sm font-medium text-gray-900 dark:text-gray-300"
+                  data-i18n="staggered_pattern"
                   >Staggered Pattern?</label
                 >
               </div>
               <div id="gage-container" class="hidden">
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="gage_vert_spacing_in"
                   >Gage (Vertical Spacing in)</label
                 >
                 <input
@@ -235,7 +241,7 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="bolt_diameter"
                   >Bolt Diameter</label
                 >
                 <select
@@ -249,7 +255,7 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1"
+                <label class="block text-sm font-medium mb-1" data-i18n="embedment_depth_hnom"
                   >Embedment Depth (h<sub>nom</sub>)</label
                 >
                 <select
@@ -260,7 +266,7 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1">Substrate</label>
+                <label class="block text-sm font-medium mb-1" data-i18n="substrate">Substrate</label>
                 <select
                   id="substrate"
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
@@ -277,6 +283,7 @@
               <button
                 id="calc-btn"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105"
+                data-i18n="calculate_capacity"
               >
                 Calculate Capacity
               </button>
@@ -296,6 +303,7 @@
           <div class="flex justify-between items-center mb-4">
             <h2
               class="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white"
+              data-i18n="batch_load_check"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -317,6 +325,7 @@
               <label
                 for="upload-excel"
                 class="cursor-pointer py-2 px-4 bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 transition-colors font-semibold text-sm flex items-center gap-2"
+                data-i18n="import_excel"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -344,6 +353,7 @@
               <button
                 id="add-case-btn"
                 class="py-2 px-4 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors font-semibold text-sm flex items-center gap-2"
+                data-i18n="add_case"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -376,10 +386,10 @@
               >
                 <tr>
                   <th class="px-3 py-3 w-12 text-center">#</th>
-                  <th class="px-3 py-3 min-w-[120px]">Beam Span (ft)</th>
-                  <th class="px-3 py-3 min-w-[120px]">Trib. Width (ft)</th>
-                  <th class="px-3 py-3 min-w-[120px]">Area Load (psf)</th>
-                  <th class="px-3 py-3 min-w-[80px]">Bolts</th>
+                  <th class="px-3 py-3 min-w-[120px]" data-i18n="beam_span_ft">Beam Span (ft)</th>
+                  <th class="px-3 py-3 min-w-[120px]" data-i18n="trib_width_spacing_ft">Trib. Width (ft)</th>
+                  <th class="px-3 py-3 min-w-[120px]" data-i18n="area_load_psf">Area Load (psf)</th>
+                  <th class="px-3 py-3 min-w-[80px]" data-i18n="number_of_bolts">Bolts</th>
                   <th class="px-3 py-3 w-16 text-center">Action</th>
                 </tr>
               </thead>
@@ -394,6 +404,7 @@
           >
             <p
               class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2"
+              data-i18n="tip_batch_paste" 
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -412,17 +423,18 @@
               <strong>Tip:</strong> You can copy multiple rows from Excel (Span,
               Trib Width, Load) and paste directly into the table.
             </p>
-            <button
-              id="batch-calc-btn"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-md transform transition hover:scale-105 text-sm"
-            >
-              Run Batch Calculation
-            </button>
+              <button
+                id="batch-calc-btn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-md transform transition hover:scale-105 text-sm"
+                data-i18n="run_batch_calculation"
+              >
+                Run Batch Calculation
+              </button>
           </div>
         </div>
 
         <div id="batch-results-container" class="hidden mb-12">
-          <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200">
+          <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200" data-i18n="results_table">
             Results Table
           </h3>
           <div
@@ -436,11 +448,11 @@
               >
                 <tr>
                   <th class="px-4 py-3">#</th>
-                  <th class="px-4 py-3">Span (ft)</th>
-                  <th class="px-4 py-3">Load (psf)</th>
-                  <th class="px-4 py-3">Bolts</th>
-                  <th class="px-4 py-3">Result</th>
-                  <th class="px-4 py-3">Max Ratio</th>
+                  <th class="px-4 py-3" data-i18n="span_l">Span (ft)</th>
+                  <th class="px-4 py-3" data-i18n="area_load_psf">Load (psf)</th>
+                  <th class="px-4 py-3" data-i18n="number_of_bolts">Bolts</th>
+                  <th class="px-4 py-3" data-i18n="status">Result</th>
+                  <th class="px-4 py-3" data-i18n="dc_ratio">Max Ratio</th>
                 </tr>
               </thead>
               <tbody id="batch-results-body">
@@ -470,22 +482,23 @@
             class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
           >
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 class="font-bold text-lg">Calculation Breakdown</h3>
+              <h3 class="font-bold text-lg" data-i18n="calculation_breakdown">Calculation Breakdown</h3>
             </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
               <div>
                 <h4
                   class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                  data-i18n="load_demand"
                 >
                   Load Demand
                 </h4>
                 <table class="w-full text-sm">
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Linear Load (w)</td>
+                    <td class="py-2" data-i18n="linear_load_w">Linear Load (w)</td>
                     <td class="py-2 text-right font-mono" id="res-w">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Beam Reaction (V<sub>total</sub>)</td>
+                    <td class="py-2" data-i18n="beam_reaction_vtotal">Beam Reaction (V<sub>total</sub>)</td>
                     <td
                       class="py-2 text-right font-mono font-bold"
                       id="res-reaction"
@@ -494,25 +507,25 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Total Bolts</td>
+                    <td class="py-2" data-i18n="total_bolts">Total Bolts</td>
                     <td class="py-2 text-right font-mono" id="res-total-bolts">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Bolts per Angle</td>
+                    <td class="py-2" data-i18n="bolts_per_angle">Bolts per Angle</td>
                     <td class="py-2 text-right font-mono" id="res-bolts-angle">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Shear per Bolt (v)</td>
+                    <td class="py-2" data-i18n="shear_per_bolt_v">Shear per Bolt (v)</td>
                     <td class="py-2 text-right font-mono" id="res-v-bolt">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Tension per Bolt (t)</td>
+                    <td class="py-2" data-i18n="tension_per_bolt_t">Tension per Bolt (t)</td>
                     <td class="py-2 text-right font-mono" id="res-t-bolt">
                       --
                     </td>
@@ -526,24 +539,25 @@
               <div>
                 <h4
                   class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                  data-i18n="anchor_capacity_allowable"
                 >
                   Anchor Capacity (Allowable)
                 </h4>
                 <table class="w-full text-sm">
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Anchor Type</td>
+                    <td class="py-2" data-i18n="anchor_type">Anchor Type</td>
                     <td class="py-2 text-right">DeWalt AC100+ Gold</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Diameter</td>
+                    <td class="py-2" data-i18n="diameter">Diameter</td>
                     <td class="py-2 text-right" id="res-dia">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Embedment (h<sub>nom</sub>)</td>
+                    <td class="py-2" data-i18n="embedment_hnom">Embedment (h<sub>nom</sub>)</td>
                     <td class="py-2 text-right" id="res-embed">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Allowable Shear (V<sub>all</sub>)</td>
+                    <td class="py-2" data-i18n="allowable_shear_vall">Allowable Shear (V<sub>all</sub>)</td>
                     <td
                       class="py-2 text-right font-mono text-green-600"
                       id="res-v-allow"
@@ -552,7 +566,7 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Allowable Tension (T<sub>all</sub>)</td>
+                    <td class="py-2" data-i18n="allowable_tension_tall">Allowable Tension (T<sub>all</sub>)</td>
                     <td
                       class="py-2 text-right font-mono text-green-600"
                       id="res-t-allow"
@@ -566,26 +580,27 @@
               <div>
                 <h4
                   class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                  data-i18n="angle_bending_local"
                 >
                   Angle Bending (Local)
                 </h4>
                 <table class="w-full text-sm">
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Moment Arm (e)</td>
+                    <td class="py-2" data-i18n="moment_arm_e">Moment Arm (e)</td>
                     <td class="py-2 text-right font-mono" id="res-arm">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Required Moment (M<sub>u</sub>)</td>
+                    <td class="py-2" data-i18n="required_moment_mu">Required Moment (M<sub>u</sub>)</td>
                     <td class="py-2 text-right font-mono font-bold" id="res-mu">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Plastic Modulus (Z)</td>
+                    <td class="py-2" data-i18n="plastic_modulus_z">Plastic Modulus (Z)</td>
                     <td class="py-2 text-right font-mono" id="res-z">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">
+                    <td class="py-2" data-i18n="capacity_ma_mn_omega">
                       Capacity (M<sub>a</sub> = M<sub>n</sub>/&Omega;)
                     </td>
                     <td
@@ -596,7 +611,7 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Length Spec</td>
+                    <td class="py-2" data-i18n="length_spec">Length Spec</td>
                     <td
                       class="py-2 text-right font-mono font-bold text-blue-600"
                       id="spec-string"
@@ -610,7 +625,7 @@
                   </tr>
                   <!-- Layout Msg -->
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Layout</td>
+                    <td class="py-2" data-i18n="layout">Layout</td>
                     <td
                       class="py-2 text-right font-mono text-xs text-gray-500"
                       id="layout-msg"
@@ -619,7 +634,7 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">D/C Ratio</td>
+                    <td class="py-2" data-i18n="dc_ratio">D/C Ratio</td>
                     <td class="py-2 text-right font-bold" id="res-ratio-bend">
                       --
                     </td>
@@ -630,18 +645,19 @@
               <div>
                 <h4
                   class="text-sm uppercase tracking-wide text-gray-500 font-bold mb-3"
+                  data-i18n="angle_bending_longit"
                 >
                   Angle Bending (Longit.)
                 </h4>
                 <table class="w-full text-sm">
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Span (L)</td>
+                    <td class="py-2" data-i18n="span_l">Span (L)</td>
                     <td class="py-2 text-right font-mono" id="res-span-long">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Req. Moment (M<sub>long</sub>)</td>
+                    <td class="py-2" data-i18n="req_moment_mlong">Req. Moment (M<sub>long</sub>)</td>
                     <td
                       class="py-2 text-right font-mono font-bold"
                       id="res-m-long"
@@ -650,13 +666,13 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Modulus (Z<sub>x</sub>)</td>
+                    <td class="py-2" data-i18n="modulus_zx">Modulus (Z<sub>x</sub>)</td>
                     <td class="py-2 text-right font-mono" id="res-zx-long">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">Capacity (M<sub>a</sub>)</td>
+                    <td class="py-2" data-i18n="capacity_ma">Capacity (M<sub>a</sub>)</td>
                     <td
                       class="py-2 text-right font-mono text-green-600 font-bold"
                       id="res-ma-long"
@@ -665,7 +681,7 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2">D/C Ratio</td>
+                    <td class="py-2" data-i18n="dc_ratio">D/C Ratio</td>
                     <td class="py-2 text-right font-bold" id="res-ratio-long">
                       --
                     </td>
