@@ -261,5 +261,24 @@
     </div>
 
     <script src="M-N.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+             if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'mn-diagram', // Verify key in nav-config.json
+                    pageTitle: 'mn_diagram',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
 </body>
 </html>

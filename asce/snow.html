@@ -271,7 +271,22 @@
     </div>
 
     <script>
-        // Manual injection removed in favor of initializeApp in snow.js
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'snow',
+                    pageTitle: 'snow',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
     </script>
 </body>
 

@@ -207,7 +207,22 @@
     <script src="rain.js" defer></script>
 
     <script>
-        // Manual injection removed in favor of initializeApp in rain.js
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'rain',
+                    pageTitle: 'rain',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
     </script>
 </body>
 

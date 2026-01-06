@@ -218,7 +218,7 @@ async function injectHeader(config) {
  * @param {string} config.footerPlaceholderId - The ID of the placeholder element.
  */
 async function injectFooter(config) {
-    const { footerPlaceholderId = 'footer-placeholder' } = config;
+    const { footerPlaceholderId = 'footer-placeholder', pathPrefix = './' } = config;
     const placeholder = document.getElementById(footerPlaceholderId);
     if (!placeholder) return;
 

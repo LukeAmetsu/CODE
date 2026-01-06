@@ -1317,48 +1317,16 @@ async function initializeApp(config) { // This function is already async
 
     // --- 0. Initialize Internationalization (i18n) First ---
     // i18n is defined in i18n.js and should be available globally.
-    // --- VISUAL DEBUGGER INJECTION (TEMPORARY) ---
-    const debugDiv = document.createElement('div');
-    debugDiv.id = 'debug-console';
-    debugDiv.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;height:150px;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;overflow:auto;z-index:9999;padding:10px;pointer-events:none;';
-    document.body.appendChild(debugDiv);
+    // --- VISUAL DEBUGGER INJECTION REMOVED ---
+    
+    // window.onerror = function(msg, url, line) { ... } removed along with debugger
 
-    const originalConsoleError = console.error;
-    const originalConsoleWarn = console.warn;
-    const originalConsoleLog = console.log;
-
-    function logToScreen(msg, color = '#0f0') {
-        const line = document.createElement('div');
-        line.style.color = color;
-        line.textContent = `> ${msg}`;
-        if (document.getElementById('debug-console')) {
-            document.getElementById('debug-console').appendChild(line);
-        }
-    }
-
-    console.error = function(...args) {
-        originalConsoleError.apply(console, args);
-        logToScreen(args.join(' '), '#f55');
-    };
-    console.warn = function(...args) {
-        originalConsoleWarn.apply(console, args);
-        logToScreen(args.join(' '), '#ff0');
-    };
-    console.log = function(...args) {
-        originalConsoleLog.apply(console, args);
-        logToScreen(args.join(' '), '#0f0');
-    };
-
-    window.onerror = function(msg, url, line) {
-        logToScreen(`Uncaught Error: ${msg} @ ${url}:${line}`, '#f00');
-    };
-
-    logToScreen("Debug Console Active. Initializing App...");
+    console.log("Initializing App...");
 
     if (typeof i18n !== 'undefined' && typeof i18n.initialize === 'function') {
         try {
             await i18n.initialize();
-            logToScreen("i18n initialized successfully.");
+            console.log("i18n initialized successfully.");
         } catch (e) {
             console.error("i18n initialization failed:", e);
         }

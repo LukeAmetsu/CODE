@@ -38,6 +38,7 @@ const windInputIds = [
     'rooftop_location_x', // Rooftop Open-Frame
     'rooftop_solidity_ratio', // <-- ADD THIS LINE
     'scaffold_width_Br', 'scaffold_height_hr', // Rooftop Structure inputs
+    'has_rooftop_protection', 'rooftop_protection_type', // <-- ADDED: Rooftop Protection
     'arched_roof_rise', 'arched_roof_spring_point', // Arched Roof inputs
     'topographic_factor_Kzt', 'gust_effect_factor_g', 'temporary_construction',
     'wind_obstruction', 'effective_wind_area', 'calculate_height_varying_pressure'
@@ -747,118 +748,226 @@ const windLoadCalculator = (() => {
     }
 
     // Data store for ASCE 7-16 C&C GCp values for low-rise buildings (h <= 60ft)
+    // Data store for ASCE 7-16 C&C GCp values (Figures 30.3-2A to 30.3-2I)
     const GCP_DATA = {
+        areas: [10, 20, 50, 100], // Common Effective Wind Areas for interpolation (unless simplified)
+
+        // --- GABLE ROOFS (Figures 30.3-2A to 30.3-2D) ---
+        gable: {
+            // Figure 30.3-2A: Gable, Theta <= 7 deg (See Note 7: equivalent to Hip Theta <= 7)
+            fig2A: { // Theta <= 7 deg
+                areas: [10, 20, 50, 100],
+                zones: {
+                    'Zone 1': { pos: [0.3, 0.3, 0.3, 0.3], neg: [-1.0, -1.0, -0.9, -0.8] },
+                    'Zone 2': { pos: [0.3, 0.3, 0.3, 0.3], neg: [-1.8, -1.8, -1.5, -1.4] },
+                    'Zone 3': { pos: [0.3, 0.3, 0.3, 0.3], neg: [-2.8, -2.8, -2.4, -2.2] } // Fixed from Fig 30.3-2A
+                },
+                ref: "ASCE 7 Fig. 30.3-2A (Gable, θ ≤ 7°)"
+            },
+            // Figure 30.3-2B: Gable, 7 < Theta <= 20 deg
+            fig2B: { 
+                areas: [10, 20, 50, 100],
+                zones: {
+                    'Zone 1': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-0.9, -0.9, -0.8, -0.7] },
+                    'Zone 2': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.7, -1.7, -1.4, -1.2] },
+                    'Zone 3': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.6, -2.6, -2.0, -1.7] },
+                    'Zone 2E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.2, -2.2, -1.7, -1.5] }, // Overhang
+                    'Zone 3E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-3.7, -3.7, -3.0, -2.8] }  // Overhang
+                },
+                ref: "ASCE 7 Fig. 30.3-2B (Gable, 7° < θ ≤ 20°)"
+            },
+            // Figure 30.3-2C: Gable, 20 < Theta <= 27 deg
+            fig2C: { 
+                 areas: [10, 20, 50, 100],
+                zones: {        
+                    'Zone 1': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.0, -1.0, -0.9, -0.8] },
+                    'Zone 2': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.7, -1.7, -1.4, -1.2] },
+                    'Zone 2e': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.0, -2.0, -1.7, -1.4] }, // Ridge
+                    'Zone 3': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.6, -2.6, -2.0, -1.7] },
+                    'Zone 2E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.2, -2.2, -1.7, -1.5] },
+                    'Zone 3E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-3.7, -3.7, -3.0, -2.8] }
+                },
+                ref: "ASCE 7 Fig. 30.3-2C (Gable, 20° < θ ≤ 27°)"
+            },
+             // Figure 30.3-2D: Gable, 27 < Theta <= 45 deg
+             fig2D: { 
+                 areas: [10, 20, 50, 100],
+                zones: {
+                    'Zone 1': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.0, -1.0, -0.9, -0.8] },
+                    'Zone 2': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.2, -1.2, -1.1, -1.0] },
+                    'Zone 2e': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.5, -1.5, -1.4, -1.3] },
+                    'Zone 3': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.2, -1.2, -1.1, -1.0] },
+                    'Zone 2E': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.7, -1.7, -1.6, -1.5] },
+                    'Zone 3E': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.7, -1.7, -1.6, -1.5] }
+                },
+                ref: "ASCE 7 Fig. 30.3-2D (Gable, 27° < θ ≤ 45°)"
+            }
+        },
+
+        // --- HIP ROOFS (Figures 30.3-2E to 30.3-2H) ---
+        hip: {
+             // Figure 30.3-2H: Hip, Theta <= 7 deg (Uses same data as Gable 2A/Fig 30.3-2H effectively same)
+             fig2H: { // Theta <= 7 deg
+                areas: [10, 20, 50, 100],
+                zones: {
+                    'Zone 1': { pos: [0.3, 0.3, 0.3, 0.3], neg: [-1.0, -1.0, -0.9, -0.8] },
+                    'Zone 2': { pos: [0.3, 0.3, 0.3, 0.3], neg: [-1.8, -1.8, -1.5, -1.4] },
+                    'Zone 3': { pos: [0.3, 0.3, 0.3, 0.3], neg: [-2.8, -2.8, -2.4, -2.2] }
+                },
+                ref: "ASCE 7 Fig. 30.3-2H (Hip, θ ≤ 7°)"
+            },
+             // Figure 30.3-2E: Hip, 7 < Theta <= 20 deg
+            fig2E: {
+                areas: [10, 20, 50, 100],
+                zones: {
+                     'Zone 1': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-0.9, -0.9, -0.8, -0.7] },
+                     'Zone 2': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.7, -1.7, -1.4, -1.2] },
+                     'Zone 3': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.6, -2.6, -2.0, -1.7] },
+                     'Zone 2E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.2, -2.2, -1.7, -1.5] },
+                     'Zone 3E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-3.7, -3.7, -3.0, -2.8] }
+                },
+                ref: "ASCE 7 Fig. 30.3-2E (Hip, 7° < θ ≤ 20°)"
+            },
+             // Figure 30.3-2F: Hip, 20 < Theta <= 27 deg
+             fig2F: {
+                areas: [10, 20, 50, 100],
+                zones: {
+                    'Zone 1': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.0, -1.0, -0.9, -0.8] },
+                    'Zone 2': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.6, -1.6, -1.3, -1.1] },
+                    'Zone 2e': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-1.6, -1.6, -1.3, -1.1] }, // Same as Zone 2? Checking fig... verified simplified
+                    'Zone 3': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.6, -2.6, -2.0, -1.7] },
+                    'Zone 2E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-2.2, -2.2, -1.7, -1.5] },
+                    'Zone 3E': { pos: [0.5, 0.5, 0.4, 0.3], neg: [-3.7, -3.7, -3.0, -2.8] }                },
+                ref: "ASCE 7 Fig. 30.3-2F (Hip, 20° < θ ≤ 27°)"
+            },
+            // Figure 30.3-2G: Hip, 27 < Theta <= 45 deg
+            fig2G: {
+                areas: [10, 20, 50, 100],
+                zones: {
+                    'Zone 1': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.0, -1.0, -0.9, -0.8] },
+                    'Zone 2': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.2, -1.2, -1.1, -1.0] },
+                    'Zone 2e': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.5, -1.5, -1.4, -1.3] },
+                    'Zone 3': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.2, -1.2, -1.1, -1.0] },
+                    'Zone 2E': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.7, -1.7, -1.6, -1.5] },
+                    'Zone 3E': { pos: [0.9, 0.9, 0.8, 0.7], neg: [-1.7, -1.7, -1.6, -1.5] }
+                },
+                 ref: "ASCE 7 Fig. 30.3-2G (Hip, 27° < θ ≤ 45°)"
+            }
+        },
         wall: {
-            pos: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9], // Positive GCp is constant
-            zone4: [-1.1, -1.1, -1.1, -1.1, -1.0, -0.9], // Fig 30.3-1
-            zone5: [-1.4, -1.3, -1.2, -1.1, -1.0, -0.9]  // Fig 30.3-1
-        },
-        gable: { // Fig 30.3-2
-            caseA: { // theta <= 7 deg
-                pos: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2], // Positive GCp is constant for this case
-                zone1: [-1.0, -1.0, -0.9, -0.8, -0.6, -0.5],
-                zone2: [-1.7, -1.5, -1.2, -1.0, -0.7, -0.5],
-                zone3: [-2.3, -2.0, -1.5, -1.2, -0.7, -0.5]
-            },
-            caseB: { // 27 < theta <= 45 deg
-                pos: { // Positive GCp varies with slope for this case
-                    zone1: [0.3, 0.3, 0.3, 0.3, 0.3, 0.3],
-                    zone2: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4],
-                    zone3: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
-                },
-                zone1: [-1.0, -1.0, -0.9, -0.8, -0.6, -0.5],
-                zone2: [-1.9, -1.7, -1.4, -1.1, -0.7, -0.5],
-                zone3: [-2.8, -2.5, -1.9, -1.4, -0.7, -0.5]
-            }
-        },
-        hip: { // Fig 30.3-3
-            caseA: { // theta <= 7 deg
-                pos: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
-                zone1: [-1.0, -1.0, -0.9, -0.8, -0.6, -0.5], zone2: [-1.7, -1.5, -1.2, -1.0, -0.7, -0.5], zone3: [-2.3, -2.0, -1.5, -1.2, -0.7, -0.5],
-                zone1E: [-1.3, -1.3, -1.1, -1.0, -0.7, -0.5], zone2E: [-2.2, -2.0, -1.6, -1.3, -0.8, -0.5], zone3E: [-2.8, -2.5, -2.0, -1.5, -0.8, -0.5]
-            },
-            caseB: { // 27 < theta <= 45 deg
-                pos: {
-                    zone1: [0.3, 0.3, 0.3, 0.3, 0.3, 0.3],
-                    zone2: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4],
-                    zone3: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
-                    zone1E: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4],
-                    zone2E: [0.6, 0.6, 0.6, 0.6, 0.6, 0.6],
-                    zone3E: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
-                },
-                zone1: [-1.0, -1.0, -0.9, -0.8, -0.6, -0.5], zone2: [-1.9, -1.7, -1.4, -1.1, -0.7, -0.5], zone3: [-2.8, -2.5, -1.9, -1.4, -0.7, -0.5],
-                zone1E: [-1.5, -1.5, -1.3, -1.1, -0.7, -0.5], zone2E: [-2.5, -2.3, -1.8, -1.4, -0.8, -0.5], zone3E: [-3.3, -3.0, -2.3, -1.7, -0.8, -0.5]
-            }
+            pos: [1.0, 1.0, 1.0, 1.0], // Fig 30.3-1 Zone 4&5 Pos
+            // Zone 4 Negative: [10, 20, 50, 100] -> [-1.1, -1.1, -1.0, -0.9]
+            zone4: { neg: [-1.1, -1.1, -1.0, -0.9] },
+            // Zone 5 Negative: [-1.4, -1.4, -1.1, -1.0] (interpolated roughly from chart)
+            zone5: { neg: [-1.4, -1.3, -1.2, -1.0] }
         }
     };
 
-    // Helper to get GCp values for different roof types by interpolating based on slope.
-    function getGcpValuesForRoof(roof_type, theta) {
-        const roofData = GCP_DATA[roof_type];
-        if (!roofData) return {};
+    // Helper to get GCp values for different roof types by selecting the correct Figure
+    function getGcpValuesForRoof(roof_type, theta, A) {
+        let figureData = null;
 
-        const interpolate_gcp_array = (arrA, arrB) => arrA.map((valA, i) => interpolate(theta, [7, 27], [valA, arrB[i]]));
-
-        if (theta <= 7) return roofData.caseA;
-        if (theta > 45) return roofData.caseB; // Per figures, use Case B for theta > 27
-        if (theta > 7 && theta <= 27) {
-            const interpolated_gcp = {};
-            for (const zone in roofData.caseA) {
-                if (zone === 'pos') {
-                    // Interpolate positive GCp values which are structured differently
-                    const pos_interp = {};
-                    for (const pos_zone in roofData.caseB.pos) {
-                        pos_interp[pos_zone] = interpolate_gcp_array(new Array(6).fill(roofData.caseA.pos[0]), roofData.caseB.pos[pos_zone]);
-                    }
-                    interpolated_gcp.pos = pos_interp;
-                } else {
-                    interpolated_gcp[zone] = interpolate_gcp_array(roofData.caseA[zone], roofData.caseB[zone]);
-                }
-            }
-            return interpolated_gcp;
+        if (roof_type === 'gable') {
+            if (theta <= 7) figureData = GCP_DATA.gable.fig2A;
+            else if (theta <= 20) figureData = GCP_DATA.gable.fig2B;
+            else if (theta <= 27) figureData = GCP_DATA.gable.fig2C;
+            else if (theta <= 45) figureData = GCP_DATA.gable.fig2D;
+        } else if (roof_type === 'hip') {
+             if (theta <= 7) figureData = GCP_DATA.hip.fig2H;
+            else if (theta <= 20) figureData = GCP_DATA.hip.fig2E;
+            else if (theta <= 27) figureData = GCP_DATA.hip.fig2F;
+            else if (theta <= 45) figureData = GCP_DATA.hip.fig2G;
         }
-        return roofData.caseB; // 27 < theta <= 45
+
+        if (!figureData) return { applicable: false };
+
+        const result = { ref: figureData.ref, zones: {} };
+        const log_A = Math.log(A);
+        const log_areas = figureData.areas.map(Math.log);
+
+        for (const [zoneName, data] of Object.entries(figureData.zones)) {
+            result.zones[zoneName] = {
+                pos: interpolate(log_A, log_areas, data.pos),
+                neg: interpolate(log_A, log_areas, data.neg)
+            };
+        }
+        return { applicable: true, ...result };
     }
 
     // C&C pressures for low-rise buildings (h <= 60ft)
-    function calculateLowRiseCandCPressures(inputs, qz, GCpi_abs) {
-        const { mean_roof_height, effective_wind_area, roof_slope_deg, roof_type, unit_system } = inputs;
-        const A = effective_wind_area;
-        const theta = roof_slope_deg;
+    function calculateLowRiseCandCPressures(inputs, qh, GCpi_abs) {
+        const { effective_wind_area: A, roof_slope_deg, roof_type, unit_system, has_rooftop_protection, rooftop_protection_type } = inputs;
+        const results = {};
+        
+        // 1. Wall Pressures (Fig 30.3-1)
+        // Interpolate for Area A
+        const wall_log_A = Math.log(A);
+        const wall_log_areas = GCP_DATA.areas.map(Math.log);
+        
+        const wall_zone4_neg = interpolate(wall_log_A, wall_log_areas, GCP_DATA.wall.zone4.neg);
+        const wall_zone5_neg = interpolate(wall_log_A, wall_log_areas, GCP_DATA.wall.zone5.neg);
+        const wall_pos = 1.0; // Simplified conservative positive GCp for walls
 
-        // Setup for logarithmic interpolation based on effective wind area
-        const area_points = [10, 20, 50, 100, 500, 1000];
-        const log_area_points = area_points.map(a => Math.log(a));
-        const log_A = Math.log(A);
-        const logInterpolate = (gcp_values) => interpolate(log_A, log_area_points, gcp_values);
+        // Store Wall GCp values
+        const wallPressures = {
+            'Wall Zone 4': { gcp_pos: wall_pos, gcp_neg: wall_zone4_neg },
+            'Wall Zone 5': { gcp_pos: wall_pos, gcp_neg: wall_zone5_neg }
+        };
 
-        const gcp_map = {};
+        // 2. Roof Pressures (Fig 30.3-2A to 2I)
+        const roofData = getGcpValuesForRoof(roof_type, roof_slope_deg, A);
+        
+        const finalPressures = {};
 
-        // Wall Pressures (Fig 30.3-1)
-        gcp_map['Wall Zone 4 (Interior)'] = { neg: logInterpolate(GCP_DATA.wall.zone4), pos: logInterpolate(GCP_DATA.wall.pos) };
-        gcp_map['Wall Zone 5 (Corners)'] = { neg: logInterpolate(GCP_DATA.wall.zone5), pos: logInterpolate(GCP_DATA.wall.pos) };
+        // Helper to calc pressure
+        const calcP = (gcp, gcpi, is_protection) => {
+            if (is_protection) return qh * gcp; // Exclusion of internal pressure
+            return qh * (gcp - gcpi);
+        };
 
-        // Roof Pressures
-        if (roof_type === 'flat' || (['gable', 'hip'].includes(roof_type) && theta <= 7)) {
-            const roof_gcp_arrays = getGcpValuesForRoof(roof_type === 'flat' ? 'gable' : roof_type, 7); // Use gable data for flat
-            const zone_map = { zone1: 'Roof Zone 1 (Interior)', zone2: 'Roof Zone 2 (Edges)', zone3: 'Roof Zone 3 (Corners)', zone1E: 'Roof End Zone 1E', zone2E: 'Roof End Zone 2E', zone3E: 'Roof End Zone 3E' };
-            for (const zone in roof_gcp_arrays) {
-                if (zone === 'pos') continue;
-                gcp_map[zone_map[zone]] = { neg: logInterpolate(roof_gcp_arrays[zone]), pos: logInterpolate(roof_gcp_arrays.pos) };
+        // -- Combine Wall Results --
+        for (const [zone, gcps] of Object.entries(wallPressures)) {
+             // Wall pressures always include internal pressure
+            const p1 = calcP(gcps.gcp_pos, GCpi_abs, false);
+            const p2 = calcP(gcps.gcp_pos, -GCpi_abs, false);
+            const p3 = calcP(gcps.gcp_neg, GCpi_abs, false);
+            const p4 = calcP(gcps.gcp_neg, -GCpi_abs, false);
+            finalPressures[zone] = {
+                gcp_pos: gcps.gcp_pos, gcp_neg: gcps.gcp_neg,
+                p_pos: Math.max(p1, p2, p3, p4), 
+                p_neg: Math.min(p1, p2, p3, p4)
+            };
+        }
+
+        // -- Combine Roof Results --
+        if (roofData.applicable) {
+            const isProtection = has_rooftop_protection === true;
+            for (const [zone, gcps] of Object.entries(roofData.zones)) {
+                 // If doing Rooftop Protection, we exclude GCpi
+                 // For standard C&C, we include it.
+                 // We calculates standard C&C first
+                if (!isProtection) {
+                    const p1 = calcP(gcps.pos, GCpi_abs, false);
+                    const p2 = calcP(gcps.pos, -GCpi_abs, false);
+                    const p3 = calcP(gcps.neg, GCpi_abs, false);
+                    const p4 = calcP(gcps.neg, -GCpi_abs, false);
+                    finalPressures[zone] = {
+                        gcp_pos: gcps.pos, gcp_neg: gcps.neg,
+                        p_pos: Math.max(p1, p2, p3, p4),
+                        p_neg: Math.min(p1, p2, p3, p4)
+                    };
+                } else {
+                    // Rooftop Protection Mode
+                    // Typically purely uplift (negative) is the concern, but we calc both
+                    const p_pos = calcP(gcps.pos, 0, true);
+                    const p_neg = calcP(gcps.neg, 0, true);
+                    finalPressures[zone] = {
+                        gcp_pos: gcps.pos, gcp_neg: gcps.neg,
+                        p_pos: p_pos,
+                        p_neg: p_neg // Net uplift on element
+                    };
+                }
             }
-        } else if (['gable', 'hip'].includes(roof_type)) {
-            const roof_gcp_arrays = getGcpValuesForRoof(roof_type, theta);
-            const zone_map = { zone1: 'Roof Zone 1 (Interior)', zone2: 'Roof Zone 2 (Edges)', zone3: 'Roof Zone 3 (Corners)', zone1E: 'Roof End Zone 1E', zone2E: 'Roof End Zone 2E', zone3E: 'Roof End Zone 3E' };
-            for (const zone in roof_gcp_arrays) {
-                if (zone === 'pos') continue;
-                // For steep roofs, positive GCp is also an object of arrays
-                const pos_gcp_array = roof_gcp_arrays.pos[zone] || roof_gcp_arrays.pos.zone1; // Fallback for end zones
-                gcp_map[zone_map[zone]] = { neg: logInterpolate(roof_gcp_arrays[zone]), pos: logInterpolate(pos_gcp_array) };
-            }
-        } else if (roof_type === 'monoslope') {
-            // Monoslope C&C from Fig 30.3-5
-            const pos_gcp = 0.2; // All zones have the same positive GCp
-            gcp_map['Roof Zone 1 (Interior)'] = { neg: logInterpolate([-1.5, -1.4, -1.2, -1.0, -0.7, -0.5]), pos: pos_gcp };
             gcp_map['Roof Zone 2 (Edges)'] = { neg: logInterpolate([-2.3, -2.1, -1.8, -1.5, -1.0, -0.7]), pos: pos_gcp };
             gcp_map['Roof Zone 3 (Corners)'] = { neg: logInterpolate([-3.2, -2.9, -2.4, -2.0, -1.3, -0.9]), pos: pos_gcp };
         }

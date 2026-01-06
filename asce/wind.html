@@ -248,6 +248,26 @@
                                 </p>
                             </div>
                         </div>
+                        <div class="col-span-2 mt-2">
+                            <label for="has_rooftop_protection" class="flex items-center space-x-2 text-sm font-medium">
+                                <input type="checkbox" id="has_rooftop_protection" data-ui-toggle-controller
+                                    data-ui-toggle-target="#rooftop-protection-inputs" data-ui-toggle-condition-checked="true">
+                                <span>Calculate Rooftop Protection (Pavers/Overlays)?</span>
+                            </label>
+                        </div>
+                        <div id="rooftop-protection-inputs"
+                            class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4 col-span-2">
+                            <div>
+                                <label for="rooftop_protection_type" class="block text-sm font-medium mb-1">Protection Type</label>
+                                <select id="rooftop_protection_type">
+                                    <option value="Pavers">Pavers/Overlays (Net Uplift)</option>
+                                    <option value="Ballast">Ballast (Simplified)</option>
+                                </select>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Calculates pressure excluding internal pressure (p = q<sub>h</sub>GC<sub>p</sub>).
+                                </p>
+                            </div>
+                        </div>
                         <div id="open-building-options" class="mt-4 space-y-4 hidden">
                             <label for="wind_obstruction" class="block text-sm font-medium mb-1">Wind Flow Obstruction
                                 (for Open Buildings)</label>
@@ -531,7 +551,22 @@
     <script src="wind.js" defer></script>
 
     <script>
-        // Manual injection removed in favor of initializeApp in wind.js
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'wind',
+                    pageTitle: 'wind',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
     </script>
 </body>
 
