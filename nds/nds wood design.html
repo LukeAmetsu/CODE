@@ -7,6 +7,7 @@
     <title>NDS Wood Member Design Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         // Lógica de Tema Imediata para evitar o "flash"
@@ -71,6 +72,12 @@
                     </div>
                     <div class="form-section">
                         <h2>Wood Species & Grade</h2>
+                        <div class="mb-4">
+                            <label for="wood_selector" class="block text-sm font-medium mb-1">Select Species & Grade</label>
+                            <select id="wood_selector" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
+                                <option value="">Custom (Manual Input)</option>
+                            </select>
+                        </div>
                         <p class="text-xs mb-2">Unadjusted values from NDS Supplement.</p>
                         <div class="grid grid-cols-2 gap-4">
                             <div><label for="Fb_unadjusted" class="block text-sm">Fb (psi)</label><input type="number"

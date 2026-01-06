@@ -693,7 +693,7 @@ const windLoadCalculator = (() => {
 
     // C&C pressures for high-rise buildings (h > 60ft)
     function calculateHighRiseCandCPressures(inputs, qh, GCpi_abs) {
-        const { mean_roof_height: h, effective_wind_area: A, roof_slope_deg, roof_type, unit_system } = inputs;
+        const { mean_roof_height: h, effective_wind_area: A, roof_slope_deg, roof_type, unit_system, has_rooftop_protection } = inputs;
         const warnings = [];
         const results = {};
 
@@ -713,9 +713,12 @@ const windLoadCalculator = (() => {
 
         // Convert GCp values to final pressures
         const finalPressures = {};
+        const protectionPressures = {};
+
         for (const [zone, gcps] of Object.entries(results)) {
             if (typeof gcps.positive !== 'number' || typeof gcps.negative !== 'number') continue;
 
+            // Standard Calculation (Always calculated)
             const p1 = qh * (gcps.positive - GCpi_abs);
             const p2 = qh * (gcps.positive - (-GCpi_abs));
             const p3 = qh * (gcps.negative - GCpi_abs);
@@ -725,9 +728,20 @@ const windLoadCalculator = (() => {
                 gcp_pos: gcps.positive, gcp_neg: gcps.negative,
                 p_pos: Math.max(p1, p2, p3, p4), p_neg: Math.min(p1, p2, p3, p4)
             };
+
+            // Rooftop Protection Calculation (Separate Table)
+            if (has_rooftop_protection && zone.toLowerCase().includes('roof')) {
+                 protectionPressures[zone] = {
+                      gcp_pos: gcps.positive, gcp_neg: gcps.negative,
+                      p_pos: qh * gcps.positive,
+                      p_neg: qh * gcps.negative
+                 };
+            }
         }
 
-        return { applicable: true, pressures: finalPressures, ref: `ASCE 7-16 Ch. 30, Part 2 (h > ${unit_system === 'imperial' ? '60ft' : '18.3m'})`, is_high_rise: true, warnings };
+        const protectionObj = has_rooftop_protection ? { applicable: true, type: inputs.rooftop_protection_type, pressures: protectionPressures, is_high_rise: true } : null;
+
+        return { applicable: true, pressures: finalPressures, protection: protectionObj, ref: `ASCE 7-16 Ch. 30, Part 2 (h > ${unit_system === 'imperial' ? '60ft' : '18.3m'})`, is_high_rise: true, warnings };
     }
 
     // C&C calculation dispatcher
@@ -940,54 +954,37 @@ const windLoadCalculator = (() => {
         }
 
         // -- Combine Roof Results --
+        const protectionPressures = {};
+
         if (roofData.applicable) {
-            const isProtection = has_rooftop_protection === true;
             for (const [zone, gcps] of Object.entries(roofData.zones)) {
-                 // If doing Rooftop Protection, we exclude GCpi
-                 // For standard C&C, we include it.
-                 // We calculates standard C&C first
-                if (!isProtection) {
-                    const p1 = calcP(gcps.pos, GCpi_abs, false);
-                    const p2 = calcP(gcps.pos, -GCpi_abs, false);
-                    const p3 = calcP(gcps.neg, GCpi_abs, false);
-                    const p4 = calcP(gcps.neg, -GCpi_abs, false);
-                    finalPressures[zone] = {
-                        gcp_pos: gcps.pos, gcp_neg: gcps.neg,
-                        p_pos: Math.max(p1, p2, p3, p4),
-                        p_neg: Math.min(p1, p2, p3, p4)
-                    };
-                } else {
-                    // Rooftop Protection Mode
-                    // Typically purely uplift (negative) is the concern, but we calc both
+                // Standard Calculation
+                const p1 = calcP(gcps.pos, GCpi_abs, false);
+                const p2 = calcP(gcps.pos, -GCpi_abs, false);
+                const p3 = calcP(gcps.neg, GCpi_abs, false);
+                const p4 = calcP(gcps.neg, -GCpi_abs, false);
+                finalPressures[zone] = {
+                    gcp_pos: gcps.pos, gcp_neg: gcps.neg,
+                    p_pos: Math.max(p1, p2, p3, p4),
+                    p_neg: Math.min(p1, p2, p3, p4)
+                };
+
+                // Rooftop Protection
+                if (has_rooftop_protection) {
                     const p_pos = calcP(gcps.pos, 0, true);
                     const p_neg = calcP(gcps.neg, 0, true);
-                    finalPressures[zone] = {
+                    protectionPressures[zone] = {
                         gcp_pos: gcps.pos, gcp_neg: gcps.neg,
                         p_pos: p_pos,
-                        p_neg: p_neg // Net uplift on element
+                        p_neg: p_neg
                     };
                 }
             }
-            gcp_map['Roof Zone 2 (Edges)'] = { neg: logInterpolate([-2.3, -2.1, -1.8, -1.5, -1.0, -0.7]), pos: pos_gcp };
-            gcp_map['Roof Zone 3 (Corners)'] = { neg: logInterpolate([-3.2, -2.9, -2.4, -2.0, -1.3, -0.9]), pos: pos_gcp };
         }
+        
+        const protectionObj = has_rooftop_protection ? { applicable: true, type: rooftop_protection_type, pressures: protectionPressures, is_high_rise: false } : null;
 
-        const final_pressures = {};
-        for (const zone in gcp_map) {
-            const gcp_pos = gcp_map[zone].pos;
-            const gcp_neg = gcp_map[zone].neg;
-            // p = qh * (GCp - GCpi)
-            const p1 = qz * (gcp_pos - GCpi_abs);
-            const p2 = qz * (gcp_pos - (-GCpi_abs));
-            const p3 = qz * (gcp_neg - GCpi_abs);
-            const p4 = qz * (gcp_neg - (-GCpi_abs));
-
-            final_pressures[zone] = {
-                gcp_pos: gcp_pos, gcp_neg: gcp_neg,
-                p_pos: Math.max(p1, p2, p3, p4), p_neg: Math.min(p1, p2, p3, p4)
-            };
-        }
-        return { applicable: true, pressures: final_pressures, ref: `ASCE 7 Ch. 30, Part 1 (h<=${unit_system === 'imperial' ? '60ft' : '18.3m'})` };
+        return { applicable: true, pressures: finalPressures, protection: protectionObj, ref: `ASCE 7 Ch. 30, Part 1 (h<=${unit_system === 'imperial' ? '60ft' : '18.3m'})` };
     }
 
     // MWFRS pressures using Envelope Procedure for low-rise buildings (ASCE 7-16 Ch. 28)
@@ -1740,16 +1737,16 @@ function generateCandCDiagram(inputs, candc) {
                     <rect x="50" y="50" width="300" height="120" class="svg-member" />
                     <!-- Zone 5 -->
                     <rect x="50" y="50" width="${a_val_str}" height="120" fill="#ef4444" opacity="0.5" />
-                    <rect x="${350 - a_val_str}" y="50" width="${a_val_str}" height="120" fill="#ef4444" opacity="0.5" />
+                    <rect x="${350 - a}" y="50" width="${a_val_str}" height="120" fill="#ef4444" opacity="0.5" />
                     <!-- Zone 4 -->
-                    <rect x="${50 + parseFloat(a_val_str)}" y="50" width="${300 - 2 * a_val_str}" height="120" fill="#facc15" opacity="0.5" />
+                    <rect x="${50 + a}" y="50" width="${300 - 2 * a}" height="120" fill="#facc15" opacity="0.5" />
                     <!-- Labels -->
                     <text x="200" y="110" class="svg-label" text-anchor="middle">${wall_zone_4_label}</text>
-                    <text x="${50 + a_val_str / 2}" y="80" class="svg-label" text-anchor="middle">${wall_zone_5_label}</text>
-                    <text x="${350 - a_val_str / 2}" y="80" class="svg-label" text-anchor="middle">${wall_zone_5_label}</text>
+                    <text x="${50 + a / 2}" y="80" class="svg-label" text-anchor="middle">${wall_zone_5_label}</text>
+                    <text x="${350 - a / 2}" y="80" class="svg-label" text-anchor="middle">${wall_zone_5_label}</text>
                     <!-- Dimension 'a' -->
-                    <line x1="50" y1="180" x2="${50 + a_val_str}" y2="180" class="svg-dim" />
-                    <text x="${50 + a_val_str / 2}" y="190" class="svg-dim-text">${a_str}</text>
+                    <line x1="50" y1="180" x2="${50 + a}" y2="180" class="svg-dim" />
+                    <text x="${50 + a / 2}" y="190" class="svg-dim-text">${a_str}</text>
                 </svg>
             </div>
         </div>`;
@@ -1777,14 +1774,14 @@ function generateCandCDiagram(inputs, candc) {
                         <!-- Base Roof -->
                         <rect x="50" y="50" width="300" height="100" class="svg-member" />
                         <!-- Zone 1 -->
-                        <rect x="${50 + parseFloat(a_val_str)}" y="${50 + parseFloat(a_val_str)}" width="${300 - 2 * a_val_str}" height="${100 - 2 * a_val_str}" fill="#4ade80" opacity="0.5" />
+                        <rect x="${50 + a}" y="${50 + a}" width="${300 - 2 * a}" height="${100 - 2 * a}" fill="#4ade80" opacity="0.5" />
                         <!-- Zone 2 -->
-                        <path d="M50 50 h 300 v 100 h -300 z M ${50 + parseFloat(a_val_str)} ${50 + parseFloat(a_val_str)} v ${100 - 2 * a_val_str} h ${300 - 2 * a_val_str} v -${100 - 2 * a_val_str} z" fill-rule="evenodd" fill="#facc15" opacity="0.5" />
+                        <path d="M50 50 h 300 v 100 h -300 z M ${50 + a} ${50 + a} v ${100 - 2 * a} h ${300 - 2 * a} v -${100 - 2 * a} z" fill-rule="evenodd" fill="#facc15" opacity="0.5" />
                         <!-- Zone 3 -->
                         <path d="M50 50 h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
-                        <path d="M${350 - a_val_str} 50 h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
-                        <path d="M50 ${150 - a_val_str} h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
-                        <path d="M${350 - a_val_str} ${150 - a_val_str} h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
+                        <path d="M${350 - a} 50 h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
+                        <path d="M50 ${150 - a} h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
+                        <path d="M${350 - a} ${150 - a} h ${a_val_str} v ${a_val_str} h -${a_val_str} z" fill="#ef4444" opacity="0.5" />
                         ${hip_zones}
                         <!-- Labels -->
                         <text x="200" y="105" class="svg-label" text-anchor="middle">${roof_zone_1_label}</text>
@@ -1804,14 +1801,14 @@ function generateCandCDiagram(inputs, candc) {
                         <rect x="50" y="50" width="300" height="100" class="svg-member" />
                         ${ridge_line} ${hip_lines}
                         <!-- Zones -->
-                        <rect x="${50 + parseFloat(a_val_str)}" y="50" width="${300 - 2 * a_val_str}" height="100" fill="#4ade80" opacity="0.5" />
-                        <path d="M50 50 h 300 v 100 h -300 z M ${50 + parseFloat(a_val_str)} 50 v 100 h ${300 - 2 * a_val_str} v -100 z" fill-rule="evenodd" fill="#facc15" opacity="0.5" />
+                        <rect x="${50 + a}" y="50" width="${300 - 2 * a}" height="100" fill="#4ade80" opacity="0.5" />
+                        <path d="M50 50 h 300 v 100 h -300 z M ${50 + a} 50 v 100 h ${300 - 2 * a} v -100 z" fill-rule="evenodd" fill="#facc15" opacity="0.5" />
                         <rect x="50" y="50" width="${a_val_str}" height="100" fill="#ef4444" opacity="0.5" />
-                        <rect x="${350 - a_val_str}" y="50" width="${a_val_str}" height="100" fill="#ef4444" opacity="0.5" />
+                        <rect x="${350 - a}" y="50" width="${a_val_str}" height="100" fill="#ef4444" opacity="0.5" />
                         <!-- Labels -->
                         <text x="200" y="105" class="svg-label" text-anchor="middle">${roof_zone_1_label}</text>
-                        <text x="${50 + a_val_str + (300 - 2 * a_val_str) / 2}" y="70" class="svg-label" text-anchor="middle" transform="rotate(-15 200 70)">${roof_zone_2_label}</text>
-                        <text x="${50 + a_val_str / 2}" y="105" class="svg-label" text-anchor="middle">${roof_zone_3_label}</text>
+                        <text x="${50 + a + (300 - 2 * a) / 2}" y="70" class="svg-label" text-anchor="middle" transform="rotate(-15 200 70)">${roof_zone_2_label}</text>
+                        <text x="${50 + a / 2}" y="105" class="svg-label" text-anchor="middle">${roof_zone_3_label}</text>
                     </svg>
                 </div>
             </div>`;
@@ -1911,6 +1908,7 @@ function renderDesignParameters(inputs, intermediate, units) {
                         ` : ''}
                         <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${safeToFixed(intermediate.Kz, 2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
                         <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${safeToFixed(inputs.GCpi_abs, 2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
+                        ${inputs.has_rooftop_protection ? `<li><strong>Rooftop Protection:</strong> Yes (Type: ${sanitizeHTML(inputs.rooftop_protection_type)}) <span class="ref">[Calculates C&C as p = q<sub>h</sub>GC<sub>p</sub>]</span></li>` : `<li><strong>Rooftop Protection:</strong> No</li>`}
                         ${inputs.temporary_construction === 'Yes' ? `<li><strong>Reduction Factor for Temporary Construction:</strong> 0.8 <span class="ref">[NYC BC, SEC. 1619.3.3]</span></li>` : ''}
                     </ul>`;
     return html;
@@ -2520,7 +2518,7 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                             <td>${safeToFixed(p_pos_lrfd, 2)} / ${safeToFixed(p_neg_lrfd, 2)}</td>
                             <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
                          </tr>`;
-            html += `<tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
+             html += `<tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
                             <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
                             <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                             <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
@@ -2540,16 +2538,54 @@ function renderCandCSection(candc, inputs, intermediate, units) {
             const p_pos_lrfd = data.p_pos;
             const pressure = inputs.design_method === 'ASD' ? Math.min(p_neg_lrfd, p_pos_lrfd) * 0.6 : Math.min(p_neg_lrfd, p_pos_lrfd);
             const detailId = `candc-detail-${i}`;
-            html += `<tr>
-                            <td>${sanitizeHTML(zone)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
-                            <td>${safeToFixed(data.gcp_neg, 2)}</td><td>${safeToFixed(pressure, 2)}</td>
-                         </tr>
-                         <tr id="${detailId}" class="details-row"><td colspan="3" class="p-0"><div class="calc-breakdown">
+            html += `<tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
                             <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
+                            <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
+                            <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                          </div></td></tr>`;
         });
     }
-    html += `</tbody></table></div>`;
+    html += `</tbody></table>`;
+
+    // --- Render Rooftop Protection Table if applicable ---
+    if (candc.protection && candc.protection.applicable && candc.protection.pressures && Object.keys(candc.protection.pressures).length > 0) {
+        html += `<h4 class="font-bold text-center mt-6 mb-2">Rooftop Protection Pressures (${sanitizeHTML(candc.protection.type)})</h4>
+                 <p class="text-xs text-center text-gray-500 mb-2">Pressure equalized (Internal pressure excluded). Formula: p = q<sub>h</sub>GC<sub>p</sub></p>
+                 <table class="w-full border-collapse">
+                    <thead class="bg-gray-100 dark:bg-gray-700">
+                        <tr>
+                            <th>Zone</th>
+                            <th>GCp (+)</th>
+                            <th>GCp (-)</th>
+                            <th>LRFD Pressure (+ / -) [${p_unit}]</th>
+                            <th>ASD Pressure (+ / -) [${p_unit}]</th>
+                        </tr>
+                    </thead>
+                    <tbody class="dark:text-gray-300 text-center">`;
+        
+        Object.entries(candc.protection.pressures).forEach(([zone, data], i) => {
+            const p_pos_lrfd = data.p_pos;
+            const p_neg_lrfd = data.p_neg;
+            const p_pos_asd = p_pos_lrfd * 0.6;
+            const p_neg_asd = p_neg_lrfd * 0.6;
+            const detailId = `protection-detail-${i}`;
+            html += `<tr>
+                            <td>${sanitizeHTML(zone)} <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
+                            <td>${safeToFixed(data.gcp_pos, 2)}</td>
+                            <td>${safeToFixed(data.gcp_neg, 2)}</td>
+                            <td>${safeToFixed(p_pos_lrfd, 2)} / ${safeToFixed(p_neg_lrfd, 2)}</td>
+                            <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
+                         </tr>
+                         <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
+                            <p><b>Formula:</b> p = q<sub>h</sub> &times; GC<sub>p</sub></p>
+                            <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(data.gcp_pos, 2)}</p>
+                            <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(data.gcp_neg, 2)}</p>
+                         </div></td></tr>`;
+        });
+        html += `</tbody></table>`;
+    }
+
+    html += `</div>`;
     return html;
 }
 

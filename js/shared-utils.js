@@ -88,10 +88,19 @@ function createCalculationHandler(config) { // This is the function being called
         console.log(`[${validationRuleKey}] Performing calculation...`);
         await Promise.resolve();
 
-        const calculationResult = safeCalculation(
+        let calculationResult = safeCalculation(
             () => calculatorFunction(inputs, validation),
             'An unexpected error occurred during calculation'
         );
+
+        if (calculationResult instanceof Promise) {
+            try {
+                calculationResult = await calculationResult;
+            } catch (e) {
+                console.error(e);
+                calculationResult = { error: 'Measurement calculation failed: ' + e.message };
+            }
+        }
 
         // --- 4. RENDER RESULTS ---
         if (calculationResult.error) {

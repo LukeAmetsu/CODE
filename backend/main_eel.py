@@ -126,6 +126,7 @@ def calculate_steel_all(inputs):
         traceback.print_exc()
         return {"error": str(e), "trace": traceback.format_exc()}
 
+
 @eel.expose
 def run_steel_check(check_name, props, inputs):
     try:
@@ -138,6 +139,26 @@ def run_steel_check(check_name, props, inputs):
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
+
+
+@eel.expose
+def calculate_wood_nds(inputs):
+    try:
+        from backend.calculators.nds import calculate_nds
+        return calculate_nds(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_wood_species():
+    try:
+        from backend.calculators.nds import get_wood_species_list
+        return get_wood_species_list()
+    except Exception as e:
+        import traceback
+        print(f"Error getting wood species: {e}")
+        return {}
 
 
 @eel.expose

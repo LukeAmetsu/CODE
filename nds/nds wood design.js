@@ -7,162 +7,98 @@ var inputIds = [
     'axial_load_P', 'moment_load_M', 'shear_load_V'
 ];
 
-var woodChecker = (() => {
-    function calculate_all_factors(inputs) {
-        const factors = {};
-        const { is_wet, temp_cond, Fb, Fc, b, d, is_incised, is_repetitive, Lb, CD, jurisdiction } = inputs;
+// --- Backend Integration ---
+var woodChecker = {
+    run: async (inputs) => {
+        if (typeof eel === 'undefined') {
+            console.error("Eel is not loaded. Make sure the server is running.");
+            return { error: "Backend connection failed." };
+        }
+        // Pass inputs to Python backend
+        // Note: Python returns a dict matching the structure expected by renderWoodResults
+        return await eel.calculate_wood_nds(inputs)();
+    }
+};
 
-        // OSHA Factor of Safety Implementation
-        // Standard NDS ASD has FOS ~ 1.5 - 2.0 depending on property.
-        // OSHA requires FOS = 4.0. We apply a conservative reduction factor C_OSHA = 0.5.
-        // This effectively doubles the safety factor.
-        factors.C_OSHA = jurisdiction === 'OSHA' ? 0.5 : 1.0;
+// --- Species & Grade Logic ---
+let woodDatabase = {};
 
-        factors.CD = CD;
-        factors.CM_Fb = is_wet && Fb > 1150 ? 0.85 : 1.0;
-        factors.CM_Fv = is_wet ? 0.97 : 1.0;
-        factors.CM_Fc_perp = is_wet ? 0.67 : 1.0;
-        factors.CM_Fc = is_wet && Fc > 750 ? 0.8 : 1.0;
-        factors.CM_E = is_wet ? 0.9 : 1.0;
-        factors.CM_E_min = is_wet ? 0.9 : 1.0;
+async function initWoodPage() {
+    if (typeof eel !== 'undefined') {
+        try {
+            woodDatabase = await eel.get_wood_species()();
+            populateSpeciesDropdown();
+        } catch (e) {
+            console.error("Failed to load wood species:", e);
+        }
+    }
+}
 
-        if (temp_cond === 'low') factors.Ct = 1.0;
-        else if (temp_cond === 'medium') factors.Ct = 0.8;
-        else if (temp_cond === 'high') factors.Ct = 0.7;
-        else factors.Ct = 1.0;
+function populateSpeciesDropdown() {
+    const selector = document.getElementById('wood_selector');
+    if (!selector) return;
 
-        if (d > 12) factors.CF = Math.pow((12 / d), 1 / 9);
-        else if (d > 4) factors.CF = 1.0;
-        else factors.CF = b >= 4 ? 1.1 : 1.5;
+    // Clear existing (except first)
+    selector.innerHTML = '<option value="">Custom (Manual Input)</option>';
 
-        factors.Cfu = 1.0; // Simplified
-        factors.Ci = is_incised ? 0.8 : 1.0;
-        factors.Cr = is_repetitive ? 1.15 : 1.0;
-        factors.Cb = (Lb > 0 && Lb < 6) ? (Lb + 0.375) / Lb : 1.0;
-        factors.CL = 1.0;
-        factors.Cp = 1.0;
-        return factors;
+    Object.keys(woodDatabase).forEach(species => {
+        const group = document.createElement('optgroup');
+        group.label = species;
+
+        Object.keys(woodDatabase[species]).forEach(grade => {
+            const option = document.createElement('option');
+            option.value = `${species}|${grade}`;
+            option.textContent = `${species} - ${grade}`;
+            group.appendChild(option);
+        });
+        selector.appendChild(group);
+    });
+
+    selector.addEventListener('change', onWoodSelectionChange);
+}
+
+function onWoodSelectionChange(e) {
+    const val = e.target.value;
+    if (!val) {
+        // Custom selected: Unlock inputs? Or just leave as is.
+        // Optional: unlock inputs
+        toggleInputLocks(false);
+        return;
     }
 
-    function run(inputs) {
-        const processedInputs = {
-            Fb: inputs.Fb_unadjusted, Fv: inputs.Fv_unadjusted, Fc_perp: inputs.Fc_perp_unadjusted,
-            Fc: inputs.Fc_unadjusted, E: inputs.E_unadjusted, E_min: inputs.E_min_unadjusted,
-            b: inputs.b_width, d: inputs.d_depth, Lu: inputs.unbraced_length_L * 12, K: inputs.effective_length_factor_K, Lb: inputs.bearing_length_Lb,
-            CD: parseFloat(inputs.load_duration),
-            jurisdiction: inputs.jurisdiction,
-            is_wet: inputs.wet_service.includes('Wet'),
-            temp_cond: inputs.temperature,
-            is_weak_axis: inputs.flat_use.includes('Weak'),
-            is_incised: inputs.incising.includes('Yes'),
-            is_repetitive: inputs.repetitive_member.includes('Yes'),
-            P: inputs.axial_load_P * 1000,
-            M: inputs.moment_load_M * 1000 * 12,
-            deflection_span: inputs.deflection_span * 12,
-            deflection_limit_divisor: inputs.deflection_limit,
-            V: inputs.shear_load_V * 1000
-        };
+    const [species, grade] = val.split('|');
+    if (woodDatabase[species] && woodDatabase[species][grade]) {
+        const props = woodDatabase[species][grade];
 
-        const results = {};
-        const factors = calculate_all_factors(processedInputs);
+        // Populate inputs
+        setInputValue('Fb_unadjusted', props.Fb);
+        setInputValue('Fv_unadjusted', props.Fv);
+        setInputValue('Fc_perp_unadjusted', props.Fcp); // Dict uses Fcp
+        setInputValue('Fc_unadjusted', props.Fc);
+        setInputValue('E_unadjusted', props.E);
+        setInputValue('E_min_unadjusted', props.Emin); // Dict uses Emin
 
-        const E_min_prime = processedInputs.E_min * factors.CM_E_min * factors.Ct * factors.Ci;
-        const Fc_star = processedInputs.Fc * factors.CD * factors.CM_Fc * factors.Ct * factors.CF * factors.Ci;
-        results.Fc_star = Fc_star;
-        results.E_min_prime = E_min_prime;
-
-        const Le = processedInputs.Lu * processedInputs.K;
-        const d_col = processedInputs.d;
-        const Le_d = d_col > 0 ? Le / d_col : 0;
-        results.Le_d = Le_d;
-        results.slenderness_fail_column = false;
-
-        if (Le_d <= 50) {
-            const c = 0.8;
-            const Fce = Le_d > 0 ? (0.822 * E_min_prime) / (Le_d ** 2) : Infinity;
-            const ratio_cp = Fc_star > 0 ? Fce / Fc_star : 0;
-            factors.Cp = ratio_cp > 0 ? ((1 + ratio_cp) / (2 * c)) - Math.sqrt(((1 + ratio_cp) / (2 * c)) ** 2 - (ratio_cp / c)) : 0;
-            results.Fce = Fce;
-        } else {
-            factors.Cp = 0;
-            results.Fce = 0;
-            results.slenderness_fail_column = true;
-        }
-
-        const [b_beam, d_beam] = processedInputs.is_weak_axis ? [processedInputs.d, processedInputs.b] : [processedInputs.b, processedInputs.d];
-        const Rb = b_beam > 0 ? Math.sqrt(processedInputs.Lu * d_beam / b_beam ** 2) : 0;
-        results.Rb = Rb;
-        results.slenderness_fail_beam = false;
-
-        if (Rb <= 50) {
-            const Fb_star = processedInputs.Fb * factors.CD * factors.CM_Fb * factors.Ct * factors.CF * factors.Cfu * factors.Ci * factors.Cr;
-            results.Fb_star = Fb_star;
-            const FbE = Rb > 0 ? (1.20 * E_min_prime) / (Rb ** 2) : Infinity;
-            const ratio_cl = Fb_star > 0 ? FbE / Fb_star : 0;
-            factors.CL = ratio_cl > 0 ? Math.min(1.0, ((1 + ratio_cl) / 1.9) - Math.sqrt(((1 + ratio_cl) / 1.9) ** 2 - (ratio_cl / 0.95))) : 0;
-            results.FbE = FbE;
-        } else {
-            factors.CL = 0;
-            results.FbE = 0;
-            results.Fb_star = 0;
-            results.slenderness_fail_beam = true;
-        }
-
-        const adj = {};
-        adj.Fb_prime = processedInputs.Fb * factors.CD * factors.CM_Fb * factors.Ct * factors.CL * factors.CF * factors.Cfu * factors.Ci * factors.Cr * factors.C_OSHA;
-        adj.Fv_prime = processedInputs.Fv * factors.CD * factors.CM_Fv * factors.Ct * factors.Ci * factors.C_OSHA;
-        adj.Fc_perp_prime = processedInputs.Fc_perp * factors.CM_Fc_perp * factors.Ct * factors.Ci * factors.Cb * factors.C_OSHA;
-        adj.Fc_prime = Fc_star * factors.Cp * factors.C_OSHA;
-        results.adjusted = adj;
-
-        const A = processedInputs.b * processedInputs.d;
-        const Sx = (b_beam * d_beam ** 2) / 6;
-        const actual = {};
-        actual.fb = processedInputs.M / Sx;
-        actual.fv = (1.5 * processedInputs.V) / A;
-        actual.fc = processedInputs.P / A;
-        actual.A = A;
-        actual.Sx = Sx;
-        results.actuals = actual;
-
-        // --- Final Ratios ---
-        results.ratios = {
-            fb: adj.Fb_prime > 0 ? actual.fb / adj.Fb_prime : Infinity,
-            fv: adj.Fv_prime > 0 ? actual.fv / adj.Fv_prime : Infinity,
-            fc: adj.Fc_prime > 0 ? actual.fc / adj.Fc_prime : Infinity,
-        };
-
-        // Pass factors for breakdown display
-        results.factors = factors;
-
-        // Deflection Calculation (assuming simply supported beam with uniform load)
-        const I = (b_beam * Math.pow(d_beam, 3)) / 12;
-        const E_adj = processedInputs.E * factors.CM_E * factors.Ct * factors.Ci;
-        const actual_deflection = (E_adj > 0 && I > 0) ? (5 * processedInputs.M * Math.pow(processedInputs.deflection_span, 2)) / (48 * E_adj * I) : Infinity;
-        const allowable_deflection = processedInputs.deflection_limit_divisor > 0 ? processedInputs.deflection_span / processedInputs.deflection_limit_divisor : Infinity;
-        results.deflection = {
-            actual: actual_deflection,
-            allowable: allowable_deflection,
-            E_adj: E_adj,
-            ratio: allowable_deflection > 0 ? actual_deflection / allowable_deflection : Infinity
-        };
-
-        const denominator_safe = adj.Fc_prime > 0 && adj.Fb_prime > 0 && results.Fce > 0 && actual.fc < results.Fce;
-        if (denominator_safe) {
-            results.interaction = Math.pow(actual.fc / adj.Fc_prime, 2) + (actual.fb / (adj.Fb_prime * (1 - (actual.fc / results.Fce))));
-        } else {
-            results.interaction = Infinity;
-        }
-
-        // Return a single object with all necessary data for rendering
-        return {
-            inputs: processedInputs, // Return the processed inputs
-            ...results
-        };
+        // Lock inputs to prevent confusion?
+        // toggleInputLocks(true);
     }
+}
 
-    return { run };
-})();
+function setInputValue(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+}
+
+function toggleInputLocks(locked) {
+    const ids = ['Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.readOnly = locked;
+            el.classList.toggle('bg-gray-100', locked);
+            el.classList.toggle('bg-white', !locked);
+        }
+    });
+}
 
 var handleRunWoodCheck = createCalculationHandler({
     inputIds: inputIds,
@@ -178,6 +114,10 @@ initializeApp({
     inputIds: inputIds,
     calculationHandler: handleRunWoodCheck,
     buttonId: 'run-wood-check-btn'
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    initWoodPage();
 });
 
 function renderWoodResults(calculationOutput) {
@@ -265,12 +205,16 @@ function renderWoodResults(calculationOutput) {
         const factorMap = {
             CD: { name: 'Load Duration (C<sub>D</sub>)', ref: 'NDS 2.3.2' },
             CM_Fb: { name: 'Wet Service (C<sub>M,Fb</sub>)', ref: 'NDS Table 4.3.1' },
+            CM_Fv: { name: 'Wet Service (C<sub>M,Fv</sub>)', ref: 'NDS Table 4.3.1' }, // Added safely
+            CM_Fc: { name: 'Wet Service (C<sub>M,Fc</sub>)', ref: 'NDS Table 4.3.1' },
+            CM_Fc_perp: { name: 'Wet Service (C<sub>M,Fc_perp</sub>)', ref: 'NDS Table 4.3.1' },
+            CM_E: { name: 'Wet Service (C<sub>M,E</sub>)', ref: 'NDS Table 4.3.1' },
+            CM_E_min: { name: 'Wet Service (C<sub>M,Emin</sub>)', ref: 'NDS Table 4.3.1' },
             Ct: { name: 'Temperature (C<sub>t</sub>)', ref: 'NDS 2.3.3' },
             CF: { name: 'Size Factor (C<sub>F</sub>)', ref: 'NDS 4.3.6' },
             Ci: { name: 'Incising (C<sub>i</sub>)', ref: 'NDS 4.3.8' },
             Cr: { name: 'Repetitive Member (C<sub>r</sub>)', ref: 'NDS 4.3.9' },
             Cb: { name: 'Bearing Area (C<sub>b</sub>)', ref: 'NDS 3.10.4' },
-            CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
             CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
             Cp: { name: 'Column Stability (C<sub>P</sub>)', ref: 'NDS 3.7.1' },
             C_OSHA: { name: 'OSHA Safety Factor (C<sub>OSHA</sub>)', ref: 'OSHA 1926' },
@@ -279,6 +223,8 @@ function renderWoodResults(calculationOutput) {
         if (info) {
             return { cells: [info.name, value.toFixed(3), info.ref] };
         }
+        // Handle specific CM keys if multiple might appear?
+        // JS loop iterates factors. Keys like CM_Fb exist.
         return null;
     }).filter(Boolean);
 
