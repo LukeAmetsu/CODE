@@ -16,6 +16,184 @@ const diagramInputIds = [
 // --- Master Bolt Cache ---
 let masterBolts = {};
 
+// --- 2D Drawing Logic ---
+function draw2dSpliceDiagram() {
+    const svgId = "splice-2d-diagram";
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+
+    // Clear existing SVG
+    while (svg.firstChild) {
+        svg.removeChild(svg.firstChild);
+    }
+
+    const inputs = gatherInputsFromIds(diagramInputIds);
+    
+    // Parse dimensions
+    const d = parseFloat(inputs.member_d) || 0;
+    const bf = parseFloat(inputs.member_bf) || 0;
+    const tf = parseFloat(inputs.member_tf) || 0;
+    const tw = parseFloat(inputs.member_tw) || 0;
+    const gap = parseFloat(inputs.gap) || 0;
+
+    // Web Plate
+    const H_wp = parseFloat(inputs.H_wp) || 0;
+    const L_wp = parseFloat(inputs.L_wp) || 0;
+    const Nc_wp = parseInt(inputs.Nc_wp) || 0;
+    const Nr_wp = parseInt(inputs.Nr_wp) || 0;
+    const S4 = parseFloat(inputs.S4_col_spacing_wp) || 0;
+    const S5 = parseFloat(inputs.S5_row_spacing_wp) || 0;
+
+    // Flange Plate
+    const num_fp = parseInt(inputs.num_flange_plates) || 0;
+    const t_fp = parseFloat(inputs.t_fp) || 0;
+    const L_fp = parseFloat(inputs.L_fp) || 0;
+    const t_fp_inner = parseFloat(inputs.t_fp_inner) || 0;
+    const L_fp_inner = parseFloat(inputs.L_fp_inner) || 0;
+    const Nc_fp = parseInt(inputs.Nc_fp) || 0;
+    const Nr_fp = parseInt(inputs.Nr_fp) || 0;
+    const S1 = parseFloat(inputs.S1_col_spacing_fp) || 0;
+
+    // Viewport calculation
+    // We want to see the full length of the longest plate + some beam extension
+    const maxL = Math.max(L_wp, L_fp, (num_fp === 2 ? L_fp_inner : 0));
+    const totalLength = maxL * 1.5; // 1.5x plate length for context
+    const totalHeight = d * 1.5; // 1.5x beam depth
+
+    const scaleX = 0.8 * (svg.clientWidth || 800) / totalLength;
+    const scaleY = 0.8 * (svg.clientHeight || 400) / totalHeight;
+    const scale = Math.min(scaleX, scaleY);
+    
+    const cx = (svg.clientWidth || 800) / 2;
+    const cy = (svg.clientHeight || 400) / 2;
+
+    const ns = "http://www.w3.org/2000/svg";
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("transform", `translate(${cx}, ${cy}) scale(${scale}) scale(1, -1)`); // Flip Y for cartesian coords
+    svg.appendChild(g);
+
+    // Helper to draw rect
+    function drawRect(x, y, w, h, fill, stroke, strokeWidth = 1) {
+        const rect = document.createElementNS(ns, "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", w);
+        rect.setAttribute("height", h);
+        rect.setAttribute("fill", fill);
+        rect.setAttribute("stroke", stroke);
+        rect.setAttribute("stroke-width", strokeWidth / scale);
+        g.appendChild(rect);
+        return rect;
+    }
+
+    // Helper to draw circle (bolt)
+    function drawCircle(x, y, r, fill, stroke) {
+        const circle = document.createElementNS(ns, "circle");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", r);
+        circle.setAttribute("fill", fill);
+        circle.setAttribute("stroke", stroke);
+        circle.setAttribute("stroke-width", 1 / scale);
+        g.appendChild(circle);
+    }
+
+    // --- Draw Beams (Left and Right) ---
+    const beamColor = "#e5e7eb"; // gray-200
+    const beamStroke = "#374151"; // gray-700
+    
+    // Left Beam
+    // Flanges
+    drawRect(-totalLength / 2, d / 2 - tf, totalLength / 2 - gap / 2, tf, beamColor, beamStroke); // Top
+    drawRect(-totalLength / 2, -d / 2, totalLength / 2 - gap / 2, tf, beamColor, beamStroke); // Bottom
+    // Web
+    drawRect(-totalLength / 2, -d / 2 + tf, totalLength / 2 - gap / 2, d - 2 * tf, "#f3f4f6", beamStroke); // Web is lighter
+
+    // Right Beam
+    // Flanges
+    drawRect(gap / 2, d / 2 - tf, totalLength / 2 - gap / 2, tf, beamColor, beamStroke); // Top
+    drawRect(gap / 2, -d / 2, totalLength / 2 - gap / 2, tf, beamColor, beamStroke); // Bottom
+    // Web
+    drawRect(gap / 2, -d / 2 + tf, totalLength / 2 - gap / 2, d - 2 * tf, "#f3f4f6", beamStroke);
+
+
+    // --- Draw Web Plates (Elevation) ---
+    // We only see the near side plate
+    const plateColor = "rgba(59, 130, 246, 0.5)"; // blue-500 transparent
+    const plateStroke = "#1d4ed8"; // blue-700
+    
+    drawRect(-L_wp / 2, -H_wp / 2, L_wp, H_wp, plateColor, plateStroke);
+
+    // --- Draw Flange Plates (Elevation Profile) ---
+    const fPlateColor = "rgba(16, 185, 129, 0.5)"; // green-500 transparent
+    const fPlateStroke = "#047857"; // green-700
+
+    if (num_fp >= 1) {
+        // Outer Top
+        drawRect(-L_fp / 2, d / 2, L_fp, t_fp, fPlateColor, fPlateStroke);
+        // Outer Bottom
+        drawRect(-L_fp / 2, -d / 2 - t_fp, L_fp, t_fp, fPlateColor, fPlateStroke);
+    }
+    if (num_fp === 2) {
+        // Inner Top (below top flange)
+        drawRect(-L_fp_inner / 2, d / 2 - tf - t_fp_inner, L_fp_inner, t_fp_inner, fPlateColor, fPlateStroke);
+        // Inner Bottom (above bottom flange)
+        drawRect(-L_fp_inner / 2, -d / 2 + tf, L_fp_inner, t_fp_inner, fPlateColor, fPlateStroke);
+    }
+
+    // --- Draw Bolts (Web) ---
+    // Elevation view of bolts in web
+    const boltColor = "#1f2937"; // gray-800
+    
+    // Web Bolts are usually centered vertically pattern-wise
+    for (let c = 0; c < Nc_wp; c++) {
+        // Calculate x for this column
+        // Pattern logic: First column is at S6 (end dist) from plate edge
+        // S4 is spacing between columns
+        
+        // Left Side
+        let x_left = -L_wp / 2 + parseFloat(inputs.S6_end_dist_wp) + c * S4;
+        
+        // Right Side (Mirrored)
+        let x_right = L_wp / 2 - parseFloat(inputs.S6_end_dist_wp) - c * S4;
+
+        for (let r = 0; r < Nr_wp; r++) {
+            // y for this row
+            // Centered on 0
+            const totalH = (Nr_wp - 1) * S5;
+            let y = -totalH / 2 + r * S5;
+
+            drawCircle(x_left, y, parseFloat(inputs.D_wp) / 2 || 0.25, boltColor, "none");
+            drawCircle(x_right, y, parseFloat(inputs.D_wp) / 2 || 0.25, boltColor, "none");
+        }
+    }
+
+    // --- Draw Bolts (Flange - Elevation Profile) ---
+    // Seeing bolts from the side (through the flange)
+    // They appear as rectangles sticking through the plates/flange, or just lines.
+    // Let's draw lines/rects for flange bolts
+    
+    if (num_fp > 0) {
+        const boltLen = tf + t_fp + (num_fp === 2 ? t_fp_inner : 0) + 1; // Arbitrary extra length
+        const boltY_top = d / 2 - tf / 2; // Approx center of top flange connection
+        const boltY_bot = -d / 2 + tf / 2;
+
+        for (let c = 0; c < Nc_fp; c++) {
+             // Left Side
+            let x_left = -gap/2 - parseFloat(inputs.S3_end_dist_fp) - c * S1;
+            // Right Side
+            let x_right = gap/2 + parseFloat(inputs.S3_end_dist_fp) + c * S1;
+
+            // Draw bolt lines (Top and Bottom)
+            drawRect(x_left - 0.1, d/2 - tf - (num_fp===2?t_fp_inner:0) - 0.5, 0.2, boltLen + 1, boltColor, "none");
+            drawRect(x_right - 0.1, d/2 - tf - (num_fp===2?t_fp_inner:0) - 0.5, 0.2, boltLen + 1, boltColor, "none");
+
+            drawRect(x_left - 0.1, -d/2 - t_fp - 0.5, 0.2, boltLen + 1, boltColor, "none");
+            drawRect(x_right - 0.1, -d/2 - t_fp - 0.5, 0.2, boltLen + 1, boltColor, "none");
+        }
+    }
+}
+
 /**
  * Creates or clones a detailed bolt mesh. A master mesh is created for each unique bolt size (diameter/thickness)
  * and subsequent requests for the same size will return a lightweight clone for performance.
@@ -2073,6 +2251,7 @@ async function handleShapeSelection() {
 
     // Manually trigger the 3D diagram update since programmatic value changes don't fire input events
     draw3dSpliceDiagram();
+    draw2dSpliceDiagram();
 }
 
 function getAllInputIdsOnPage() {
@@ -2431,7 +2610,23 @@ const handleRunSpliceCheck = createCalculationHandler({
         // Return all found errors and warnings
         return { errors, warnings };
     },
-    calculatorFunction: (rawInputs) => spliceCalculator.run(rawInputs),
+    calculatorFunction: async (rawInputs) => {
+        if (window.eel && window.eel.calculate_splice_all) {
+            console.log("Using Python Backend for Splice Calculation...");
+            try {
+                const result = await window.eel.calculate_splice_all(rawInputs)();
+                if (result.error) {
+                    console.error("Backend Error:", result.error);
+                    throw new Error(result.error);
+                }
+                return result;
+            } catch (e) {
+                console.error("Backend call failed, falling back to local JS.", e);
+                return spliceCalculator.run(rawInputs);
+            }
+        }
+        return spliceCalculator.run(rawInputs);
+    },
     renderFunction: renderResults,
     resultsContainerId: 'results-container',
     buttonId: 'run-check-btn'
@@ -2468,6 +2663,7 @@ initializeApp({
         // --- Attach event listeners for DYNAMIC diagram updates with debouncing ---
         const debouncedRecalculateAndRedraw = debounce(() => {
             draw3dSpliceDiagram(); // Redraw the 3D model
+            draw2dSpliceDiagram(); // Redraw the 2D model
             // handleRunSpliceCheck(); // REMOVED: Calculation will now only run on button click.
         }, 400);
         diagramInputIds.forEach(id => {
@@ -2480,7 +2676,10 @@ initializeApp({
         });
 
         // Initial draw
-        setTimeout(draw3dSpliceDiagram, 100);
+        setTimeout(() => {
+            draw3dSpliceDiagram();
+            draw2dSpliceDiagram();
+        }, 100);
     }
 });
 console.log("splice.js: initializeApp called.");

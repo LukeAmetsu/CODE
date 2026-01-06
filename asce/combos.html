@@ -250,21 +250,7 @@
     <script src="combos.js" defer></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof injectHeader === 'function') {
-                injectHeader({
-                    activePage: 'combos', // Verify key in nav-config.json
-                    pageTitle: 'combinations',
-                    headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: '../'
-                });
-            }
-            if (typeof injectFooter === 'function') {
-                injectFooter({
-                    footerPlaceholderId: 'footer-placeholder'
-                });
-            }
-        });
+        // Manual injection removed in favor of initializeApp in combos.js
     </script>
 </body>
 

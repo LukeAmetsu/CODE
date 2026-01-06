@@ -207,21 +207,7 @@
     <script src="rain.js" defer></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof injectHeader === 'function') {
-                injectHeader({
-                    activePage: 'rain', // Verify key in nav-config.json
-                    pageTitle: 'rain',
-                    headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: '../'
-                });
-            }
-            if (typeof injectFooter === 'function') {
-                injectFooter({
-                    footerPlaceholderId: 'footer-placeholder'
-                });
-            }
-        });
+        // Manual injection removed in favor of initializeApp in rain.js
     </script>
 </body>
 

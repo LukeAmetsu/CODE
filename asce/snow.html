@@ -271,21 +271,7 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof injectHeader === 'function') {
-                injectHeader({
-                    activePage: 'snow', // Verify key in nav-config.json
-                    pageTitle: 'snow',
-                    headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: '../'
-                });
-            }
-            if (typeof injectFooter === 'function') {
-                injectFooter({
-                    footerPlaceholderId: 'footer-placeholder'
-                });
-            }
-        });
+        // Manual injection removed in favor of initializeApp in snow.js
     </script>
 </body>
 

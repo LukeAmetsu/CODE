@@ -1321,6 +1321,29 @@ var basePlateCalculator = (() => {
         const ca2 = (pedestal_B - bolt_group_width) / 2.0;
         return { ca1: ca1 >= 0 ? ca1 : 0, ca2: ca2 >= 0 ? ca2 : 0 };
     }
+
+    // This function is intended to be called by the main application logic
+    // to perform the base plate calculations. It can use a Python backend
+    // if available, or fall back to the local JavaScript implementation.
+    const calculatorFunction = async (inputs, validation) => {
+        if (window.eel && window.eel.calculate_base_plate_all) {
+            console.log("Using Python Backend for Base Plate Check...");
+            try {
+                const result = await window.eel.calculate_base_plate_all(inputs)();
+                if (result.error) {
+                    console.error("Backend Error:", result.error);
+                    throw new Error(result.error);
+                }
+                return result;
+            } catch (e) {
+                console.error("Backend call failed, falling back to local JS.", e);
+                // Explicitly pass validation to local run if backend fails
+                return run(inputs, validation); // Call the local run function
+            }
+        }
+        return run(inputs, validation); // Call the local run function
+    };
+
     function run(inputs, validation) { // FIX: Accept the validation object as an argument
         // --- FIX: Call getBasePlateGeometryChecks ---
         // This function was defined but not called in the main run function.
@@ -2041,12 +2064,12 @@ async function handleRunBasePlateCheck() {
         showFeedback('Calculating on server...', false, feedbackId);
 
         // Ensure eel is available
-        if (typeof eel === 'undefined' || !eel.calculate_base_plate) {
+        if (typeof eel === 'undefined' || !eel.calculate_base_plate_all) {
             throw new Error("Server connection (Eel) is not available.");
         }
 
         // Call exposed Python function
-        const result = await eel.calculate_base_plate(inputs)();
+        const result = await eel.calculate_base_plate_all(inputs)();
 
         // 4. Process Results
         if (result.error) {

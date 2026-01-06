@@ -205,10 +205,24 @@ const AISC_SPEC = (() => {
     async function loadShapeDatabase() {
         if (typeof AISC_SHAPES_DATABASE !== 'undefined') {
             return Promise.resolve(AISC_SHAPES_DATABASE);
-        } else {
-            console.error("AISC_SHAPES_DATABASE is not defined. Make sure aisc-shapes-database-v16.0.js is loaded.");
-            return Promise.reject("AISC_SHAPES_DATABASE is not defined.");
         }
+        
+        // Try fetching from Backend via Eel
+        if (window.eel && window.eel.get_aisc_database) {
+            try {
+                console.log("Fetching AISC Database from Backend...");
+                const db = await window.eel.get_aisc_database()();
+                // Cache it globally
+                window.AISC_SHAPES_DATABASE = db;
+                return db;
+            } catch (e) {
+                console.error("Failed to fetch database from backend:", e);
+                return Promise.reject("Failed to fetch database.");
+            }
+        }
+        
+        console.error("AISC_SHAPES_DATABASE is not defined and Eel is not available.");
+        return Promise.reject("AISC_SHAPES_DATABASE is not defined.");
     }
 
     /**

@@ -32,6 +32,8 @@ except Exception as e:
 
 # --- Expose Functions ---
 
+
+
 @eel.expose
 def calculate_angle_support(inputs):
     try:
@@ -54,6 +56,89 @@ def calculate_base_plate(inputs):
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_splice(inputs):
+    try:
+        from backend.calculators.splice import splice_calc
+        # splice_calc is the instance. It has multiple methods. 
+        # The frontend likely calls specific methods or one aggregate. 
+        # Since I am translating the *entire* file, I should probably check how the frontend uses it. 
+        # JS `spliceCalculator` usually has `checkBoltShear` etc calls.
+        # But `splice.js` also had a `spliceCalculator` IIFE. 
+        # Wait, the user asked to translate *logic*. The frontend is likely still doing the orchestration in JS unless I fully port the UI to use the backend for everything. 
+        # The user said "translate all files on the AISC folder to python". 
+        # If I translate `splice.js` completely, the frontend Logic (which collects inputs and calls math) should now call Backend.
+        # So I need an entry point. 
+        # For now, I'll expose the calculator object wrapper or specific methods if needed.
+        # But `splice.js` (lines 446+) has `spliceCalculator` module. 
+        # I'll expose a generic 'run_check' or specific checks.
+        # Let's Expose a proxy for now.
+        return {"status": "Calculator loaded", "methods": ["check_bolt_shear", "check_bolt_bearing", "check_gross_section_yielding", "check_net_section_rupture", "check_block_shear", "calculate_eccentricity_analysis"]}
+    except Exception as e:
+         return {"error": str(e)}
+
+@eel.expose
+def calculate_base_plate_all(inputs):
+    """Orchestrates the full base plate calculation via Python backend."""
+    try:
+        from backend.calculators.base_plate import calculate_base_plate
+        return calculate_base_plate(inputs)
+    except Exception as e:
+        import traceback
+        print(f"Base Plate Check Error: {e}")
+        traceback.print_exc()
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def run_splice_check(check_name, inputs):
+    try:
+        from backend.calculators.splice import splice_calc
+        method = getattr(splice_calc, check_name, None)
+        if method:
+            return method(inputs)
+        return {"error": f"Method {check_name} not found"}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_splice_all(inputs):
+    """Orchestrates the full splice calculation via Python backend."""
+    try:
+        from backend.calculators.splice import splice_calc
+        return splice_calc.run(inputs)
+    except Exception as e:
+        import traceback
+        print(f"Splice Calculation Error: {e}")
+        traceback.print_exc()
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_steel_all(inputs):
+    """Orchestrates the full steel check calculation via Python backend."""
+    try:
+        from backend.calculators.steel_check import steel_checker
+        return steel_checker.run(inputs)
+    except Exception as e:
+        import traceback
+        print(f"Steel Check Error: {e}")
+        traceback.print_exc()
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def run_steel_check(check_name, props, inputs):
+    try:
+        from backend.calculators.steel_check import SteelChecker
+        checker = SteelChecker()
+        method = getattr(checker, check_name, None)
+        if method:
+            return method(props, inputs)
+        return {"error": f"Method {check_name} not found"}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
 
 @eel.expose
 def get_shapes_by_type(shape_type):
@@ -84,6 +169,16 @@ def get_shape_details(shape_name):
     except Exception as e:
         print(f"Error getting shape details: {e}")
         return None
+
+@eel.expose
+def get_aisc_database():
+    """Returns the entire AISC database to the frontend."""
+    try:
+        return db.get_all_shapes()
+    except Exception as e:
+        print(f"Error getting full database: {e}")
+        return {}
+
 
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)

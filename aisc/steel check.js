@@ -1938,7 +1938,23 @@ document.addEventListener('DOMContentLoaded', () => {
             lastSteelRunResults = null; // Clear previous results on new run
             return steelChecker.validateInputs(inputs);
         },
-        calculatorFunction: steelChecker.run,
+        calculatorFunction: async (inputs) => {
+            if (window.eel && window.eel.calculate_steel_all) {
+                console.log("Using Python Backend for Steel Check...");
+                try {
+                    const result = await window.eel.calculate_steel_all(inputs)();
+                    if (result.error) {
+                        console.error("Backend Error:", result.error);
+                        throw new Error(result.error);
+                    }
+                    return result;
+                } catch (e) {
+                    console.error("Backend call failed, falling back to local JS.", e);
+                    return steelChecker.run(inputs);
+                }
+            }
+            return steelChecker.run(inputs);
+        },
         renderFunction: renderSteelResults,
         resultsContainerId: 'steel-results-container',
         buttonId: 'run-steel-check-btn' // Add button ID for loading state

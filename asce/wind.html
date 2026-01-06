@@ -531,21 +531,7 @@
     <script src="wind.js" defer></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (typeof injectHeader === 'function') {
-                injectHeader({
-                    activePage: 'wind', // Verify key in nav-config.json
-                    pageTitle: 'wind',
-                    headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: '../'
-                });
-            }
-            if (typeof injectFooter === 'function') {
-                injectFooter({
-                    footerPlaceholderId: 'footer-placeholder'
-                });
-            }
-        });
+        // Manual injection removed in favor of initializeApp in wind.js
     </script>
 </body>
 

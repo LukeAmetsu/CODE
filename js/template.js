@@ -142,7 +142,7 @@ async function injectHeader(config) {
             
             <!-- Left: Logo / Brand (Always fixed size, never shrinks) -->
             <div class="flex items-center flex-shrink-0 mr-4">
-                <a href="${pathPrefix}index.html" class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <a href="${pathPrefix}gui/index.html" class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                     <svg class="w-7 h-7 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                     <span class="whitespace-nowrap hidden sm:inline">${brandText}</span>
                 </a>
@@ -225,7 +225,7 @@ async function injectFooter(config) {
     const footerHTML = `
     <footer class="bg-white dark:bg-gray-800 rounded-lg shadow m-4 mt-12">
         <div class="w-full mx-auto max-w-screen-xl p-4 md:flex md:items-center md:justify-between">
-            <span class="text-sm text-gray-500 sm:text-center dark:text-gray-400">© ${new Date().getFullYear()} <a href="https://engineeringhub.com/" class="hover:underline">Engineering Hub™</a>. All Rights Reserved.
+            <span class="text-sm text-gray-500 sm:text-center dark:text-gray-400">© ${new Date().getFullYear()} <a href="${pathPrefix}gui/index.html" class="hover:underline">Engineering Hub™</a>. All Rights Reserved.
             </span>
             <ul class="flex flex-wrap items-center mt-3 text-sm font-medium text-gray-500 dark:text-gray-400 sm:mt-0">
                 <li>
