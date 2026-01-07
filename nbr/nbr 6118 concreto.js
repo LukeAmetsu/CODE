@@ -134,15 +134,24 @@ function renderNbrResults(calc_results) {
     report.render('results-container');
 }
 
+
 var handleRunNbrCheck = createCalculationHandler({
     inputIds: nbr6118InputIds,
     storageKey: 'nbr6118-inputs',
     validationRuleKey: 'nbr_concreto', // This key is used for validation and report naming
-    calculatorFunction: nbr6118Calculator.calculate,
+    calculatorFunction: async (inputs) => {
+        if (window.eel && window.eel.calculate_nbr_concrete) {
+            return await window.eel.calculate_nbr_concrete(inputs)();
+        } else {
+            console.warn("Eel not found, using local legacy calculator.");
+            return nbr6118Calculator.calculate(inputs);
+        }
+    },
     renderFunction: renderNbrResults,
     resultsContainerId: 'results-container',
     buttonId: 'run-check-btn'
 });
+
 
 initializeApp({
     inputIds: nbr6118InputIds,

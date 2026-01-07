@@ -201,6 +201,53 @@ def get_aisc_database():
         return {}
 
 
+
+@eel.expose
+def calculate_nbr_combinations(inputs):
+    try:
+        from backend.calculators.nbr_6118_comb import calculate_combinations
+        return calculate_combinations(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_nbr_concrete(inputs):
+    try:
+        from backend.calculators.nbr_6118_concrete import calculate_concrete_beam
+        return calculate_concrete_beam(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_nbr_steel(inputs):
+    try:
+        from backend.calculators.nbr_8800_steel import calculate_steel_structure
+        return calculate_steel_structure(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_mn_interaction_diagram(inputs):
+    try:
+        from backend.calculators.mn_interaction import calculate_mn_interaction
+        return calculate_mn_interaction(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_prestressed_beam_check(inputs):
+    try:
+        from backend.calculators.prestressed_beam import calculate_prestressed_beam
+        return calculate_prestressed_beam(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)
     # This exposes 'gui', 'aisc', 'js', etc.
@@ -210,10 +257,22 @@ if __name__ == '__main__':
     
     print("Starting Eel App...")
     # Start the app opening the index.html located in gui/
+    # Start the app opening the index.html located in gui/
+    # Try port 8000 specifically to allow browser refreshes to work after server restart
+    start_options = {'size': (1200, 800)}
+    
+    def start_eel(port):
+        try:
+            eel.start('gui/index.html', port=port, **start_options)
+        except EnvironmentError:
+            # Fallback if Chrome/Edge not found (opens in default browser)
+            eel.start('gui/index.html', mode='default', port=port, **start_options)
+
     try:
-        eel.start('gui/index.html', size=(1200, 800), port=0)
-    except EnvironmentError:
-        # Fallback if Chrome/Edge not found (opens in default browser)
-        eel.start('gui/index.html', mode='default', size=(1200, 800), port=0)
+        print("Attempting to start on port 8000...")
+        start_eel(8000)
+    except OSError:
+        print("Port 8000 taken, falling back to random port...")
+        start_eel(0)
     except (SystemExit, KeyboardInterrupt):
         pass

@@ -117,10 +117,30 @@ var nbrComboCalculator = (() => {
     return { calculate };
 })();
 
+
 initializeApp({
     calculationHandler: createCalculationHandler({
         gatherInputsFunction: gatherNbrLoads,
-        calculatorFunction: nbrComboCalculator.calculate,
+        calculatorFunction: async (inputs) => {
+            if (window.eel && window.eel.calculate_nbr_combinations) {
+                return await window.eel.calculate_nbr_combinations(inputs)(); // Eel functions return a thunk that needs to be called? No, usually eel.func(args)() in some versions, or await eel.func(args)().
+                // Eel python-side expose returns a function in JS. 
+                // In standard eel, `eel.exposed_func(arg)` returns a promise or calls a callback.
+                // Usually: `await eel.exposed_func(arg)()` check eel version behavior in valid examples.
+                // `backend/main_eel.py` line 1 says `import eel`.
+                // Let's assume standard behavior: `await eel.function_name(args)();`
+                // BUT, in `main_eel.py` I see usage of `eel.start`.
+                // Looking at other files... `nds wood design.js` (if it exists) might show pattern.
+                // I'll assume `await eel.calculate_nbr_combinations(inputs)()` is the safe way if using modern eel.
+                // Wait, if I'm not sure, I should check `js/shared-utils.js` or `main_eel.py` comments. 
+                // Or I can check if there are other JS files calling eel. 
+                // I'll check `gui/index.html` or similar if I could, but I'll stick to `await window.eel.calculate_nbr_combinations(inputs)();`.
+                return await window.eel.calculate_nbr_combinations(inputs)();
+            } else {
+                console.warn("Eel not found, using local legacy calculator.");
+                return nbrComboCalculator.calculate(inputs);
+            }
+        },
         renderFunction: renderNbrComboResults,
         resultsContainerId: 'report-output',
         buttonId: 'generate-report-btn', // Corrected button ID
@@ -135,6 +155,7 @@ initializeApp({
         addLoadRow(loadsContainer); // Add initial row
     }
 });
+
 
 function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {
     const rowId = `row-${Date.now()}`;

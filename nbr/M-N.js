@@ -880,15 +880,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculationHandler = createCalculationHandler({
         inputIds: INPUT_IDS,
         validationRuleKey: 'mn_diagram',
-        calculatorFunction: (inputs) => {
+        calculatorFunction: async (inputs) => {
+            const params = calculateDesignParameters(inputs);
+            const geom = normalizeGeometry(inputs);
             try {
-                const params = calculateDesignParameters(inputs);
-                const geom = normalizeGeometry(inputs);
+                if (window.eel && window.eel.calculate_mn_interaction_diagram) {
+                    const result = await window.eel.calculate_mn_interaction_diagram(inputs)();
+                    if (result.points) {
+                        return { points: result.points, params, geom };
+                    }
+                }
                 const points = calculateKeyPoints(inputs, geom, params);
                 return { points, params, geom }; 
             } catch (err) {
-                console.error("[Calculadora] Erro fatal no cálculo:", err);
-                return { points: [], params: null, geom: null }; 
+                console.error("[Calculadora] Erro backend/fatal:", err);
+                const points = calculateKeyPoints(inputs, geom, params);
+                return { points, params, geom }; 
             }
         },
         renderFunction: (result, inputs) => {

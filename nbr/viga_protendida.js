@@ -1286,8 +1286,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 300);
 
     window.addEventListener('input', drawAll);
-    document.getElementById('run-check-btn').addEventListener('click', () => {
-        const res = concreteBeamCalculator.run(gatherAllInputs());
+    document.getElementById('run-check-btn').addEventListener('click', async () => {
+        const inputs = gatherAllInputs();
+        let res;
+        try {
+             if (window.eel && window.eel.calculate_prestressed_beam_check) {
+                 res = await window.eel.calculate_prestressed_beam_check(inputs)();
+                 // Normalize errors
+                 if(res.errors && res.errors.length > 0) {
+                     alert("Erro no cálculo: " + res.errors.join("\n"));
+                     return;
+                 }
+             } else {
+                 console.warn("Backend not available, using local.");
+                 res = concreteBeamCalculator.run(inputs);
+             }
+        } catch(e) {
+            console.error("Backend failed, using local fallback", e);
+             res = concreteBeamCalculator.run(inputs);
+        }
         renderResults(res);
     });
     drawAll();

@@ -166,15 +166,24 @@ function renderNbr8800Results(calc_results) {
     report.render('results-container'); // Render into the main container
 }
 
+
 var handleRunNbr8800Check = createCalculationHandler({
     inputIds: nbr8800InputIds,
     storageKey: 'nbr8800-inputs',
     validationRuleKey: 'nbr_aco', // This key is used for validation and report naming
-    calculatorFunction: nbr8800Calculator.calculate,
+    calculatorFunction: async (inputs) => {
+        if (window.eel && window.eel.calculate_nbr_steel) {
+            return await window.eel.calculate_nbr_steel(inputs)();
+        } else {
+            console.warn("Eel not found, using local legacy calculator.");
+            return nbr8800Calculator.calculate(inputs);
+        }
+    },
     renderFunction: renderNbr8800Results,
     resultsContainerId: 'results-container',
     buttonId: 'run-check-btn'
 });
+
 
 initializeApp({
     inputIds: nbr8800InputIds,
