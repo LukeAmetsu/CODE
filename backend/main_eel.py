@@ -238,11 +238,21 @@ def calculate_mn_interaction_diagram(inputs):
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
 
+
 @eel.expose
 def calculate_prestressed_beam_check(inputs):
     try:
         from backend.calculators.prestressed_beam import calculate_prestressed_beam
         return calculate_prestressed_beam(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def solve_stm(inputs):
+    try:
+        from backend.calculators.STM_backend import solve_truss_system
+        return solve_truss_system(inputs)
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}

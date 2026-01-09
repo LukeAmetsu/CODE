@@ -1,47 +1,50 @@
 import json
+import os
 import re
 
-input_path = r'g:\My Drive\CODE-2\aisc\aisc-shapes-database-v16.0.js'
-output_path = r'g:\My Drive\CODE-2\backend\aisc_shapes.json'
+# Define absolute paths
+base_dir = os.path.dirname(os.path.abspath(__file__)) # backend/
+project_root = os.path.abspath(os.path.join(base_dir, '..'))
+input_js = os.path.join(project_root, 'aisc', 'aisc-shapes-database-v16.0.js')
+output_json = os.path.join(base_dir, 'aisc_shapes.json')
 
-try:
-    with open(input_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+def convert_db():
+    print(f"Reading from: {input_js}")
+    if not os.path.exists(input_js):
+        print(f"Error: Input file not found: {input_js}")
+        return
 
-    # Extract the object content
-    match = re.search(r'const AISC_SHAPES_DATABASE =\s*({.*});?', content, re.DOTALL)
-    if not match:
-        print("Could not find AISC_SHAPES_DATABASE object.")
-        exit(1)
-
-    json_str = match.group(1)
-    
-    # Simple cleanup for JSON compatibility if needed
-    # The file viewed had quoted keys, so it might be valid JSON already if we remove the variable declaration.
-    # However, standard JSON doesn't allow trailing commas.
-    
-    # Try parsing directly
     try:
-        data = json.loads(json_str)
-    except json.JSONDecodeError:
-        print("Direct JSON parse failed. Attempting robust parsing with ast.literal_eval...")
-        import ast
-        try:
-             # ast.literal_eval handles trailing commas and Python-like dict syntax (which matches JSON mostly)
-             data = ast.literal_eval(json_str)
-        except Exception as e:
-            print(f"AST eval failed: {e}")
-            # Last resort: simple regex cleanup for trailing commas
-            print("Attempting regex cleanup of trailing commas...")
-            json_str = re.sub(r',\s*}', '}', json_str)
-            json_str = re.sub(r',\s*]', ']', json_str)
+        with open(input_js, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Extract JSON object from JS assignment
+        # Look for "const AISC_SHAPES_DATABASE = { ... };"
+        match = re.search(r'const AISC_SHAPES_DATABASE\s*=\s*(\{.*\});', content, re.DOTALL)
+        if not match:
+            # Maybe it doesn't end with ; or uses var/let
+            match = re.search(r'=\s*(\{.*\})', content, re.DOTALL)
+        
+        if match:
+            json_str = match.group(1)
             data = json.loads(json_str)
+            print(f"Successfully parsed {len(data)} shapes from JS.")
+            
+            # Write to JSON
+            with open(output_json, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+            
+            print(f"Saved to {output_json}")
+            
+            # Verify W count
+            w_count = sum(1 for k, v in data.items() if v.get('type') == 'W' or v.get('Type') == 'W')
+            print(f"W-Shapes count: {w_count}")
+            
+        else:
+            print("Failed to extract JSON from JS file.")
 
-    # Write to JSON
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Error: {e}")
 
-    print(f"Successfully converted database to {output_path}. Total shapes: {len(data)}")
-
-except Exception as e:
-    print(f"Error converting database: {e}")
+if __name__ == "__main__":
+    convert_db()

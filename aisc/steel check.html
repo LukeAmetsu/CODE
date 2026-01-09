@@ -93,7 +93,8 @@
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-geometry">Geometry</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-loads">Loads</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-materials">Materials</button>
-                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-checks">Checks</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-checks">Checks</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-projects">Projects</button>
                 </div>
 
                 <!-- Tab Contents (Scrollable part) -->
@@ -295,6 +296,15 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Projects Tab -->
+                    <div id="tab-projects" class="tab-content hidden space-y-4">
+                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
+                            Saved Projects</h2>
+                        <div id="project-manager-container">
+                             <!-- Initializing ProjectManager will populate this -->
+                        </div>
+                    </div>
 
 
                     <div id="file-actions" class="mt-8 pt-4 border-t dark:border-gray-700">
@@ -342,6 +352,7 @@
         </main>
     </div>
 
+    <script src="steel_math.js" defer></script>
     <script src="steel check.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {

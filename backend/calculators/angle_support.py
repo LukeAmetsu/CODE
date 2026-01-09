@@ -111,7 +111,7 @@ def calculate_angle_support(inputs):
     req_spacing = 16.0 * dia 
 
     # --- 3. LAYOUT & LENGTH CALCULATION ---
-    num_angles = 2 if config == 'double' else 1
+    num_angles = 2 if (config == 'double' or config == 'top_bottom') else 1
     n_bolts_total = n_bolts
     n_bolts_angle = n_bolts_total / num_angles
     
@@ -168,8 +168,28 @@ def calculate_angle_support(inputs):
     e = float(user_e) if (user_e and float(user_e) > 0) else (leg_size / 2.0)
     Mu = V_angle * e
 
-    # Tension Calc (Elastic vs Linear)
-    if is_staggered:
+    # Tension Calc (Elastic vs Linear vs Top/Bottom)
+    beam_depth = float(inputs.get('beam_depth', 0))
+    
+    if config == 'top_bottom':
+        # Top & Bottom Angle Logic
+        # Moment is resisted by couple between Top and Bottom Angles
+        # Arm = Beam Depth + (Leg/2 top + Leg/2 bot) = Beam Depth + Leg Size
+        d_arm = beam_depth + leg_size
+        if d_arm <= 0: d_arm = 1.0 # Safety
+        
+        T_couple = Mu / d_arm
+        
+        # Tension is taken by Top Angle Bolts
+        # Assuming equal bolts top/bottom
+        n_bolts_top = max(1, n_bolts_total / 2.0)
+        
+        t_bolt = T_couple / n_bolts_top
+        
+        # Override layout msg
+        layout_msg = f"Top/Bot: {int(n_bolts_total)} Total Bolts (Arm {d_arm:.2f}\")"
+
+    elif is_staggered:
         # Elastic Method (My/I)
         y = gage / 2.0
         sum_y_sq = n_bolts_angle * (y**2)
@@ -179,6 +199,7 @@ def calculate_angle_support(inputs):
         else:
              t_bolt = (Mu / leg_size) / n_bolts_angle 
     else:
+        # Standard Bracket assumption (Linear/Prying)
         t_bolt = (Mu / leg_size) / n_bolts_angle
         
     v_bolt = V_angle / n_bolts_angle
@@ -214,7 +235,11 @@ def calculate_angle_support(inputs):
     ratio_long = (M_long / Ma_long) if Ma_long > 0 else 999.0
     
     # --- 7. Final Spec String ---
-    config_str = "2L" if config == 'double' else "L"
+    if config == 'top_bottom':
+        config_str = "TB"
+    else:
+        config_str = "2L" if config == 'double' else "L"
+        
     stag_lbl = " (Staggered)" if is_staggered else ""
     spec_string = f"{config_str}{leg_size}x{leg_size}x{format_fraction(t)}x{rec_length_calc:g}\"{stag_lbl}"
 

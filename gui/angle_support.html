@@ -79,6 +79,15 @@
                 </p>
               </div>
               <div>
+                <label class="block text-sm font-medium mb-1" data-i18n="beam_depth_in">Beam Depth (in)</label>
+                <input
+                  type="text"
+                  id="beam_depth"
+                  value="12"
+                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                />
+              </div>
+              <div>
                 <label class="block text-sm font-medium mb-1" data-i18n="area_load_psf"
                   >Area Load (psf)</label
                 >
@@ -125,6 +134,7 @@
                 >
                   <option value="single">Single (L)</option>
                   <option value="double">Double (2L)</option>
+                  <option value="top_bottom">Top & Bottom (Seat+Cap)</option>
                 </select>
               </div>
               <div class="grid grid-cols-2 gap-2">

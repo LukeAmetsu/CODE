@@ -208,6 +208,7 @@ async function calculateAngleSupport() {
     angle_thick:
       parseFloat(document.getElementById("angle_thick").value) || 0.375,
     angle_fy: safeMathEval(document.getElementById("angle_fy").value) || 36,
+    beam_depth: safeMathEval(document.getElementById("beam_depth").value) || 0,
     moment_arm: safeMathEval(document.getElementById("moment_arm").value),
     angle_config: document.getElementById("angle_config").value,
     design_method: document.getElementById("angle_method").value,

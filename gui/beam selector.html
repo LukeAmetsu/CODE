@@ -39,6 +39,14 @@
                     <div class="space-y-4">
                         <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1" data-i18n="design_criteria">Design Criteria</h3>
                         <div>
+                            <label class="block text-sm font-medium mb-1" data-i18n="shape_type">Shape Type</label>
+                            <select id="shape_type"
+                                class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                <option value="W" selected>W - Wide Flange</option>
+                                <option value="S">S - American Standard Beam</option>
+                            </select>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium mb-1" data-i18n="method">Method</label>
                             <select id="design_method"
                                 class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
@@ -144,8 +152,17 @@
 
                 <div
                     class="mt-8 flex flex-wrap gap-4 justify-center md:justify-end border-t border-gray-200 dark:border-gray-700 pt-6">
-                    <div class="flex items-center gap-2 mr-auto">
-                        <label class="inline-flex items-center cursor-pointer mr-6">
+                    <div class="flex items-center gap-4 mr-auto">
+                        <div class="flex items-center gap-2" title="Filter results by maximum utilization">
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Max Ratio:</label>
+                            <div class="relative">
+                                <input type="number" id="max_ratio" value="100" min="1" max="100"
+                                    class="w-16 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-center font-bold text-blue-600 dark:text-blue-400">
+                                <span class="absolute right-1 top-2 text-xs text-gray-500">%</span>
+                            </div>
+                        </div>
+
+                        <label class="inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="depth_limit_check" class="sr-only peer">
                             <div
                                 class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">

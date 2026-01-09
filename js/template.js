@@ -57,8 +57,12 @@ async function injectHeader(config) {
     // --- LOGIC TO FIND ACTIVE SECTION AND SIBLINGS ---
     // Get current filename (e.g., "wind.html")
     const currentPath = window.location.pathname;
-    const currentFilename = decodeURIComponent(currentPath.substring(currentPath.lastIndexOf('/') + 1));
-
+    // Handle root path or empty filename
+    let currentFilename = decodeURIComponent(currentPath.substring(currentPath.lastIndexOf('/') + 1));
+    if (currentFilename === '') currentFilename = 'index.html'; // Default to index if root
+    
+    // Normalize logic: remove extension for looser matching if needed, but strict is okay for now.
+    
     // Find the active item in the navigation tree
     let activeItem = null;
     let activeParent = null;
@@ -66,14 +70,15 @@ async function injectHeader(config) {
     // Iterate through main nav items
     for (const item of navConfig.mainNav) {
         // Check if the item itself matches (for top-level links without subnav)
-        if (item.href && item.href.endsWith(currentFilename)) {
+        // Robust check: endsWith or exact match
+        if (item.href && (item.href.endsWith(currentFilename) || item.href === currentFilename)) {
             activeItem = item;
             activeParent = item; // It's its own parent in a way
             break;
         }
         // Check sub-items
         if (item.subNav) {
-            const found = item.subNav.find(sub => sub.href && sub.href.endsWith(currentFilename));
+            const found = item.subNav.find(sub => sub.href && (sub.href.endsWith(currentFilename) || sub.href === currentFilename));
             if (found) {
                 activeItem = found;
                 activeParent = item;
@@ -136,6 +141,11 @@ async function injectHeader(config) {
     const brandText = safeTranslate('engineering_hub', 'Engineering Hub');
 
     const headerHTML = `
+    <!-- Skip to Content Link for Accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[100] focus:p-4 focus:bg-white focus:text-blue-600 focus:font-bold">
+        Skip to main content
+    </a>
+
     <header class="bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300 relative w-full bottom-5 z-50 flex flex-col">
         <!-- Top Navigation Bar -->
         <nav class="container mx-auto px-4 h-16 flex items-center justify-between w-full">

@@ -67,17 +67,26 @@ document.addEventListener('DOMContentLoaded', () => {
     updateMomentPreview();
 
     // Populate Desired Section Dropdown
-    populateShapesDropdown();
+    populateShapesDropdown('W');
+
+    // Shape Type Listener
+    document.getElementById('shape_type').addEventListener('change', (e) => {
+        populateShapesDropdown(e.target.value);
+    });
 
     // Initial Render of Batch Table
     renderBatchTable();
 });
 
-async function populateShapesDropdown() {
+async function populateShapesDropdown(type) {
     try {
-        // Use the generic get_shapes_by_type exposed in main_eel.py
-        const shapes = await eel.get_shapes_by_type('W')();
         const select = document.getElementById('desired_section');
+        select.innerHTML = '<option value="">-- Check Specific Beam --</option>'; // Clear existing
+        
+        // Use the generic get_shapes_by_type exposed in main_eel.py
+        const shapes = await eel.get_shapes_by_type(type)();
+        shapes.sort(); // Alphabetical sort is usually fine
+        
         shapes.forEach(shape => {
             const opt = document.createElement('option');
             opt.value = shape;
@@ -268,6 +277,7 @@ function setupBatchExcelImport() {
 // --- MAIN CALCULATION ---
 async function findLightestBeam() {
     // 1. Gather Global Inputs
+    const shapeType = document.getElementById('shape_type').value;
     const method = document.getElementById('design_method').value; // LRFD, ASD, or OSHA
     const Fy = safeMathEval(document.getElementById('Fy').value) || 50;
     // Note: Lb and Cb from single inputs are override defaults if not in batch row, 
@@ -277,10 +287,12 @@ async function findLightestBeam() {
 
     const checkDeflection = document.getElementById('check_deflection').checked;
 
-    // Only send nominal depth limit if the checkbox is actually checked
     const depthChecked = document.getElementById('depth_limit_check').checked;
     const nominalDepth = depthChecked ? (safeMathEval(document.getElementById('nominal_depth').value) || 0) : 0;
     const desiredShape = document.getElementById('desired_section').value;
+    
+    const maxRatioPct = safeMathEval(document.getElementById('max_ratio').value) || 100;
+    const maxRatio = maxRatioPct / 100.0;
 
     // Check if triggered by Batch button
     const isBatch = beamData.batchCases.length > 0;
@@ -330,6 +342,7 @@ async function findLightestBeam() {
     }
 
     const inputs = {
+        shape_type: shapeType,
         design_method: method,
         fy: Fy,
         // Global Single Inputs (used if batch is null)
@@ -340,8 +353,10 @@ async function findLightestBeam() {
         w_load: w_load,
 
         nominal_depth: nominalDepth,
+        nominal_depth: nominalDepth,
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
+        max_ratio: maxRatio,
 
         // The New Batch Data
         batch_loads: batchPayload.length > 0 ? batchPayload : null
@@ -483,7 +498,7 @@ function renderResults(data, demand) {
     `).join('');
 }
 
-const beamBatchResults = []; // Store batch results for detail view
+var beamBatchResults = []; // Store batch results for detail view
 
 function renderBatchResults(data) {
     const container = document.getElementById('batch-results-container');
@@ -570,8 +585,12 @@ async function viewBatchDetails(index) {
 
     const checkDeflection = document.getElementById('check_deflection').checked;
     const desiredShape = document.getElementById('desired_section').value;
+    const maxRatioPct = safeMathEval(document.getElementById('max_ratio').value) || 100;
 
     const singleInputs = {
+        shape_type: document.getElementById('shape_type').value, // Use current UI selection or from data? 
+        // Technically batch data should store shape type if we support mixed batches. 
+        // For now, assuming batch runs under current global shape setting.
         design_method: method,
         fy: Fy,
         lb_ft: data.lb !== undefined ? data.lb : data.span,
@@ -582,6 +601,7 @@ async function viewBatchDetails(index) {
         nominal_depth: nominalDepth,
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
+        max_ratio: maxRatioPct / 100.0, // Re-calc or pass? We didn't grab it in viewBatchDetails local scope yet
         batch_loads: null
     };
 

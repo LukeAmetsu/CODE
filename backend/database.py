@@ -87,8 +87,27 @@ class AISCDatabase:
             raise Exception("Database not loaded. Call load_database() first.")
         
         # Filter shapes where 'Type' matches (e.g., 'W', 'L', etc.)
-        # We assume the 'Type' column exists and matches AISC codes.
-        return {k: v for k, v in self._shapes.items() if v.get('Type') == shape_type}
+        # Fix: Check both 'Type' (Excel) and 'type' (JSON)
+        # Also map standard codes to database verbose names found in JS DB
+        type_mapping = {
+            'W': ['W', 'W-Shape'],
+            'M': ['M', 'M-Shape'],
+            'S': ['S', 'S-Shape'],
+            'HP': ['HP', 'HP-Shape'],
+            'C': ['C', 'Channel'],
+            'MC': ['MC', 'Channel'], # MC is also a channel type usually
+            'L': ['L', 'Angle'],
+            'WT': ['WT', 'WT-Shape'],
+            'MT': ['MT', 'MT-Shape'],
+            'ST': ['ST', 'ST-Shape'],
+            '2L': ['2L', 'Double Angle'],
+            'HSS': ['HSS', 'HSS-Rect', 'HSS-Round'],
+            'PIPE': ['PIPE', 'Pipe']
+        }
+        
+        target_types = type_mapping.get(shape_type, [shape_type])
+        
+        return {k: v for k, v in self._shapes.items() if v.get('Type') in target_types or v.get('type') in target_types}
 
     def get_shape_details(self, shape_name):
         if self._shapes is None:

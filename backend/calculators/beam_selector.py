@@ -64,6 +64,7 @@ def find_lightest_beam(inputs):
 
     
     # 1. Gather Inputs
+    shape_type = inputs.get('shape_type', 'W')
     method = inputs.get('design_method', 'ASD')
     fy = float(inputs.get('fy', 50))
     E = 29000.0
@@ -79,9 +80,11 @@ def find_lightest_beam(inputs):
         m_req = (w * span * span) / 8.0
         
     max_depth = float(inputs.get('max_depth', 9999))
+    max_ratio = float(inputs.get('max_ratio', 1.0))
+    if max_ratio <= 0: max_ratio = 1.0 # Safety fallback
     
     # 2. Fetch Database
-    shapes = db.get_shapes_by_type('W')
+    shapes = db.get_shapes_by_type(shape_type)
     
     valid_candidates = []
     desired_result = None
@@ -92,7 +95,10 @@ def find_lightest_beam(inputs):
     
     for name, props in shapes.items():
         # Metric check filter (some DBs have metric)
-        if 'W' not in name: 
+        # Metric check filter (some DBs have metric)
+        if shape_type not in name: 
+            # Basic check: Ensure the shape name starts with or contains the type.
+            # For 'W' it works. For 'S' (S12x30) it works.
             continue 
         
         # Parse Weight from name W12x26 -> 26
@@ -219,7 +225,8 @@ def find_lightest_beam(inputs):
             # Name format is W[Depth]X[Weight]
             try:
                 # Remove W, split by X
-                depth_str = name.upper().replace('W', '').split('X')[0]
+                # Remove Prefix (W, S, etc), split by X
+                depth_str = name.upper().replace(shape_type, '').split('X')[0]
                 nominal_actual = float(depth_str)
                 # Check match (tolerance? No, nominal is exact integer usually, but float safe)
                 if abs(nominal_actual - nominal_target) > 0.1:
@@ -227,8 +234,9 @@ def find_lightest_beam(inputs):
             except:
                 is_valid = False
             
-        # 2. Capacity Check
-        if capacity < m_req:
+        # 2. Capacity Check (Ratio <= Max Ratio)
+        # Note: 'ratio' calculated above is m_req / capacity
+        if ratio > max_ratio:
             is_valid = False
             
         # 3. Deflection Check (Optional)

@@ -16,8 +16,42 @@ function createCalculationHandler(config) { // This is the function being called
         resultsContainerId,
         validatorFunction,
         feedbackElId = 'feedback-message',
-        buttonId
+        buttonId,
+        onCalculationStart,
+        onCalculationEnd,
+        resetButtonId
     } = config;
+
+    // --- SETUP RESET BUTTON ---
+    if (resetButtonId) {
+        const resetBtn = document.getElementById(resetButtonId);
+        if (resetBtn) {
+            // Remove old listeners ideally, but assuming this is called once per page load
+            const newResetBtn = resetBtn.cloneNode(true);
+            resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+            
+            newResetBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset all fields?')) {
+                    // Reset inputs
+                    if (inputIds && Array.isArray(inputIds)) {
+                        inputIds.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) {
+                                if (el.type === 'checkbox') el.checked = false;
+                                else el.value = '';
+                                el.dispatchEvent(new Event('change'));
+                            }
+                        });
+                    }
+                    // Clear results
+                    const resultsParams = document.getElementById(resultsContainerId);
+                    if (resultsParams) resultsParams.innerHTML = '';
+                    // Clear storage if needed? Maybe separate button.
+                    showFeedback('Form reset.', 'info', feedbackElId);
+                }
+            });
+        }
+    }
 
     // Automatically highlight required fields for this calculator when it's created.
     if (validationRuleKey) {
@@ -31,7 +65,11 @@ function createCalculationHandler(config) { // This is the function being called
         console.log(`[${validationRuleKey}] Calculation triggered.`);
         // --- 1. SETUP & GATHER INPUTS ---
         if (buttonId) setLoadingState(true, buttonId);
-        showFeedback('Gathering inputs...', false, feedbackElId);
+        showFeedback('Gathering inputs...', 'info', feedbackElId);
+        
+        if (typeof onCalculationStart === 'function') {
+            try { onCalculationStart(); } catch(e) { console.error('Error in onCalculationStart:', e); }
+        }
 
         // Use the provided gather function or the default one.
         console.log(`[${validationRuleKey}] Gathering inputs...`);
@@ -44,7 +82,8 @@ function createCalculationHandler(config) { // This is the function being called
 
 
         // --- 2. VALIDATE INPUTS ---
-        showFeedback('Validating inputs...', false, feedbackElId);
+        // --- 2. VALIDATE INPUTS ---
+        showFeedback('Validating inputs...', 'info', feedbackElId);
         // Awaiting a resolved promise is a clean way to yield to the event loop, allowing the UI to update.
         console.log(`[${validationRuleKey}] Validating inputs...`);
         await Promise.resolve();
@@ -78,13 +117,15 @@ function createCalculationHandler(config) { // This is the function being called
         if (validation.errors && validation.errors.length > 0) {
             renderValidationResults(validation, resultsContainer);
             console.error(`[${validationRuleKey}] Validation failed. Errors:`, validation.errors);
-            showFeedback('Validation failed. Please correct the errors.', true, feedbackElId);
+            console.error(`[${validationRuleKey}] Validation failed. Errors:`, validation.errors);
+            showFeedback('Validation failed. Please correct the errors.', 'error', feedbackElId);
             if (buttonId) setLoadingState(false, buttonId);
             return;
         }
 
         // --- 3. PERFORM CALCULATION ---
-        showFeedback('Running calculation...', false, feedbackElId);
+        // --- 3. PERFORM CALCULATION ---
+        showFeedback('Running calculation...', 'info', feedbackElId);
         console.log(`[${validationRuleKey}] Performing calculation...`);
         await Promise.resolve();
 
@@ -106,10 +147,12 @@ function createCalculationHandler(config) { // This is the function being called
         if (calculationResult.error) {
             console.error(`[${validationRuleKey}] Calculation error:`, calculationResult.error);
             renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
-            showFeedback('Calculation failed.', true, feedbackElId);
+            renderValidationResults({ errors: [calculationResult.error] }, resultsContainer);
+            showFeedback('Calculation failed.', 'error', feedbackElId);
         } else {
             console.log(`[${validationRuleKey}] Calculation successful. Rendering results...`);
-            showFeedback('Rendering results...', false, feedbackElId);
+            console.log(`[${validationRuleKey}] Calculation successful. Rendering results...`);
+            showFeedback('Rendering results...', 'info', feedbackElId);
             await Promise.resolve();
 
             saveInputsToLocalStorage(storageKey, inputs, '1.1');
@@ -135,7 +178,12 @@ function createCalculationHandler(config) { // This is the function being called
             });
 
             console.log(`[${validationRuleKey}] Event listeners attached to container #${resultsContainerId}. Targetting report content ID: #${reportContentId}`);
-            showFeedback('Calculation complete!', false, feedbackElId);
+            console.log(`[${validationRuleKey}] Event listeners attached to container #${resultsContainerId}. Targetting report content ID: #${reportContentId}`);
+            showFeedback('Calculation complete!', 'success', feedbackElId);
+            
+            if (typeof onCalculationEnd === 'function') {
+                try { onCalculationEnd(calculationResult); } catch(e) { console.error('Error in onCalculationEnd:', e); }
+            }
         }
 
         if (buttonId) setLoadingState(false, buttonId);
@@ -214,44 +262,86 @@ function setLoadingState(isLoading, buttonId) {
 
 /**
  * Shows a feedback message to the user.
+ * Supports 'success', 'error', 'warning', 'info'.
  */
-function showFeedback(message, isError, elementId) {
+function showFeedback(message, typeOrIsError, elementId = 'feedback-message') {
     const el = document.getElementById(elementId);
     if (!el) return;
 
-    el.textContent = message;
-    el.className = isError ? 'feedback-error' : 'feedback-success';
-    el.style.display = 'block';
+    // Backward compatibility: handle boolean for isError
+    let type = 'success';
+    if (typeof typeOrIsError === 'boolean') {
+        type = typeOrIsError ? 'error' : 'success';
+    } else if (typeof typeOrIsError === 'string') {
+        type = typeOrIsError;
+    }
 
-    // Auto-hide success messages after 3 seconds
-    if (!isError) {
-        setTimeout(() => {
+    el.textContent = message;
+    
+    // Map types to classes
+    const classMap = {
+        'success': 'feedback-success text-green-600 bg-green-100 border-green-400',
+        'error': 'feedback-error text-red-600 bg-red-100 border-red-400',
+        'warning': 'feedback-warning text-yellow-600 bg-yellow-100 border-yellow-400',
+        'info': 'feedback-info text-blue-600 bg-blue-100 border-blue-400'
+    };
+    
+    // Reset classes and add base + specific (clearing old specific classes first)
+    el.className = `feedback-message p-4 mb-4 text-sm rounded-lg border ${classMap[type] || classMap['info']}`;
+    el.style.display = 'block';
+    
+    // Reset opacity for transition
+    el.style.opacity = '1';
+
+    // Auto-hide unless it's an error
+    if (type !== 'error') {
+        // Clear existing timeout if any
+        if (el.dataset.timeoutId) clearTimeout(parseInt(el.dataset.timeoutId));
+        
+        const timeoutId = setTimeout(() => {
+            el.style.transition = 'opacity 0.5s ease-out';
             el.style.opacity = '0';
             setTimeout(() => {
                 el.style.display = 'none';
                 el.style.opacity = '1';
+                el.style.transition = '';
             }, 500);
         }, 3000);
+        el.dataset.timeoutId = timeoutId;
     }
 }
 
 /**
  * Renders validation errors into the results container.
  */
+/**
+ * Renders validation errors into the results container.
+ * Returns the HTML string.
+ */
 function renderValidationResults(validation, container) {
-    if (!container) return;
-
-    let html = '<div class="validation-summary error-box">';
-    html += '<h4>Please correct the following errors:</h4><ul>';
+    let html = '<div class="validation-summary error-box border border-red-400 bg-red-50 p-4 rounded text-red-700">';
+    html += '<h4 class="font-bold mb-2">Please correct the following errors:</h4><ul class="list-disc pl-5">';
 
     if (validation.errors) {
         validation.errors.forEach(err => {
-            html += `<li>${err}</li>`;
+            const msg = (typeof err === 'object') ? (err.message || err.msg || JSON.stringify(err)) : err;
+            html += `<li>${msg}</li>`;
         });
+    }
+    
+    if (validation.warnings && validation.warnings.length > 0) {
+         html += '</ul><h4 class="font-bold mt-4 mb-2 text-yellow-700">Warnings:</h4><ul class="list-disc pl-5 text-yellow-700">';
+         validation.warnings.forEach(warn => {
+             html += `<li>${warn}</li>`;
+         });
     }
 
     html += '</ul></div>';
-    container.innerHTML = html;
+    
+    if (container) {
+        container.innerHTML = html;
+    }
+    return html;
 }
 
 /**
@@ -307,26 +397,37 @@ function attachReportEventListeners(containerId, options) {
     });
 }
 
-// Stub for clipboard copying
-function copyReportToClipboard(elementId) {
+// Modern Clipboard Copy
+async function copyReportToClipboard(elementId) {
     const el = document.getElementById(elementId);
     if (!el) {
         console.warn('Report element not found for copying.');
         return;
     }
 
-    // Create a temporary textarea to copy text
-    const textarea = document.createElement('textarea');
-    textarea.value = el.innerText;
-    document.body.appendChild(textarea);
-    textarea.select();
+    const text = el.innerText; // Get text content
+
     try {
-        document.execCommand('copy');
-        alert('Report copied to clipboard!');
+        await navigator.clipboard.writeText(text);
+        showFeedback('Report copied to clipboard!', 'success', 'feedback-message');
     } catch (err) {
-        console.error('Failed to copy report:', err);
+        console.warn('Clipboard API failed, trying fallback...', err);
+        // Fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed'; // Avoid scrolling
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showFeedback('Report copied to clipboard (fallback)!', 'success', 'feedback-message');
+        } catch (fallbackErr) {
+            console.error('Failed to copy report:', fallbackErr);
+            showFeedback('Failed to copy report.', 'error', 'feedback-message');
+        }
+        document.body.removeChild(textarea);
     }
-    document.body.removeChild(textarea);
 }
 
 // Stub for printing
@@ -841,7 +942,7 @@ async function handleCopy(targetId, options = {}) {
         clone.querySelectorAll('button, .print-hidden, [data-copy-ignore]').forEach(el => el.remove());
         clone.querySelectorAll('.details-row').forEach(row => row.classList.add('is-visible'));
 
-        // Convert SVGs to PNGs
+// Convert SVGs to PNGs
         let conversionFailures = 0;
         const diagramElements = Array.from(clone.querySelectorAll('svg, canvas'));
         if (diagramElements.length > 0) {
@@ -852,17 +953,35 @@ async function handleCopy(targetId, options = {}) {
                     let pngImage;
                     if (diagram.tagName.toLowerCase() === 'svg') {
                         pngImage = await convertSvgToPng(diagram);
-                    } else if (diagram.tagName.toLowerCase() === 'canvas' && engine && scene) {
-                        // Handle BabylonJS canvas
-                        pngImage = await new Promise(res => BABYLON.Tools.CreateScreenshot(engine, scene.activeCamera, { finalWidth: diagram.width, finalHeight: diagram.height }, data => res(data)));
+                    } else if (diagram.tagName.toLowerCase() === 'canvas') {
+                        if (engine && scene) {
+                             // Handle BabylonJS canvas
+                            pngImage = await new Promise(res => BABYLON.Tools.CreateScreenshot(engine, scene.activeCamera, { finalWidth: diagram.width, finalHeight: diagram.height }, data => res(data)));
+                        } else {
+                            // Handle standard 2D canvas
+                            const dataUrl = diagram.toDataURL('image/png');
+                            pngImage = new Image();
+                            pngImage.src = dataUrl;
+                             // Wait for image load
+                            await new Promise(resolve => {
+                                if (pngImage.complete) resolve();
+                                else pngImage.onload = resolve;
+                            });
+                        }
                     }
                     if (pngImage && diagram.parentNode) {
+                        // Maintain original size
+                        if (diagram.style.width) pngImage.style.width = diagram.style.width;
+                        if (diagram.style.height) pngImage.style.height = diagram.style.height;
+                        if (diagram.width) pngImage.width = diagram.width;
+                        if (diagram.height) pngImage.height = diagram.height;
+                        
                         diagram.parentNode.replaceChild(pngImage, diagram);
                     } else if (diagram.parentNode) { diagram.parentNode.remove(); }
                 } catch (error) {
-                    console.warn("SVG to PNG conversion failed:", error);
+                    console.warn("SVG/Canvas to PNG conversion failed:", error);
                     conversionFailures++;
-                    if (diagram.parentNode) diagram.parentNode.remove(); // Remove SVG if conversion fails to avoid broken images.
+                    if (diagram.parentNode) diagram.parentNode.remove(); // Remove if conversion fails
                 }
             }));
         }
@@ -1983,3 +2102,151 @@ function interpolate(x, x_points, y_values) {
     return y_values[y_values.length - 1]; // Should not be reached
 }
 
+
+/**
+ * Class for managing named project items (snapshots of inputs).
+ * Allows users to save, load, and delete multiple named configurations.
+ */
+class ProjectManager {
+    /**
+     * @param {object} config - Configuration object
+     * @param {string} config.storageKey - LocalStorage key (e.g., 'steel-project-items')
+     * @param {string} config.containerId - DOM ID of the container to render the manager UI
+     * @param {string[]} config.inputIds - Array of input IDs to save
+     * @param {function} config.onLoadItem - Callback function(inputs) when an item is loaded
+     */
+    constructor(config) {
+        this.storageKey = config.storageKey;
+        this.containerId = config.containerId;
+        this.inputIds = config.inputIds;
+        this.onLoadItem = config.onLoadItem;
+        
+        this.items = this.loadItemsFromStorage();
+        this.render();
+    }
+
+    loadItemsFromStorage() {
+        try {
+            return JSON.parse(localStorage.getItem(this.storageKey) || '{}');
+        } catch (e) {
+            console.error('Failed to load project items', e);
+            return {};
+        }
+    }
+
+    saveCurrentAs(name) {
+        if (!name) return;
+        const inputs = gatherInputsFromIds(this.inputIds);
+        this.items[name] = {
+            timestamp: new Date().toISOString(),
+            inputs: inputs
+        };
+        this.persist();
+        this.render();
+        if (typeof showFeedback === 'function') showFeedback(`Saved item: ${name}`, false);
+    }
+
+    deleteItem(name) {
+        if (this.items[name]) {
+            delete this.items[name];
+            this.persist();
+            this.render();
+        }
+    }
+
+    loadItem(name) {
+        const item = this.items[name];
+        if (item && item.inputs) {
+            if (this.onLoadItem) this.onLoadItem(item.inputs);
+            if (typeof showFeedback === 'function') showFeedback(`Loaded item: ${name}`, false);
+        }
+    }
+
+    persist() {
+        localStorage.setItem(this.storageKey, JSON.stringify(this.items));
+    }
+
+    render() {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+
+        container.innerHTML = '';
+        
+        const header = document.createElement('h3');
+        header.className = 'text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200';
+        header.textContent = 'Project Items';
+        
+        const list = document.createElement('div');
+        list.className = 'space-y-2 max-h-60 overflow-y-auto pr-1';
+
+        if (Object.keys(this.items).length === 0) {
+            list.innerHTML = '<p class="text-gray-500 italic text-sm">No saved items.</p>';
+        } else {
+            Object.entries(this.items).forEach(([name, data]) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600 shadow-sm';
+                
+                const label = document.createElement('div');
+                label.className = 'flex flex-col';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'font-medium text-sm text-gray-800 dark:text-gray-200';
+                nameSpan.textContent = name;
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'text-xs text-gray-500';
+                // Format timestamp nicely
+                const date = new Date(data.timestamp);
+                dateSpan.textContent = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                label.append(nameSpan, dateSpan);
+                
+                const actions = document.createElement('div');
+                actions.className = 'flex gap-2';
+
+                const loadBtn = document.createElement('button');
+                loadBtn.textContent = 'Load';
+                loadBtn.className = 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-semibold px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-gray-600';
+                loadBtn.onclick = () => this.loadItem(name);
+
+                const delBtn = document.createElement('button');
+                delBtn.textContent = 'Delete';
+                delBtn.className = 'text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xs px-2 py-1 border border-red-200 rounded hover:bg-red-50 dark:border-red-800 dark:hover:bg-gray-600';
+                delBtn.onclick = () => {
+                    if(confirm(`Delete "${name}"?`)) this.deleteItem(name);
+                };
+
+                actions.append(loadBtn, delBtn);
+                itemEl.append(label, actions);
+                list.appendChild(itemEl);
+            });
+        }
+        
+        // Add "Save New" UI
+        const saveRow = document.createElement('div');
+        saveRow.className = 'mt-4 pt-4 border-t dark:border-gray-600 flex gap-2';
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Item Name (e.g. Beam B1)';
+        input.className = 'border rounded px-2 py-1 text-sm flex-grow dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+        input.onkeydown = (e) => { if (e.key === 'Enter') saveBtn.click(); };
+        
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save New';
+        saveBtn.className = 'bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 shadow-sm transition-colors whitespace-nowrap';
+        saveBtn.onclick = () => {
+            const val = input.value.trim();
+            if(val) {
+                if (this.items[val] && !confirm(`Overwrite existing item "${val}"?`)) return;
+                this.saveCurrentAs(val);
+                input.value = '';
+            } else {
+                if (typeof showFeedback === 'function') showFeedback('Please enter a name.', true);
+            }
+        };
+
+        saveRow.append(input, saveBtn);
+        container.append(header, list, saveRow);
+    }
+}

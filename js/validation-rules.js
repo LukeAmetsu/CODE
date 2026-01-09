@@ -620,47 +620,57 @@ let validationStatus = true;
  * @param {Array<string>} inputIds An array of IDs for the input fields to validate.
  * @returns {boolean} True if all specified inputs are valid, false otherwise.
  */
+/**
+ * Orchestrates the validation of all required input fields on the page.
+ *
+ * @param {Array<string>} inputIds An array of IDs for the input fields to validate.
+ * @param {Object} rules The validation rules object.
+ * @returns {Object} An object containing errors, warnings, and field-specific errors.
+ */
 function validateInputs(inputIds, rules = {}) {
     // Reset global status for a new validation run
     validationStatus = true;
     const errors = [];
     const warnings = [];
+    const fieldErrors = {}; // New: Track errors per field for UI highlighting
 
     // Assume inputIds is an array of strings, where each string is an element ID.
     if (!Array.isArray(inputIds)) {
         console.error("validateInputs requires an array of input IDs.");
-        return { errors: ["Internal Error: Invalid input IDs."], warnings: [] };
+        return { errors: ["Internal Error: Invalid input IDs."], warnings: [], fieldErrors: {} };
     }
 
     // Capture values for cross-field validation
     const inputs = {};
 
-    // Apply validation to each input
+    // First pass: Gather all values
+    inputIds.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            const rawValue = input.value;
+            // Parse number if possible, but keep raw for regex/string checks
+            const value = (input.type === 'number' && rawValue !== '') ? parseFloat(rawValue) : rawValue;
+            inputs[id] = value;
+        }
+    });
+
+    // Second pass: Validate each input
     inputIds.forEach(id => {
         const input = document.getElementById(id);
         if (!input) return;
 
-        // Collect value for later
         const rawValue = input.value;
-        const value = parseFloat(rawValue);
-        inputs[id] = isNaN(value) ? rawValue : value;
-
+        const value = inputs[id]; // Parsed value or raw string
         const rule = rules[id];
-        // If no rule is defined, we assume it's NOT required by default for safety, 
-        // or we check if it was previously treated as required. 
-        // The original code passed 'true' to validateField, forcing everything to be required.
-        // Let's stick to the rule definition if available, otherwise default to required=false unless strict mode.
-        // However, looking at the previous code, it just called validateField(id, true) for everything provided in inputIds.
-        // So we should respect that if 'rules' is empty/undefined for that field, but maybe we should default to true to match legacy behavior?
-        // Actually, shared-utils passes `Object.keys(inputs)` which is ALL inputs gathered. 
-        // We shouldn't enforce requirement on EVERYTHING if there is no rule. 
-        // Let's only validate if there IS a rule or if we want to enforce legacy behavior. 
-        // The safest bet is: if rule exists, follow it. If not, ignore (unless we want to enforce numeric checks on everything).
-
         let isValid = true;
         let errorMessage = null;
 
-        const isRequired = rule ? (typeof rule.required === 'function' ? rule.required(inputs) : rule.required) : false;
+        // Reset previous error state
+        input.classList.remove('input-error');
+
+        // Determine if required
+        // If rule exists, respect its required property. If no rule, assume NOT required (safe default).
+        const isRequired = rule ? (typeof rule.required === 'function' ? rule.required(inputs) : !!rule.required) : false;
 
         // 1. Required Check
         if (isRequired && rawValue.trim() === "") {
@@ -668,30 +678,57 @@ function validateInputs(inputIds, rules = {}) {
             errorMessage = `${rule?.label || id} is required.`;
         }
 
-        // 2. Numeric Check (if not empty)
-        if (isValid && rawValue.trim() !== "" && isNaN(value) && input.type === 'number') {
-            isValid = false;
-            errorMessage = `${rule?.label || id} must be a number.`;
+        // 2. Numeric Check (if not empty and input type is number)
+        if (isValid && rawValue.trim() !== "" && input.type === 'number') {
+            if (typeof value !== 'number' || isNaN(value)) {
+                isValid = false;
+                errorMessage = `${rule?.label || id} must be a number.`;
+            }
         }
 
-        // 3. Min/Max Check
-        if (isValid && typeof value === 'number' && !isNaN(value)) {
-            if (rule && rule.min !== undefined && value < rule.min) {
-                isValid = false;
-                errorMessage = `${rule.label || id} must be at least ${rule.min}.`;
+        // 3. Rule constraints (min, max, integer, regex)
+        if (isValid && rawValue.trim() !== "" && rule) {
+            // Min/Max (only for numbers)
+            if (typeof value === 'number' && !isNaN(value)) {
+                if (rule.min !== undefined && value < rule.min) {
+                    isValid = false;
+                    errorMessage = `${rule.label || id} must be at least ${rule.min}.`;
+                }
+                if (rule.max !== undefined && value > rule.max) {
+                    isValid = false;
+                    errorMessage = `${rule.label || id} must be at most ${rule.max}.`;
+                }
+                if (rule.integer && !Number.isInteger(value)) {
+                    isValid = false;
+                    errorMessage = `${rule.label || id} must be a whole number.`;
+                }
             }
-            if (rule && rule.max !== undefined && value > rule.max) {
-                isValid = false;
-                errorMessage = `${rule.label || id} must be at most ${rule.max}.`;
+
+            // Regex (for strings or numbers treated as strings)
+            if (rule.regex && rule.regex instanceof RegExp) {
+                if (!rule.regex.test(rawValue)) {
+                    isValid = false;
+                    errorMessage = rule.regexMessage || `${rule.label || id} format is invalid.`;
+                }
+            }
+            
+            // Custom Validator Function
+            if (rule.validator && typeof rule.validator === 'function') {
+                const customResult = rule.validator(value, inputs);
+                if (customResult !== true) {
+                    isValid = false;
+                    errorMessage = typeof customResult === 'string' ? customResult : `${rule.label || id} is invalid.`;
+                }
             }
         }
 
         if (!isValid) {
             input.classList.add('input-error');
             validationStatus = false;
-            if (errorMessage) errors.push(errorMessage);
-        } else {
-            input.classList.remove('input-error');
+            if (errorMessage) {
+                errors.push(errorMessage);
+                fieldErrors[id] = errorMessage;
+            }
         }
     });
 
@@ -699,12 +736,27 @@ function validateInputs(inputIds, rules = {}) {
     if (rules.crossField && Array.isArray(rules.crossField)) {
         rules.crossField.forEach(check => {
             // The condition defines the VALID state. If it returns false, it's an error/warning.
-            if (!check.condition(inputs)) {
+            let conditionMet = false;
+            try {
+                conditionMet = check.condition(inputs);
+            } catch (e) {
+                console.warn("Error in cross-field validation rule:", e);
+                conditionMet = false; // Fail safe
+            }
+
+            if (!conditionMet) {
                 if (check.level === 'warning') {
                     warnings.push(check.message);
                 } else {
                     errors.push(check.message);
                     validationStatus = false;
+                }
+                // Optional: Highlight specific fields involved in the cross-field error if defined
+                if (check.fields && Array.isArray(check.fields)) {
+                    check.fields.forEach(fid => {
+                         const el = document.getElementById(fid);
+                         if (el) el.classList.add('input-error');
+                    });
                 }
             }
         });
@@ -716,5 +768,5 @@ function validateInputs(inputIds, rules = {}) {
         messageArea.textContent = "Please check the errors above.";
     }
 
-    return { errors, warnings };
+    return { errors, warnings, fieldErrors };
 }
