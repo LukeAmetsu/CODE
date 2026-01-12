@@ -754,6 +754,8 @@ function renderSteelResults(results) {
     // Draw the interaction diagram after keeping HTML
     setTimeout(() => {
         drawInteractionDiagram('interaction-canvas', results);
+        drawCrossSection('crossSectionCanvas', properties);
+        drawStructuralSchematic('structuralSchematicCanvas', inputs);
     }, 0);
 }
 
@@ -1160,4 +1162,277 @@ function setupRealTimeValidation(inputIds, validatorFn, resultsContainerId, auto
             el.addEventListener('change', runValidation); // For selects
         }
     });
+}
+// --- New Canvas Drawing Functions ---
+
+function drawCrossSection(canvasId, props) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    // Auto-resize canvas to container if needed
+    const container = canvas.parentElement;
+    if (container) {
+        // Only resize if significantly different to avoid flickering loops, but here relying on CSS size
+        // canvas.width = container.clientWidth; // better done in a resize observer
+        // Use current canvas size (scaled by pixel ratio ideally, but simple here)
+        if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+    }
+    const cw = canvas.width;
+    const ch = canvas.height;
+
+    ctx.clearRect(0, 0, cw, ch);
+    
+    // Draw Background/Grid
+    ctx.fillStyle = '#f9fafb'; // gray-50
+    if (document.documentElement.classList.contains('dark')) ctx.fillStyle = '#111827'; // gray-900
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Styling
+    const isDark = document.documentElement.classList.contains('dark');
+    ctx.fillStyle = isDark ? '#4b5563' : '#d1d5db'; // gray-600/300 fill
+    ctx.strokeStyle = isDark ? '#e5e7eb' : '#1f2937'; // white/gray-800 stroke
+    ctx.lineWidth = 2;
+
+    if (!props || !props.d) return;
+
+    // Dimensions
+    const d = parseFloat(props.d);
+    let bf = parseFloat(props.bf) || d/2;
+    let tf = parseFloat(props.tf) || d/20;
+    let tw = parseFloat(props.tw) || d/30;
+    
+    // Scale Factor
+    // Fit (d, bf) into (cw, ch) with padding
+    const padding = 40;
+    const scaleX = (cw - 2 * padding) / bf;
+    const scaleY = (ch - 2 * padding) / d;
+    const scale = Math.min(scaleX, scaleY);
+    
+    const cx = cw / 2;
+    const cy = ch / 2;
+    
+    const dw = d * scale;
+    const bfw = bf * scale;
+    const tfw = tf * scale;
+    const tww = tw * scale;
+
+    ctx.beginPath();
+    
+    switch (props.type) {
+        case 'W-Shape':
+        case 'S-Shape':
+        case 'HP-Shape':
+        case 'M-Shape':
+            // I-Section
+            // Flanges are centered
+            // Top Flange
+            ctx.rect(cx - bfw/2, cy - dw/2, bfw, tfw);
+            // Bottom Flange
+            ctx.rect(cx - bfw/2, cy + dw/2 - tfw, bfw, tfw);
+            // Web
+            ctx.rect(cx - tww/2, cy - dw/2 + tfw, tww, dw - 2*tfw);
+            break;
+            
+        case 'WT-Shape':
+            // T-Section
+            // Top Flange
+            ctx.rect(cx - bfw/2, cy - dw/2, bfw, tfw);
+            // Stem
+            ctx.rect(cx - tww/2, cy - dw/2 + tfw, tww, dw - tfw);
+            break;
+            
+        case 'Channel':
+            // C-Section (Lips to right usually)
+            // Top Flange
+            ctx.rect(cx - bfw/2, cy - dw/2, bfw, tfw);
+            // Bottom Flange
+            ctx.rect(cx - bfw/2, cy + dw/2 - tfw, bfw, tfw);
+            // Web (Left side)
+            ctx.rect(cx - bfw/2, cy - dw/2, tww, dw);
+            break;
+            
+        case 'Angle':
+            // L-Section
+            // Vertical Leg
+            ctx.rect(cx - bfw/2, cy - dw/2, tww, dw);
+            // Horizontal Leg
+            ctx.rect(cx - bfw/2, cy + dw/2 - tfw, bfw, tfw);
+            break;
+            
+        case 'Rectangular HSS':
+            // Box
+            ctx.rect(cx - bfw/2, cy - dw/2, bfw, dw);
+            // Inner hollow (approx)
+            ctx.moveTo(cx - bfw/2 + tww, cy - dw/2 + tww);
+            ctx.lineTo(cx + bfw/2 - tww, cy - dw/2 + tww);
+            ctx.lineTo(cx + bfw/2 - tww, cy + dw/2 - tww);
+            ctx.lineTo(cx - bfw/2 + tww, cy + dw/2 - tww);
+            ctx.lineTo(cx - bfw/2 + tww, cy - dw/2 + tww);
+            break;
+            
+        case 'Round HSS':
+        case 'Pipe':
+            // Circle
+            ctx.arc(cx, cy, dw/2, 0, 2*Math.PI);
+            // Inner Circle
+            ctx.moveTo(cx + dw/2 - tww, cy); // move to edge of inner
+            ctx.arc(cx, cy, dw/2 - tww, 0, 2*Math.PI);
+            break;
+            
+        default:
+             // Box placeholder
+            ctx.rect(cx - bfw/2, cy - dw/2, bfw, dw);
+    }
+    
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw Dimensions Text
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.font = '12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    
+    // Height label (Left)
+    ctx.fillText(`d=${d.toFixed(1)}"`, cx - bfw/2 - 20, cy);
+    // Width label (Top)
+    ctx.fillText(`bf=${bf.toFixed(1)}"`, cx, cy - dw/2 - 10);
+}
+
+function drawStructuralSchematic(canvasId, inputs) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+     const container = canvas.parentElement;
+    if (container && (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight)) {
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+    }
+    const cw = canvas.width;
+    const ch = canvas.height;
+    
+    ctx.clearRect(0, 0, cw, ch);
+    
+     // Styling
+    const isDark = document.documentElement.classList.contains('dark');
+    const strokeColor = isDark ? '#e5e7eb' : '#374151';
+    
+    // Inputs
+    const L = parseFloat(inputs.deflection_span) || 20; // ft
+    const Pu = parseFloat(inputs.Pu_or_Pa) || 0;
+    const Vu = parseFloat(inputs.Vu_or_Va) || 0;
+    const Mu = parseFloat(inputs.Mux_or_Max) || 0;
+    
+    // Drawing Parameters
+    const paddingX = 60;
+    const beamY = ch / 2;
+    const beamStart = paddingX;
+    const beamEnd = cw - paddingX;
+    const beamLength = beamEnd - beamStart;
+    
+    // Draw Beam
+    ctx.strokeStyle = '#3b82f6'; // blue-500
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(beamStart, beamY);
+    ctx.lineTo(beamEnd, beamY);
+    ctx.stroke();
+    
+    // Draw Supports (Pinned-Pinned Assumption)
+    ctx.fillStyle = strokeColor;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    
+    // Left Support (Pin)
+    ctx.beginPath();
+    ctx.moveTo(beamStart, beamY);
+    ctx.lineTo(beamStart - 10, beamY + 15);
+    ctx.lineTo(beamStart + 10, beamY + 15);
+    ctx.closePath();
+    ctx.stroke(); 
+    
+    // Right Support (Roller)
+    ctx.beginPath();
+    ctx.moveTo(beamEnd, beamY);
+    ctx.lineTo(beamEnd - 10, beamY + 15);
+    ctx.lineTo(beamEnd + 10, beamY + 15);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(beamEnd - 12, beamY + 18);
+    ctx.lineTo(beamEnd + 12, beamY + 18); // ground
+    ctx.stroke();
+
+    // Draw Loads
+    // Axial P
+    if (Math.abs(Pu) > 0) {
+        ctx.strokeStyle = '#ef4444'; // red-500
+        ctx.fillStyle = '#ef4444';
+        const arrowLen = 40;
+        const yOffset = -20;
+        
+        ctx.beginPath();
+        if (Pu < 0) { // Compression
+             // Arrows pointing IN
+             // Left
+             ctx.moveTo(beamStart - arrowLen, beamY);
+             ctx.lineTo(beamStart, beamY);
+             ctx.lineTo(beamStart - 10, beamY - 5);
+             ctx.moveTo(beamStart, beamY);
+             ctx.lineTo(beamStart - 10, beamY + 5);
+             
+             // Right
+             ctx.moveTo(beamEnd + arrowLen, beamY);
+             ctx.lineTo(beamEnd, beamY);
+             ctx.lineTo(beamEnd + 10, beamY - 5);
+             ctx.moveTo(beamEnd, beamY);
+             ctx.lineTo(beamEnd + 10, beamY + 5);
+             
+             ctx.fillText(`P=${Math.abs(Pu)}k (C)`, cw/2, beamY - 10);
+        } else { // Tension
+             // Arrows pointing OUT
+             // Left
+             ctx.moveTo(beamStart, beamY);
+             ctx.lineTo(beamStart - arrowLen, beamY);
+             ctx.lineTo(beamStart - arrowLen + 10, beamY - 5);
+             ctx.moveTo(beamStart - arrowLen, beamY);
+             ctx.lineTo(beamStart - arrowLen + 10, beamY + 5);
+             
+             // Right
+             ctx.moveTo(beamEnd, beamY);
+             ctx.lineTo(beamEnd + arrowLen, beamY);
+             ctx.lineTo(beamEnd + arrowLen - 10, beamY - 5);
+             ctx.moveTo(beamEnd + arrowLen, beamY);
+             ctx.lineTo(beamEnd + arrowLen - 10, beamY + 5);
+             
+             ctx.fillText(`P=${Pu}k (T)`, cw/2, beamY - 10);
+        }
+        ctx.stroke();
+    }
+    
+    // Draw Moment (at ends or midspan?)
+    // Assuming simple span with max moment at center for visualization
+    if (Math.abs(Mu) > 0) {
+        ctx.strokeStyle = '#10b981'; // green-500
+        
+        ctx.beginPath();
+        // Arc at center
+        ctx.arc(cw/2, beamY, 30, Math.PI, 2*Math.PI); // Top half arc
+        ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#10b981';
+        ctx.fillText(`M=${Math.abs(Mu)}k-ft`, cw/2, beamY - 40);
+    }
+    
+    // Labels
+    ctx.fillStyle = strokeColor;
+    ctx.textAlign = 'center';
+    ctx.fillText(`L = ${L} ft`, cw/2, beamY + 40);
+
 }

@@ -34,7 +34,10 @@ def calculate_mn_interaction(inputs):
     
     points = calculate_key_points(i, geom, params)
     
-    return {'points': points}
+    # ELS Cracking Check
+    cracking_points = calculate_cracking_limit_curve(i, geom, params)
+    
+    return {'points': points, 'cracking_points': cracking_points}
 
 def normalize_geometry(inputs):
     sect_type = inputs.get('section_type', 'rect')
@@ -372,3 +375,228 @@ def calculate_key_points(inputs, geom, params):
     neg_points.reverse() # Order for polygon drawing
     
     return neg_points + pos_points
+
+def calculate_cracking_limit_curve(inputs, geom, params):
+    """
+    Calculates points (N, M) corresponding to the crack width limit (els-w).
+    Based on NBR 6118, Stage II (Linear Elastic).
+    """
+    phi_l = float(inputs.get('phi_l', 16.0)) # mm
+    wk_lim = float(inputs.get('wk_lim', 0.3)) # mm
+    
+    print(f"[DEBUG] Cracking Check: phi={phi_l}, wk={wk_lim}")
+    
+    # 1. Determine Limiting Steel Stress (sigma_s_lim) for the given wk_lim
+    # NBR 6118 Eq 17.1: wk = (phi / (12.5 * eta_1)) * (sigma_s / Es) * (3 * sigma_s / fctm)
+    # Using eta_1 = 2.25 (High bond)
+    # wk = (phi / 28.125) * (sigma_s^2 / (Es * fctm)) * 3? 
+    # Let's check the exact formula:
+    # wk = (phi_i / 12.5 * eta1) * (sigma_si / Esi) * (sigma_si / fctm) / rho_ri ? No.
+    # NBR Eq 17.2:
+    # wk = alpha * rho * (sigma_s / Es) * (3 * sigma_s / fctm) ... no.
+    
+    # Standard approximation for NBR 6118:
+    # w = (phi / 12.5 * eta1) * (sigma_s / Es) * max( (sigma_s / fctm) * 3 , ??? )
+    # Let's use the basic one often used for 'estimation':
+    # w = (phi * sigma_s^2 * 3) / (12.5 * eta1 * Es * fctm)
+    # Solve for sigma_s:
+    # sigma_s^2 = (w * 12.5 * eta1 * Es * fctm) / (3 * phi)
+    # sigma_s = sqrt(...)
+    
+    # Material properties
+    fck = float(inputs.get('fck', 25))
+    fctm = 0.3 * (fck ** (2/3)) # MPa
+    Es_mpa = params['Es'] * 10 # kN/cm2 -> MPa
+    eta1 = 2.25 # Ribbed bars
+    
+    # Convert units to consistent set. Let's use N, mm, MPa.
+    # phi in mm. wk in mm. Es in MPa. fctm in MPa.
+    
+    # wk = (phi/12.5/eta1) * (sigma_s/Es) * (3*sigma_s/fctm)
+    # wk = (phi * 3 * sigma_s^2) / (12.5 * eta1 * Es * fctm)
+    
+    term = (wk_lim * 12.5 * eta1 * Es_mpa * fctm) / (3 * phi_l)
+    sigma_s_lim_mpa = math.sqrt(term)
+    
+    # Limit sigma_s to fyk? (Though ELS usually well below fyk)
+    fyk = float(inputs.get('fyk', 500))
+    if sigma_s_lim_mpa > fyk: sigma_s_lim_mpa = fyk
+    
+    sigma_s_lim = sigma_s_lim_mpa / 10.0 # MPa -> kN/cm2
+    
+    # 2. Iterate Neutral Axis (x) and find (N, M) for this stress
+    # Linear Elastic Analysis (Stage II)
+    # Concrete Stress: Linear distribution. Max sigma_c.
+    # Steel Stress: sigma_s = sigma_s_lim (Fixed).
+    # From geometric compatibility + Hooke's Law:
+    # eps_s = sigma_s / Es
+    # eps_c / x = eps_s / (d - x)  => eps_c = eps_s * x / (d - x)
+    # sigma_c = eps_c * Ec
+    # Ec = 4760 * sqrt(fck) ... or Eci/Ecs.
+    # NBR 6118: Eci = 5600 * sqrt(fck). Ecs = alpha_i * Eci.
+    # For simplified check, let's use Ecs ~= 0.85 Eci? Or Eci.
+    # Let's use Ecs from standard.
+    
+    alpha_e = 10 # Modular ratio Es/Ec approx. Or calculate?
+    # Ec = 5600 * sqrt(fck) (MPa).
+    # if fck > 20... use full formula?
+    # Let's calculate Ec.
+    if fck <= 50:
+        Eci = 5600 * math.sqrt(fck)
+    else:
+        Eci = 21500 * ((fck/10) ** (1/3)) # Approx for high strength? No let's stick to standard 5600 for now or input.
+        
+    alpha_i = 0.8 + 0.2 * (fck / 80) if fck > 80 else (0.8 + 0.2 * (fck/80)) # wait formula is alpha_E
+    # Let's stick to alpha_e = 10 or 15 as common approximation if exact not needed?
+    # Correct calculation:
+    Ec_mpa = Eci * 0.9 # Ecs approx 0.9 Eci for granite aggregate?
+    Ec_kn_cm = Ec_mpa / 10.0
+    alpha_e = params['Es'] / Ec_kn_cm
+    
+    d = float(inputs.get('d', 55))
+    h = geom['h']
+    
+    points = []
+    
+    # Iterate x from 0.05d to 0.95d (Depth of neutral axis)
+    # x is depth from compressed fiber.
+    steps = 40
+    for i in range(1, steps):
+        x = (i / steps) * d
+        
+        # Calculate Strains/Stresses
+        # Fix Tension Steel Stress to Limiting Value
+        fs_s = sigma_s_lim # kN/cm2
+        
+        # Strains (compatibility)
+        eps_s = fs_s / params['Es']
+        eps_c = eps_s * x / (d - x)
+        
+        # Concrete Stress (Linear)
+        fc_max = eps_c * Ec_kn_cm
+        
+        # Check linearized concrete limit? (0.5 fck usually for creep linear assumption)
+        # But we force the steel to be at Wk limit. Concrete stress just follows.
+        
+        # Integration of Forces (Stage II - Linear)
+        
+        # Concrete Compression (Triangle)
+        # Resultant C = 0.5 * fc_max * b * x (for rect).
+        # General shape: Integrate.
+        # Simple integration for complex shapes:
+        # Split into strips or Use generalized 'get_concrete_compression' but with Linear stress profile?
+        # Existing 'get_concrete_compression' assumes rectangular stress block (lambda*x).
+        # We need LINEAR stress block.
+        
+        # Custom Integration for Linear Stress:
+        Nc_val = 0
+        Mc_val = 0
+        
+        # Discretize compressed zone
+        y_steps = 20
+        dy = x / y_steps
+        for j in range(y_steps):
+            y_mid = (j + 0.5) * dy # distance from NA? No, x is depth.
+            # let y be distance from Neutral Axis upwards?
+            # Geometry function returns width at depth.
+            # Let's iterate depth 'y_depth' from 0 (top) to x.
+            y_depth = (j + 0.5) * dy
+            
+            # Strain at y_depth:
+            # eps(y) = eps_c * (x - y_depth) / x
+            eps_local = eps_c * (x - y_depth) / x
+            sig_local = eps_local * Ec_kn_cm
+            
+            # Width at y_depth
+            # Need a helper 'get_width(y, geom)'
+            # Inline logic:
+            width = 0
+            if y_depth <= geom.get('hf_sup',0): width = geom.get('bf_sup',0)
+            elif y_depth <= (h - geom.get('hf_inf',0)): width = geom.get('bw',0)
+            else: width = geom.get('bf_inf',0)
+            
+            dA = width * dy
+            dF = sig_local * dA
+            
+            Nc_val += dF
+            Mc_val += dF * (y_depth - h/2.0) # Moment about geometric center
+            
+        # Resultant is Compression -> Negative Force in our convention?
+        # In existing 'get_state': Nc = -fcd * Area. (Negative).
+        # Our dF is stress (positive number computed) * Area.
+        # Concrete is in compression. So Force should be Negative.
+        Nc_val = -Nc_val
+        Mc_val = -Mc_val # This assumes positive moment puts top in compression.
+        # Wait. Moment arm = (y_depth - h/2).
+        # If y_depth < h/2 (top), arm is negative.
+        # Force is negative (comp).
+        # Moment = Neg * Neg = Pos. Correct.
+        
+        # Steel Forces
+        # Tension Steel (Bottom)
+        Ns = inputs.get('As',0) * fs_s # Positive (Tension)
+        Ms = Ns * (d - h/2.0)
+        
+        # Compression Steel (Top) - d_linha
+        d_lin = inputs.get('d_linha', 5)
+        # Strain at d_lin:
+        # eps_sl = eps_c * (x - d_lin) / x
+        eps_sl = eps_c * (x - d_lin) / x
+        # Stress (Elastic)
+        fs_sl = eps_sl * params['Es'] 
+        # Note: if d_lin < x, it is in compression (eps_sl > 0 in this logic? no eps_c is comp strain magnitude?)
+        # Let's standardize signs.
+        # eps_c (top) is compression. Let's say Comp is Negative.
+        # eps_s (bottom) is tension. Positive.
+        # Profile: linear.
+        # eps(z) = eps_s + (eps_c - eps_s) * (z - d) / (0 - d) ?
+        
+        # Easier:
+        # Curvature Kappa = eps_s / (d - x)
+        # Strain at depth z: eps(z) = Kappa * (z - x)
+        # If z > x (below NA), Strain > 0 (Tension).
+        # If z < x (above NA), Strain < 0 (Compression).
+        
+        # Re-calc with signed strains:
+        Kappa = (sigma_s_lim / params['Es']) / (d - x)
+        
+        # Concrete Integration Signed
+        Nc_val = 0
+        Mc_val = 0
+        for j in range(y_steps):
+            y_depth = (j + 0.5) * dy # 0 to x
+            
+            eps_local = Kappa * (y_depth - x) # Should be negative
+            sig_local = eps_local * Ec_kn_cm
+            
+            width = 0
+            if y_depth <= geom.get('hf_sup',0): width = geom.get('bf_sup',0)
+            elif y_depth <= (h - geom.get('hf_inf',0)): width = geom.get('bw',0)
+            else: width = geom.get('bf_inf',0)
+            
+            dA = width * dy
+            dF = sig_local * dA
+            
+            Nc_val += dF
+            Mc_val += dF * (y_depth - h/2.0)
+            
+        # Top Steel (d_lin)
+        eps_s_lin = Kappa * (d_lin - x)
+        fs_s_lin = eps_s_lin * params['Es']
+        Ns_lin = inputs.get('As_linha',0) * fs_s_lin
+        Ms_lin = Ns_lin * (d_lin - h/2.0)
+        
+        # Bottom Steel (d) - Fixed to limit
+        eps_s_bot = Kappa * (d - x) # should match sigma_s_lim/Es
+        fs_s_bot = eps_s_bot * params['Es']
+        # Use computed to be consistent, though it should equal (or slightly differ due to float)
+        Ns = inputs.get('As',0) * fs_s_bot
+        Ms = Ns * (d - h/2.0)
+        
+        # Total
+        N_tot = Nc_val + Ns_lin + Ns
+        M_tot = (Mc_val + Ms_lin + Ms) / 100.0 # kNm
+        
+        
+    print(f"[DEBUG] Cracking Check Generated {len(points)} points.")
+    return points

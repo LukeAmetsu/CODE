@@ -18,7 +18,7 @@
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
     <!-- Page Specific Script -->
-    <script src="STM_LOGIC.js" defer></script>
+    <script src="STM_UI.js" defer></script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
 
@@ -32,18 +32,47 @@
                 <!-- Project Settings -->
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-blue-600">
                     <h2 class="text-xl font-bold mb-4">Settings</h2>
-                    <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium mb-1">Concrete Strength (f'c) [ksi]</label>
+                            <label class="block text-sm font-medium mb-1">Concrete (f'c) [ksi]</label>
                             <input type="number" id="fc" value="4" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Steel Strength (fy) [ksi]</label>
+                            <label class="block text-sm font-medium mb-1">Steel (fy) [ksi]</label>
                             <input type="number" id="fy" value="60" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
                         </div>
-                        <!-- Status Removed -->
-
                     </div>
+                    <div class="mt-4 pt-4 border-t dark:border-gray-700">
+                        <label class="block text-sm font-medium mb-2">Member Geometry (in)</label>
+                        <div class="grid grid-cols-3 gap-2">
+                             <div>
+                                <label class="text-xs text-gray-500">Length (X)</label>
+                                <input type="number" id="geom-x" value="120" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">Height (Y)</label>
+                                <input type="number" id="geom-y" value="24" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500">Thickness (Z)</label>
+                                <input type="number" id="geom-z" value="12" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Generator -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-purple-600">
+                    <h2 class="text-xl font-bold mb-4">Model Generator</h2>
+                    <div class="flex space-x-2">
+                        <select id="template-select" class="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                            <option value="custom">Custom Manual Input</option>
+                            <option value="deep-beam">Deep Beam (Single Panel)</option>
+                            <!-- <option value="wall">Wall Panel</option> -->
+                        </select>
+                        <button id="generate-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold">Generate</button>
+                    </div>
+                     <p class="text-xs text-gray-500 mt-2">Generates nodes/members based on geometry and supports.</p>
                 </div>
 
                 <!-- Nodes Input -->
@@ -86,6 +115,7 @@
                                     <th class="p-2">Start</th>
                                     <th class="p-2">End</th>
                                     <th class="p-2">Type</th>
+                                    <th class="p-2">Force</th>
                                     <th class="p-2"></th>
                                 </tr>
                             </thead>

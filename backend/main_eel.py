@@ -257,6 +257,15 @@ def solve_stm(inputs):
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
 
+@eel.expose
+def generate_stm_template(template_type, geometry):
+    try:
+        from backend.calculators.STM_backend import generate_template
+        return generate_template(template_type, geometry)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
 
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)

@@ -1,0 +1,1434 @@
+diff --git a/aisc/steel check.html b/aisc/steel check.html
+index f37e6fd..ebc1b4b 100644
+--- a/aisc/steel check.html	
++++ b/aisc/steel check.html	
+@@ -331,11 +331,37 @@
+ 
+              </div>
+ 
+-             <!-- Right Panel: Results -->
++             <!-- Right Panel: Visuals & Results -->
+             <div class="flex-grow flex flex-col h-full overflow-hidden bg-gray-100 dark:bg-gray-900 relative">
+-                  <!-- Result Content -->
++                  
++                <!-- Result Content -->
+                 <div class="flex-grow overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar">
+ 
++                    <!-- Visuals Row -->
++                     <div class="grid grid-cols-1 xl:grid-cols-8 gap-6 h-[400px] min-h-[400px]">
++                        <!-- Load Diagram (Left - 5/8) -->
++                        <div class="xl:col-span-5 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
++                             <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
++                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Member Loading</h3>
++                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Diagram</span>
++                            </div>
++                            <div id="load-diagram-container" class="relative w-full flex-grow bg-white dark:bg-gray-900 flex items-center justify-center overflow-hidden">
++                                <canvas id="structuralSchematicCanvas" class="block w-full h-full"></canvas>
++                            </div>
++                        </div>
++
++                        <!-- Cross Section Preview (Right - 3/8) -->
++                        <div class="xl:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
++                           <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
++                                <h3 class="font-bold text-slate-700 dark:text-gray-300 text-xs uppercase tracking-wider">Cross Section</h3>
++                                <span class="text-[10px] text-gray-400">Scale 1:X</span>
++                            </div>
++                            <div id="cross-section-container" class="relative w-full flex-grow bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
++                                <canvas id="crossSectionCanvas" class="block w-full h-full"></canvas>
++                            </div>
++                        </div>
++                    </div>
++
+                     <!-- Results Table Container -->
+                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px]">
+                          <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+diff --git a/aisc/steel check.js b/aisc/steel check.js
+index bb71140..79e31c7 100644
+--- a/aisc/steel check.js	
++++ b/aisc/steel check.js	
+@@ -754,6 +754,8 @@ function renderSteelResults(results) {
+     // Draw the interaction diagram after keeping HTML
+     setTimeout(() => {
+         drawInteractionDiagram('interaction-canvas', results);
++        drawCrossSection('crossSectionCanvas', properties);
++        drawStructuralSchematic('structuralSchematicCanvas', inputs);
+     }, 0);
+ }
+ 
+@@ -1161,3 +1163,276 @@ function setupRealTimeValidation(inputIds, validatorFn, resultsContainerId, auto
+         }
+     });
+ }
++// --- New Canvas Drawing Functions ---
++
++function drawCrossSection(canvasId, props) {
++    const canvas = document.getElementById(canvasId);
++    if (!canvas) return;
++    const ctx = canvas.getContext('2d');
++    const w = canvas.width;
++    const h = canvas.height;
++    
++    // Auto-resize canvas to container if needed
++    const container = canvas.parentElement;
++    if (container) {
++        // Only resize if significantly different to avoid flickering loops, but here relying on CSS size
++        // canvas.width = container.clientWidth; // better done in a resize observer
++        // Use current canvas size (scaled by pixel ratio ideally, but simple here)
++        if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
++            canvas.width = container.clientWidth;
++            canvas.height = container.clientHeight;
++        }
++    }
++    const cw = canvas.width;
++    const ch = canvas.height;
++
++    ctx.clearRect(0, 0, cw, ch);
++    
++    // Draw Background/Grid
++    ctx.fillStyle = '#f9fafb'; // gray-50
++    if (document.documentElement.classList.contains('dark')) ctx.fillStyle = '#111827'; // gray-900
++    ctx.fillRect(0, 0, cw, ch);
++
++    // Styling
++    const isDark = document.documentElement.classList.contains('dark');
++    ctx.fillStyle = isDark ? '#4b5563' : '#d1d5db'; // gray-600/300 fill
++    ctx.strokeStyle = isDark ? '#e5e7eb' : '#1f2937'; // white/gray-800 stroke
++    ctx.lineWidth = 2;
++
++    if (!props || !props.d) return;
++
++    // Dimensions
++    const d = parseFloat(props.d);
++    let bf = parseFloat(props.bf) || d/2;
++    let tf = parseFloat(props.tf) || d/20;
++    let tw = parseFloat(props.tw) || d/30;
++    
++    // Scale Factor
++    // Fit (d, bf) into (cw, ch) with padding
++    const padding = 40;
++    const scaleX = (cw - 2 * padding) / bf;
++    const scaleY = (ch - 2 * padding) / d;
++    const scale = Math.min(scaleX, scaleY);
++    
++    const cx = cw / 2;
++    const cy = ch / 2;
++    
++    const dw = d * scale;
++    const bfw = bf * scale;
++    const tfw = tf * scale;
++    const tww = tw * scale;
++
++    ctx.beginPath();
++    
++    switch (props.type) {
++        case 'W-Shape':
++        case 'S-Shape':
++        case 'HP-Shape':
++        case 'M-Shape':
++            // I-Section
++            // Flanges are centered
++            // Top Flange
++            ctx.rect(cx - bfw/2, cy - dw/2, bfw, tfw);
++            // Bottom Flange
++            ctx.rect(cx - bfw/2, cy + dw/2 - tfw, bfw, tfw);
++            // Web
++            ctx.rect(cx - tww/2, cy - dw/2 + tfw, tww, dw - 2*tfw);
++            break;
++            
++        case 'WT-Shape':
++            // T-Section
++            // Top Flange
++            ctx.rect(cx - bfw/2, cy - dw/2, bfw, tfw);
++            // Stem
++            ctx.rect(cx - tww/2, cy - dw/2 + tfw, tww, dw - tfw);
++            break;
++            
++        case 'Channel':
++            // C-Section (Lips to right usually)
++            // Top Flange
++            ctx.rect(cx - bfw/2, cy - dw/2, bfw, tfw);
++            // Bottom Flange
++            ctx.rect(cx - bfw/2, cy + dw/2 - tfw, bfw, tfw);
++            // Web (Left side)
++            ctx.rect(cx - bfw/2, cy - dw/2, tww, dw);
++            break;
++            
++        case 'Angle':
++            // L-Section
++            // Vertical Leg
++            ctx.rect(cx - bfw/2, cy - dw/2, tww, dw);
++            // Horizontal Leg
++            ctx.rect(cx - bfw/2, cy + dw/2 - tfw, bfw, tfw);
++            break;
++            
++        case 'Rectangular HSS':
++            // Box
++            ctx.rect(cx - bfw/2, cy - dw/2, bfw, dw);
++            // Inner hollow (approx)
++            ctx.moveTo(cx - bfw/2 + tww, cy - dw/2 + tww);
++            ctx.lineTo(cx + bfw/2 - tww, cy - dw/2 + tww);
++            ctx.lineTo(cx + bfw/2 - tww, cy + dw/2 - tww);
++            ctx.lineTo(cx - bfw/2 + tww, cy + dw/2 - tww);
++            ctx.lineTo(cx - bfw/2 + tww, cy - dw/2 + tww);
++            break;
++            
++        case 'Round HSS':
++        case 'Pipe':
++            // Circle
++            ctx.arc(cx, cy, dw/2, 0, 2*Math.PI);
++            // Inner Circle
++            ctx.moveTo(cx + dw/2 - tww, cy); // move to edge of inner
++            ctx.arc(cx, cy, dw/2 - tww, 0, 2*Math.PI);
++            break;
++            
++        default:
++             // Box placeholder
++            ctx.rect(cx - bfw/2, cy - dw/2, bfw, dw);
++    }
++    
++    ctx.fill();
++    ctx.stroke();
++    
++    // Draw Dimensions Text
++    ctx.fillStyle = ctx.strokeStyle;
++    ctx.font = '12px Inter, sans-serif';
++    ctx.textAlign = 'center';
++    
++    // Height label (Left)
++    ctx.fillText(`d=${d.toFixed(1)}"`, cx - bfw/2 - 20, cy);
++    // Width label (Top)
++    ctx.fillText(`bf=${bf.toFixed(1)}"`, cx, cy - dw/2 - 10);
++}
++
++function drawStructuralSchematic(canvasId, inputs) {
++    const canvas = document.getElementById(canvasId);
++    if (!canvas) return;
++    const ctx = canvas.getContext('2d');
++    
++     const container = canvas.parentElement;
++    if (container && (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight)) {
++        canvas.width = container.clientWidth;
++        canvas.height = container.clientHeight;
++    }
++    const cw = canvas.width;
++    const ch = canvas.height;
++    
++    ctx.clearRect(0, 0, cw, ch);
++    
++     // Styling
++    const isDark = document.documentElement.classList.contains('dark');
++    const strokeColor = isDark ? '#e5e7eb' : '#374151';
++    
++    // Inputs
++    const L = parseFloat(inputs.deflection_span) || 20; // ft
++    const Pu = parseFloat(inputs.Pu_or_Pa) || 0;
++    const Vu = parseFloat(inputs.Vu_or_Va) || 0;
++    const Mu = parseFloat(inputs.Mux_or_Max) || 0;
++    
++    // Drawing Parameters
++    const paddingX = 60;
++    const beamY = ch / 2;
++    const beamStart = paddingX;
++    const beamEnd = cw - paddingX;
++    const beamLength = beamEnd - beamStart;
++    
++    // Draw Beam
++    ctx.strokeStyle = '#3b82f6'; // blue-500
++    ctx.lineWidth = 4;
++    ctx.beginPath();
++    ctx.moveTo(beamStart, beamY);
++    ctx.lineTo(beamEnd, beamY);
++    ctx.stroke();
++    
++    // Draw Supports (Pinned-Pinned Assumption)
++    ctx.fillStyle = strokeColor;
++    ctx.strokeStyle = strokeColor;
++    ctx.lineWidth = 2;
++    
++    // Left Support (Pin)
++    ctx.beginPath();
++    ctx.moveTo(beamStart, beamY);
++    ctx.lineTo(beamStart - 10, beamY + 15);
++    ctx.lineTo(beamStart + 10, beamY + 15);
++    ctx.closePath();
++    ctx.stroke(); 
++    
++    // Right Support (Roller)
++    ctx.beginPath();
++    ctx.moveTo(beamEnd, beamY);
++    ctx.lineTo(beamEnd - 10, beamY + 15);
++    ctx.lineTo(beamEnd + 10, beamY + 15);
++    ctx.closePath();
++    ctx.stroke();
++    ctx.beginPath();
++    ctx.moveTo(beamEnd - 12, beamY + 18);
++    ctx.lineTo(beamEnd + 12, beamY + 18); // ground
++    ctx.stroke();
++
++    // Draw Loads
++    // Axial P
++    if (Math.abs(Pu) > 0) {
++        ctx.strokeStyle = '#ef4444'; // red-500
++        ctx.fillStyle = '#ef4444';
++        const arrowLen = 40;
++        const yOffset = -20;
++        
++        ctx.beginPath();
++        if (Pu < 0) { // Compression
++             // Arrows pointing IN
++             // Left
++             ctx.moveTo(beamStart - arrowLen, beamY);
++             ctx.lineTo(beamStart, beamY);
++             ctx.lineTo(beamStart - 10, beamY - 5);
++             ctx.moveTo(beamStart, beamY);
++             ctx.lineTo(beamStart - 10, beamY + 5);
++             
++             // Right
++             ctx.moveTo(beamEnd + arrowLen, beamY);
++             ctx.lineTo(beamEnd, beamY);
++             ctx.lineTo(beamEnd + 10, beamY - 5);
++             ctx.moveTo(beamEnd, beamY);
++             ctx.lineTo(beamEnd + 10, beamY + 5);
++             
++             ctx.fillText(`P=${Math.abs(Pu)}k (C)`, cw/2, beamY - 10);
++        } else { // Tension
++             // Arrows pointing OUT
++             // Left
++             ctx.moveTo(beamStart, beamY);
++             ctx.lineTo(beamStart - arrowLen, beamY);
++             ctx.lineTo(beamStart - arrowLen + 10, beamY - 5);
++             ctx.moveTo(beamStart - arrowLen, beamY);
++             ctx.lineTo(beamStart - arrowLen + 10, beamY + 5);
++             
++             // Right
++             ctx.moveTo(beamEnd, beamY);
++             ctx.lineTo(beamEnd + arrowLen, beamY);
++             ctx.lineTo(beamEnd + arrowLen - 10, beamY - 5);
++             ctx.moveTo(beamEnd + arrowLen, beamY);
++             ctx.lineTo(beamEnd + arrowLen - 10, beamY + 5);
++             
++             ctx.fillText(`P=${Pu}k (T)`, cw/2, beamY - 10);
++        }
++        ctx.stroke();
++    }
++    
++    // Draw Moment (at ends or midspan?)
++    // Assuming simple span with max moment at center for visualization
++    if (Math.abs(Mu) > 0) {
++        ctx.strokeStyle = '#10b981'; // green-500
++        
++        ctx.beginPath();
++        // Arc at center
++        ctx.arc(cw/2, beamY, 30, Math.PI, 2*Math.PI); // Top half arc
++        ctx.stroke();
++        ctx.textAlign = 'center';
++        ctx.fillStyle = '#10b981';
++        ctx.fillText(`M=${Math.abs(Mu)}k-ft`, cw/2, beamY - 40);
++    }
++    
++    // Labels
++    ctx.fillStyle = strokeColor;
++    ctx.textAlign = 'center';
++    ctx.fillText(`L = ${L} ft`, cw/2, beamY + 40);
++
++}
+diff --git a/backend/calculators/STM_backend.py b/backend/calculators/STM_backend.py
+index 6d91b96..acaf63e 100644
+--- a/backend/calculators/STM_backend.py
++++ b/backend/calculators/STM_backend.py
+@@ -90,14 +90,32 @@ def solve_truss_system(data):
+             K[idx + 1, idx + 1] += penalty
+             K[idx + 2, idx + 2] += penalty
+ 
++    # 3.5 Auto-stabilize unconstrained DOFs (e.g., Z-direction in 2D trusses)
++    # If a DOF has 0 stiffness (Kii approx 0), it's a mechanism. 
++    # If loaded -> Unstable. If unloaded -> Can be fixed (ignored).
++    for i in range(total_dof):
++        if abs(K[i, i]) < 1e-3: 
++            if abs(F[i]) > 1e-3: # Has significant load
++                dof_names = ['X', 'Y', 'Z']
++                return {'error': f'Structure is unstable at Node {int(i/3)+1} ({dof_names[i%3]}). Unconstrained DOF has load.'}
++            else:
++                # No load -> Fix it to prevent singularity
++                K[i, i] += penalty
++
+     # 4. Solve Linear System
+     try:
+         u = np.linalg.solve(K, F)
+     except np.linalg.LinAlgError:
+         return {'error': 'Structure is unstable (singular stiffness matrix). Check constraints.'}
+ 
++
+     # 5. Post-Process Member Forces
+     results = []
++    warnings = []
++    
++    # Track node connections to calculate angles
++    node_connections = {nid: [] for nid in node_idx} # {node_id: [(neighbor_id, member_type, vector)]}
++
+     for idx, m in enumerate(members):
+         idx_i = node_idx[m['start']]
+         idx_j = node_idx[m['end']]
+@@ -111,10 +129,15 @@ def solve_truss_system(data):
+         L = math.sqrt(dx**2 + dy**2 + dz**2)
+         
+         if L == 0:
+-            cx, cy, cz = 0, 0, 0 # Avoid div by zero, though L=0 check already exists
++            cx, cy, cz = 0, 0, 0
+         else:
+             cx, cy, cz = dx/L, dy/L, dz/L
+         
++        # Store connection vectors for angle checks
++        vec = np.array([cx, cy, cz])
++        node_connections[m['start']].append({'neighbor': m['end'], 'type': m['type'], 'vec': vec})
++        node_connections[m['end']].append({'neighbor': m['start'], 'type': m['type'], 'vec': -vec})
++
+         # Get nodal displacements
+         u_i = u[idx_i*3 : idx_i*3+3]
+         u_j = u[idx_j*3 : idx_j*3+3]
+@@ -135,6 +158,74 @@ def solve_truss_system(data):
+             'start_node': m['start'],
+             'end_node': m['end']
+         })
+-        
+-    return results
++
++    # 6. Check Angles (ACI 318 requirement: Angle between Strut and Tie >= 25 deg)
++    for nid, conns in node_connections.items():
++        for i in range(len(conns)):
++            for j in range(i + 1, len(conns)):
++                c1 = conns[i]
++                c2 = conns[j]
++                
++                # Check angle between Strut and Tie
++                if (c1['type'] == 'strut' and c2['type'] == 'tie') or \
++                   (c1['type'] == 'tie' and c2['type'] == 'strut'):
++                    
++                    dot_prod = np.dot(c1['vec'], c2['vec'])
++                    # Clip for numerical stability
++                    dot_prod = max(-1.0, min(1.0, dot_prod))
++                    angle_rad = math.acos(dot_prod)
++                    angle_deg = math.degrees(angle_rad)
++                    
++                    if angle_deg < 25.0:
++                        warnings.append(f"Angle Check Warning at Node {nid}: Angle between Member {c1['type']} and {c2['type']} is {angle_deg:.1f}° (< 25° minimum).")
++
++    # Add warnings to result list (or change return structure to dict)
++    # Keeping return structure as list of dicts for now to not break frontend map, 
++    # but we can append a special result metadata or frontend can handle it.
++    # Actually, let's wrap it object-style if frontend supports it, otherwise hack it.
++    # Frontend JS (STM_logic.js:168) handles `if (solveResult.results)`. So we can return a dict.
++    
++    return {
++        'results': results,
++        'warnings': warnings
++    }
++
++
++def generate_template(template_type, geometry):
++    """
++    Generates a Strut and Tie model based on geometry.
++    """
++    nodes = []
++    members = []
++    
++    L = geometry.get('L', 120.0)
++    H = geometry.get('H', 24.0)
++    B = geometry.get('B', 12.0)
++
++    if template_type == 'deep-beam':
++        # Simple Deep Beam (Single Panel)
++        # Supports at ends (inset by 0.1L or bearing width proxy)
++        inset = min(12.0, L * 0.1)
++        
++        # Node 1: Left Support
++        nodes.append({'id': 1, 'x': inset, 'y': 0, 'z': 0, 'fixed': True, 'load': 0})
++        # Node 2: Right Support
++        nodes.append({'id': 2, 'x': L - inset, 'y': 0, 'z': 0, 'fixed': True, 'load': 0})
++        
++        # Node 3: Top Load Points (Center for single point)
++        # Let's do 2 point loads for a classic deep beam truss
++        # Or simple single point at midspan
++        mid_span = L / 2.0
++        
++        nodes.append({'id': 3, 'x': mid_span, 'y': H * 0.9, 'z': 0, 'fixed': False, 'load': -100})
++        
++        # Members
++        # Strut 1-3
++        members.append({'start': 1, 'end': 3, 'type': 'strut'})
++        # Strut 2-3
++        members.append({'start': 2, 'end': 3, 'type': 'strut'})
++        # Tie 1-2
++        members.append({'start': 1, 'end': 2, 'type': 'tie'})
++        
++    return {'nodes': nodes, 'members': members}
+ 
+diff --git a/backend/calculators/__pycache__/angle_support.cpython-311.pyc b/backend/calculators/__pycache__/angle_support.cpython-311.pyc
+index bfec31a..f6dfdfe 100644
+Binary files a/backend/calculators/__pycache__/angle_support.cpython-311.pyc and b/backend/calculators/__pycache__/angle_support.cpython-311.pyc differ
+diff --git a/backend/calculators/__pycache__/mn_interaction.cpython-311.pyc b/backend/calculators/__pycache__/mn_interaction.cpython-311.pyc
+index 113cdae..a0a9cbd 100644
+Binary files a/backend/calculators/__pycache__/mn_interaction.cpython-311.pyc and b/backend/calculators/__pycache__/mn_interaction.cpython-311.pyc differ
+diff --git a/backend/calculators/mn_interaction.py b/backend/calculators/mn_interaction.py
+index 70c6fd9..71fa1e6 100644
+--- a/backend/calculators/mn_interaction.py
++++ b/backend/calculators/mn_interaction.py
+@@ -34,7 +34,10 @@ def calculate_mn_interaction(inputs):
+     
+     points = calculate_key_points(i, geom, params)
+     
+-    return {'points': points}
++    # ELS Cracking Check
++    cracking_points = calculate_cracking_limit_curve(i, geom, params)
++    
++    return {'points': points, 'cracking_points': cracking_points}
+ 
+ def normalize_geometry(inputs):
+     sect_type = inputs.get('section_type', 'rect')
+@@ -372,3 +375,228 @@ def calculate_key_points(inputs, geom, params):
+     neg_points.reverse() # Order for polygon drawing
+     
+     return neg_points + pos_points
++
++def calculate_cracking_limit_curve(inputs, geom, params):
++    """
++    Calculates points (N, M) corresponding to the crack width limit (els-w).
++    Based on NBR 6118, Stage II (Linear Elastic).
++    """
++    phi_l = float(inputs.get('phi_l', 16.0)) # mm
++    wk_lim = float(inputs.get('wk_lim', 0.3)) # mm
++    
++    print(f"[DEBUG] Cracking Check: phi={phi_l}, wk={wk_lim}")
++    
++    # 1. Determine Limiting Steel Stress (sigma_s_lim) for the given wk_lim
++    # NBR 6118 Eq 17.1: wk = (phi / (12.5 * eta_1)) * (sigma_s / Es) * (3 * sigma_s / fctm)
++    # Using eta_1 = 2.25 (High bond)
++    # wk = (phi / 28.125) * (sigma_s^2 / (Es * fctm)) * 3? 
++    # Let's check the exact formula:
++    # wk = (phi_i / 12.5 * eta1) * (sigma_si / Esi) * (sigma_si / fctm) / rho_ri ? No.
++    # NBR Eq 17.2:
++    # wk = alpha * rho * (sigma_s / Es) * (3 * sigma_s / fctm) ... no.
++    
++    # Standard approximation for NBR 6118:
++    # w = (phi / 12.5 * eta1) * (sigma_s / Es) * max( (sigma_s / fctm) * 3 , ??? )
++    # Let's use the basic one often used for 'estimation':
++    # w = (phi * sigma_s^2 * 3) / (12.5 * eta1 * Es * fctm)
++    # Solve for sigma_s:
++    # sigma_s^2 = (w * 12.5 * eta1 * Es * fctm) / (3 * phi)
++    # sigma_s = sqrt(...)
++    
++    # Material properties
++    fck = float(inputs.get('fck', 25))
++    fctm = 0.3 * (fck ** (2/3)) # MPa
++    Es_mpa = params['Es'] * 10 # kN/cm2 -> MPa
++    eta1 = 2.25 # Ribbed bars
++    
++    # Convert units to consistent set. Let's use N, mm, MPa.
++    # phi in mm. wk in mm. Es in MPa. fctm in MPa.
++    
++    # wk = (phi/12.5/eta1) * (sigma_s/Es) * (3*sigma_s/fctm)
++    # wk = (phi * 3 * sigma_s^2) / (12.5 * eta1 * Es * fctm)
++    
++    term = (wk_lim * 12.5 * eta1 * Es_mpa * fctm) / (3 * phi_l)
++    sigma_s_lim_mpa = math.sqrt(term)
++    
++    # Limit sigma_s to fyk? (Though ELS usually well below fyk)
++    fyk = float(inputs.get('fyk', 500))
++    if sigma_s_lim_mpa > fyk: sigma_s_lim_mpa = fyk
++    
++    sigma_s_lim = sigma_s_lim_mpa / 10.0 # MPa -> kN/cm2
++    
++    # 2. Iterate Neutral Axis (x) and find (N, M) for this stress
++    # Linear Elastic Analysis (Stage II)
++    # Concrete Stress: Linear distribution. Max sigma_c.
++    # Steel Stress: sigma_s = sigma_s_lim (Fixed).
++    # From geometric compatibility + Hooke's Law:
++    # eps_s = sigma_s / Es
++    # eps_c / x = eps_s / (d - x)  => eps_c = eps_s * x / (d - x)
++    # sigma_c = eps_c * Ec
++    # Ec = 4760 * sqrt(fck) ... or Eci/Ecs.
++    # NBR 6118: Eci = 5600 * sqrt(fck). Ecs = alpha_i * Eci.
++    # For simplified check, let's use Ecs ~= 0.85 Eci? Or Eci.
++    # Let's use Ecs from standard.
++    
++    alpha_e = 10 # Modular ratio Es/Ec approx. Or calculate?
++    # Ec = 5600 * sqrt(fck) (MPa).
++    # if fck > 20... use full formula?
++    # Let's calculate Ec.
++    if fck <= 50:
++        Eci = 5600 * math.sqrt(fck)
++    else:
++        Eci = 21500 * ((fck/10) ** (1/3)) # Approx for high strength? No let's stick to standard 5600 for now or input.
++        
++    alpha_i = 0.8 + 0.2 * (fck / 80) if fck > 80 else (0.8 + 0.2 * (fck/80)) # wait formula is alpha_E
++    # Let's stick to alpha_e = 10 or 15 as common approximation if exact not needed?
++    # Correct calculation:
++    Ec_mpa = Eci * 0.9 # Ecs approx 0.9 Eci for granite aggregate?
++    Ec_kn_cm = Ec_mpa / 10.0
++    alpha_e = params['Es'] / Ec_kn_cm
++    
++    d = float(inputs.get('d', 55))
++    h = geom['h']
++    
++    points = []
++    
++    # Iterate x from 0.05d to 0.95d (Depth of neutral axis)
++    # x is depth from compressed fiber.
++    steps = 40
++    for i in range(1, steps):
++        x = (i / steps) * d
++        
++        # Calculate Strains/Stresses
++        # Fix Tension Steel Stress to Limiting Value
++        fs_s = sigma_s_lim # kN/cm2
++        
++        # Strains (compatibility)
++        eps_s = fs_s / params['Es']
++        eps_c = eps_s * x / (d - x)
++        
++        # Concrete Stress (Linear)
++        fc_max = eps_c * Ec_kn_cm
++        
++        # Check linearized concrete limit? (0.5 fck usually for creep linear assumption)
++        # But we force the steel to be at Wk limit. Concrete stress just follows.
++        
++        # Integration of Forces (Stage II - Linear)
++        
++        # Concrete Compression (Triangle)
++        # Resultant C = 0.5 * fc_max * b * x (for rect).
++        # General shape: Integrate.
++        # Simple integration for complex shapes:
++        # Split into strips or Use generalized 'get_concrete_compression' but with Linear stress profile?
++        # Existing 'get_concrete_compression' assumes rectangular stress block (lambda*x).
++        # We need LINEAR stress block.
++        
++        # Custom Integration for Linear Stress:
++        Nc_val = 0
++        Mc_val = 0
++        
++        # Discretize compressed zone
++        y_steps = 20
++        dy = x / y_steps
++        for j in range(y_steps):
++            y_mid = (j + 0.5) * dy # distance from NA? No, x is depth.
++            # let y be distance from Neutral Axis upwards?
++            # Geometry function returns width at depth.
++            # Let's iterate depth 'y_depth' from 0 (top) to x.
++            y_depth = (j + 0.5) * dy
++            
++            # Strain at y_depth:
++            # eps(y) = eps_c * (x - y_depth) / x
++            eps_local = eps_c * (x - y_depth) / x
++            sig_local = eps_local * Ec_kn_cm
++            
++            # Width at y_depth
++            # Need a helper 'get_width(y, geom)'
++            # Inline logic:
++            width = 0
++            if y_depth <= geom.get('hf_sup',0): width = geom.get('bf_sup',0)
++            elif y_depth <= (h - geom.get('hf_inf',0)): width = geom.get('bw',0)
++            else: width = geom.get('bf_inf',0)
++            
++            dA = width * dy
++            dF = sig_local * dA
++            
++            Nc_val += dF
++            Mc_val += dF * (y_depth - h/2.0) # Moment about geometric center
++            
++        # Resultant is Compression -> Negative Force in our convention?
++        # In existing 'get_state': Nc = -fcd * Area. (Negative).
++        # Our dF is stress (positive number computed) * Area.
++        # Concrete is in compression. So Force should be Negative.
++        Nc_val = -Nc_val
++        Mc_val = -Mc_val # This assumes positive moment puts top in compression.
++        # Wait. Moment arm = (y_depth - h/2).
++        # If y_depth < h/2 (top), arm is negative.
++        # Force is negative (comp).
++        # Moment = Neg * Neg = Pos. Correct.
++        
++        # Steel Forces
++        # Tension Steel (Bottom)
++        Ns = inputs.get('As',0) * fs_s # Positive (Tension)
++        Ms = Ns * (d - h/2.0)
++        
++        # Compression Steel (Top) - d_linha
++        d_lin = inputs.get('d_linha', 5)
++        # Strain at d_lin:
++        # eps_sl = eps_c * (x - d_lin) / x
++        eps_sl = eps_c * (x - d_lin) / x
++        # Stress (Elastic)
++        fs_sl = eps_sl * params['Es'] 
++        # Note: if d_lin < x, it is in compression (eps_sl > 0 in this logic? no eps_c is comp strain magnitude?)
++        # Let's standardize signs.
++        # eps_c (top) is compression. Let's say Comp is Negative.
++        # eps_s (bottom) is tension. Positive.
++        # Profile: linear.
++        # eps(z) = eps_s + (eps_c - eps_s) * (z - d) / (0 - d) ?
++        
++        # Easier:
++        # Curvature Kappa = eps_s / (d - x)
++        # Strain at depth z: eps(z) = Kappa * (z - x)
++        # If z > x (below NA), Strain > 0 (Tension).
++        # If z < x (above NA), Strain < 0 (Compression).
++        
++        # Re-calc with signed strains:
++        Kappa = (sigma_s_lim / params['Es']) / (d - x)
++        
++        # Concrete Integration Signed
++        Nc_val = 0
++        Mc_val = 0
++        for j in range(y_steps):
++            y_depth = (j + 0.5) * dy # 0 to x
++            
++            eps_local = Kappa * (y_depth - x) # Should be negative
++            sig_local = eps_local * Ec_kn_cm
++            
++            width = 0
++            if y_depth <= geom.get('hf_sup',0): width = geom.get('bf_sup',0)
++            elif y_depth <= (h - geom.get('hf_inf',0)): width = geom.get('bw',0)
++            else: width = geom.get('bf_inf',0)
++            
++            dA = width * dy
++            dF = sig_local * dA
++            
++            Nc_val += dF
++            Mc_val += dF * (y_depth - h/2.0)
++            
++        # Top Steel (d_lin)
++        eps_s_lin = Kappa * (d_lin - x)
++        fs_s_lin = eps_s_lin * params['Es']
++        Ns_lin = inputs.get('As_linha',0) * fs_s_lin
++        Ms_lin = Ns_lin * (d_lin - h/2.0)
++        
++        # Bottom Steel (d) - Fixed to limit
++        eps_s_bot = Kappa * (d - x) # should match sigma_s_lim/Es
++        fs_s_bot = eps_s_bot * params['Es']
++        # Use computed to be consistent, though it should equal (or slightly differ due to float)
++        Ns = inputs.get('As',0) * fs_s_bot
++        Ms = Ns * (d - h/2.0)
++        
++        # Total
++        N_tot = Nc_val + Ns_lin + Ns
++        M_tot = (Mc_val + Ms_lin + Ms) / 100.0 # kNm
++        
++        
++    print(f"[DEBUG] Cracking Check Generated {len(points)} points.")
++    return points
+diff --git a/backend/main_eel.py b/backend/main_eel.py
+index ed10223..bcd9db3 100644
+--- a/backend/main_eel.py
++++ b/backend/main_eel.py
+@@ -257,6 +257,15 @@ def solve_stm(inputs):
+         import traceback
+         return {"error": str(e), "trace": traceback.format_exc()}
+ 
++@eel.expose
++def generate_stm_template(template_type, geometry):
++    try:
++        from backend.calculators.STM_backend import generate_template
++        return generate_template(template_type, geometry)
++    except Exception as e:
++        import traceback
++        return {"error": str(e), "trace": traceback.format_exc()}
++
+ 
+ if __name__ == '__main__':
+     # Initialize with the absolute path to the project root (CODE-2)
+diff --git a/gui/STM_LOGIC.js b/gui/STM_LOGIC.js
+deleted file mode 100644
+index a5b1512..0000000
+--- a/gui/STM_LOGIC.js
++++ /dev/null
+@@ -1,398 +0,0 @@
+-/**
+- * 3D Strut and Tie Model Calculator
+- * Features: Frontend for Python Solver, Babylon.js Visualization
+- */
+-
+-// --- Global State ---
+-let stmEngine = null;
+-let stmScene = null;
+-let nodeCounter = 1;
+-
+-const DEFAULT_NODES = [
+-    { id: 1, x: 0, y: 0, z: 0, fixed: true, load: 0 },
+-    { id: 2, x: 10, y: 0, z: 0, fixed: true, load: 0 },
+-    { id: 3, x: 5, y: 8, z: 0, fixed: false, load: -50 } // Apex
+-];
+-const DEFAULT_MEMBERS = [
+-    { start: 1, end: 3, type: 'strut' },
+-    { start: 2, end: 3, type: 'strut' },
+-    { start: 1, end: 2, type: 'tie' }
+-];
+-
+-// --- Initialization ---
+-document.addEventListener('DOMContentLoaded', async () => {
+-    // 1. Initialize Shared Utils (Header/Footer)
+-    if (typeof injectHeader === 'function') {
+-        injectHeader({
+-            activePage: 'stm',
+-            pageTitle: 'strut_tie', // Add key to i18n if needed
+-            headerPlaceholderId: 'header-placeholder',
+-            pathPrefix: '../'
+-        });
+-    }
+-    if (typeof injectFooter === 'function') {
+-        injectFooter({
+-            footerPlaceholderId: 'footer-placeholder',
+-            pathPrefix: '../'
+-        });
+-    }
+-    
+-    // 2. Setup Default Data
+-    renderNodeTable(DEFAULT_NODES);
+-    renderMemberTable(DEFAULT_MEMBERS);
+-
+-    // 3. UI Event Listeners
+-    document.getElementById('add-node-btn').addEventListener('click', () => addNodeRow());
+-    document.getElementById('add-member-btn').addEventListener('click', () => addMemberRow());
+-    document.getElementById('run-stm-btn').addEventListener('click', handleCalculation); // Explicitly attach
+-    
+-    // 4. Initialize Babylon Engine
+-    init3D();
+-});
+-
+-// --- UI Helpers for Dynamic Tables ---
+-
+-function renderNodeTable(nodes) {
+-    const tbody = document.querySelector('#nodes-table tbody');
+-    tbody.innerHTML = '';
+-    nodes.forEach(n => addNodeRow(n));
+-    if (nodes.length > 0) nodeCounter = Math.max(...nodes.map(n => n.id)) + 1;
+-}
+-
+-function renderMemberTable(members) {
+-    const tbody = document.querySelector('#members-table tbody');
+-    tbody.innerHTML = '';
+-    members.forEach(m => addMemberRow(m));
+-}
+-
+-function addNodeRow(data = null) {
+-    const tbody = document.querySelector('#nodes-table tbody');
+-    const tr = document.createElement('tr');
+-    const id = data ? data.id : nodeCounter++;
+-    
+-    tr.innerHTML = `
+-        <td class="p-1"><input type="number" class="node-id w-12 p-1 border rounded text-center bg-gray-100 dark:bg-gray-700" value="${id}" readonly></td>
+-        <td class="p-1"><input type="number" class="node-x w-16 p-1 border rounded dark:bg-gray-700" value="${data?.x ?? 0}" step="0.1"></td>
+-        <td class="p-1"><input type="number" class="node-y w-16 p-1 border rounded dark:bg-gray-700" value="${data?.y ?? 0}" step="0.1"></td>
+-        <td class="p-1"><input type="number" class="node-z w-16 p-1 border rounded dark:bg-gray-700" value="${data?.z ?? 0}" step="0.1"></td>
+-        <td class="p-1 text-center"><input type="checkbox" class="node-fix" ${data?.fixed ? 'checked' : ''}></td>
+-        <td class="p-1"><input type="number" class="node-load w-16 p-1 border rounded dark:bg-gray-700" value="${data?.load ?? 0}"></td>
+-        <td class="p-1"><button onclick="this.closest('tr').remove()" class="text-red-500 hover:text-red-700">&times;</button></td>
+-    `;
+-    tbody.appendChild(tr);
+-}
+-
+-function addMemberRow(data = null) {
+-    const tbody = document.querySelector('#members-table tbody');
+-    const tr = document.createElement('tr');
+-    
+-    tr.innerHTML = `
+-        <td class="p-1"><input type="number" class="mem-start w-16 p-1 border rounded dark:bg-gray-700" value="${data?.start ?? 1}"></td>
+-        <td class="p-1"><input type="number" class="mem-end w-16 p-1 border rounded dark:bg-gray-700" value="${data?.end ?? 2}"></td>
+-        <td class="p-1">
+-            <select class="mem-type p-1 border rounded w-24 dark:bg-gray-700">
+-                <option value="strut" ${data?.type === 'strut' ? 'selected' : ''}>Strut</option>
+-                <option value="tie" ${data?.type === 'tie' ? 'selected' : ''}>Tie</option>
+-            </select>
+-        </td>
+-        <td class="p-1"><button onclick="this.closest('tr').remove()" class="text-red-500 hover:text-red-700">&times;</button></td>
+-    `;
+-    tbody.appendChild(tr);
+-}
+-
+-function gatherSTMInputs() {
+-    const nodes = [];
+-    document.querySelectorAll('#nodes-table tbody tr').forEach(tr => {
+-        nodes.push({
+-            id: parseInt(tr.querySelector('.node-id').value),
+-            x: parseFloat(tr.querySelector('.node-x').value) || 0,
+-            y: parseFloat(tr.querySelector('.node-y').value) || 0,
+-            z: parseFloat(tr.querySelector('.node-z').value) || 0,
+-            fixed: tr.querySelector('.node-fix').checked,
+-            load: parseFloat(tr.querySelector('.node-load').value) || 0
+-        });
+-    });
+-
+-    const members = [];
+-    document.querySelectorAll('#members-table tbody tr').forEach(tr => {
+-        members.push({
+-            start: parseInt(tr.querySelector('.mem-start').value),
+-            end: parseInt(tr.querySelector('.mem-end').value),
+-            type: tr.querySelector('.mem-type').value
+-        });
+-    });
+-
+-    return {
+-        fc: parseFloat(document.getElementById('fc').value) || 4,
+-        fy: parseFloat(document.getElementById('fy').value) || 60,
+-        nodes,
+-        members
+-    };
+-}
+-
+-// --- Main Handler ---
+-
+-async function handleCalculation() {
+-    const inputs = gatherSTMInputs();
+-    
+-    if (typeof showFeedback === 'function') {
+-        showFeedback('Calculating...', 'info', 'feedback-message');
+-    }
+-    
+-    const btn = document.getElementById('run-stm-btn');
+-    if(btn) {
+-        btn.disabled = true;
+-        btn.textContent = "Calculating...";
+-    }
+-
+-    try {
+-        // CALL PYTHON API via EEL
+-        if (!window.eel || !window.eel.solve_stm) {
+-            throw new Error("Eel not initialized or solve_stm not found.");
+-        }
+-
+-        const solveResult = await window.eel.solve_stm(inputs)();
+-
+-        if (solveResult.error) {
+-            if (typeof showFeedback === 'function') showFeedback(solveResult.error, 'error', 'feedback-message');
+-            else alert(solveResult.error);
+-            return;
+-        }
+-
+-        // 2. Update Visualization
+-        // Note: results comes as a list directly or inside 'results' key? 
+-        // Backend returns "return results" (list) OR {'error': ...}
+-        // Let's check backend... returns a list of result dicts if successful.
+-        
+-        let results = solveResult;
+-        if (solveResult.results) results = solveResult.results; // Handle if wrapped
+-
+-        update3D(inputs, results);
+-
+-        // 3. Generate Report
+-        // Using generic reporter if available, or simple logic
+-        // We can reuse the existing generateReport logic if we update it to use HTML string building
+-        generateReport(inputs, results);
+-        
+-        if (typeof showFeedback === 'function') showFeedback('Calculation complete!', 'success', 'feedback-message');
+-
+-    } catch (error) {
+-        console.error(error);
+-        if (typeof showFeedback === 'function') showFeedback(`Error: ${error.message}`, 'error', 'feedback-message');
+-    } finally {
+-        if (btn) {
+-            btn.disabled = false;
+-            btn.textContent = "Calculate (Python) & Visualize";
+-        }
+-    }
+-}
+-
+-function generateReport(inputs, results) {
+-    const container = document.getElementById('stm-results-container');
+-    if (!container) return;
+-
+-    // Build Report HTML
+-    let html = `
+-        <div id="stm-report-content" class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mt-6">
+-            <div class="flex justify-between items-center border-b pb-4 mb-4">
+-                <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Strut and Tie Calculation Report</h2>
+-                <div class="space-x-2 print-hidden">
+-                    <button class="btn-copy-report bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-1 rounded text-sm transition" onclick="handleCopy('stm-report-content', {engine: stmEngine, scene: stmScene})">
+-                        Copy to Clipboard
+-                    </button>
+-                </div>
+-            </div>
+-
+-            <div class="mb-6">
+-                <h3 class="text-lg font-semibold mb-2 text-blue-600 dark:text-blue-400">Analysis Summary</h3>
+-                <div class="grid grid-cols-2 gap-4 text-sm">
+-                    <p><b>Total Nodes:</b> ${inputs.nodes.length}</p>
+-                    <p><b>Total Members:</b> ${inputs.members.length}</p>
+-                    <p><b>Materials:</b> f'c = ${inputs.fc} ksi, fy = ${inputs.fy} ksi</p>
+-                    <p class="text-gray-500">Calculated via Python/NumPy Backend</p>
+-                </div>
+-            </div>
+-
+-            <div class="mb-6">
+-                <h3 class="text-lg font-semibold mb-2 text-blue-600 dark:text-blue-400">Member Forces</h3>
+-                <div class="overflow-x-auto">
+-                    <table class="w-full text-sm text-left border-collapse">
+-                        <thead class="bg-gray-100 dark:bg-gray-700">
+-                            <tr>
+-                                <th class="p-2 border dark:border-gray-600">Member</th>
+-                                <th class="p-2 border dark:border-gray-600">Nodes</th>
+-                                <th class="p-2 border dark:border-gray-600">Type</th>
+-                                <th class="p-2 border dark:border-gray-600">Force</th>
+-                                <th class="p-2 border dark:border-gray-600">Length</th>
+-                                <th class="p-2 border dark:border-gray-600">Status</th>
+-                            </tr>
+-                        </thead>
+-                        <tbody>
+-    `;
+-
+-    results.forEach(r => {
+-        // Basic Capacity Checks
+-        let capacity = 0;
+-        let area_assumed = 10; 
+-        
+-        if (r.type === 'strut') {
+-            capacity = 0.85 * inputs.fc * area_assumed; 
+-        } else {
+-            capacity = inputs.fy * area_assumed;
+-        }
+-        
+-        const mag = Math.abs(r.force);
+-        const ratio = mag / capacity;
+-        
+-        let statusText = "OK";
+-        let statusClass = "text-green-600 font-bold";
+-        
+-        if (r.type === 'strut' && r.force > 0.1) {
+-            statusText = "Tension in Strut!";
+-            statusClass = "text-red-600 font-bold";
+-        } else if (r.type === 'tie' && r.force < -0.1) {
+-            statusText = "Comp. in Tie!";
+-            statusClass = "text-red-600 font-bold";
+-        } else if (ratio > 1.0) {
+-            statusText = "Overstressed";
+-            statusClass = "text-red-600 font-bold";
+-        }
+-
+-        html += `
+-            <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+-                <td class="p-2 border dark:border-gray-600">Member ${r.id}</td>
+-                <td class="p-2 border dark:border-gray-600">${r.start_node} ➝ ${r.end_node}</td>
+-                <td class="p-2 border dark:border-gray-600">${r.type.toUpperCase()}</td>
+-                <td class="p-2 border dark:border-gray-600 font-mono">${r.force.toFixed(2)} kips</td>
+-                <td class="p-2 border dark:border-gray-600">${r.length.toFixed(2)} ft</td>
+-                <td class="p-2 border dark:border-gray-600 ${statusClass}">${statusText}</td>
+-            </tr>
+-        `;
+-    });
+-
+-    html += `
+-                        </tbody>
+-                    </table>
+-                </div>
+-            </div>
+-            
+-            <div class="text-xs text-gray-500 mt-4 border-t pt-2">
+-                * Note: Capacity checks assume an arbitrary area of 10 in² for preliminary purposes.
+-            </div>
+-        </div>
+-    `;
+-
+-    container.innerHTML = html;
+-}
+-
+-
+-// --- Babylon.js Visualization ---
+-
+-function init3D() {
+-    const canvas = document.getElementById("renderCanvas");
+-    stmEngine = new BABYLON.Engine(canvas, true);
+-    
+-    const createScene = function () {
+-        const scene = new BABYLON.Scene(stmEngine);
+-        scene.clearColor = new BABYLON.Color4(0.95, 0.95, 0.95, 1); 
+-
+-        // Camera
+-        const camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 3, 20, new BABYLON.Vector3(5, 5, 0), scene);
+-        camera.attachControl(canvas, true);
+-        camera.wheelPrecision = 50;
+-
+-        // Light
+-        const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+-        light.intensity = 0.8;
+-
+-        return scene;
+-    };
+-
+-    stmScene = createScene();
+-    
+-    stmEngine.runRenderLoop(function () {
+-        stmScene.render();
+-    });
+-
+-    window.addEventListener("resize", function () {
+-        stmEngine.resize();
+-    });
+-}
+-
+-function update3D(inputs, results) {
+-    if (!stmScene) return;
+-
+-    // Dispose old meshes
+-    stmScene.meshes.forEach(m => {
+-        if (m.name !== "ground" && m.id !== "ground") m.dispose();
+-    });
+-    
+-    // Axes
+-    new BABYLON.AxesViewer(stmScene, 2);
+-
+-    // Map Node Positions
+-    const nodeMap = {};
+-    inputs.nodes.forEach(n => {
+-        nodeMap[n.id] = new BABYLON.Vector3(n.x, n.y, n.z);
+-        
+-        // Node
+-        const sphere = BABYLON.MeshBuilder.CreateSphere("node"+n.id, {diameter: 0.5}, stmScene);
+-        sphere.position = nodeMap[n.id];
+-        
+-        const mat = new BABYLON.StandardMaterial("matNode", stmScene);
+-        mat.diffuseColor = n.fixed ? BABYLON.Color3.Black() : BABYLON.Color3.Gray();
+-        sphere.material = mat;
+-
+-        // Support Box
+-        if (n.fixed) {
+-            const box = BABYLON.MeshBuilder.CreateBox("support"+n.id, {size: 0.8}, stmScene);
+-            box.position = nodeMap[n.id].add(new BABYLON.Vector3(0, -0.6, 0));
+-        }
+-
+-        // Load Arrow
+-        if (n.load !== 0) {
+-            // Visualize load vector
+-            const dir = new BABYLON.Vector3(0, n.load > 0 ? 1 : -1, 0); // Y direction
+-            const origin = nodeMap[n.id];
+-            const length = 2;
+-            
+-            // Draw a red line for load
+-            const lines = BABYLON.MeshBuilder.CreateLines("loadLine"+n.id, {
+-                points: [origin, origin.add(dir.scale(length))]
+-            }, stmScene);
+-            lines.color = BABYLON.Color3.Purple();
+-        }
+-    });
+-
+-    // Draw Members
+-    inputs.members.forEach((m, idx) => {
+-        const p1 = nodeMap[m.start];
+-        const p2 = nodeMap[m.end];
+-        if (!p1 || !p2) return;
+-
+-        // Color Coding based on result
+-        const res = results[idx];
+-        const force = res ? res.force : 0;
+-        
+-        // Compression (Negative) -> Blue, Tension (Positive) -> Red
+-        // Standard STM: Struts (Comp) = Dashed/Blue, Ties (Tens) = Solid/Red
+-        
+-        let color;
+-        if (force < 0) color = BABYLON.Color3.Blue();      // Compression
+-        else if (force > 0) color = BABYLON.Color3.Red();  // Tension
+-        else color = BABYLON.Color3.Gray();                // Zero force
+-
+-        // Struts thicker
+-        const thickness = m.type === 'strut' ? 0.35 : 0.15;
+-
+-        const tube = BABYLON.MeshBuilder.CreateTube("mem"+idx, {
+-            path: [p1, p2],
+-            radius: thickness,
+-            cap: BABYLON.Mesh.CAP_ALL
+-        }, stmScene);
+-
+-        const mat = new BABYLON.StandardMaterial("matMem"+idx, stmScene);
+-        mat.diffuseColor = color;
+-        tube.material = mat;
+-    });
+-}
+\ No newline at end of file
+diff --git a/gui/STM_UI.html b/gui/STM_UI.html
+index 9c72615..514bb59 100644
+--- a/gui/STM_UI.html
++++ b/gui/STM_UI.html
+@@ -18,7 +18,7 @@
+     <script src="../js/shared-utils.js" defer></script>
+     <script src="../js/template.js" defer></script>
+     <!-- Page Specific Script -->
+-    <script src="STM_LOGIC.js" defer></script>
++    <script src="STM_UI.js" defer></script>
+ </head>
+ <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+ 
+@@ -32,18 +32,47 @@
+                 <!-- Project Settings -->
+                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-blue-600">
+                     <h2 class="text-xl font-bold mb-4">Settings</h2>
+-                    <div class="grid grid-cols-1 gap-4">
++                    <div class="grid grid-cols-2 gap-4">
+                         <div>
+-                            <label class="block text-sm font-medium mb-1">Concrete Strength (f'c) [ksi]</label>
++                            <label class="block text-sm font-medium mb-1">Concrete (f'c) [ksi]</label>
+                             <input type="number" id="fc" value="4" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                         </div>
+                         <div>
+-                            <label class="block text-sm font-medium mb-1">Steel Strength (fy) [ksi]</label>
++                            <label class="block text-sm font-medium mb-1">Steel (fy) [ksi]</label>
+                             <input type="number" id="fy" value="60" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                         </div>
+-                        <!-- Status Removed -->
++                    </div>
++                    <div class="mt-4 pt-4 border-t dark:border-gray-700">
++                        <label class="block text-sm font-medium mb-2">Member Geometry (in)</label>
++                        <div class="grid grid-cols-3 gap-2">
++                             <div>
++                                <label class="text-xs text-gray-500">Length (X)</label>
++                                <input type="number" id="geom-x" value="120" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
++                            </div>
++                            <div>
++                                <label class="text-xs text-gray-500">Height (Y)</label>
++                                <input type="number" id="geom-y" value="24" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
++                            </div>
++                            <div>
++                                <label class="text-xs text-gray-500">Thickness (Z)</label>
++                                <input type="number" id="geom-z" value="12" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
++                            </div>
++                        </div>
++                    </div>
++                </div>
+ 
++                <!-- Template Generator -->
++                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-purple-600">
++                    <h2 class="text-xl font-bold mb-4">Model Generator</h2>
++                    <div class="flex space-x-2">
++                        <select id="template-select" class="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
++                            <option value="custom">Custom Manual Input</option>
++                            <option value="deep-beam">Deep Beam (Single Panel)</option>
++                            <!-- <option value="wall">Wall Panel</option> -->
++                        </select>
++                        <button id="generate-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold">Generate</button>
+                     </div>
++                     <p class="text-xs text-gray-500 mt-2">Generates nodes/members based on geometry and supports.</p>
+                 </div>
+ 
+                 <!-- Nodes Input -->
+@@ -86,6 +115,7 @@
+                                     <th class="p-2">Start</th>
+                                     <th class="p-2">End</th>
+                                     <th class="p-2">Type</th>
++                                    <th class="p-2">Force</th>
+                                     <th class="p-2"></th>
+                                 </tr>
+                             </thead>
+diff --git a/gui/index.html b/gui/index.html
+index e1454c7..74e810a 100644
+--- a/gui/index.html
++++ b/gui/index.html
+@@ -234,6 +234,19 @@
+                                 class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
+                                 data-i18n="go_to_pcalc">Go to PCALC</a>
+                         </div>
++
++                        <!-- M-N Interaction Diagram Card -->
++                        <div class="form-section flex flex-col group">
++                            <div class="flex items-center mb-3">
++                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="mn_diagram">
++                                    M-N Interaction Diagram</h3>
++                            </div>
++                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="mn_desc">
++                                Generate the N-M interaction diagram for reinforced concrete sections (Rectangular, T, I) according to NBR 6118.</p>
++                            <a href="../nbr/M-N.html"
++                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
++                                data-i18n="go_to_mn">Go to M-N Diagram</a>
++                        </div>
+                     </div>
+                 </div>
+         </main>
+diff --git a/js/locales/locales.json b/js/locales/locales.json
+index 0cea6ea..92a6d1f 100644
+--- a/js/locales/locales.json
++++ b/js/locales/locales.json
+@@ -18,6 +18,8 @@
+         "wood": "Wood",
+         "asce_loads": "ASCE Loads",
+         "asce_desc": "Calculate wind, snow, and rain loads according to ASCE 7 standards. Generate load combinations for structural design.",
++        "go_to_pcalc": "Go to PCALC",
++        "go_to_mn": "Go to M-N Diagram",
+         "go_to_load_calcs": "Go to Load Calcs",
+         "aisc_steel": "AISC Steel Design",
+         "aisc_desc": "Check steel members and connections based on the AISC Steel Construction Manual. Includes member checks, base plates, and splices.",
+@@ -162,6 +164,7 @@
+         "run_load_combinations": "Run Load Combinations",
+         "pcalc": "PCALC",
+         "mn_diagram": "M-N Interaction Diagram",
++        "mn_desc": "Generate the N-M interaction diagram for reinforced concrete sections (Rectangular, T, I) according to NBR 6118.",
+         "beam_selector": "Beam Selector",
+         "beam_selector_desc": "Finds the lightest W-shape based on Unbraced Length (Lb) and Required Moment (Mu). Calculates capacities per AISC 360-16/22 Chapter F.",
+         "go_to_beam_selector": "Go to Beam Selector",
+@@ -272,7 +275,9 @@
+         "steel": "Acero",
+         "wood": "Madeira",
+         "pcalc": "PCALC",
++        "go_to_mn": "Ir al Diagrama M-N",
+         "mn_diagram": "Diagrama de Interacción M-N",
++        "mn_desc": "Genere el diagrama de interacción N-M para secciones de hormigón armado (Rectangular, T, I) según la NBR 6118.",
+         "geometry_spacing_checks_title": "Verificaciones de Geometría y Espaciamiento",
+         "angle_support_title": "Soporte de Ángulo Simple",
+         "angle_support_subtitle": "Verifica anclajes de mampostería para un soporte de viga de ángulo simple usando interacción lineal.",
+@@ -378,7 +383,9 @@
+         "steel": "Aço",
+         "wood": "Madeira",
+         "pcalc": "PCALC",
++        "go_to_mn": "Ir para Diagrama M-N",
+         "mn_diagram": "Diagrama de Interação M-N",
++        "mn_desc": "Gere o diagrama de interação N-M para seções de concreto armado (Retangular, T, I) de acordo com a NBR 6118.",
+         "geometry_spacing_checks_title": "Verificações de Geometria e Espaçamento",
+         "angle_support_title": "Suporte de Cantoneira Simples",
+         "angle_support_subtitle": "Verifica âncoras de alvenaria para suporte de viga de cantoneira única usando interação linear.",
+diff --git a/js/nav-config.json b/js/nav-config.json
+index 1635429..ecccb6f 100644
+--- a/js/nav-config.json
++++ b/js/nav-config.json
+@@ -88,11 +88,6 @@
+           "href": "nbr/viga_protendida.html",
+           "textKey": "prestressed_beam"
+         },
+-        {
+-          "key": "nbr-aco",
+-          "href": "nbr/nbr 8080 estruturas de aço.html",
+-          "textKey": "steel"
+-        },
+         {
+           "key": "pcalc",
+           "href": "nbr/PCALC.html",
+diff --git a/nbr/M-N.html b/nbr/M-N.html
+index 1049455..31f717b 100644
+--- a/nbr/M-N.html
++++ b/nbr/M-N.html
+@@ -173,6 +173,25 @@
+                         </form>
+                     </div>
+ 
++                    <!-- ELS Section -->
++                    <div class="form-section mt-4">
++                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-2 mb-4 gap-4">
++                            <h2 class="text-2xl font-semibold">Estado Limite de Serviço (ELS)</h2>
++                        </div>
++                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
++                            <div>
++                                <label for="phi_l" class="block text-sm font-medium">Diâmetro da Barra &phi; (mm)</label>
++                                <input type="number" id="phi_l" value="16.0" step="0.1">
++                                <p class="text-xs text-gray-500 mt-1">Usado para cálculo da abertura de fissuras (NBR 6118).</p>
++                            </div>
++                            <div>
++                                <label for="wk_lim" class="block text-sm font-medium">limite w<sub>k,max</sub> (mm)</label>
++                                <input type="number" id="wk_lim" value="0.30" step="0.05">
++                                <p class="text-xs text-gray-500 mt-1">Abertura máxima de fissura permitida.</p>
++                            </div>
++                        </div>
++                    </div>
++
+                     <!-- NOVA SEÇÃO: Verificação de Esforços -->
+                     <div class="form-section mt-8">
+                         <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Verificação de Esforços (N<sub>sd</sub>, M<sub>sd</sub>)</h2>
+diff --git a/nbr/M-N.js b/nbr/M-N.js
+index 102d1f9..b122de1 100644
+--- a/nbr/M-N.js
++++ b/nbr/M-N.js
+@@ -5,7 +5,8 @@ const INPUT_IDS = [
+     'As', 'As_linha', 
+     'gamma_c', 'gamma_s',
+     'bw', 'bf_sup', 'hf_sup', 'bf_inf', 'hf_inf',
+-    'has_prestress', 'Ap', 'dp', 'fptk', 'Ep', 'sigma_pi', 'loss_pct'
++    'has_prestress', 'Ap', 'dp', 'fptk', 'Ep', 'sigma_pi', 'loss_pct',
++    'phi_l', 'wk_lim'
+ ];
+ let myMnChart = null;
+ let checkPoints = []; // Array para armazenar os pontos de verificação {n, m, id}
+@@ -747,6 +748,23 @@ function drawChart(points) {
+             type: 'scatter'
+         });
+     }
++    
++    // Dataset for Cracking Limit (if available in points)
++    // The backend should return 'cracking_points'
++    if (points.cracking_points && points.cracking_points.length > 0) {
++        const crackData = points.cracking_points.map(p => ({ x: p.Nrd, y: p.Mrd }));
++        datasets.push({
++            label: 'Limite Fissuração w=0.3mm', // TODO: Dynamic label based on input
++            data: crackData,
++            borderColor: 'rgb(234, 179, 8)', // Yellow-500
++            borderDash: [5, 5],
++            pointRadius: 0,
++            borderWidth: 2,
++            showLine: true, // Required to draw the line in scatter chart
++            fill: false,
++            tension: 0.4 
++        });
++    }
+ 
+     myMnChart = new Chart(ctx, {
+         type: 'scatter',
+@@ -758,13 +776,14 @@ function drawChart(points) {
+             maintainAspectRatio: false,
+             interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
+             plugins: {
+-                title: { display: true, text: 'Diagrama de Interação N-M Completo', font: { size: 16 } },
++                title: { display: true, text: 'Diagrama de Interação N-M Completo + ELS', font: { size: 16 } },
+                 tooltip: {
+                     callbacks: {
+                         label: function(context) {
+                             const p = context.raw;
+-                            let label = `Nrd: ${p.x.toFixed(2)} kN, Mrd: ${p.y.toFixed(2)} kNm`;
++                            let label = `N: ${p.x.toFixed(2)} kN, M: ${p.y.toFixed(2)} kNm`;
+                             if (p.status) label += ` (${p.status})`;
++                            if (context.dataset.label.includes('Fissuração')) label += ' (ELS)';
+                             return label;
+                         }
+                     }
+@@ -886,8 +905,14 @@ document.addEventListener('DOMContentLoaded', () => {
+             try {
+                 if (window.eel && window.eel.calculate_mn_interaction_diagram) {
+                     const result = await window.eel.calculate_mn_interaction_diagram(inputs)();
++                    // Result from backend: { points: [...], cracking_points: [...] }
+                     if (result.points) {
+-                        return { points: result.points, params, geom };
++                        return { 
++                            points: result.points, 
++                            cracking_points: result.cracking_points, 
++                            params, 
++                            geom 
++                        };
+                     }
+                 }
+                 const points = calculateKeyPoints(inputs, geom, params);
+@@ -899,7 +924,36 @@ document.addEventListener('DOMContentLoaded', () => {
+             }
+         },
+         renderFunction: (result, inputs) => {
+-            renderResults(result.points, inputs, result.params, result.geom, 'results-container');
++            // Updated to handle object wrapper from backend or local wrapper
++            // Backend returns { points: [...], cracking_points: [...] } but calculateKeyPoints only returns [...]
++            // We need to normalize.
++            // But wait, the calculatorFunction below already normalizes it?
++            // "return { points, params, geom };" -> points is the list.
++            
++            // Wait, calculate_mn_interaction_diagram returns { points: [...] }
++            // So result.points from backend is list.
++            // If backend is updated to return cracking_points, it will be in result.points? No.
++            // Backend "return {'points': points}".
++            // I should update backend to return {'points': [...], 'cracking_points': [...]}
++            
++            // My calculatorFunction below handles the unpacking.
++            // If backend: return { points: result.points, cracking_points: result.cracking_points, params, geom };
++            
++            // Let's pass the whole result object to renderResults?
++            // renderResults signature: (points, inputs, params, geom, resultsContainerId)
++            // It expects points as array.
++            // I need to update renderResults signature or pass points with attached property.
++            
++            // Or better: renderResults takes an object? 
++            // Existing signature is fixed. I can attach cracking_points to the points array property?
++            // "points.cracking_points = ..."
++            
++            const pointsArray = result.points;
++            if (result.cracking_points) {
++                pointsArray.cracking_points = result.cracking_points;
++            }
++            
++            renderResults(pointsArray, inputs, result.params, result.geom, 'results-container');
+         },
+         resultsContainerId: 'results-container',
+         buttonId: 'run-check-btn'

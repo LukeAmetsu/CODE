@@ -5,7 +5,8 @@ const INPUT_IDS = [
     'As', 'As_linha', 
     'gamma_c', 'gamma_s',
     'bw', 'bf_sup', 'hf_sup', 'bf_inf', 'hf_inf',
-    'has_prestress', 'Ap', 'dp', 'fptk', 'Ep', 'sigma_pi', 'loss_pct'
+    'has_prestress', 'Ap', 'dp', 'fptk', 'Ep', 'sigma_pi', 'loss_pct',
+    'phi_l', 'wk_lim'
 ];
 let myMnChart = null;
 let checkPoints = []; // Array para armazenar os pontos de verificação {n, m, id}
@@ -747,6 +748,23 @@ function drawChart(points) {
             type: 'scatter'
         });
     }
+    
+    // Dataset for Cracking Limit (if available in points)
+    // The backend should return 'cracking_points'
+    if (points.cracking_points && points.cracking_points.length > 0) {
+        const crackData = points.cracking_points.map(p => ({ x: p.Nrd, y: p.Mrd }));
+        datasets.push({
+            label: 'Limite Fissuração w=0.3mm', // TODO: Dynamic label based on input
+            data: crackData,
+            borderColor: 'rgb(234, 179, 8)', // Yellow-500
+            borderDash: [5, 5],
+            pointRadius: 0,
+            borderWidth: 2,
+            showLine: true, // Required to draw the line in scatter chart
+            fill: false,
+            tension: 0.4 
+        });
+    }
 
     myMnChart = new Chart(ctx, {
         type: 'scatter',
@@ -758,13 +776,14 @@ function drawChart(points) {
             maintainAspectRatio: false,
             interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
             plugins: {
-                title: { display: true, text: 'Diagrama de Interação N-M Completo', font: { size: 16 } },
+                title: { display: true, text: 'Diagrama de Interação N-M Completo + ELS', font: { size: 16 } },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             const p = context.raw;
-                            let label = `Nrd: ${p.x.toFixed(2)} kN, Mrd: ${p.y.toFixed(2)} kNm`;
+                            let label = `N: ${p.x.toFixed(2)} kN, M: ${p.y.toFixed(2)} kNm`;
                             if (p.status) label += ` (${p.status})`;
+                            if (context.dataset.label.includes('Fissuração')) label += ' (ELS)';
                             return label;
                         }
                     }
@@ -886,8 +905,14 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 if (window.eel && window.eel.calculate_mn_interaction_diagram) {
                     const result = await window.eel.calculate_mn_interaction_diagram(inputs)();
+                    // Result from backend: { points: [...], cracking_points: [...] }
                     if (result.points) {
-                        return { points: result.points, params, geom };
+                        return { 
+                            points: result.points, 
+                            cracking_points: result.cracking_points, 
+                            params, 
+                            geom 
+                        };
                     }
                 }
                 const points = calculateKeyPoints(inputs, geom, params);
@@ -899,7 +924,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         renderFunction: (result, inputs) => {
-            renderResults(result.points, inputs, result.params, result.geom, 'results-container');
+            // Updated to handle object wrapper from backend or local wrapper
+            // Backend returns { points: [...], cracking_points: [...] } but calculateKeyPoints only returns [...]
+            // We need to normalize.
+            // But wait, the calculatorFunction below already normalizes it?
+            // "return { points, params, geom };" -> points is the list.
+            
+            // Wait, calculate_mn_interaction_diagram returns { points: [...] }
+            // So result.points from backend is list.
+            // If backend is updated to return cracking_points, it will be in result.points? No.
+            // Backend "return {'points': points}".
+            // I should update backend to return {'points': [...], 'cracking_points': [...]}
+            
+            // My calculatorFunction below handles the unpacking.
+            // If backend: return { points: result.points, cracking_points: result.cracking_points, params, geom };
+            
+            // Let's pass the whole result object to renderResults?
+            // renderResults signature: (points, inputs, params, geom, resultsContainerId)
+            // It expects points as array.
+            // I need to update renderResults signature or pass points with attached property.
+            
+            // Or better: renderResults takes an object? 
+            // Existing signature is fixed. I can attach cracking_points to the points array property?
+            // "points.cracking_points = ..."
+            
+            const pointsArray = result.points;
+            if (result.cracking_points) {
+                pointsArray.cracking_points = result.cracking_points;
+            }
+            
+            renderResults(pointsArray, inputs, result.params, result.geom, 'results-container');
         },
         resultsContainerId: 'results-container',
         buttonId: 'run-check-btn'

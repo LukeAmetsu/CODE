@@ -89,11 +89,6 @@
           "textKey": "prestressed_beam"
         },
         {
-          "key": "nbr-aco",
-          "href": "nbr/nbr 8080 estruturas de aço.html",
-          "textKey": "steel"
-        },
-        {
           "key": "pcalc",
           "href": "nbr/PCALC.html",
           "textKey": "pcalc"

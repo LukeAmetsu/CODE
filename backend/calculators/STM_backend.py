@@ -90,14 +90,32 @@ def solve_truss_system(data):
             K[idx + 1, idx + 1] += penalty
             K[idx + 2, idx + 2] += penalty
 
+    # 3.5 Auto-stabilize unconstrained DOFs (e.g., Z-direction in 2D trusses)
+    # If a DOF has 0 stiffness (Kii approx 0), it's a mechanism. 
+    # If loaded -> Unstable. If unloaded -> Can be fixed (ignored).
+    for i in range(total_dof):
+        if abs(K[i, i]) < 1e-3: 
+            if abs(F[i]) > 1e-3: # Has significant load
+                dof_names = ['X', 'Y', 'Z']
+                return {'error': f'Structure is unstable at Node {int(i/3)+1} ({dof_names[i%3]}). Unconstrained DOF has load.'}
+            else:
+                # No load -> Fix it to prevent singularity
+                K[i, i] += penalty
+
     # 4. Solve Linear System
     try:
         u = np.linalg.solve(K, F)
     except np.linalg.LinAlgError:
         return {'error': 'Structure is unstable (singular stiffness matrix). Check constraints.'}
 
+
     # 5. Post-Process Member Forces
     results = []
+    warnings = []
+    
+    # Track node connections to calculate angles
+    node_connections = {nid: [] for nid in node_idx} # {node_id: [(neighbor_id, member_type, vector)]}
+
     for idx, m in enumerate(members):
         idx_i = node_idx[m['start']]
         idx_j = node_idx[m['end']]
@@ -111,10 +129,15 @@ def solve_truss_system(data):
         L = math.sqrt(dx**2 + dy**2 + dz**2)
         
         if L == 0:
-            cx, cy, cz = 0, 0, 0 # Avoid div by zero, though L=0 check already exists
+            cx, cy, cz = 0, 0, 0
         else:
             cx, cy, cz = dx/L, dy/L, dz/L
         
+        # Store connection vectors for angle checks
+        vec = np.array([cx, cy, cz])
+        node_connections[m['start']].append({'neighbor': m['end'], 'type': m['type'], 'vec': vec})
+        node_connections[m['end']].append({'neighbor': m['start'], 'type': m['type'], 'vec': -vec})
+
         # Get nodal displacements
         u_i = u[idx_i*3 : idx_i*3+3]
         u_j = u[idx_j*3 : idx_j*3+3]
@@ -135,6 +158,74 @@ def solve_truss_system(data):
             'start_node': m['start'],
             'end_node': m['end']
         })
+
+    # 6. Check Angles (ACI 318 requirement: Angle between Strut and Tie >= 25 deg)
+    for nid, conns in node_connections.items():
+        for i in range(len(conns)):
+            for j in range(i + 1, len(conns)):
+                c1 = conns[i]
+                c2 = conns[j]
+                
+                # Check angle between Strut and Tie
+                if (c1['type'] == 'strut' and c2['type'] == 'tie') or \
+                   (c1['type'] == 'tie' and c2['type'] == 'strut'):
+                    
+                    dot_prod = np.dot(c1['vec'], c2['vec'])
+                    # Clip for numerical stability
+                    dot_prod = max(-1.0, min(1.0, dot_prod))
+                    angle_rad = math.acos(dot_prod)
+                    angle_deg = math.degrees(angle_rad)
+                    
+                    if angle_deg < 25.0:
+                        warnings.append(f"Angle Check Warning at Node {nid}: Angle between Member {c1['type']} and {c2['type']} is {angle_deg:.1f}° (< 25° minimum).")
+
+    # Add warnings to result list (or change return structure to dict)
+    # Keeping return structure as list of dicts for now to not break frontend map, 
+    # but we can append a special result metadata or frontend can handle it.
+    # Actually, let's wrap it object-style if frontend supports it, otherwise hack it.
+    # Frontend JS (STM_logic.js:168) handles `if (solveResult.results)`. So we can return a dict.
+    
+    return {
+        'results': results,
+        'warnings': warnings
+    }
+
+
+def generate_template(template_type, geometry):
+    """
+    Generates a Strut and Tie model based on geometry.
+    """
+    nodes = []
+    members = []
+    
+    L = geometry.get('L', 120.0)
+    H = geometry.get('H', 24.0)
+    B = geometry.get('B', 12.0)
+
+    if template_type == 'deep-beam':
+        # Simple Deep Beam (Single Panel)
+        # Supports at ends (inset by 0.1L or bearing width proxy)
+        inset = min(12.0, L * 0.1)
         
-    return results
+        # Node 1: Left Support
+        nodes.append({'id': 1, 'x': inset, 'y': 0, 'z': 0, 'fixed': True, 'load': 0})
+        # Node 2: Right Support
+        nodes.append({'id': 2, 'x': L - inset, 'y': 0, 'z': 0, 'fixed': True, 'load': 0})
+        
+        # Node 3: Top Load Points (Center for single point)
+        # Let's do 2 point loads for a classic deep beam truss
+        # Or simple single point at midspan
+        mid_span = L / 2.0
+        
+        nodes.append({'id': 3, 'x': mid_span, 'y': H * 0.9, 'z': 0, 'fixed': False, 'load': -100})
+        
+        # Members
+        # Strut 1-3
+        members.append({'start': 1, 'end': 3, 'type': 'strut'})
+        # Strut 2-3
+        members.append({'start': 2, 'end': 3, 'type': 'strut'})
+        # Tie 1-2
+        members.append({'start': 1, 'end': 2, 'type': 'tie'})
+        
+    return {'nodes': nodes, 'members': members}
 
