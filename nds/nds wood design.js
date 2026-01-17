@@ -1,10 +1,11 @@
 var lastWoodRunResults = null; // To hold the results for report generation
 
 var inputIds = [
-    'Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted', 'jurisdiction',
+    'Fb_unadjusted', 'Fv_unadjusted', 'Ft_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted', 'jurisdiction',
     'b_width', 'd_depth', 'unbraced_length_L', 'effective_length_factor_K', 'bearing_length_Lb',
     'load_duration', 'wet_service', 'temperature', 'flat_use', 'incising', 'repetitive_member', 'deflection_span', 'deflection_limit',
-    'axial_load_P', 'moment_load_M', 'shear_load_V'
+    'axial_load_P', 'moment_load_M', 'shear_load_V',
+    'notch_depth', 'member_type', 'bearing_type'
 ];
 
 // --- Backend Integration ---
@@ -21,7 +22,7 @@ var woodChecker = {
 };
 
 // --- Species & Grade Logic ---
-let woodDatabase = {};
+var woodDatabase = {};
 
 async function initWoodPage() {
     if (typeof eel !== 'undefined') {
@@ -73,6 +74,7 @@ function onWoodSelectionChange(e) {
         // Populate inputs
         setInputValue('Fb_unadjusted', props.Fb);
         setInputValue('Fv_unadjusted', props.Fv);
+        setInputValue('Ft_unadjusted', props.Ft);
         setInputValue('Fc_perp_unadjusted', props.Fcp); // Dict uses Fcp
         setInputValue('Fc_unadjusted', props.Fc);
         setInputValue('E_unadjusted', props.E);
@@ -89,7 +91,7 @@ function setInputValue(id, val) {
 }
 
 function toggleInputLocks(locked) {
-    const ids = ['Fb_unadjusted', 'Fv_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted'];
+    const ids = ['Fb_unadjusted', 'Fv_unadjusted', 'Ft_unadjusted', 'Fc_perp_unadjusted', 'Fc_unadjusted', 'E_unadjusted', 'E_min_unadjusted'];
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -139,9 +141,11 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Actual Bending Stress (f<sub>b</sub>) = M / S<sub>x</sub> = ${inputs.M.toFixed(0)} lb-in / ${actual.Sx.toFixed(3)} in³ = <b>${actual.fb.toFixed(2)} psi</b></li>
-                    <li>Allowable Bending Stress (F'<sub>b</sub>) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>r</sub> * C<sub>OSHA</sub></li>
-                    <li>F'<sub>b</sub> = ${inputs.Fb.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fb.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.CL.toFixed(3)} * ${wood_results.factors.CF.toFixed(3)} * ${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.Cr.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fb_prime.toFixed(2)} psi</b></li>
+                    <li>Allowable Bending Stress (F'<sub>b</sub>) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * ${wood_results.factors.CV && wood_results.factors.CV < 1.0 ? 'C<sub>V</sub>' : 'C<sub>F</sub>'} * ${wood_results.factors.Cfu > 1.0 ? 'C<sub>fu</sub> * ' : ''}C<sub>i</sub> * C<sub>r</sub> * C<sub>OSHA</sub></li>
+                    <li>F'<sub>b</sub> = ${inputs.Fb.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fb.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.CL.toFixed(3)} * ${wood_results.factors.CV && wood_results.factors.CV < 1.0 ? wood_results.factors.CV.toFixed(3) : wood_results.factors.CF.toFixed(3)} * ${wood_results.factors.Cfu > 1.0 ? wood_results.factors.Cfu.toFixed(3) + ' * ' : ''}${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.Cr.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fb_prime.toFixed(2)} psi</b></li>
                     <li>Beam Stability Factor (C<sub>L</sub>) = <b>${wood_results.factors.CL.toFixed(3)}</b> (from R<sub>B</sub> = ${wood_results.Rb.toFixed(2)})</li>
+                    ${wood_results.factors.CV < 1.0 ? `<li>Volume Factor (C<sub>V</sub>) = <b>${wood_results.factors.CV.toFixed(3)}</b> (Glulam/SCL)</li>` : ''}
+                    ${wood_results.factors.Cfu > 1.0 ? `<li>Flat Use Factor (C<sub>fu</sub>) = <b>${wood_results.factors.Cfu.toFixed(3)}</b></li>` : ''}
                 </ul>`
         },
         { // Shear
@@ -152,13 +156,47 @@ function renderWoodResults(calculationOutput) {
             status: ratios.fv <= 1.0 ? 'Pass' : 'Fail',
             breakdown: `
                 <ul>
+                    <li>Shear Mode: <b>${wood_results.shear_mode || 'Standard'}</b></li>
                     <li>Actual Shear Stress (f<sub>v</sub>) = 1.5 * V / A = 1.5 * ${inputs.V.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fv.toFixed(2)} psi</b></li>
+                    ${wood_results.shear_mode === 'Notched (Tension Side)' ? 
+                    `<li><b>Notched Member:</b> Allowable Shear Capacity Reduced.</li>
+                     <li>Ratio calculated as V / V'<sub>r</sub> where V'<sub>r</sub> = (2/3) F'<sub>v</sub> b d<sub>n</sub> (d<sub>n</sub>/d)²</li>
+                     <li>Notch Depth (dn) = ${inputs.dn.toFixed(2)} in</li>`
+                    : ''}
                     <li>Allowable Shear Stress (F'<sub>v</sub>) = F<sub>v</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
                     <li>F'<sub>v</sub> = ${inputs.Fv.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fv.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fv_prime.toFixed(2)} psi</b></li>
                 </ul>`
         },
+        { // Tension
+            name: 'Tension',
+            actual: actual.ft > 0 ? `${actual.ft.toFixed(2)} psi` : '--',
+            allowable: adj.Ft_prime > 0 ? `${adj.Ft_prime.toFixed(2)} psi` : '--',
+            ratio: actual.ft > 0 ? ratios.ft.toFixed(3) : '0.000',
+            status: ratios.ft <= 1.0 ? 'Pass' : 'Fail',
+            breakdown: actual.ft > 0 ? `
+                <ul>
+                    <li>Actual Tension Stress (f<sub>t</sub>) = |P| / A = ${Math.abs(inputs.P).toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.ft.toFixed(2)} psi</b></li>
+                    <li>Allowable Tension Stress (F'<sub>t</sub>) = F<sub>t</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
+                    <li>F'<sub>t</sub> = ${inputs.Ft ? inputs.Ft.toFixed(0) : '0'} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci ? wood_results.factors.Ci.toFixed(2) : '1.0'} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Ft_prime.toFixed(2)} psi</b></li>
+                </ul>` : 'No significant tension force.'
+        },
+        { // Bearing (Compression Perpendicular)
+            name: 'Bearing (Compression \u22A5)',
+            actual: `${actual.fc_perp.toFixed(2)} psi`,
+            allowable: `${adj.Fc_perp_prime.toFixed(2)} psi`,
+            ratio: ratios.fc_perp.toFixed(3),
+            status: ratios.fc_perp <= 1.0 ? 'Pass' : 'Fail',
+            breakdown: `
+                <ul>
+                    <li>Bearing Type: <b>${inputs.bearing_type || 'Side'} Grain</b></li>
+                    <li>Actual Bearing Stress (f<sub>c\u22A5</sub>) = V / (b * L<sub>b</sub>) = ${inputs.V.toFixed(0)} lb / (${inputs.b.toFixed(2)} * ${inputs.Lb.toFixed(2)}) in² = <b>${actual.fc_perp.toFixed(2)} psi</b></li>
+                    <li>Allowable Bearing Stress (F'<sub>c\u22A5</sub>) = F<sub>c\u22A5</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>b</sub> * C<sub>OSHA</sub></li>
+                    <li>F'<sub>c\u22A5</sub> = ${inputs.Fc_perp.toFixed(0)} * ${wood_results.factors.CM_Fc_perp.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci ? wood_results.factors.Ci.toFixed(2) : '1.0'} * ${wood_results.factors.Cb.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fc_perp_prime.toFixed(2)} psi</b></li>
+                    <li>Bearing Area Factor (C<sub>b</sub>) = <b>${wood_results.factors.Cb.toFixed(3)}</b></li>
+                </ul>`
+        },
         { // Compression
-            name: 'Compression',
+            name: 'Compression (Parallel)',
             actual: `${actual.fc.toFixed(2)} psi`,
             allowable: `${adj.Fc_prime.toFixed(2)} psi`,
             ratio: ratios.fc.toFixed(3),
@@ -184,14 +222,15 @@ function renderWoodResults(calculationOutput) {
         },
         { // Interaction
             name: 'Combined Bending + Axial',
-            actual: `Eq. 3.9-3`,
+            actual: `Interaction`,
             allowable: "1.00",
             ratio: wood_results.interaction.toFixed(3),
             status: wood_results.interaction <= 1.0 ? 'Pass' : 'Fail',
             breakdown: `
                 <ul>
-                    <li>Equation: (f<sub>c</sub> / F'<sub>c</sub>)² + f<sub>b</sub> / (F'<sub>b</sub> * (1 - f<sub>c</sub>/F<sub>cE</sub>))</li>
-                    <li>Interaction = (${actual.fc.toFixed(2)} / ${adj.Fc_prime.toFixed(2)})² + ${actual.fb.toFixed(2)} / (${adj.Fb_prime.toFixed(2)} * (1 - ${actual.fc.toFixed(2)}/${wood_results.Fce.toFixed(2)})) = <b>${wood_results.interaction.toFixed(3)}</b></li>
+                    <li>Result: <b>${wood_results.interaction.toFixed(3)}</b></li>
+                    <li>If Compression: Uses NDS Eq 3.9-3 (Beam-Column)</li>
+                    <li>If Tension: Uses NDS Eqs 3.9-1 & 3.9-2</li>
                 </ul>`
         }
     ];
@@ -217,6 +256,8 @@ function renderWoodResults(calculationOutput) {
             Cb: { name: 'Bearing Area (C<sub>b</sub>)', ref: 'NDS 3.10.4' },
             CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
             Cp: { name: 'Column Stability (C<sub>P</sub>)', ref: 'NDS 3.7.1' },
+            CV: { name: 'Volume Factor (C<sub>V</sub>)', ref: 'NDS 5.3.6' },
+            Cfu: { name: 'Flat Use Factor (C<sub>fu</sub>)', ref: 'NDS 4.3.7' },
             C_OSHA: { name: 'OSHA Safety Factor (C<sub>OSHA</sub>)', ref: 'OSHA 1926' },
         };
         const info = factorMap[key];

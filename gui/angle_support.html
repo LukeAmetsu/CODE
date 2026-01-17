@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -31,15 +31,22 @@
       <main id="angle-support-main">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
           <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white" data-i18n="angle_support_title">
+            <h1
+              class="text-2xl font-bold text-gray-900 dark:text-white"
+              data-i18n="angle_support_title"
+            >
               Single Angle Wall Support
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" data-i18n="angle_support_subtitle">
+            <p
+              class="text-sm text-gray-500 dark:text-gray-400 mt-1"
+              data-i18n="angle_support_subtitle"
+            >
               Checks masonry anchors for a single angle beam support using
               linear interaction.
             </p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              <strong data-i18n="anchor_type">Anchor:</strong> DeWalt AC100+ Gold (Masonry)
+              <strong data-i18n="anchor_type">Anchor:</strong> DeWalt AC100+
+              Gold (Masonry)
             </p>
           </div>
 
@@ -54,7 +61,9 @@
                 Beam Geometry & Load
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="beam_span_ft"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="beam_span_ft"
                   >Beam Span (ft)</label
                 >
                 <input
@@ -65,7 +74,9 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="trib_width_spacing_ft"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="trib_width_spacing_ft"
                   >Tributary Width / Spacing (ft)</label
                 >
                 <input
@@ -74,12 +85,19 @@
                   value="5"
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                 />
-                <p class="text-xs text-gray-500 mt-1" data-i18n="trib_width_desc">
+                <p
+                  class="text-xs text-gray-500 mt-1"
+                  data-i18n="trib_width_desc"
+                >
                   Width of deck supported by this beam.
                 </p>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="beam_depth_in">Beam Depth (in)</label>
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="beam_depth_in"
+                  >Beam Depth (in)</label
+                >
                 <input
                   type="text"
                   id="beam_depth"
@@ -88,7 +106,9 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="area_load_psf"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="area_load_psf"
                   >Area Load (psf)</label
                 >
                 <input
@@ -97,7 +117,12 @@
                   value="50"
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                 />
-                <p class="text-xs text-gray-500 mt-1" data-i18n="total_dead_live_load">Total Dead + Live Load</p>
+                <p
+                  class="text-xs text-gray-500 mt-1"
+                  data-i18n="total_dead_live_load"
+                >
+                  Total Dead + Live Load
+                </p>
               </div>
             </div>
 
@@ -112,7 +137,9 @@
               </h3>
 
               <div class="mb-2">
-                <label class="block text-sm font-medium mb-1" data-i18n="design_method_fos"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="design_method_fos"
                   >Design Method (FOS)</label
                 >
                 <select
@@ -125,7 +152,9 @@
               </div>
 
               <div class="mb-2">
-                <label class="block text-sm font-medium mb-1" data-i18n="configuration"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="configuration"
                   >Configuration</label
                 >
                 <select
@@ -139,7 +168,9 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-sm font-medium mb-1" data-i18n="leg_size_in"
+                  <label
+                    class="block text-sm font-medium mb-1"
+                    data-i18n="leg_size_in"
                     >Leg Size (in)</label
                   >
                   <select
@@ -157,7 +188,9 @@
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1" data-i18n="thickness_in"
+                  <label
+                    class="block text-sm font-medium mb-1"
+                    data-i18n="thickness_in"
                     >Thickness (in)</label
                   >
                   <select
@@ -178,7 +211,9 @@
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-sm font-medium mb-1" data-i18n="moment_arm_e"
+                  <label
+                    class="block text-sm font-medium mb-1"
+                    data-i18n="moment_arm_e"
                     >Moment Arm (e)</label
                   >
                   <input
@@ -189,7 +224,11 @@
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1" data-i18n="fy_ksi">Fy (ksi)</label>
+                  <label
+                    class="block text-sm font-medium mb-1"
+                    data-i18n="fy_ksi"
+                    >Fy (ksi)</label
+                  >
                   <input
                     type="text"
                     id="angle_fy"
@@ -198,7 +237,10 @@
                   />
                 </div>
               </div>
-              <p class="text-xs text-gray-500 mt-1" data-i18n="sym_angles_assumed">
+              <p
+                class="text-xs text-gray-500 mt-1"
+                data-i18n="sym_angles_assumed"
+              >
                 Symmetrical angles assumed (e.g. L4x4).
               </p>
             </div>
@@ -213,7 +255,9 @@
                 Connection Details
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="number_of_bolts"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="number_of_bolts"
                   >Number of Bolts</label
                 >
                 <input
@@ -239,7 +283,9 @@
                 >
               </div>
               <div id="gage-container" class="hidden">
-                <label class="block text-sm font-medium mb-1" data-i18n="gage_vert_spacing_in"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="gage_vert_spacing_in"
                   >Gage (Vertical Spacing in)</label
                 >
                 <input
@@ -251,7 +297,9 @@
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="bolt_diameter"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="bolt_diameter"
                   >Bolt Diameter</label
                 >
                 <select
@@ -265,7 +313,9 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="embedment_depth_hnom"
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="embedment_depth_hnom"
                   >Embedment Depth (h<sub>nom</sub>)</label
                 >
                 <select
@@ -276,7 +326,11 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="substrate">Substrate</label>
+                <label
+                  class="block text-sm font-medium mb-1"
+                  data-i18n="substrate"
+                  >Substrate</label
+                >
                 <select
                   id="substrate"
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
@@ -396,10 +450,24 @@
               >
                 <tr>
                   <th class="px-3 py-3 w-12 text-center">#</th>
-                  <th class="px-3 py-3 min-w-[120px]" data-i18n="beam_span_ft">Beam Span (ft)</th>
-                  <th class="px-3 py-3 min-w-[120px]" data-i18n="trib_width_spacing_ft">Trib. Width (ft)</th>
-                  <th class="px-3 py-3 min-w-[120px]" data-i18n="area_load_psf">Area Load (psf)</th>
-                  <th class="px-3 py-3 min-w-[80px]" data-i18n="number_of_bolts">Bolts</th>
+                  <th class="px-3 py-3 min-w-[120px]" data-i18n="beam_span_ft">
+                    Beam Span (ft)
+                  </th>
+                  <th
+                    class="px-3 py-3 min-w-[120px]"
+                    data-i18n="trib_width_spacing_ft"
+                  >
+                    Trib. Width (ft)
+                  </th>
+                  <th class="px-3 py-3 min-w-[120px]" data-i18n="area_load_psf">
+                    Area Load (psf)
+                  </th>
+                  <th
+                    class="px-3 py-3 min-w-[80px]"
+                    data-i18n="number_of_bolts"
+                  >
+                    Bolts
+                  </th>
                   <th class="px-3 py-3 w-16 text-center">Action</th>
                 </tr>
               </thead>
@@ -414,7 +482,7 @@
           >
             <p
               class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2"
-              data-i18n="tip_batch_paste" 
+              data-i18n="tip_batch_paste"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -433,18 +501,21 @@
               <strong>Tip:</strong> You can copy multiple rows from Excel (Span,
               Trib Width, Load) and paste directly into the table.
             </p>
-              <button
-                id="batch-calc-btn"
-                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-md transform transition hover:scale-105 text-sm"
-                data-i18n="run_batch_calculation"
-              >
-                Run Batch Calculation
-              </button>
+            <button
+              id="batch-calc-btn"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-md transform transition hover:scale-105 text-sm"
+              data-i18n="run_batch_calculation"
+            >
+              Run Batch Calculation
+            </button>
           </div>
         </div>
 
         <div id="batch-results-container" class="hidden mb-12">
-          <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200" data-i18n="results_table">
+          <h3
+            class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200"
+            data-i18n="results_table"
+          >
             Results Table
           </h3>
           <div
@@ -459,7 +530,9 @@
                 <tr>
                   <th class="px-4 py-3">#</th>
                   <th class="px-4 py-3" data-i18n="span_l">Span (ft)</th>
-                  <th class="px-4 py-3" data-i18n="area_load_psf">Load (psf)</th>
+                  <th class="px-4 py-3" data-i18n="area_load_psf">
+                    Load (psf)
+                  </th>
                   <th class="px-4 py-3" data-i18n="number_of_bolts">Bolts</th>
                   <th class="px-4 py-3" data-i18n="status">Result</th>
                   <th class="px-4 py-3" data-i18n="dc_ratio">Max Ratio</th>
@@ -492,7 +565,9 @@
             class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
           >
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 class="font-bold text-lg" data-i18n="calculation_breakdown">Calculation Breakdown</h3>
+              <h3 class="font-bold text-lg" data-i18n="calculation_breakdown">
+                Calculation Breakdown
+              </h3>
             </div>
             <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
               <div>
@@ -504,11 +579,15 @@
                 </h4>
                 <table class="w-full text-sm">
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="linear_load_w">Linear Load (w)</td>
+                    <td class="py-2" data-i18n="linear_load_w">
+                      Linear Load (w)
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-w">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="beam_reaction_vtotal">Beam Reaction (V<sub>total</sub>)</td>
+                    <td class="py-2" data-i18n="beam_reaction_vtotal">
+                      Beam Reaction (V<sub>total</sub>)
+                    </td>
                     <td
                       class="py-2 text-right font-mono font-bold"
                       id="res-reaction"
@@ -523,27 +602,36 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="bolts_per_angle">Bolts per Angle</td>
+                    <td class="py-2" data-i18n="bolts_per_angle">
+                      Bolts per Angle
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-bolts-angle">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="shear_per_bolt_v">Shear per Bolt (v)</td>
+                    <td class="py-2" data-i18n="shear_per_bolt_v">
+                      Shear per Bolt (v)
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-v-bolt">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="tension_per_bolt_t">Tension per Bolt (t)</td>
+                    <td class="py-2" data-i18n="tension_per_bolt_t">
+                      Tension per Bolt (t)
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-t-bolt">
                       --
                     </td>
                   </tr>
                 </table>
-                <p class="text-xs text-gray-400 mt-2 italic" id="logic-note">
-                  * Logic: Single = R/n. Double = (Mu/Leg)/n.
-                </p>
+                <div
+                  class="mt-4 pt-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3 rounded text-xs text-gray-600 dark:text-gray-400 font-mono space-y-2 hidden"
+                  id="breakdown-container"
+                >
+                  <!-- Detailed Breakdown -->
+                </div>
               </div>
 
               <div>
@@ -563,11 +651,15 @@
                     <td class="py-2 text-right" id="res-dia">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="embedment_hnom">Embedment (h<sub>nom</sub>)</td>
+                    <td class="py-2" data-i18n="embedment_hnom">
+                      Embedment (h<sub>nom</sub>)
+                    </td>
                     <td class="py-2 text-right" id="res-embed">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="allowable_shear_vall">Allowable Shear (V<sub>all</sub>)</td>
+                    <td class="py-2" data-i18n="allowable_shear_vall">
+                      Allowable Shear (V<sub>all</sub>)
+                    </td>
                     <td
                       class="py-2 text-right font-mono text-green-600"
                       id="res-v-allow"
@@ -576,7 +668,9 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="allowable_tension_tall">Allowable Tension (T<sub>all</sub>)</td>
+                    <td class="py-2" data-i18n="allowable_tension_tall">
+                      Allowable Tension (T<sub>all</sub>)
+                    </td>
                     <td
                       class="py-2 text-right font-mono text-green-600"
                       id="res-t-allow"
@@ -596,17 +690,23 @@
                 </h4>
                 <table class="w-full text-sm">
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="moment_arm_e">Moment Arm (e)</td>
+                    <td class="py-2" data-i18n="moment_arm_e">
+                      Moment Arm (e)
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-arm">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="required_moment_mu">Required Moment (M<sub>u</sub>)</td>
+                    <td class="py-2" data-i18n="required_moment_mu">
+                      Required Moment (M<sub>u</sub>)
+                    </td>
                     <td class="py-2 text-right font-mono font-bold" id="res-mu">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="plastic_modulus_z">Plastic Modulus (Z)</td>
+                    <td class="py-2" data-i18n="plastic_modulus_z">
+                      Plastic Modulus (Z)
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-z">--</td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
@@ -631,7 +731,9 @@
                   </tr>
                   <tr class="border-b dark:border-gray-700">
                     <td class="py-2">Edge Distance</td>
-                    <td class="py-2 text-right font-mono" id="res-edge-dist">--</td>
+                    <td class="py-2 text-right font-mono" id="res-edge-dist">
+                      --
+                    </td>
                   </tr>
                   <!-- Layout Msg -->
                   <tr class="border-b dark:border-gray-700">
@@ -667,7 +769,9 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="req_moment_mlong">Req. Moment (M<sub>long</sub>)</td>
+                    <td class="py-2" data-i18n="req_moment_mlong">
+                      Req. Moment (M<sub>long</sub>)
+                    </td>
                     <td
                       class="py-2 text-right font-mono font-bold"
                       id="res-m-long"
@@ -676,13 +780,17 @@
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="modulus_zx">Modulus (Z<sub>x</sub>)</td>
+                    <td class="py-2" data-i18n="modulus_zx">
+                      Modulus (Z<sub>x</sub>)
+                    </td>
                     <td class="py-2 text-right font-mono" id="res-zx-long">
                       --
                     </td>
                   </tr>
                   <tr class="border-b dark:border-gray-700">
-                    <td class="py-2" data-i18n="capacity_ma">Capacity (M<sub>a</sub>)</td>
+                    <td class="py-2" data-i18n="capacity_ma">
+                      Capacity (M<sub>a</sub>)
+                    </td>
                     <td
                       class="py-2 text-right font-mono text-green-600 font-bold"
                       id="res-ma-long"
@@ -729,11 +837,14 @@
             activePage: "angle_support",
             pageTitle: "Angle Support",
             headerPlaceholderId: "header-placeholder",
-            pathPrefix: '../',
+            pathPrefix: "../",
           });
         }
         if (typeof injectFooter === "function") {
-          injectFooter({ footerPlaceholderId: "footer-placeholder", pathPrefix: '../' });
+          injectFooter({
+            footerPlaceholderId: "footer-placeholder",
+            pathPrefix: "../",
+          });
         }
       });
     </script>

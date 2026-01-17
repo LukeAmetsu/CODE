@@ -429,6 +429,28 @@ function renderResults(data) {
   const specEl = document.getElementById("spec-string");
   if (specEl) specEl.textContent = data.specString;
 
+  // Render Detailed Logic
+  if (typeof renderDetailedSteps === 'function') {
+      renderDetailedSteps(data);
+  } else {
+      // Inline fallback if script extraction failed (browser nuances)
+      const container = document.getElementById('breakdown-container');
+      if(container && data.breakdown) {
+          let html = '<div class="mb-2"><strong class="text-blue-600 dark:text-blue-400">Shear Calculation:</strong><ul class="list-disc pl-4 mt-1 space-y-1">';
+          (data.breakdown.shear_steps || []).forEach(step => {
+              html += `<li>${step}</li>`;
+          });
+          html += '</ul></div>';
+          
+          html += '<div><strong class="text-blue-600 dark:text-blue-400">Tension Calculation:</strong><ul class="list-disc pl-4 mt-1 space-y-1">';
+          (data.breakdown.tension_steps || []).forEach(step => {
+              html += `<li>${step}</li>`;
+          });
+          html += '</ul></div>';
+          container.innerHTML = html;
+      }
+  }
+
   // Layout Msg & Warnings
   const layoutEl = document.getElementById("layout-msg");
   if (layoutEl) layoutEl.textContent = data.layout_msg || "--";
@@ -622,6 +644,30 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initial Render
     renderBatchTable();
 });
+
+function renderDetailedSteps(data) {
+    const container = document.getElementById('breakdown-container');
+    if(!container) return;
+    
+    if(data.breakdown) {
+        let html = '<div class="mb-2"><strong class="text-blue-600 dark:text-blue-400">Shear Calculation:</strong><ul class="list-disc pl-4 mt-1 space-y-1">';
+        (data.breakdown.shear_steps || []).forEach(step => {
+            html += `<li>${step}</li>`;
+        });
+        html += '</ul></div>';
+        
+        html += '<div><strong class="text-blue-600 dark:text-blue-400">Tension Calculation:</strong><ul class="list-disc pl-4 mt-1 space-y-1">';
+        (data.breakdown.tension_steps || []).forEach(step => {
+            html += `<li>${step}</li>`;
+        });
+        html += '</ul></div>';
+        container.innerHTML = html;
+        container.classList.remove('hidden');
+    } else {
+        container.innerHTML = '<p class="italic">* Logic: Single = R/n. Double = (Mu/Leg)/n.</p>';
+        container.classList.remove('hidden');
+    }
+}
 
 function populateEmbedmentOptions() {
     const diaSelect = document.getElementById("bolt_diameter");

@@ -11,7 +11,7 @@ AISC_OMEGA = {
 
 # --- Helper Functions ---
 def get_design_factors(jurisdiction, aisc_phi, aisc_omega):
-    if jurisdiction == 'OSHA':
+    if str(jurisdiction).strip().upper() == 'OSHA':
         return {'phi': 0.25, 'omega': 4.0}
     return {'phi': aisc_phi, 'omega': aisc_omega}
 
@@ -383,16 +383,28 @@ class SpliceCalculator:
         factors = get_design_factors(inputs.get('jurisdiction'), 0.75, 2.00)
         
         if afn <= 0:
-             return {'Rn': 0, 'applies': True, 'phi': factors['phi'], 'omega': factors['omega']}
+             return {
+                 'Rn': 0, 'applies': True, 'phi': factors['phi'], 'omega': factors['omega'],
+                 'Afn': afn, 'Afg': afg, 'Yt': 1.0, 'Fy': fy, 'Fu': fu, 'Sx': sx
+             }
              
         yt = 1.0 if (fy/fu <= 0.8) else 1.1
         
         if fu * afn >= yt * fy * afg:
-             # Does not apply
-             return {'Rn': float('inf'), 'applies': False, 'phi': factors['phi'], 'omega': factors['omega']}
+             # Does not apply, but we still want the details for the check report
+             mn = (fu * afn / afg) * sx # Technically this formula doesn't apply, but if we need a value...
+             # Actually, if it doesn't apply, Rn is usually controlled by Yielding. 
+             # Or we return inf.
+             return {
+                 'Rn': float('inf'), 'applies': False, 'phi': factors['phi'], 'omega': factors['omega'],
+                 'Afn': afn, 'Afg': afg, 'Yt': yt, 'Fy': fy, 'Fu': fu, 'Sx': sx
+             }
              
         mn = (fu * afn / afg) * sx
-        return {'Rn': mn, 'applies': True, 'phi': factors['phi'], 'omega': factors['omega']}
+        return {
+            'Rn': mn, 'applies': True, 'phi': factors['phi'], 'omega': factors['omega'],
+            'Afn': afn, 'Afg': afg, 'Yt': yt, 'Fy': fy, 'Fu': fu, 'Sx': sx
+        }
 
     def calculate_bolt_group_geometry(self, inputs):
         """Calculates geometry for a bolt group."""
@@ -600,7 +612,31 @@ class SpliceCalculator:
             'L_plate': inputs.get('L_fp', 0), 'H_plate': inputs.get('H_fp', 0),
             'Nc': nc, 'Nr': nr, 'S_col': s_col, 'S_row': s_row, 'S_end_gap': s_end, 'gage': gage
         })
-        # Could populate geomChecks here similar to JS
+        
+        t_thinner_flange = min(
+            float(inputs.get('member_tf', 0)), 
+            float(inputs.get('t_fp', 0)), 
+            float(inputs.get('t_fp_inner', float('inf')) if int(inputs.get('num_flange_plates', 0)) == 2 else float('inf'))
+        )
+        
+        geom_checks['Flange Bolts'] = self.get_geometry_checks({
+            'db': d_fp,
+            's_col': s_col,
+            's_row': s_row,
+            'gage': gage,
+            'le_long': geo_geom['le_long'],
+            'le_tran': geo_geom['le_tran'],
+            't_thinner': t_thinner_flange,
+            'jurisdiction': inputs.get('jurisdiction')
+        })
+        
+        # Add edge_dist_gap check manually or via helper if expanded, but helper covers long/tran
+        min_le_fp = geom_checks['Flange Bolts']['edge_dist_long']['min']
+        geom_checks['Flange Bolts']['edge_dist_gap'] = {
+            'actual': geo_geom['edge_dist_gap'],
+            'min': min_le_fp, 
+            'pass': geo_geom['edge_dist_gap'] >= min_le_fp - 1e-9
+        }
         
         # 1. Bolt Shear
         num_shear_planes = 2 if int(inputs.get('num_flange_plates', 0)) == 2 else 1
@@ -615,8 +651,16 @@ class SpliceCalculator:
         
         checks['Flange Bolt Shear'] = {
             'demand': demands['total_flange_demand_tension'],
-            'check': {'Rn': bolt_check['Rn'] * num_bolts_side, 'phi': 0.75, 'omega': 2.00},
-            'details': {'Rn_single': bolt_check['Rn'], 'num_bolts': num_bolts_side, 'Fnv': bolt_check['Fnv'], 'Ab': bolt_check['Ab']}
+            'check': {
+                'Rn': bolt_check['Rn'] * num_bolts_side, 
+                'phi': bolt_check['phi'], 
+                'omega': bolt_check['omega'],
+                'Fnv': bolt_check['Fnv'],
+                'Ab': bolt_check['Ab'],
+                'num_planes': bolt_check['num_planes'],
+                'wasReduced': bolt_check.get('wasReduced', False)
+            },
+            'details': {'Rn_single': bolt_check['Rn'], 'num_bolts': num_bolts_side}
         }
         
         # 2. Outer Plate Checks
@@ -666,6 +710,8 @@ class SpliceCalculator:
         s_row = float(inputs.get('S5_row_spacing_wp', 0))
         s_end = float(inputs.get('S6_end_dist_wp', 0))
         
+        t_thinner_web = min(float(inputs.get('member_tw', 0)), float(inputs.get('t_wp', 0)) * int(inputs.get('num_web_plates', 1)))
+        
         v_load = demands['V_load']
         h_load = demands['Hw'] # Horizontal load from moment
         
@@ -680,10 +726,30 @@ class SpliceCalculator:
         bolt_shear = self.check_bolt_shear({'grade': inputs.get('bolt_grade_wp'), 'db': d_wp, 'num_planes': num_web_planes, 'jurisdiction': inputs.get('jurisdiction')})
         
         resultant_demand = ecc_res['max_R']
+        # Calculate details for Web Bolt breakdown
+        theta_deg = math.degrees(math.atan2(h_load, v_load))
+        eccentricity = ecc_res.get('eccentricity', 0)
+        e_eff = (v_load * eccentricity) / resultant_demand if resultant_demand > 0 else 0
+        
+        # Effective C for Elastic Method (roughly max_R / Rn_single ? No, C is group capacity ratio)
+        # JS breakdown says: Nominal Group Capacity = C * Rn_single.
+        # Here check['Rn'] is SET to single bolt capacity (incorrectly? No, see max_R demand).
+        # We are comparing "Force on Critical Bolt" vs "Capacity of ONE Bolt".
+        # So effectively C = 1.0 in this context of per-bolt analysis.
+        C_coeff = 1.0 
+        
         checks['Web Bolt Group Shear (ICR)'] = { # Labelled ICR in JS but using elastic here for parity with my implementation
              'demand': resultant_demand,
              'check': {'Rn': bolt_shear['Rn'], 'phi': 0.75, 'omega': 2.00},
-             'details': {'V_load': v_load, 'Hw': h_load, 'max_R': resultant_demand, 'Rn_single': bolt_shear['Rn'], 'eccentricity': ecc_res.get('eccentricity')}
+             'details': {
+                 'V_load': v_load, 'Hw': h_load, 
+                 'max_R': resultant_demand, 
+                 'Rn_single': bolt_shear['Rn'], 
+                 'eccentricity': eccentricity,
+                 'theta_deg': theta_deg,
+                 'e_eff': e_eff,
+                 'C': C_coeff
+             }
         }
         
         # 2. Web Plate Shear Checks (Yield/Rupture)
@@ -703,6 +769,30 @@ class SpliceCalculator:
             'demand': v_load,
             'check': self.check_shear_rupture({'Anv': anv, 'Fu': float(inputs.get('web_plate_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction')}),
             'details': {'hole_dia': hole_dia}
+        }
+        
+        # Geometry Checks within Web Checks
+        geo_geom_web = self.calculate_bolt_group_geometry({
+             'L_plate': inputs.get('L_wp', 0), 'H_plate': inputs.get('H_wp', 0),
+            'Nc': nc_wp, 'Nr': nr_wp, 'S_col': s_col, 'S_row': s_row, 'S_end_gap': s_end, 'gage': 0
+        })
+        
+        geom_checks['Web Bolts'] = self.get_geometry_checks({
+            'db': d_wp,
+            's_col': s_col,
+            's_row': s_row,
+            'gage': 0, # No gage for web
+            'le_long': geo_geom_web['le_long'],
+            'le_tran': geo_geom_web['le_tran'],
+            't_thinner': t_thinner_web,
+            'jurisdiction': inputs.get('jurisdiction')
+        })
+        
+        min_le_wp = geom_checks['Web Bolts']['edge_dist_long']['min']
+        geom_checks['Web Bolts']['edge_dist_gap'] = {
+            'actual': geo_geom_web['edge_dist_gap'],
+            'min': min_le_wp,
+            'pass': geo_geom_web['edge_dist_gap'] >= min_le_wp - 1e-9
         }
         
         return {'checks': checks, 'geomChecks': geom_checks}
@@ -782,6 +872,54 @@ class SpliceCalculator:
              }
         
         return {'checks': checks}
+
+    MIN_EDGE_DISTANCE_TABLE = {
+        0.5: 0.875,
+        0.625: 1.125,
+        0.75: 1.25,
+        0.875: 1.5,
+        1.0: 1.75,
+        1.125: 2.0,
+        1.25: 2.25
+    }
+
+    def get_geometry_checks(self, inputs):
+        db = float(inputs.get('db', 0))
+        if db <= 0:
+            return {}
+        
+        s_col = float(inputs.get('s_col', 0))
+        s_row = float(inputs.get('s_row', 0))
+        gage = float(inputs.get('gage', 0))
+        le_long = float(inputs.get('le_long', 0))
+        le_tran = float(inputs.get('le_tran', 0))
+        t_thinner = float(inputs.get('t_thinner', 0))
+        
+        tolerance = 1e-9
+        
+        # Min Edge Distance
+        min_le = self.MIN_EDGE_DISTANCE_TABLE.get(db)
+        if min_le is None:
+            if db > 1.25:
+                min_le = 1.75 * db
+            else:
+                min_le = 1.25 * db # Fallback/interp if not exact
+        
+        # Min Spacing
+        min_s = (8.0 / 3.0) * db
+        
+        # Max Spacing
+        max_s = min(24 * t_thinner, 12.0) if t_thinner > 0 else 12.0
+        
+        return {
+            'edge_dist_long': {'actual': le_long, 'min': min_le, 'pass': le_long >= min_le - tolerance},
+            'edge_dist_tran': {'actual': le_tran, 'min': min_le, 'pass': le_tran >= min_le - tolerance},
+            'spacing_col': {'actual': s_col, 'min': min_s, 'pass': s_col >= min_s - tolerance},
+            'spacing_row': {'actual': s_row, 'min': min_s, 'pass': s_row >= min_s - tolerance},
+            'spacing_gage': {'actual': gage, 'min': min_s, 'pass': (not gage) or (gage >= min_s - tolerance)},
+            'max_spacing_col': {'actual': s_col, 'max': max_s, 'pass': s_col <= max_s + tolerance},
+            'max_spacing_row': {'actual': s_row, 'max': max_s, 'pass': s_row <= max_s + tolerance}
+        }
 
     def _sanitize_output(self, data):
         """Recursively sanitizes dictionary values for JSON serialization (removes Infinity)."""

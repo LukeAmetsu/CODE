@@ -43,6 +43,7 @@ function draw2dSpliceDiagram() {
     const Nr_wp = parseInt(inputs.Nr_wp) || 0;
     const S4 = parseFloat(inputs.S4_col_spacing_wp) || 0;
     const S5 = parseFloat(inputs.S5_row_spacing_wp) || 0;
+    const S6 = parseFloat(inputs.S6_end_dist_wp) || 0;
 
     // Flange Plate
     const num_fp = parseInt(inputs.num_flange_plates) || 0;
@@ -53,6 +54,16 @@ function draw2dSpliceDiagram() {
     const Nc_fp = parseInt(inputs.Nc_fp) || 0;
     const Nr_fp = parseInt(inputs.Nr_fp) || 0;
     const S1 = parseFloat(inputs.S1_col_spacing_fp) || 0;
+    const S3 = parseFloat(inputs.S3_end_dist_fp) || 0;
+
+    // Bolt Diameters (for 2D drawing)
+    const D_web = parseFloat(inputs.D_wp) || 0;
+    // Note: D_fp is not explicitly used for drawing circle size in flange loop?
+    // Actually the flange loop draws rects (lines), but uses boltLen.
+    // Wait, the 2D flange bolts are drawn as Rects (side view).
+    
+    // Check if we need simple D for flange bolts width?
+    // The code currently draws rects with width 0.2 (hardcoded).
 
     // Viewport calculation
     // We want to see the full length of the longest plate + some beam extension
@@ -152,10 +163,10 @@ function draw2dSpliceDiagram() {
         // S4 is spacing between columns
         
         // Left Side
-        let x_left = -L_wp / 2 + parseFloat(inputs.S6_end_dist_wp) + c * S4;
+        let x_left = -L_wp / 2 + S6 + c * S4;
         
         // Right Side (Mirrored)
-        let x_right = L_wp / 2 - parseFloat(inputs.S6_end_dist_wp) - c * S4;
+        let x_right = L_wp / 2 - S6 - c * S4;
 
         for (let r = 0; r < Nr_wp; r++) {
             // y for this row
@@ -163,8 +174,8 @@ function draw2dSpliceDiagram() {
             const totalH = (Nr_wp - 1) * S5;
             let y = -totalH / 2 + r * S5;
 
-            drawCircle(x_left, y, parseFloat(inputs.D_wp) / 2 || 0.25, boltColor, "none");
-            drawCircle(x_right, y, parseFloat(inputs.D_wp) / 2 || 0.25, boltColor, "none");
+            drawCircle(x_left, y, D_web / 2 || 0.125, boltColor, "none");
+            drawCircle(x_right, y, D_web / 2 || 0.125, boltColor, "none");
         }
     }
 
@@ -180,9 +191,9 @@ function draw2dSpliceDiagram() {
 
         for (let c = 0; c < Nc_fp; c++) {
              // Left Side
-            let x_left = -gap/2 - parseFloat(inputs.S3_end_dist_fp) - c * S1;
+            let x_left = -gap/2 - S3 - c * S1;
             // Right Side
-            let x_right = gap/2 + parseFloat(inputs.S3_end_dist_fp) + c * S1;
+            let x_right = gap/2 + S3 + c * S1;
 
             // Draw bolt lines (Top and Bottom)
             drawRect(x_left - 0.1, d/2 - tf - (num_fp===2?t_fp_inner:0) - 0.5, 0.2, boltLen + 1, boltColor, "none");
@@ -1893,22 +1904,61 @@ const spliceCalculator = (() => {
     function run(rawInputs) {
         const inputs = { ...rawInputs };
 
-        // The user inputs TOTAL plate length. Convert to length-per-side for calculations.
-        inputs.L_fp = (rawInputs.L_fp || 0) / 2.0;
-        inputs.L_fp_inner = (rawInputs.L_fp_inner || 0) / 2.0;
-        inputs.L_wp = (rawInputs.L_wp || 0) / 2.0;
+        // Helper to safely parse numbers, defaulting to 0 if NaN/invalid
+        const safeFloat = (val) => {
+            const num = parseFloat(val);
+            return isFinite(num) ? num : 0;
+        };
 
-        // Convert string properties from DOM to numbers for calculations
-        inputs.num_flange_plates = parseInt(inputs.num_flange_plates, 10);
-        inputs.num_web_plates = parseInt(inputs.num_web_plates, 10);
-        inputs.member_Fy = parseFloat(inputs.member_Fy);
-        inputs.member_Fu = parseFloat(inputs.member_Fu);
-        inputs.flange_plate_Fy = parseFloat(inputs.flange_plate_Fy);
-        inputs.flange_plate_Fu = parseFloat(inputs.flange_plate_Fu);
-        inputs.flange_plate_Fy_inner = parseFloat(inputs.flange_plate_Fy_inner);
-        inputs.flange_plate_Fu_inner = parseFloat(inputs.flange_plate_Fu_inner);
-        inputs.web_plate_Fy = parseFloat(inputs.web_plate_Fy);
-        inputs.web_plate_Fu = parseFloat(inputs.web_plate_Fu);
+        // Parse key dimensions and loads
+        inputs.gap = safeFloat(inputs.gap);
+        inputs.M_load = safeFloat(inputs.M_load);
+        inputs.V_load = safeFloat(inputs.V_load);
+        inputs.Axial_load = safeFloat(inputs.Axial_load);
+
+        inputs.member_d = safeFloat(inputs.member_d);
+        inputs.member_bf = safeFloat(inputs.member_bf);
+        inputs.member_tf = safeFloat(inputs.member_tf);
+        inputs.member_tw = safeFloat(inputs.member_tw);
+        inputs.member_Fy = safeFloat(inputs.member_Fy);
+        inputs.member_Fu = safeFloat(inputs.member_Fu);
+        inputs.member_Zx = safeFloat(inputs.member_Zx);
+        inputs.member_Sx = safeFloat(inputs.member_Sx);
+
+        inputs.num_flange_plates = parseInt(inputs.num_flange_plates, 10) || 0;
+        inputs.flange_plate_Fy = safeFloat(inputs.flange_plate_Fy);
+        inputs.flange_plate_Fu = safeFloat(inputs.flange_plate_Fu);
+        inputs.flange_plate_Fy_inner = safeFloat(inputs.flange_plate_Fy_inner);
+        inputs.flange_plate_Fu_inner = safeFloat(inputs.flange_plate_Fu_inner);
+        
+        inputs.H_fp = safeFloat(inputs.H_fp);
+        inputs.t_fp = safeFloat(inputs.t_fp);
+        inputs.H_fp_inner = safeFloat(inputs.H_fp_inner);
+        inputs.t_fp_inner = safeFloat(inputs.t_fp_inner);
+        
+        inputs.Nc_fp = parseInt(inputs.Nc_fp, 10) || 0;
+        inputs.Nr_fp = parseInt(inputs.Nr_fp, 10) || 0;
+        inputs.S1_col_spacing_fp = safeFloat(inputs.S1_col_spacing_fp);
+        inputs.S2_row_spacing_fp = safeFloat(inputs.S2_row_spacing_fp);
+        inputs.S3_end_dist_fp = safeFloat(inputs.S3_end_dist_fp);
+        inputs.g_gage_fp = safeFloat(inputs.g_gage_fp);
+
+        inputs.num_web_plates = parseInt(inputs.num_web_plates, 10) || 0;
+        inputs.web_plate_Fy = safeFloat(inputs.web_plate_Fy);
+        inputs.web_plate_Fu = safeFloat(inputs.web_plate_Fu);
+        inputs.H_wp = safeFloat(inputs.H_wp);
+        inputs.t_wp = safeFloat(inputs.t_wp);
+
+        inputs.Nc_wp = parseInt(inputs.Nc_wp, 10) || 0;
+        inputs.Nr_wp = parseInt(inputs.Nr_wp, 10) || 0;
+        inputs.S4_col_spacing_wp = safeFloat(inputs.S4_col_spacing_wp);
+        inputs.S5_row_spacing_wp = safeFloat(inputs.S5_row_spacing_wp);
+        inputs.S6_end_dist_wp = safeFloat(inputs.S6_end_dist_wp);
+
+        // The user inputs TOTAL plate length. Convert to length-per-side for calculations.
+        inputs.L_fp = safeFloat(rawInputs.L_fp) / 2.0;
+        inputs.L_fp_inner = safeFloat(rawInputs.L_fp_inner) / 2.0;
+        inputs.L_wp = safeFloat(rawInputs.L_wp) / 2.0;
 
         if (inputs.optimize_bolts_check) {
             return runOptimization(inputs);

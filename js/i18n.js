@@ -87,13 +87,28 @@ class I18nManager {
         }
         return translation;
     }
+
+    /**
+     * Alias for get() to maintain compatibility with template.js
+     */
+    t(key) {
+        return this.get(key);
+    }
+
+    /**
+     * Alias for currentLang to maintain compatibility with template.js
+     */
+    get currentLocale() {
+        return this.currentLang;
+    }
 }
 
 // --- Global Instance and Initialization ---
-const i18n = new I18nManager();
+// --- Global Instance and Initialization ---
+window.i18n = new I18nManager();
 // The initialization is now handled by `initializeApp` in shared-utils.js
 
 // Expose a global `getTranslation` function for convenience in other scripts
 function getTranslation(key) {
-    return i18n.get(key);
+    return window.i18n.get(key);
 }

@@ -84,6 +84,8 @@
                                     id="Fb_unadjusted" value="975"></div>
                             <div><label for="Fv_unadjusted" class="block text-sm">Fv (psi)</label><input type="number"
                                     id="Fv_unadjusted" value="150"></div>
+                            <div><label for="Ft_unadjusted" class="block text-sm">Ft (psi)</label><input type="number"
+                                    id="Ft_unadjusted" value="575"></div>
                             <div><label for="Fc_perp_unadjusted" class="block text-sm">Fc⊥ (psi)</label><input
                                     type="number" id="Fc_perp_unadjusted" value="405"></div>
                             <div><label for="Fc_unadjusted" class="block text-sm">Fc (psi)</label><input type="number"
@@ -101,6 +103,12 @@
                     <div class="form-section">
                         <h2>Member Properties</h2>
                         <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2"><label for="member_type" class="block text-sm font-medium mb-1">Member Type</label>
+                                <select id="member_type" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
+                                    <option value="Sawn" selected>Sawn Lumber</option>
+                                    <option value="Glulam">Glulam / SCL</option>
+                                </select>
+                            </div>
                             <div><label for="b_width" class="block text-sm">Width (b, in)</label><input type="number"
                                     id="b_width" value="1.5"></div>
                             <div><label for="d_depth" class="block text-sm">Depth (d, in)</label><input type="number"
@@ -109,8 +117,20 @@
                                     type="number" id="unbraced_length_L" value="3.5"></div>
                             <div><label for="effective_length_factor_K" class="block text-sm">K Factor</label><input
                                     type="number" id="effective_length_factor_K" value="1.0"></div>
+                            
+                            <!-- Notch & Bearing -->
+                            <div><label for="notch_depth" class="block text-sm">Notch Depth (dn, in)</label><input
+                                    type="number" id="notch_depth" value="0"></div>
+                                    
                             <div><label for="bearing_length_Lb" class="block text-sm">Bearing Lb (in)</label><input
                                     type="number" id="bearing_length_Lb" value="1.5"></div>
+                            <div>
+                                <label for="bearing_type" class="block text-sm font-medium mb-1">Bearing Type</label>
+                                <select id="bearing_type" class="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md">
+                                    <option value="Side" selected>Side Grain</option>
+                                    <option value="End">End Grain</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="form-section">
