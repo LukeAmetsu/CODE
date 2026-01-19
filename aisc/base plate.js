@@ -21,10 +21,28 @@ function drawBasePlateDiagram(inputs) {
     const W = 500, H = 350; // ViewBox dimensions
     const pad = 60;
     const cx = W / 2, cy = H / 2;
+    
+    // Validate essential inputs to prevent NaN errors
+    const B = parseFloat(inputs.base_plate_width_B);
+    const N = parseFloat(inputs.base_plate_length_N);
+    const d = parseFloat(inputs.column_depth_d);
+    
+    // Basic check: Dimensions must be positive numbers
+    if (
+        !inputs || 
+        isNaN(B) || B <= 0 || 
+        isNaN(N) || N <= 0 ||
+        isNaN(d) // Column depth is critical for scaling
+    ) {
+        // console.warn("Invalid inputs for Base Plate Diagram:", inputs); // Optional logging
+        return; 
+    }
 
-    if (!inputs || inputs.base_plate_width_B <= 0 || inputs.base_plate_length_N <= 0) return;
+    // Check specific column dims based on type if needed, but scaling usually relies on B/N mainly.
+    // However, if d is 0, scale might be fine but drawing column will fail. 
+    // Let's rely on the checks above.
 
-    const scale = Math.min((W - 2 * pad) / inputs.base_plate_width_B, (H - 2 * pad) / inputs.base_plate_length_N);
+    const scale = Math.min((W - 2 * pad) / B, (H - 2 * pad) / N);
 
     // --- 2. Declarative Component Generation ---
     // Each function returns an array of objects describing SVG elements.
@@ -65,7 +83,7 @@ function getPlateComponents(inputs, cx, cy, scale) {
 
 function getColumnComponents(inputs, cx, cy, scale) {
     const components = [];
-    if (inputs.column_type === 'Round HSS') {
+    if (inputs.column_type === 'Round HSS' || inputs.column_type === 'Pipe') {
         const sD = inputs.column_depth_d * scale;
         if (inputs.weld_size > 0 && inputs.weld_type === 'Fillet') {
             components.push({ tag: 'circle', attrs: { cx, cy, r: sD / 2 + (inputs.weld_size * scale), class: 'svg-weld' } });
@@ -141,7 +159,8 @@ function getDimensionComponents(inputs, cx, cy, scale) {
     if (inputs.num_bolts_N > 1) drawDim(cx - sB / 2 - 20, start_y, cx - sB / 2 - 20, start_y + (inputs.bolt_spacing_N * scale), `${inputs.bolt_spacing_N}"`, true);
 
     // Column/Weld Dims
-    if (inputs.column_type === 'Round HSS') {
+    if (inputs.column_type === 'Round HSS' || inputs.column_type === 'Pipe') {
+        const sD = inputs.column_depth_d * scale;
         components.push({ tag: 'text', attrs: { x: cx, y: cy, class: 'svg-label' }, text: `D = ${inputs.column_depth_d}"` });
     } else {
         drawDim(cx - inputs.column_flange_width_bf * scale / 2 - 20, cy - inputs.column_depth_d * scale / 2, cx - inputs.column_flange_width_bf * scale / 2 - 20, cy + inputs.column_depth_d * scale / 2, `d = ${inputs.column_depth_d}"`, true);
@@ -1479,7 +1498,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
             `<ul>`,
             `<li>Confinement Factor (&Psi;) = min(&radic;(A₂/A₁), 2.0) = min(&radic;(${details.A2.toFixed(2)}/${details.A1.toFixed(2)}), 2.0) = ${details.confinement_factor.toFixed(2)}</li>`,
             `<li>P<sub>p</sub> = 0.85 &times; f'c &times; A₁ &times; &Psi;</li>`,
-            `<li>P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${check.Rn.toFixed(2)} kips</b></li>`,
+            `<li>P<sub>p</sub> = 0.85 &times; ${inputs.concrete_fc} ksi &times; ${details.A1.toFixed(2)} in² &times; ${details.confinement_factor.toFixed(2)} = <b>${(details.Rn_force || (check.Rn * details.A1)).toFixed(2)} kips</b></li>`,
             `</ul>`
         ];
         return breakdown_items.join('');
@@ -1556,9 +1575,9 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
                     `t<sub>req</sub> = l &times; &radic;(2 &times; f<sub>p,max</sub> / (${factor_char}F<sub>y</sub>))`,
                     `t<sub>req</sub> = ${details.l.toFixed(3)} &times; &radic;(2 &times; ${details.f_p_max.toFixed(2)} ksi / (${phi_bending_val} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
                 ]);
-            } else { // Round HSS
+            } else { // Round HSS or Pipe
                 content = format_list([
-                    `<u>Required Thickness (t<sub>req</sub>) for HSS (Simplified Cantilever)</u>`,
+                    `<u>Required Thickness (t<sub>req</sub>) for HSS/Pipe (Simplified Cantilever)</u>`,
                     `Cantilever length (l) = (max(N, B) - D)/2 = (max(${inputs.base_plate_length_N}, ${inputs.base_plate_width_B}) - ${inputs.column_depth_d})/2 = <b>${details.l.toFixed(3)} in</b>`,
                     `t<sub>req</sub> = l &times; &radic;(2 &times; f<sub>p,max</sub> / (${factor_char}F<sub>y</sub>))`,
                     `t<sub>req</sub> = ${details.l.toFixed(3)} &times; &radic;(2 &times; ${details.f_p_max.toFixed(2)} ksi / (${phi_bending_val} &times; ${inputs.base_plate_Fy} ksi)) = <b>${check.Rn.toFixed(3)} in</b>`
@@ -1592,16 +1611,15 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
                 `R<sub>n</sub> = &mu; &times; P<sub>u,compressive</sub>`,
                 `R<sub>n</sub> = ${details.mu} &times; ${details.Pu_compressive.toFixed(2)} kips = <b>${check.Rn.toFixed(2)} kips</b>`,
                 `<u>Design Capacity</u>`,
-                `<em>${details.note || ''}</em>`
+                `<em>${details.note || 'No special notes.'}</em>`
             ]);
             break;
         case 'Anchor Steel Tension':
             const Ab_tension = Math.PI * (inputs.anchor_bolt_diameter ** 2) / 4.0;
             const Nsa = Ab_tension * (AISC_SPEC.getFnt(inputs.anchor_bolt_grade) || inputs.anchor_bolt_Fut);
             const phiNsa = (check?.phi || 0.75) * Nsa;
-            content = format_list([
-                details.breakdown, // Use the pre-generated HTML breakdown
-                `<hr class="my-2 dark:border-gray-600">`,
+            content = (details.breakdown || (typeof generateAnchorTensionBreakdown === 'function' ? generateAnchorTensionBreakdown(details.Pu, details.Mux, details.Muy, (inputs.bolt_coords || []), inputs).breakdown : 'Breakdown not available')) + 
+            format_list([
                 `<u>Nominal Steel Strength (N<sub>sa</sub>) per ACI 17.6.1</u>`,
                 `<u>Design Capacity (per bolt)</u>`,
                 `&phi;N<sub>sa</sub> = &phi; &times; A<sub>b,eff</sub> &times; F<sub>ut</sub> = ${(check?.phi || 0.75)} &times; ${Ab_tension.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${phiNsa.toFixed(2)} kips</b>`
@@ -1614,7 +1632,6 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
             content = format_list([
                 `<u>Shear Demand per Bolt (V<sub>u,bolt</sub>)</u>`,
                 `V<sub>u,bolt</sub> = V<sub>net</sub> / n<sub>bolts</sub> = ${parseFloat(shear_on_bolts).toFixed(2)} / ${details.num_bolts_total} = <b>${Vu_bolt.toFixed(2)} kips</b>`,
-                `<hr class="my-2">`,
                 `<u>Nominal Steel Strength (V<sub>sa</sub>) per ACI 17.7.1</u>`,
                 `&phi;V<sub>sa</sub> = &phi; &times; 0.6 &times; A<sub>b,eff</sub> &times; F<sub>ut</sub>`, // Fut is actually Fnt
                 `&phi;V<sub>sa</sub> = ${check.phi} &times; 0.6 &times; ${Ab_shear.toFixed(3)} in² &times; ${inputs.anchor_bolt_Fut} ksi = <b>${(check.phi * check.Rn).toFixed(2)} kips</b>`
@@ -1698,11 +1715,19 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
             const factor_val = getPhi('weld', design_method, inputs.jurisdiction);
             let weld_cap_eq, weld_strength_calc;
             if (inputs.weld_type === 'Fillet') {
-                weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>exx</sub> * 0.707 * w` : `(0.6 * F<sub>exx</sub> * 0.707 * w) / &Omega;`;
-                weld_strength_calc = `Design Strength = ${factor_val} * 0.6 * ${inputs.weld_Fexx} ksi * 0.707 * ${inputs.weld_size}" = <b>${check.Rn.toFixed(2)} kips/in</b>`;
+                weld_cap_eq = design_method === 'LRFD' ? `&phi;R<sub>n</sub> = &phi; &times; 0.6F<sub>exx</sub> &times; 0.707w` : `R<sub>n</sub>/&Omega; = (0.6F<sub>exx</sub> &times; 0.707w) / &Omega;`;
+                if (design_method === 'LRFD') {
+                    weld_strength_calc = `&phi;R<sub>n</sub> = ${factor_val} &times; 0.6 &times; ${inputs.weld_Fexx} ksi &times; 0.707 &times; ${inputs.weld_size}" = <b>${(check.Rn * factor_val).toFixed(2)} kips/in</b>`;
+                } else {
+                    weld_strength_calc = `R<sub>n</sub>/&Omega; = (0.6 &times; ${inputs.weld_Fexx} ksi &times; 0.707 &times; ${inputs.weld_size}") / ${factor_val} = <b>${(check.Rn / factor_val).toFixed(2)} kips/in</b>`;
+                }
             } else if (inputs.weld_type === 'PJP') {
-                weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>exx</sub> * E` : `(0.6 * F<sub>exx</sub> * E) / &Omega;`;
-                weld_strength_calc = `Design Strength = ${factor_val} * 0.6 * ${inputs.weld_Fexx} ksi * ${inputs.weld_effective_throat}" = <b>${check.Rn.toFixed(2)} kips/in</b>`;
+                weld_cap_eq = design_method === 'LRFD' ? `&phi;R<sub>n</sub> = &phi; &times; 0.6F<sub>exx</sub> &times; E` : `R<sub>n</sub>/&Omega; = (0.6F<sub>exx</sub> &times; E) / &Omega;`;
+                 if (design_method === 'LRFD') {
+                    weld_strength_calc = `&phi;R<sub>n</sub> = ${factor_val} &times; 0.6 &times; ${inputs.weld_Fexx} ksi &times; ${inputs.weld_effective_throat}" = <b>${(check.Rn * factor_val).toFixed(2)} kips/in</b>`;
+                } else {
+                    weld_strength_calc = `R<sub>n</sub>/&Omega; = (0.6 &times; ${inputs.weld_Fexx} ksi &times; ${inputs.weld_effective_throat}") / ${factor_val} = <b>${(check.Rn / factor_val).toFixed(2)} kips/in</b>`;
+                }
             } else { // CJP
                 weld_cap_eq = design_method === 'LRFD' ? `&phi; * 0.6 * F<sub>y</sub> * t<sub>base_metal</sub>` : `(0.6 * F<sub>y</sub> * t<sub>base_metal</sub>) / &Omega;`;
                 weld_strength_calc = `CJP welds develop the strength of the base metal. Capacity is based on shear yielding of the column wall.`;
@@ -1713,7 +1738,7 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
                 stress_calcs.push(`Normal Stress (f<sub>n</sub>) = P/A<sub>w</sub> + M<sub>x</sub>/S<sub>wx</sub> + M<sub>y</sub>/S<sub>wy</sub> = ${details.f_axial.toFixed(2)} + ${(inputs.moment_Mx_in * 12 / details.Sw_x).toFixed(2)} + ${(inputs.moment_My_in * 12 / details.Sw_y).toFixed(2)} = <b>${(details.f_axial + details.f_moment_x + details.f_moment_y).toFixed(2)} kips/in</b>`);
                 stress_calcs.push(`Shear Stress (f_v) = &radic;(f<sub>vx</sub>² + f<sub>vy</sub>²) = &radic;(${details.f_shear_x.toFixed(2)}² + ${details.f_shear_y.toFixed(2)}²) = ${sqrt(details.f_shear_x ** 2 + details.f_shear_y ** 2).toFixed(2)} kips/in`);
                 stress_calcs.push(`Resultant Stress (f<sub>r</sub>) = &radic;(f<sub>n</sub>² + f<sub>v</sub>²) = <b>${details.f_max_weld.toFixed(2)} kips/in</b>`);
-            } else if (inputs.column_type === 'Round HSS') {
+            } else if (inputs.column_type === 'Round HSS' || inputs.column_type === 'Pipe') {
                 stress_calcs.push(`Normal Stress (f<sub>n</sub>) = P/A<sub>w</sub> + M/S<sub>w</sub> = ${details.f_axial.toFixed(2)} + ${details.f_moment.toFixed(2)} = ${(details.f_axial + details.f_moment).toFixed(2)} kips/in`); // Muy not handled for HSS yet
                 stress_calcs.push(`Shear Stress (f<sub>v</sub>) = 2V/A<sub>w</sub> = ${details.f_shear.toFixed(2)} kips/in`);
                 stress_calcs.push(`Resultant Stress (f<sub>r</sub>) = &radic;(f<sub>n</sub>² + f<sub>v</sub>²) = <b>${details.f_max_weld.toFixed(2)} kips/in</b>`);
@@ -1747,7 +1772,15 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
                 `t<sub>min</sub> = ${details.l.toFixed(3)} &times; &radic;[ (2 &times; ${details.Pu_abs.toFixed(2)}) / (0.9 &times; ${details.Fy} &times; ${details.B} &times; ${details.N}) ] = <b>${check.Rn.toFixed(3)} in</b>`
             ]);
             break;
-        default: return 'Breakdown not available.';
+        default: 
+            if (details && details.breakdown) {
+                // If the backend sent pre-formatted HTML, use it. But wrap it if needed or trust it.
+                // My backend sends <ul>...</ul>. format_list expects array of strings.
+                // But details.breakdown is likely a full HTML string.
+                // The return value of this function acts as HTML content.
+                return details.breakdown;
+            }
+            return 'Breakdown not available.';
     }
     return content;
 }
@@ -1771,7 +1804,9 @@ function renderResults(results) {
         { cells: ['Concrete Strength (f\'c)', `${inputs.concrete_fc} ksi`] },
         { cells: ['Pedestal Dimensions (N &times; B)', `${inputs.pedestal_N}" &times; ${inputs.pedestal_B}"`] },
         { cells: ['Plate Dimensions (N &times; B &times; t<sub>p</sub>)', `${inputs.base_plate_length_N}" &times; ${inputs.base_plate_width_B}" &times; ${inputs.provided_plate_thickness_tp}"`] },
-        { cells: ['Column Dimensions (d &times; b<sub>f</sub>)', `${inputs.column_depth_d}" &times; ${inputs.column_flange_width_bf}" (${inputs.column_type})`] },
+        { cells: ['Column Dimensions', inputs.column_type === 'Round HSS' || inputs.column_type === 'Pipe' ? 
+            `Diameter D = ${inputs.column_depth_d}" (${inputs.column_type})` : 
+            `${inputs.column_depth_d}" &times; ${inputs.column_flange_width_bf}" (${inputs.column_type})`] },
         { cells: ['Anchor Pattern (&#35;N &times; &#35;B)', `${inputs.num_bolts_N} &times; ${inputs.num_bolts_B} bolts`] },
         { cells: ['Anchor Spacing (N &times; B)', `${inputs.bolt_spacing_N}" &times; ${inputs.bolt_spacing_B}"`] },
         { cells: ['Anchor Type / Weld Size', `${inputs.bolt_type} / ${inputs.weld_size}"`] },
@@ -1800,7 +1835,7 @@ function renderResults(results) {
     // --- Load Summary & Demands ---
     const bearingDetails = checks['Concrete Bearing']?.details;
     const anchorTensionDemand = checks['Anchor Steel Tension']?.demand || 0;
-    const tensionBreakdown = checks['Anchor Steel Tension']?.breakdown || 'No tension calculated.';
+    const tensionBreakdown = checks['Anchor Steel Tension']?.details?.breakdown || checks['Anchor Steel Tension']?.breakdown || 'No tension calculated.';
     const anchorShearDemand = checks['Anchor Steel Shear']?.demand || 0;
     const num_bolts_total = inputs.num_bolts_N * inputs.num_bolts_B;
     const bearing_pressure = (bearingDetails?.f_p_max > 0 && bearingDetails?.Pu < 0) ? bearingDetails.f_p_max : 0;
@@ -1862,8 +1897,13 @@ function renderResults(results) {
                 demand_val = design_capacity;
                 capacity_val = demand;
                 ratio = capacity_val > 0 ? demand_val / capacity_val : (demand_val > 0 ? Infinity : 0);
+            } else if (name === 'Concrete Bearing') {
+                 // Bearing Check is Stress-based (ksi)
+                 demand_val = demand; // f_p_max
+                 capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
+                 ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : 0;
             } else {
-                demand_val = is_anchor_check && design_method === 'ASD' ? demand * 1.6 : demand;
+                demand_val = (is_anchor_check && design_method === 'ASD') ? demand * 1.6 : demand;
                 capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
                 ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
             }

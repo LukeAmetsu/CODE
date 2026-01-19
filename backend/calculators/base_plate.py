@@ -85,37 +85,57 @@ def check_concrete_bearing(inputs):
     method = inputs.get('design_method', 'ASD')
     jurisdiction = inputs.get('jurisdiction', 'IBC')
     
-    N = float(inputs.get('base_plate_length_N', 0))
-    B = float(inputs.get('base_plate_width_B', 0))
-    fc = float(inputs.get('concrete_fc', 4000)) if float(inputs.get('concrete_fc', 4000)) < 20 else float(inputs.get('concrete_fc', 4.0)) # heuristic for ksi vs psi
-    if fc > 20: fc = fc / 1000.0 
+    def safe_float(val, default=0.0):
+        try:
+            f = float(val)
+            return 0.0 if math.isnan(f) else f
+        except (ValueError, TypeError):
+            return default
+
+    N = safe_float(inputs.get('base_plate_length_N', 0))
+    B = safe_float(inputs.get('base_plate_width_B', 0))
     
-    pedestal_N = float(inputs.get('pedestal_N', N))
-    pedestal_B = float(inputs.get('pedestal_B', B))
+    raw_fc = safe_float(inputs.get('concrete_fc', 4000))
+    # Heuristic: if < 20, assume ksi, else psi. 
+    # But if user enters 4000 (psi), we want ksi. 4000/1000 = 4.
+    fc = raw_fc / 1000.0 if raw_fc > 20 else raw_fc
     
-    Pu = float(inputs.get('axial_load_P_in', 0))
-    Mux = float(inputs.get('moment_Mx_in', 0)) * 12.0 
+    pedestal_N = safe_float(inputs.get('pedestal_N', N))
+    pedestal_B = safe_float(inputs.get('pedestal_B', B))
     
-    Muy = float(inputs.get('moment_My_in', 0)) * 12.0 # k-in
+    Pu = safe_float(inputs.get('axial_load_P_in', 0))
+    Mux = safe_float(inputs.get('moment_Mx_in', 0)) * 12.0 
+    Muy = safe_float(inputs.get('moment_My_in', 0)) * 12.0 
     
-    # Check if Uplift
+    # Combined Logic for Capacity
+    A1 = N * B
+    A2 = pedestal_N * pedestal_B
+    ratio_A = math.sqrt(A2/A1) if A1 > 0 else 1.0
+    psi = min(ratio_A, 2.0)
+    
+    Pp = 0.85 * fc * A1 * psi
+    Fp = Pp / A1 if A1 > 0 else 0
+    
+    phi = get_phi('bearing', method, jurisdiction)
+    omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction)
+    
+    Rn = Fp 
+    
     if Pu > 0:
         return {
             "demand": 0,
-            "check": {"Rn": 0, "phi": 0.65, "omega": 2.31},
+            "check": {"Rn": Rn, "phi": phi, "omega": omega},
             "details": {
                 "bearing_case": "Uplift", 
                 "Pu": Pu, 
                 "f_p_max": 0,
                 "P_abs": abs(Pu),
-                "Mux": Mux / 12.0, # Convert back to k-ft? No JS uses Moment directly? JS uses Mux (k-ft) in display? 
-                # JS: Eccentricity (e_x) = M_ux / P_u. Mux in JS input is k-ft if from inputs?
-                # JS checks: details.Mux.
-                # In JS, Mux is from details.
-                "Mux": Mux/12.0, "Muy": Muy/12.0, # Report usually shows input units
-                "e_x": 0, "e_y": 0,
+                "Mux": Mux/12.0, "Muy": Muy/12.0,
+                "e_x": (Mux / abs(Pu)) if abs(Pu) > 0 else 0, 
+                "e_y": (Muy / abs(Pu)) if abs(Pu) > 0 else 0,
                 "A1": N*B, "A2": pedestal_N*pedestal_B,
                 "confinement_factor": 1.0,
+                "Rn_force": Pp,
                 "breakdown_formula": "Uplift: No bearing pressure."
             }
         }
@@ -227,20 +247,6 @@ def check_concrete_bearing(inputs):
                 f_p_max = 0 # Unstable
                 bearing_case = "Unstable (Load outside)"
 
-    # Capacity
-    # Capacity
-    A1 = N * B
-    A2 = pedestal_N * pedestal_B
-    ratio_A = math.sqrt(A2/A1) if A1 > 0 else 1.0
-    psi = min(ratio_A, 2.0)
-    
-    Pp = 0.85 * fc * A1 * psi
-    phi = get_phi('bearing', method, jurisdiction)
-    omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction) # Hack to get opposite for report? No, stick to standard return
-    
-    # Calculate Capacity based on method
-    Rn = Pp
-    
     return {
         "demand": f_p_max,
         "check": {"Rn": Rn, "phi": phi, "omega": omega},
@@ -248,8 +254,9 @@ def check_concrete_bearing(inputs):
             "f_p_max": f_p_max, "e_x": e_x, "e_y": e_y, "Y": Y, "X": X, 
             "A1": A1, "A2": A2, "confinement_factor": psi, "Pu": Pu, 
             "P_abs": P_abs,
-            "bearing_case": bearing_case,
-            "breakdown_formula": "Refer to AISC Design Guide 1" # Simplified placeholder
+            "Rn_force": Pp, # Pass Force for breakdown display
+            "bearing_case": bearing_case if bearing_case else "Uplift",
+            "breakdown_formula": breakdown if bearing_case == "" else "Refer to AISC Design Guide 1"
         }
     }
 
@@ -274,7 +281,7 @@ def check_plate_bending(inputs, bearing_results):
     l = 0
     details = {}
     
-    if col_type == 'Round HSS':
+    if col_type == 'Round HSS' or col_type == 'Pipe':
         l = (max(N, B) - d) / 2.0
         details = {'l': l, 'column_type': col_type, 'f_p_max': f_p_max}
     else:
@@ -356,7 +363,208 @@ def check_plate_bending_uplift(inputs, Tu_bolt):
         "details": {"c": c, "Tu_bolt": Tu_bolt}
     }
 
+
+def check_concrete_breakout_tension(inputs, Tu_bolt):
+    """ACI 318-19 Ch. 17 Concrete Breakout Strength in Tension"""
+    if Tu_bolt <= 0: return None
+    
+    hef = float(inputs.get('anchor_embedment_hef', 0))
+    if hef <= 0: return None # Cannot calc without hef
+    
+    fc = float(inputs.get('concrete_fc', 4))
+    if fc > 10: fc = fc / 1000.0 # Normalize to ksi? No, formulas use psi usually but let's stick to consistent units.
+    # Nb formula uses psi for fc and inches for hef usually, resulting in lbs.
+    # Nb = kc * lambda * sqrt(fc_psi) * hef^1.5
+    
+    fc_psi = fc * 1000
+    
+    # 1. Basic Breakout Strength (Nb) - ACI 17.4.2.2
+    kc = 24 # Cast-in
+    lambda_a = 1.0 # Normal weight
+    Nb = kc * lambda_a * math.sqrt(fc_psi) * (hef ** 1.5) # lbs
+    Nb = Nb / 1000.0 # kips
+    
+    # 2. Geometric Factors & Group Area (Anc/Anco)
+    # Anco = 9 * hef^2
+    Anco = 9 * (hef**2)
+    
+    # Anc computation (Simplified Rectangular Group)
+    # Critical edge distance = 1.5 * hef
+    ca1 = float(inputs.get('concrete_edge_dist_ca1', 0))
+    ca2 = float(inputs.get('concrete_edge_dist_ca2', 0))
+    
+    num_N = int(inputs.get('num_bolts_N', 1))
+    num_B = int(inputs.get('num_bolts_B', 1))
+    sp_N = float(inputs.get('bolt_spacing_N', 0))
+    sp_B = float(inputs.get('bolt_spacing_B', 0))
+    
+    # Dimensions of the breakout surface
+    # c_x = min(ca, 1.5*hef)
+    # dimension = c_x_left + spacing + c_x_right
+    # Here we assume symmetrical edge distances or single edge provided?
+    # inputs only provide ca1 (N-direction) and ca2 (B-direction).
+    # We will assume the group is centered-ish or these are the limiting edges.
+    
+    c1 = min(ca1, 1.5 * hef)
+    dim_1 = c1 + (num_N - 1) * sp_N + c1 # N direction
+    
+    c2 = min(ca2, 1.5 * hef)
+    dim_2 = c2 + (num_B - 1) * sp_B + c2 # B direction
+    
+    Anc = dim_1 * dim_2
+    
+    # Prevent Anc > n * Anco (Check 17.4.2.1) - Actually Anc can be anything, but let's be sane.
+    
+    # 3. Modification Factors
+    # psi_ec,N (Eccentricity) - ACI 17.4.2.4
+    # Simplified: 1.0 (Assume concentric tension on the group or user handled e elsewhere)
+    psi_ec_N = 1.0 
+    
+    # psi_ed,N (Edge Effect) - ACI 17.4.2.5
+    # If c_min < 1.5 hef
+    c_min = min(ca1, ca2)
+    psi_ed_N = 1.0
+    if c_min < 1.5 * hef:
+        psi_ed_N = 0.7 + 0.3 * (c_min / (1.5 * hef))
+        
+    # psi_c,N (Cracked/Uncracked) - ACI 17.4.2.6
+    # Assume uncracked for base plates unless specified.
+    psi_c_N = 1.25 # Cast-in, uncracked. (1.0 if cracked)
+    
+    # psi_cp,N (Splitting) - ACI 17.4.2.7
+    # For cast-in, = 1.0 if confined. Base plates usually confined.
+    psi_cp_N = 1.0
+    
+    # Nominal Strength Ncbg
+    Ncbg = (Anc / Anco) * psi_ec_N * psi_ed_N * psi_c_N * psi_cp_N * Nb
+    
+    breakdown = f"""
+        <ul class="list-disc list-inside">
+            <li>h<sub>ef</sub> = {hef:.2f} in</li>
+            <li>Basic Strength (N<sub>b</sub>) = {Nb:.2f} kips</li>
+            <li>Group Area (A<sub>Nc</sub> / A<sub>Nco</sub>) = {Anc:.1f} / {Anco:.1f} = {(Anc/Anco):.2f}</li>
+            <li>Edge Factor (&psi;<sub>ed,N</sub>) = {psi_ed_N:.2f} (c<sub>min</sub>={c_min:.2f}")</li>
+            <li>Concrete Factor (&psi;<sub>c,N</sub>) = {psi_c_N:.2f} (Uncracked)</li>
+            <li>N<sub>cbg</sub> = {Ncbg:.2f} kips</li>
+        </ul>
+    """
+    
+    return {
+        "demand": Tu_bolt, # Total tension on group? Or bolt? 
+        # ACI calculates GROUP strength. Demand should be TOTAL TENSION on anchors.
+        # But 'demand' passed in is usually per bolt because earlier we did Tu_bolt.
+        # Wait, check_anchors calculated Tu_bolt as MAX TENSION PER BOLT.
+        # Concrete breakout is a GROUP check usually.
+        # We need TOTAL TENSION.
+        # Approx Total Tension = Tu_bolt * num_bolts_tens (conservative) or sum.
+        # Let's Scale Demand to Group for this check, or Scale Capacity to Bolt.
+        # Standard: Compare Group Demand to Group Capacity.
+        # If Tu_bolt is max bolt tension, Group Demand approx Tu_bolt * number_of_bolts_in_tension.
+        # This is hard to know exactly without the bolt map.
+        # SAFE/CONSERVATIVE: Assume Capacity is for the Whole Group, compare with Max Bolt * Num Bolts Check?
+        # BETTER: Compare Ncbg with Total Uplift Force (if pure uplift)?
+        # For Moment, it's complex.
+        # IMPLEMENTATION CHOICE: Return Ncb (Group) divide by Num Bolts to get "Per Bolt Limit" for consistent display?
+        # NO, ACI checks are Group Checks.
+        # Let's pass the demand as Tu_bolt (per bolt) * num_bolts (total) as a conservative bound, 
+        # OR if we trust the user understands, we show Group Check.
+        # Let's use Total Tension from logic if available, or simpler: 
+        # Compare (Ncbg) vs (Sum of Tensions).
+        # We don't have Sum of Tensions easily.
+        # Let's compare Ncbg/num_bolts vs Tu_bolt (Per Bolt Capacity).
+        
+        "check": {"Rn": Ncbg / (num_N*num_B), "phi": 0.70, "omega": 2.5}, # Normalized to per-bolt for table consistency
+        "details": {
+            "breakdown": breakdown,
+            "Ncb": Ncbg, 
+            "is_group": True,
+            "note": "Capacity shown is N_cbg / n_total (averaged per bolt) for comparison with T_u,bolt."
+        }
+    }
+
+def check_concrete_breakout_shear(inputs, Vu_total):
+    """ACI 318-19 Ch. 17 Concrete Breakout Strength in Shear"""
+    # Note: Shear is usually checked against the edge.
+    if Vu_total <= 0: return None
+    
+    hef = float(inputs.get('anchor_embedment_hef', 0))
+    if hef <= 0: return None
+    
+    # 1. Basic Strength Vb (ACI 17.5.2.2)
+    fc_psi = float(inputs.get('concrete_fc', 4)) * 1000
+    da = float(inputs.get('anchor_bolt_diameter', 0.75))
+    le = hef # Load bearing length, usually hef for cast-in
+    if le > 8 * da: le = 8 * da
+    
+    ca1 = float(inputs.get('concrete_edge_dist_ca1', 0))
+    # Shear usually towards an edge. Using MIN edge distance is conservative.
+    c1 = ca1 
+    if c1 <= 0: return None # No edge distance = no shear breakout issue? Or infinite? infinite.
+    # If c1 is huge, breakout is unlikely.
+    # If input ca1 is 0 (User didn't provide), skipping check is safer than failing.
+    
+    lambda_a = 1.0
+    # Vb = (7 * (le/da)^0.2 * sqrt(da) * lambda * sqrt(fc) * c1^1.5 )
+    # This is for SINGLE anchor.
+    Vb = 7 * ((le/da)**0.2) * math.sqrt(da) * lambda_a * math.sqrt(fc_psi) * (c1**1.5)
+    Vb = Vb / 1000.0 # kips
+    
+    # 2. Group Factors
+    # A_Vc / A_Vco
+    # Avco = 4.5 * c1^2
+    Avco = 4.5 * (c1**2)
+    
+    # Avc - projected area on side of concrete
+    # Simplified: (num_bolts_perp * spacing + 1.5c1 + 1.5c1??) * (1.5c1)
+    # This is highly dependent on direction. 
+    # Assumption: Shear direction is towards the 'ca1' edge.
+    num_perp = int(inputs.get('num_bolts_B', 1)) # Bolts in row perp to shear
+    sp_perp = float(inputs.get('bolt_spacing_B', 0))
+    
+    width_avail = 1.5 * c1 + (num_perp - 1) * sp_perp + 1.5 * c1
+    # Check physical width limit (Pedestal B)
+    ped_B = float(inputs.get('pedestal_B', 0))
+    if ped_B > 0: width_avail = min(width_avail, ped_B)
+    
+    Avc = width_avail * (1.5 * c1) # Simplified height 1.5c1
+    
+    # psi_ec,V = 1.0
+    psi_ec_V = 1.0
+    # psi_ed,V = 1.0 (if c2 > 1.5c1)
+    psi_ed_V = 1.0 
+    # psi_c,V (Cracked/Uncracked) involves analysis. 
+    # Factors 1.4 for uncracked, 1.0 cracked, 1.2 ...
+    psi_c_V = 1.4 # Uncracked, no reinforcing
+    
+    # psi_h,V (Thickness) - if ha < 1.5 c1
+    psi_h_V = 1.0 # Assume deep enough
+    
+    Vcbg = (Avc / Avco) * psi_ec_V * psi_ed_V * psi_c_V * psi_h_V * Vb
+    
+    num_bolts = int(inputs.get('num_bolts_N', 1)) * int(inputs.get('num_bolts_B', 1))
+    
+    breakdown = f"""
+        <ul class="list-disc list-inside">
+            <li>Edge Distance (c<sub>1</sub>) = {c1:.2f} in</li>
+            <li>Basic Strength (V<sub>b</sub>) = {Vb:.2f} kips</li>
+            <li>Area Factor (A<sub>Vc</sub> / A<sub>Vco</sub>) = {(Avc/Avco):.2f}</li>
+            <li>Concrete Factor (&psi;<sub>c,V</sub>) = {psi_c_V:.2f}</li>
+            <li>V<sub>cbg</sub> = {Vcbg:.2f} kips</li>
+        </ul>
+    """
+    
+    return {
+        "demand": Vu_total / num_bolts, # Per bolt for consistency table
+        "check": {"Rn": Vcbg / num_bolts, "phi": 0.70, "omega": 2.5}, 
+        "details": {
+            "breakdown": breakdown,
+            "Vcbg": Vcbg,
+            "note": "Capacity shown is V_cbg / n_total (averaged per bolt)."
+        }
+    }
+
 def check_anchors(inputs, bearing_results):
+
     checks = {}
     
     # 1. Calc Demands (Tu, Vu)
@@ -392,15 +600,52 @@ def check_anchors(inputs, bearing_results):
     num_bolts = len(coords)
     max_T = 0
     
+    max_bolt_details = {'axial': 0, 'mx': 0, 'my': 0, 'z': 0, 'x': 0}
+    
     for b in coords:
         ft = 0
-        if Pu > 0: ft += Pu / num_bolts # Uplift
-        if Ix > 0: ft += (Mux * b['z']) / Ix
-        if Iy > 0: ft += (Muy * b['x']) / Iy
+        term_axial = 0
+        term_mx = 0
+        term_my = 0
         
-        if ft > max_T: max_T = ft
+        if Pu > 0: 
+            term_axial = Pu / num_bolts # Uplift
+            ft += term_axial
+        # Note: Mux/Muy already converted to k-in above
+        if Ix > 0: 
+            term_mx = (Mux * b['z']) / Ix
+            ft += term_mx
+        if Iy > 0: 
+            term_my = (Muy * b['x']) / Iy
+            ft += term_my
+        
+        if ft > max_T: 
+            max_T = ft
+            max_bolt_details = {
+                'axial': term_axial,
+                'mx': term_mx,
+                'my': term_my,
+                'z': b['z'],
+                'x': b['x']
+            }
         
     Tu_bolt = max(0, max_T)
+
+    # Generate Breakdown HTML
+    breakdown_html = ""
+    if Tu_bolt > 0:
+        # Re-using logic from JS for consistency
+        breakdown_html = f"""
+            <ul class="list-disc list-inside">
+                <li>T<sub>u,bolt</sub> &approx; P/n + M<sub>x</sub>&middot;z/I<sub>x</sub> + M<sub>y</sub>&middot;x/I<sub>y</sub></li>
+                <li>P/n = {Pu:.2f} / {num_bolts} = {max_bolt_details['axial']:.2f} kips</li>
+                <li>M<sub>x</sub> term = ({Mux:.2f} k-in * {max_bolt_details['z']:.2f} in) / {Ix:.2f} in² = {max_bolt_details['mx']:.2f} kips</li>
+                <li>M<sub>y</sub> term = ({Muy:.2f} k-in * {max_bolt_details['x']:.2f} in) / {Iy:.2f} in² = {max_bolt_details['my']:.2f} kips</li>
+                <li><b>Resultant Max Tension = {Tu_bolt:.2f} kips</b></li>
+            </ul>
+        """
+    else:
+        breakdown_html = "No tension on anchors."
     
     # Shear
     Vu_total = abs(float(inputs.get('shear_V_in', 0)))
@@ -433,7 +678,10 @@ def check_anchors(inputs, bearing_results):
         checks['Anchor Steel Tension'] = {
             "demand": Tu_bolt,
             "check": {"Rn": Rn, "phi": 0.75, "omega": 2.00},
-            "details": {"desc": "AISC J3 / ACI 17.4.1"}
+            "details": {
+                "desc": "AISC J3 / ACI 17.4.1",
+                "breakdown": breakdown_html
+            }
         }
 
     # --- Steel Shear --- 
@@ -472,15 +720,33 @@ def check_friction_resistance(inputs):
     # Actually friction often uses phi=0.55 or similar in ACI/AISC depending on interface. 
     # For now matching common practice / JS inputs implies a generic check.
     
+    note = ""
+    if pu_comp <= 0 and pu > 0:
+        note = "Uplift: No friction resistance. Shear must be resisted by anchors."
+    elif pu_comp == 0:
+        note = "Zero compression."
+        
     return {
         "demand": abs(float(inputs.get('shear_V_in', 0))),
         "check": {"Rn": rn, "phi": 0.75, "omega": 2.00},
-        "details": {"mu": mu, "Pu_compressive": pu_comp, "note": ""}
+        "details": {"mu": mu, "Pu_compressive": pu_comp, "note": note}
     }
 
 def check_bolt_bearing_on_plate(inputs, shear_per_bolt):
     """AISC J3.10 Bearing on Plate Hole"""
-    if shear_per_bolt <= 0: return {"demand": 0, "check": {"Rn": 9999, "phi": 0.75, "omega": 2.00}, "details": {"Lc": 0, "Rn_tearout": 0, "Rn_bearing": 0}}
+    if shear_per_bolt <= 0: 
+        # Return complete structure with zeros to satisfy frontend contract
+        return {
+            "demand": 0, 
+            "check": {"Rn": 9999, "phi": 0.75, "omega": 2.00}, 
+            "details": {
+                "Lc": 0, 
+                "Rn_tearout": 0, 
+                "Rn_bearing": 0,
+                "le": 0,   # Required by frontend .toFixed()
+                "hole_dia": 0 # Required by frontend .toFixed()
+            }
+        }
     
     tp = float(inputs.get('provided_plate_thickness_tp', 0))
     fu_plate = float(inputs.get('base_plate_Fu', 58)) # Need Fu of plate! usually matched to Fy if not given. 
@@ -735,6 +1001,17 @@ def calculate_base_plate(inputs):
     # Anchors
     anchor_res = check_anchors(inputs, bearing_res)
     checks.update(anchor_res)
+    
+    # Concrete Breakout (Tension)
+    # Pass max bolt tension as demand reference
+    Tu_max = anchor_res.get('Anchor Steel Tension', {}).get('demand', 0)
+    breakout_res = check_concrete_breakout_tension(inputs, Tu_max)
+    if breakout_res: checks['Anchor Concrete Breakout (Tension)'] = breakout_res
+        
+    # Concrete Breakout (Shear)
+    Vu_net = float(inputs.get('shear_V_in', 0))
+    breakout_shear = check_concrete_breakout_shear(inputs, Vu_net)
+    if breakout_shear: checks['Anchor Concrete Breakout (Shear)'] = breakout_shear
     
     # Uplift Bending
     Tu_bolt = anchor_res.get('Anchor Steel Tension', {}).get('demand', 0)
