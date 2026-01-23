@@ -9,8 +9,25 @@ AISC_OMEGA = {
     'Mn': 1.67, 'Vn': 1.67, 'Pn': 1.67, 'Tn': 1.67
 }
 
-def get_factor(method, limit_state):
+def get_factor(method, limit_state, global_fos=None):
     """Returns factor for report (phi or 1/omega)"""
+    if global_fos is not None:
+        try:
+            fos = float(global_fos)
+            if fos > 0:
+                if method == 'LRFD': return 1.0/fos
+                return 1.0/fos # For Display? No.
+                # Standard: LRFD phi = 1/FOS. ASD omega = FOS.
+                # get_factor returns the MULTIPLIER to Nominal.
+                # LRFD: phi*Rn. Multiplier = 1/FOS.
+                # ASD: Rn/Omega = Rn * (1/Omega). Multiplier = 1/FOS.
+                # So if FOS=2, Multiplier is 0.5.
+                # Wait, Existing get_factor for ASD returns 1.0/Omega.
+                # So yes, return 1.0/fos regardless of method if FOS is applied as Safety Factor.
+                return 1.0/fos
+        except:
+             pass
+
     phi = AISC_PHI.get(limit_state, 0.9)
     omega = AISC_OMEGA.get(limit_state, 1.67)
     if method == 'LRFD':
@@ -71,7 +88,7 @@ class SteelChecker:
             mn = min(mn, mp)
             
         # Design Strength
-        factor = get_factor(method, 'Mn')
+        factor = get_factor(method, 'Mn', inputs.get('global_fos'))
         phi_mn = mn * factor
         
         return {
@@ -108,10 +125,11 @@ class SteelChecker:
             fcr = 0.877 * fe
             
         pn = fcr * ag
-        factor = get_factor(method, 'Pn')
+        factor = get_factor(method, 'Pn', inputs.get('global_fos'))
         
         return {
             'phiPn': pn * factor,
+            'phiPn_or_Pn_omega': pn * factor,
             'Pn': pn,
             'Fcr': fcr,
             'KL_r_max': lc_r
@@ -151,7 +169,7 @@ class SteelChecker:
                  cv = 1.51 * E * kv / (h_tw**2 * fy)
                  
         vn = 0.6 * fy * aw * cv
-        factor = get_factor(method, 'Vn')
+        factor = get_factor(method, 'Vn', inputs.get('global_fos'))
         
         return {
             'phiVn': vn * factor, # kips
@@ -177,11 +195,14 @@ class SteelChecker:
         # Rupture
         pn_rupture = fu * ae
         
-        factor_y = get_factor(method, 'Pn') # 0.9 / 1.67
+        factor_y = get_factor(method, 'Pn', inputs.get('global_fos')) # 0.9 / 1.67
         # Rupture uses 0.75 / 2.00
-        phi_rupture = 0.75
-        omega_rupture = 2.00
-        factor_r = phi_rupture if method == 'LRFD' else 1.0/omega_rupture
+        if inputs.get('global_fos'):
+            factor_r = 1.0 / float(inputs.get('global_fos'))
+        else:
+            phi_rupture = 0.75
+            omega_rupture = 2.00
+            factor_r = phi_rupture if method == 'LRFD' else 1.0/omega_rupture
         
         cap_y = pn_yield * factor_y
         cap_r = pn_rupture * factor_r
@@ -208,7 +229,7 @@ class SteelChecker:
         my = fy * sy
         mn = min(mp, 1.6 * my)
         
-        factor = get_factor(method, 'Mn')
+        factor = get_factor(method, 'Mn', inputs.get('global_fos'))
         return {
              'phiMny_or_Mny_omega': mn * factor / 12.0, # k-ft
              'Mny': mn,

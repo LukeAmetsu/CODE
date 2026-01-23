@@ -512,7 +512,7 @@ function draw3dBasePlateDiagram(currentInputs) {
 }
 
 var basePlateInputIds = [ // FIX: Corrected variable name
-    'design_method', 'jurisdiction', 'design_code', 'unit_system', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
+    'design_method', 'jurisdiction', 'design_code', 'unit_system', 'global_fos', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx',
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
@@ -2073,9 +2073,11 @@ async function handleShapeSelection() {
 // Attach listener for column type change
 document.getElementById('column_type').addEventListener('change', updateColumnInputsUI);
 // --- BACKEND CONNECTION ---
-// Replaced createCalculationHandler with custom async handler to call Python
+// --- Batch State ---
+var basePlateBatch = [];
+
 async function handleRunBasePlateCheck() {
-    console.log("[Base Plate] Starting Backend Analysis...");
+    console.log("[Base Plate] Starting Unified Analysis...");
     const btnId = 'run-steel-check-btn';
     const feedbackId = 'feedback-message';
     const containerId = 'steel-results-container';
@@ -2084,15 +2086,13 @@ async function handleRunBasePlateCheck() {
     showFeedback('Gathering inputs...', false, feedbackId);
 
     try {
-        // 1. Gather Inputs
+        // 1. Gather Global Inputs
         const inputs = gatherInputsFromIds(basePlateInputIds);
 
-        // 2. Validate (Client-Side)
-        // We still use the JS validator for immediate feedback
+        // 2. Client-Side Validation (Global Inputs)
         const validation = basePlateCalculator.validateBasePlateInputs(inputs);
-
-        // Clear previous results if validation fails
         const resultsContainer = document.getElementById(containerId);
+        
         if (validation.errors.length > 0) {
             renderValidationResults(validation, resultsContainer);
             showFeedback('Validation failed.', true, feedbackId);
@@ -2100,10 +2100,40 @@ async function handleRunBasePlateCheck() {
             return;
         }
 
-        // 3. Call Python Backend
+        // 3. Prepare Batch Data
+        // Always include the current UI inputs as the first "case" or part of the batch
+        // The backend expects 'batch_loads' to override P, Mx, My, V if present.
+        
+        const currentCase = {
+            id: 'UI_Input',
+            P: parseFloat(inputs.axial_load_P_in) || 0,
+            Mx: parseFloat(inputs.moment_Mx_in) || 0,
+            My: parseFloat(inputs.moment_My_in) || 0,
+            V: parseFloat(inputs.shear_V_in) || 0
+        };
+
+        let finalBatch = [currentCase];
+
+        // Add table cases if they exist
+        if (basePlateBatch && basePlateBatch.length > 0) {
+             const tableCases = basePlateBatch.map((row, index) => ({
+                id: `Batch_${index + 1}`,
+                P: parseFloat(row.P) || 0,
+                Mx: parseFloat(row.Mx) || 0,
+                My: parseFloat(row.My) || 0, // Base plate currently only has Mx in batch table HTML? 
+                // Wait, HTML table has P, Mx, V. My is missing from table but present in inputs.
+                // We should assume My=0 for batch rows unless column is added.
+                // Let's stick to P, Mx, V per HTML table columns.
+                V: parseFloat(row.V) || 0
+            }));
+            finalBatch = [...finalBatch, ...tableCases];
+        }
+
+        inputs.batch_loads = finalBatch;
+
+        // 4. Call Python Backend
         showFeedback('Calculating on server...', false, feedbackId);
 
-        // Ensure eel is available
         if (typeof eel === 'undefined' || !eel.calculate_base_plate_all) {
             throw new Error("Server connection (Eel) is not available.");
         }
@@ -2111,7 +2141,7 @@ async function handleRunBasePlateCheck() {
         // Call exposed Python function
         const result = await eel.calculate_base_plate_all(inputs)();
 
-        // 4. Process Results
+        // 5. Process Results
         if (result.error) {
             console.error("Backend Error:", result.error);
             renderValidationResults({ errors: [result.error, ...(result.trace ? [result.trace] : [])] }, resultsContainer);
@@ -2120,15 +2150,15 @@ async function handleRunBasePlateCheck() {
             console.log("Backend Result:", result);
             showFeedback('Rendering results...', false, feedbackId);
 
-            // Render the results using the existing render function
-            // result structure matched: { checks: ..., details: ..., inputs: ... }
-            // Use inputs FROM BACKEND (result.inputs) which might contain calculated geometry
-            renderResults(result, result.inputs || inputs);
+            // Handle Array (Batch) or Object (Single)
+            // Backend update will return a list of results if 'batch_loads' was processed
+            
+            renderUnifiedResults(result, inputs, containerId);
 
             showFeedback('Calculation complete!', false, feedbackId);
 
             // Re-attach listeners for reports
-            attachReportEventListeners(containerId, {
+             attachReportEventListeners(containerId, {
                 reportId: containerId,
                 filenamePrefix: 'BasePlate-Report',
                 toggleTexts: { show: '[Show]', hide: '[Hide]' }

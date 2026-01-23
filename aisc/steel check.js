@@ -2,7 +2,7 @@
 var lastSteelRunResults = null;
 
 var steelCheckInputIds = [
-    'design_method', 'jurisdiction', 'aisc_standard', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
+    'design_method', 'jurisdiction', 'aisc_standard', 'global_fos', 'unit_system', 'steel_material', 'Fy', 'Fu', 'E',
     'section_type', 'aisc_shape_select',
     'd', 'bf', 'tf', 'tw', 'stiffener_spacing_a', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
@@ -707,6 +707,13 @@ function renderSteelStrengthChecks(results) {
 
 
 function renderSteelResults(results) {
+    if (Array.isArray(results)) {
+        if (results.length > 0) {
+             renderSteelResults(results[0]); 
+             renderBatchResults(results.slice(1));
+        }
+        return;
+    }
     lastSteelRunResults = results; // Cache for other functions
     const { inputs, properties, warnings, errors } = results;
     const resultsContainer = document.getElementById('steel-results-container');
@@ -988,7 +995,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const handleRunSteelCheck = createCalculationHandler({
-        gatherInputsFunction: () => gatherInputsFromIds(steelCheckInputIds),
+        gatherInputsFunction: () => {
+            const inputs = gatherInputsFromIds(steelCheckInputIds);
+            // Unified Batch: Case 0 is main inputs (empty override), followed by batch table cases
+            inputs.batch_loads = [{}, ...steelBatch.cases];
+            return inputs;
+        },
         storageKey: 'steel-check-inputs',
         validationRuleKey: 'steel_check',
         validatorFunction: (inputs) => {
@@ -1034,10 +1046,20 @@ document.addEventListener('DOMContentLoaded', () => {
         el?.addEventListener('input', debouncedSave);
     });
 
+    // Batch Table Listeners
+    document.getElementById('add-case-btn')?.addEventListener('click', addBatchRow);
+    const batchTable = document.getElementById('batch-table');
+    if (batchTable) {
+        batchTable.addEventListener('input', handleBatchInput);
+        batchTable.addEventListener('click', handleBatchAction);
+        batchTable.addEventListener('paste', handleBatchPaste);
+    }
+
     // --- Initial Setup ---
     populateMaterialDropdowns();
     populateShapeDropdown();
     updateGeometryInputsUI();
+    renderBatchTable();
     loadInputsFromLocalStorage('steel-check-inputs', steelCheckInputIds);
 
     // --- Initialize Project Manager ---
@@ -1439,10 +1461,7 @@ function drawStructuralSchematic(canvasId, inputs) {
 
 // --- BATCH LOGIC ---
 const steelBatch = {
-    cases: [
-        { P: 100, Mx: 50, My: 0, V: 10 },
-        { P: 200, Mx: 150, My: 20, V: 25 }
-    ] 
+    cases: [] 
 };
 
 function renderBatchTable() {
@@ -1534,8 +1553,7 @@ function renderBatchResults(results) {
     const tbody = document.getElementById("batch-results-body");
     const singleWrapper = document.getElementById("results-wrapper");
 
-    // Hide single view, show batch
-    if(singleWrapper) singleWrapper.classList.add("hidden");
+    // Show batch container
     container.classList.remove("hidden");
     tbody.innerHTML = "";
     

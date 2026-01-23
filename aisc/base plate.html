@@ -122,7 +122,11 @@
                                     <option value="OSHA">OSHA</option>
                                 </select>
                             </div>
-                            <div class="col-span-2">
+                            <div>
+                                <label for="global_fos" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Global FOS (Override)</label>
+                                <input type="number" id="global_fos" placeholder="Optional" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div>
                                 <label for="design_code" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Design Code</label>
                                 <input type="text" id="design_code" value="AISC 360-16 / ACI 318-19" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 cursor-not-allowed" readonly>
                             </div>
@@ -204,8 +208,8 @@
                         <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
                              <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Concrete Pedestal</h3>
                              <div class="grid grid-cols-2 gap-4">
-                                <div><label for="pedestal_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Pedestal N</label><input type="number" id="pedestal_N" value="24" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                                <div><label for="pedestal_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Pedestal B</label><input type="number" id="pedestal_B" value="24" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
+                                <div><label for="pedestal_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Pedestal N</label><input type="number" id="pedestal_N" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
+                                <div><label for="pedestal_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Pedestal B</label><input type="number" id="pedestal_B" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
                             </div>
                         </div>
                     </div>
@@ -284,9 +288,9 @@
                         <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
                             Anchor Configuration</h2>
                          <div class="grid grid-cols-2 gap-4">
-                            <div><label for="anchor_bolt_diameter" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Diameter</label><input type="number" id="anchor_bolt_diameter" value="0.375" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
+                            <div><label for="anchor_bolt_diameter" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Diameter</label><input type="number" id="anchor_bolt_diameter" value="0.75" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
                             <div><label for="total_anchors" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Total Bolts</label><input type="number" id="total_anchors" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="integer,positive"></div>
-                            <div><label for="anchor_embedment_hef" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Embedment (hef)</label><input type="number" id="anchor_embedment_hef" value="2.88" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
+                            <div><label for="anchor_embedment_hef" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Embedment (hef)</label><input type="number" id="anchor_embedment_hef" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
                             <div>
                                 <label for="bolt_type" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolt Type</label>
                                 <select id="bolt_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
@@ -301,54 +305,52 @@
                              <div class="grid grid-cols-2 gap-4">
                                 <div><label for="num_bolts_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolts along N</label><input type="number" id="num_bolts_N" value="2" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="integer,positive"></div>
                                 <div><label for="num_bolts_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolts along B</label><input type="number" id="num_bolts_B" value="2" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="integer,positive"></div>
-                                <div><label for="bolt_spacing_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (N)</label><input type="number" id="bolt_spacing_N" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                                <div><label for="bolt_spacing_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (B)</label><input type="number" id="bolt_spacing_B" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
+                                <div><label for="bolt_spacing_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (N)</label><input type="number" id="bolt_spacing_N" value="6" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
+                                <div><label for="bolt_spacing_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (B)</label><input type="number" id="bolt_spacing_B" value="6" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Loads Tab -->
+                    <!-- Loads Tab (Unified) -->
                     <div id="tab-loads" class="tab-content hidden space-y-4">
                         <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Applied Loads</h2>
+                            Calculated Loads</h2>
                         <div class="space-y-4">
-                            <div><label for="axial_load_P_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Axial (P)</label><input type="number" id="axial_load_P_in" value="-3" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                            <div><label for="moment_Mx_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (Mx)</label><input type="number" id="moment_Mx_in" value="0.5" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
+                            <div><label for="axial_load_P_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Axial (P)</label><input type="number" id="axial_load_P_in" value="-20" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
+                            <div><label for="moment_Mx_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (Mx)</label><input type="number" id="moment_Mx_in" value="50" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
                             <div><label for="moment_My_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (My)</label><input type="number" id="moment_My_in" value="0" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                            <div><label for="shear_V_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Shear (V)</label><input type="number" id="shear_V_in" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                        </div>
-                    </div>
-
-                    <!-- Batch Tab -->
-                    <div id="tab-batch" class="tab-content hidden space-y-4">
-                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
-                             <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Batch Calculation</h2>
-                             <div class="flex gap-1">
-                                <label class="cursor-pointer bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-100 text-[10px] items-center gap-1 inline-flex">
-                                    <input type="file" id="upload-excel" accept=".xlsx,.xls" class="hidden">
-                                    <span>Import</span>
-                                </label>
-                                <button id="add-case-btn" class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]">Add Case</button>
-                             </div>
+                            <div><label for="shear_V_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Shear (V)</label><input type="number" id="shear_V_in" value="10" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
                         </div>
                         
-                        <div class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800">
-                             <table id="batch-table" class="w-full text-xs text-left">
-                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                                    <tr>
-                                        <th class="px-2 py-1">P (k)</th>
-                                        <th class="px-2 py-1">Mx (ft-k)</th>
-                                        <th class="px-2 py-1">V (k)</th>
-                                        <th class="w-6"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    <!-- JS Populates -->
-                                </tbody>
-                             </table>
+                        <div class="mt-6 pt-6 border-t dark:border-gray-700">
+                             <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-2 rounded mb-2">
+                                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-300">Batch Cases</h3>
+                                <div class="flex gap-1">
+                                    <label class="cursor-pointer bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded border border-gray-200 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-[10px] items-center gap-1 inline-flex">
+                                        <input type="file" id="upload-excel" accept=".xlsx,.xls" class="hidden">
+                                        <span>Import</span>
+                                    </label>
+                                    <button id="add-case-btn" class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]">Add</button>
+                                </div>
+                             </div>
+                             
+                             <div class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                 <table id="batch-table" class="w-full text-xs text-left">
+                                    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="px-2 py-1">P</th>
+                                            <th class="px-2 py-1">Mx</th>
+                                            <th class="px-2 py-1">V</th>
+                                            <th class="w-6"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        <!-- JS Populates -->
+                                    </tbody>
+                                 </table>
+                            </div>
+                            <p class="text-[10px] text-gray-500 italic mt-1">Single inputs above + Batch table below will be calculated together.</p>
                         </div>
-                        <p class="text-[10px] text-gray-500 italic">Paste from Excel supported. Cols: P, Mx, V</p>
-                        <button id="batch-calc-btn" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 text-xs shadow-md">Run Batch</button>
                     </div>
                 
                     <div id="file-actions" class="mt-8 pt-4 border-t dark:border-gray-700">

@@ -46,7 +46,16 @@ NOMINAL_HOLE_TABLE = {
 
 # --- Helper Functions ---
 
-def get_phi(limit_state, design_method, jurisdiction):
+def get_phi(limit_state, design_method, jurisdiction, global_fos=None):
+    if global_fos is not None:
+        try:
+            fos = float(global_fos)
+            if fos > 0:
+                if design_method == 'LRFD': return 1.0 / fos
+                return fos
+        except:
+            pass
+
     if jurisdiction == 'OSHA':
         if design_method == 'LRFD': return 0.25
         return 4.0
@@ -56,12 +65,15 @@ def get_phi(limit_state, design_method, jurisdiction):
         'bending': {'phi': 0.90, 'omega': 1.67},
         'weld': {'phi': 0.75, 'omega': 2.00},
         'anchor_tension_steel': {'phi': 0.75, 'omega': 2.00},
-        'anchor_tension_concrete': {'phi': 0.65, 'omega': 2.31},
+        'anchor_tension_concrete': {'phi': 0.65, 'omega': 2.31}, # Breakout
         'anchor_pullout': {'phi': 0.70, 'omega': 2.14},
         'anchor_side_face': {'phi': 0.75, 'omega': 2.00},
         'anchor_shear_steel': {'phi': 0.65, 'omega': 2.31},
-        'anchor_shear_concrete': {'phi': 0.65, 'omega': 2.31},
+        'anchor_shear_concrete': {'phi': 0.65, 'omega': 2.31}, # Breakout
         'anchor_pryout': {'phi': 0.65, 'omega': 2.31},
+        'web_yielding': {'phi': 1.00, 'omega': 1.50},
+        'web_crippling': {'phi': 0.75, 'omega': 2.00},
+        'friction': {'phi': 0.75, 'omega': 2.00} # Assumed
     }
     
     f = factors.get(limit_state, {'phi': 1.0, 'omega': 1.0})
@@ -116,8 +128,8 @@ def check_concrete_bearing(inputs):
     Pp = 0.85 * fc * A1 * psi
     Fp = Pp / A1 if A1 > 0 else 0
     
-    phi = get_phi('bearing', method, jurisdiction)
-    omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction)
+    phi = get_phi('bearing', method, jurisdiction, inputs.get('global_fos'))
+    omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction, inputs.get('global_fos'))
     
     Rn = Fp 
     
@@ -311,7 +323,7 @@ def check_plate_bending(inputs, bearing_results):
         l = max(m, n, lambda_val * n_prime)
         details = {'m': m, 'n': n, 'n_prime': n_prime, 'lambda': lambda_val, 'X': X_val, 'l': l, 'column_type': col_type, 'f_p_max': f_p_max}
 
-    phi = get_phi('bending', method, jurisdiction)
+    phi = get_phi('bending', method, jurisdiction, inputs.get('global_fos'))
     
     # Required Thickness
     # LRFD: phi*Fy
@@ -323,7 +335,7 @@ def check_plate_bending(inputs, bearing_results):
     else:
         # For ASD, DG1 uses Fy/Omega
         # get_phi returns omega for ASD
-        omega = get_phi('bending', method, jurisdiction)
+        omega = get_phi('bending', method, jurisdiction, inputs.get('global_fos'))
         denom = Fy / omega
         
     t_req = l * math.sqrt( (2 * f_p_max) / denom )
@@ -352,8 +364,8 @@ def check_plate_bending_uplift(inputs, Tu_bolt):
     c_B = (s_B - (d if col_type == 'Round HSS' else bf)) / 2.0
     c = max(c_N, c_B, 0)
     
-    phi = get_phi('bending', method, jurisdiction)
-    denom = (phi * Fy) if method == 'LRFD' else (Fy / get_phi('bending', method, jurisdiction))
+    phi = get_phi('bending', method, jurisdiction, inputs.get('global_fos'))
+    denom = (phi * Fy) if method == 'LRFD' else (Fy / get_phi('bending', method, jurisdiction, inputs.get('global_fos')))
     
     t_req = math.sqrt( (4 * Tu_bolt) / denom )
     
@@ -473,7 +485,7 @@ def check_concrete_breakout_tension(inputs, Tu_bolt):
         # We don't have Sum of Tensions easily.
         # Let's compare Ncbg/num_bolts vs Tu_bolt (Per Bolt Capacity).
         
-        "check": {"Rn": Ncbg / (num_N*num_B), "phi": 0.70, "omega": 2.5}, # Normalized to per-bolt for table consistency
+        "check": {"Rn": Ncbg / (num_N*num_B), "phi": get_phi('anchor_tension_concrete', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('anchor_tension_concrete', 'ASD', 'IBC', inputs.get('global_fos'))}, # Normalized
         "details": {
             "breakdown": breakdown,
             "Ncb": Ncbg, 
@@ -555,7 +567,7 @@ def check_concrete_breakout_shear(inputs, Vu_total):
     
     return {
         "demand": Vu_total / num_bolts, # Per bolt for consistency table
-        "check": {"Rn": Vcbg / num_bolts, "phi": 0.70, "omega": 2.5}, 
+        "check": {"Rn": Vcbg / num_bolts, "phi": get_phi('anchor_shear_concrete', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('anchor_shear_concrete', 'ASD', 'IBC', inputs.get('global_fos'))}, 
         "details": {
             "breakdown": breakdown,
             "Vcbg": Vcbg,
@@ -677,7 +689,7 @@ def check_anchors(inputs, bearing_results):
         Rn = Ab * Fut
         checks['Anchor Steel Tension'] = {
             "demand": Tu_bolt,
-            "check": {"Rn": Rn, "phi": 0.75, "omega": 2.00},
+            "check": {"Rn": Rn, "phi": get_phi('anchor_tension_steel', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('anchor_tension_steel', 'ASD', 'IBC', inputs.get('global_fos'))},
             "details": {
                 "desc": "AISC J3 / ACI 17.4.1",
                 "breakdown": breakdown_html
@@ -694,7 +706,7 @@ def check_anchors(inputs, bearing_results):
         Rn = 0.6 * Ab * Fut
         checks['Anchor Steel Shear'] = {
             "demand": Vu_bolt,
-            "check": {"Rn": Rn, "phi": 0.65, "omega": 2.31},
+            "check": {"Rn": Rn, "phi": get_phi('anchor_shear_steel', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('anchor_shear_steel', 'ASD', 'IBC', inputs.get('global_fos'))},
             "details": {"desc": "ACI 17.5.1"}
         }
 
@@ -728,7 +740,7 @@ def check_friction_resistance(inputs):
         
     return {
         "demand": abs(float(inputs.get('shear_V_in', 0))),
-        "check": {"Rn": rn, "phi": 0.75, "omega": 2.00},
+        "check": {"Rn": rn, "phi": get_phi('friction', 'LRFD', jurisdiction, inputs.get('global_fos')), "omega": get_phi('friction', 'ASD', jurisdiction, inputs.get('global_fos'))},
         "details": {"mu": mu, "Pu_compressive": pu_comp, "note": note}
     }
 
@@ -738,7 +750,7 @@ def check_bolt_bearing_on_plate(inputs, shear_per_bolt):
         # Return complete structure with zeros to satisfy frontend contract
         return {
             "demand": 0, 
-            "check": {"Rn": 9999, "phi": 0.75, "omega": 2.00}, 
+            "check": {"Rn": 9999, "phi": get_phi('anchor_side_face', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('anchor_side_face', 'ASD', 'IBC', inputs.get('global_fos'))}, 
             "details": {
                 "Lc": 0, 
                 "Rn_tearout": 0, 
@@ -776,7 +788,7 @@ def check_bolt_bearing_on_plate(inputs, shear_per_bolt):
     
     return {
         "demand": shear_per_bolt,
-        "check": {"Rn": rn, "phi": 0.75, "omega": 2.00},
+        "check": {"Rn": rn, "phi": get_phi('anchor_side_face', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('anchor_side_face', 'ASD', 'IBC', inputs.get('global_fos'))},
         "details": {"Lc": lc, "Rn_tearout": rn_tearout, "Rn_bearing": rn_bearing, "le": lc + hole_dia/2, "hole_dia": hole_dia}
     }
 
@@ -870,7 +882,7 @@ def check_weld_strength(inputs, bearing_results):
     
     return {
         "demand": f_res,
-        "check": {"Rn": rn_per_in, "phi": 0.75, "omega": 2.00},
+        "check": {"Rn": rn_per_in, "phi": get_phi('weld', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('weld', 'ASD', 'IBC', inputs.get('global_fos'))},
         "details": {
             "f_max_weld": f_res, "Aw": aw, "Sw_x": sw_x, "Sw_y": sw_y,
             "f_axial": f_axial,
@@ -913,8 +925,8 @@ def check_column_web_checks(inputs, bearing_results):
     rn_wlc = 0.80 * (tw**2) * (1 + 3*(bf/d)*((tw/tf)**1.5)) * math.sqrt(29000*fy*tf/tw)
     
     return {
-        "Column Web Local Yielding": {"demand": demand, "check": {"Rn": rn_wly, "phi": 1.0, "omega": 1.5}},
-        "Column Web Local Crippling": {"demand": demand, "check": {"Rn": rn_wlc, "phi": 0.75, "omega": 2.0}}
+        "Column Web Local Yielding": {"demand": demand, "check": {"Rn": rn_wly, "phi": get_phi('web_yielding', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('web_yielding', 'ASD', 'IBC', inputs.get('global_fos'))}},
+        "Column Web Local Crippling": {"demand": demand, "check": {"Rn": rn_wlc, "phi": get_phi('web_crippling', 'LRFD', 'IBC', inputs.get('global_fos')), "omega": get_phi('web_crippling', 'ASD', 'IBC', inputs.get('global_fos'))}}
     }
 
 def check_minimum_thickness(inputs, bearing_results):

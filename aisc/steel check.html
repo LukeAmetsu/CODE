@@ -94,7 +94,6 @@
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-loads">Loads</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-materials">Materials</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-checks">Checks</button>
-                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-batch">Batch</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-projects">Projects</button>
                 </div>
 
@@ -126,6 +125,10 @@
                                     <option value="360-22" selected>AISC 360-22</option>
                                     <option value="360-16">AISC 360-16</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label for="global_fos" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Global FOS (Override)</label>
+                                <input type="number" id="global_fos" placeholder="Optional" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
                             </div>
                             <div class="col-span-2">
                                 <label for="unit_system" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Unit System</label>
@@ -233,6 +236,37 @@
                                 <input type="number" id="Tu_or_Ta" value="0" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
                             </div>
                         </div>
+
+                         <div class="mt-6 pt-6 border-t dark:border-gray-700">
+                             <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-2 rounded mb-2">
+                                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-300">Batch Cases</h3>
+                                <div class="flex gap-1">
+                                    <label class="cursor-pointer bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded border border-gray-200 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-[10px] items-center gap-1 inline-flex">
+                                        <input type="file" id="upload-excel" accept=".xlsx,.xls" class="hidden">
+                                        <span>Import</span>
+                                    </label>
+                                    <button id="add-case-btn" class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]">Add</button>
+                                </div>
+                             </div>
+                             
+                             <div class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                 <table id="batch-table" class="w-full text-xs text-left">
+                                    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0 z-10">
+                                        <tr>
+                                            <th class="px-2 py-1">P</th>
+                                            <th class="px-2 py-1">Mx</th>
+                                            <th class="px-2 py-1">My</th>
+                                            <th class="px-2 py-1">V</th>
+                                            <th class="w-6"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        <!-- JS Populates -->
+                                    </tbody>
+                                 </table>
+                            </div>
+                            <p class="text-[10px] text-gray-500 italic mt-1">Single inputs above + Batch table below will be calculated together.</p>
+                        </div>
                     </div>
 
                     <!-- Materials Tab -->
@@ -298,38 +332,7 @@
                         </div>
                     </div>
                     
-                    <!-- Batch Tab -->
-                    <div id="tab-batch" class="tab-content hidden space-y-4">
-                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
-                             <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Batch Calculation</h2>
-                             <div class="flex gap-1">
-                                <label class="cursor-pointer bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-100 text-[10px] items-center gap-1 inline-flex">
-                                    <input type="file" id="upload-excel" accept=".xlsx,.xls" class="hidden">
-                                    <span>Import</span>
-                                </label>
-                                <button id="add-case-btn" class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]">Add Case</button>
-                             </div>
-                        </div>
-                        
-                        <div class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800">
-                             <table id="batch-table" class="w-full text-xs text-left">
-                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-                                    <tr>
-                                        <th class="px-2 py-1">P (k)</th>
-                                        <th class="px-2 py-1">Mx (ft-k)</th>
-                                        <th class="px-2 py-1">My (ft-k)</th>
-                                        <th class="px-2 py-1">V (k)</th>
-                                        <th class="w-6"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    <!-- JS Populates -->
-                                </tbody>
-                             </table>
-                        </div>
-                        <p class="text-[10px] text-gray-500 italic">Paste from Excel supported. Cols: P, Mx, My, V</p>
-                        <button id="batch-calc-btn" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 text-xs shadow-md">Run Batch</button>
-                    </div>
+
 
                     <!-- Projects Tab -->
                     <div id="tab-projects" class="tab-content hidden space-y-4">
