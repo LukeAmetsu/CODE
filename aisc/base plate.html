@@ -97,6 +97,7 @@
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-materials">Materials</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-anchors">Anchors</button>
                     <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-loads">Loads</button>
+                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-batch">Batch</button>
                 </div>
 
                 <!-- Tab Contents (Scrollable part) -->
@@ -317,6 +318,38 @@
                             <div><label for="shear_V_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Shear (V)</label><input type="number" id="shear_V_in" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
                         </div>
                     </div>
+
+                    <!-- Batch Tab -->
+                    <div id="tab-batch" class="tab-content hidden space-y-4">
+                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
+                             <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Batch Calculation</h2>
+                             <div class="flex gap-1">
+                                <label class="cursor-pointer bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-100 text-[10px] items-center gap-1 inline-flex">
+                                    <input type="file" id="upload-excel" accept=".xlsx,.xls" class="hidden">
+                                    <span>Import</span>
+                                </label>
+                                <button id="add-case-btn" class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]">Add Case</button>
+                             </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800">
+                             <table id="batch-table" class="w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                                    <tr>
+                                        <th class="px-2 py-1">P (k)</th>
+                                        <th class="px-2 py-1">Mx (ft-k)</th>
+                                        <th class="px-2 py-1">V (k)</th>
+                                        <th class="w-6"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <!-- JS Populates -->
+                                </tbody>
+                             </table>
+                        </div>
+                        <p class="text-[10px] text-gray-500 italic">Paste from Excel supported. Cols: P, Mx, V</p>
+                        <button id="batch-calc-btn" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 text-xs shadow-md">Run Batch</button>
+                    </div>
                 
                     <div id="file-actions" class="mt-8 pt-4 border-t dark:border-gray-700">
                          <div class="flex justify-center items-center gap-2 flex-wrap">
@@ -375,8 +408,31 @@
                         </div>
                     </div>
 
-                    <!-- Results Table Container -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px]">
+                    <!-- Batch Results Container -->
+                    <div id="batch-results-container" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px] hidden">
+                         <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 dark:text-white text-sm">Batch Results</h3>
+                            <button id="download-batch-btn" class="text-xs text-blue-600 hover:text-blue-800">Export</button>
+                        </div>
+                        <div class="flex-grow overflow-y-auto p-0 custom-scrollbar">
+                             <table class="w-full text-xs text-left" id="batch-results-table">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase">
+                                    <tr>
+                                        <th class="px-4 py-2">#</th>
+                                        <th class="px-4 py-2">P</th>
+                                        <th class="px-4 py-2">Mx</th>
+                                        <th class="px-4 py-2">Ratio</th>
+                                        <th class="px-4 py-2 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800" id="batch-results-body">
+                                </tbody>
+                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Single Results Table Container -->
+                    <div id="results-wrapper" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px]">
                          <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
                             <h3 class="font-bold text-slate-800 dark:text-white text-sm">Detailed Results</h3>
                         </div>

@@ -2232,6 +2232,17 @@ initializeApp({
         }
 
         syncBoltInputs();
+        
+        // --- Batch Listeners ---
+        document.getElementById("batch-calc-btn")?.addEventListener("click", handleRunBatchCheck);
+        document.getElementById("add-case-btn")?.addEventListener("click", addBatchRow);
+        const batchTable = document.getElementById("batch-table");
+        if(batchTable) {
+            batchTable.addEventListener("input", handleBatchInput);
+            batchTable.addEventListener("click", handleBatchAction);
+            batchTable.addEventListener("paste", handleBatchPaste);
+        }
+        renderBatchTable();
     }
 });
 

@@ -941,12 +941,37 @@ def check_minimum_thickness(inputs, bearing_results):
     }
 
 
+
 def calculate_base_plate(inputs):
     """
     Main entry point for Base Plate Calculation.
     """
+    # --- 0. Batch Processing ---
+    batch_loads = inputs.get('batch_loads')
+    if batch_loads and isinstance(batch_loads, list):
+        results = []
+        base_inputs = inputs.copy()
+        if 'batch_loads' in base_inputs:
+            del base_inputs['batch_loads'] # Prevent recursion loop
+        
+        for case in batch_loads:
+            # Case can be a dict of overrides
+            if not isinstance(case, dict): continue
+            
+            case_input = base_inputs.copy()
+            case_input.update(case)
+            
+            try:
+                res = calculate_base_plate(case_input)
+                results.append(res)
+            except Exception as e:
+                import traceback
+                results.append({"error": str(e), "trace": traceback.format_exc()})
+        return results
+
     inputs = inputs.copy() # Avoid mutation
     # 1. Validation (Simplified, frontend handles mostly)
+
     
     # 2. Geometry Checks
     try:

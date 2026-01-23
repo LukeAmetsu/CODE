@@ -276,7 +276,7 @@ if __name__ == '__main__':
     
     print("Starting Eel App...")
     # Start the app opening the index.html located in gui/
-    # Start the app opening the index.html located in gui/
+    # Start the app opening the index.html located in gui/   
     # Try port 8000 specifically to allow browser refreshes to work after server restart
     start_options = {'size': (1200, 800)}
     

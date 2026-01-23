@@ -296,8 +296,30 @@ class SteelChecker:
         
         return props
 
+
     def run(self, inputs):
         """Main entry point simulating steel check.js run()"""
+        
+        # --- Batch Processing ---
+        batch_loads = inputs.get('batch_loads')
+        if batch_loads and isinstance(batch_loads, list):
+            results = []
+            base_inputs = inputs.copy()
+            if 'batch_loads' in base_inputs:
+                del base_inputs['batch_loads']
+            
+            for case in batch_loads:
+                if not isinstance(case, dict): continue
+                case_input = base_inputs.copy()
+                case_input.update(case)
+                try:
+                    res = self.run(case_input)
+                    results.append(res)
+                except Exception as e:
+                    import traceback
+                    results.append({"error": str(e), "trace": traceback.format_exc()})
+            return results
+            
         inputs = inputs.copy() # Avoid mutating original
         # Parse basic numerics
         inputs['Fy'] = float(inputs.get('Fy', 0))

@@ -16,6 +16,12 @@ const diagramInputIds = [
 // --- Master Bolt Cache ---
 let masterBolts = {};
 
+// --- Batch / Unified Load Logic ---
+const spliceBatch = {
+    cases: [{ Mu: 0, Vu: 0, Pu: 0 }], // Start with one default case
+    selectedIndex: -1
+};
+
 // --- 2D Drawing Logic ---
 function draw2dSpliceDiagram() {
     const svgId = "splice-2d-diagram";
@@ -284,8 +290,29 @@ function draw3dSpliceDiagram() {
         bjsScene = new BABYLON.Scene(bjsEngine);
         bjsGuiTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI", true, bjsScene);
 
+        // Initialize Camera (Orthographic for CAD look)
         const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.5, Math.PI / 2.8, 60, BABYLON.Vector3.Zero(), bjsScene);
         camera.attachControl(canvas, true);
+        camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+        
+        let orthoSize = 30; // Initial zoom level
+        const ratio = canvas.width / canvas.height;
+        camera.orthoTop = orthoSize;
+        camera.orthoBottom = -orthoSize;
+        camera.orthoLeft = -orthoSize * ratio;
+        camera.orthoRight = orthoSize * ratio;
+
+        // Dynamic zoom handling for Orthographic camera
+        bjsScene.onBeforeRenderObservable.add(() => {
+             // Sync ortho bounds with radius to simulate zoom
+             // Base radius is 60.
+             const zoomFactor = camera.radius / 60;
+             const currentOrtho = orthoSize * zoomFactor;
+             camera.orthoTop = currentOrtho;
+             camera.orthoBottom = -currentOrtho;
+             camera.orthoLeft = -currentOrtho * ratio;
+             camera.orthoRight = currentOrtho * ratio;
+        });
         camera.lowerRadiusLimit = 20;
         camera.upperRadiusLimit = 400;
         camera.wheelPrecision = 10;
@@ -296,9 +323,11 @@ function draw3dSpliceDiagram() {
         }, { passive: false });
 
         const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, bjsScene, [camera]);
-        pipeline.samples = 1;
+        pipeline.samples = 4; // Enable Anti-Aliasing
+        pipeline.fxaaEnabled = true; // Fast AA
         pipeline.ssaoEnabled = true;
-        pipeline.ssaoRatio = 0.1;
+        pipeline.ssaoRatio = 0.5; // Better quality SSAO
+        pipeline.bloomEnabled = false; // DISABLED bloom to prevent bolt glow
 
         bjsEngine.runRenderLoop(() => {
             if (bjsScene && bjsScene.isReady()) {
@@ -324,87 +353,241 @@ function draw3dSpliceDiagram() {
 
     // --- 3. Lighting & Materials (Create only if they don't exist) ---
     if (bjsScene.lights.length === 0) {
-        const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-0.5, -1, -0.5), bjsScene);
+        // Main Directional Light (Sun)
+        const light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(-1, -2, -1), bjsScene);
         light.position = new BABYLON.Vector3(20, 40, 20);
-        new BABYLON.ShadowGenerator(1024, light);
+        light.intensity = 1.5; // Reduced intensity (was 2.5)
+        
+        // Shadow Generator
+        // Shadow Generator - REMOVED for Technical Drawing look
+        // const shadowGenerator = new BABYLON.ShadowGenerator(2048, light);
+        // shadowGenerator.useBlurExponentialShadowMap = true;
+        // shadowGenerator.blurKernel = 32;
+
+        // Ambient Light (Fill)
+        const hemiLight = new BABYLON.HemisphericLight("hemi01", new BABYLON.Vector3(0, 1, 0), bjsScene);
+        hemiLight.intensity = 0.6;
+        hemiLight.groundColor = new BABYLON.Color3(0.2, 0.2, 0.2);
     }
 
 
     // --- 3. Lighting & Materials ---
-    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.1, 0.12, 0.15, 1) : new BABYLON.Color4(0.95, 0.95, 0.95, 1);
-    bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
-    bjsScene.environmentIntensity = 1.2;
+    // Updated Background Color for "Premium" look
+    bjsScene.clearColor = isDarkMode ? new BABYLON.Color4(0.08, 0.09, 0.11, 1) : new BABYLON.Color4(0.92, 0.94, 0.96, 1);
+    
+    // Environment - Lower intensity for less glare
+    if (!bjsScene.environmentTexture) {
+         bjsScene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", bjsScene);
+    }
+    bjsScene.environmentIntensity = 0.6; // Reduced environment impact (was 0.8)
 
-    const shadowGenerator = bjsScene.lights[0].getShadowGenerator();
+    // Enable High-DPI Rendering
+    bjsEngine.setHardwareScalingLevel(0.5); // 2x Scaling for retina-like sharpness
+
+    // const shadowGenerator = bjsScene.lights[0].getShadowGenerator();
+    const shadowGenerator = null; // No shadows
 
     // Use existing materials or create them if they don't exist
-    const memberMaterial = bjsScene.getMaterialByName("memberMat") || new BABYLON.PBRMaterial("memberMat", bjsScene);
-    memberMaterial.albedoColor = new BABYLON.Color3.FromHexString("#003cff");
-    memberMaterial.metallic = 0.6;
-    memberMaterial.roughness = 0.45;
+    // Switch to StandardMaterial for reliable "Technical Drawing" colors
+    const memberMaterial = bjsScene.getMaterialByName("memberMat") || new BABYLON.StandardMaterial("memberMat", bjsScene);
+    memberMaterial.diffuseColor = new BABYLON.Color3.FromHexString("#FDB813"); // Construction Orange
+    memberMaterial.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Low specular
+    memberMaterial.emissiveColor = new BABYLON.Color3.FromHexString("#FDB813").scale(0.1); // Slight emissive to prevent darkness
 
-    const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
-    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#ff8800");
-    plateMaterial.metallic = 0.6;
-    plateMaterial.roughness = 0.4;
+    const plateMaterial = new BABYLON.StandardMaterial("plateMat", bjsScene);
+    plateMaterial.diffuseColor = new BABYLON.Color3.FromHexString("#2E75B6"); // Engineering Blue
+    plateMaterial.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+    plateMaterial.emissiveColor = new BABYLON.Color3.FromHexString("#2E75B6").scale(0.1);
 
-    const boltMaterial = bjsScene.getMaterialByName("boltMat") || new BABYLON.PBRMaterial("boltMat", bjsScene);
-    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5");
-    boltMaterial.metallic = 0.6;
-    boltMaterial.roughness = 0.35;
+    const boltMaterial = bjsScene.getMaterialByName("boltMat") || new BABYLON.StandardMaterial("boltMat", bjsScene);
+    boltMaterial.diffuseColor = new BABYLON.Color3.FromHexString("#64748b");
+    boltMaterial.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+    boltMaterial.metallic = 0.0; // Non-metallic look for dull galvanized
+    boltMaterial.roughness = 1.0; // Maximum roughness to kill reflection
+
+
+// ... (Create Dimension Helper Functions remain same) ...
+
+    // --- Event Listeners for 3D Interaction --- inside setTimeout
+    const toggleBtn = document.getElementById("toggle-dimensions-btn");
+    const copyBtn = document.getElementById("copy-3d-btn");
+    const resetBtn = document.getElementById("camera-reset-btn");
+    
+    if (toggleBtn) {
+        // Clone to remove old listeners
+        const newToggleBtn = toggleBtn.cloneNode(true);
+        toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+        
+        newToggleBtn.addEventListener("click", () => {
+             areDimensionsVisible = !areDimensionsVisible;
+             
+             // Efficiently toggle visibility without redraw
+             if (dimensionElements) {
+                 if (dimensionElements.meshes) {
+                     dimensionElements.meshes.forEach(m => m.isVisible = areDimensionsVisible);
+                 }
+                 if (dimensionElements.labels) {
+                     dimensionElements.labels.forEach(l => l.isVisible = areDimensionsVisible);
+                 }
+             }
+
+             newToggleBtn.textContent = areDimensionsVisible ? "Hide Dim" : "Show Dim";
+             newToggleBtn.classList.toggle("bg-blue-100", areDimensionsVisible);
+             newToggleBtn.classList.toggle("text-blue-700", areDimensionsVisible);
+             newToggleBtn.classList.toggle("bg-gray-200", !areDimensionsVisible);
+             newToggleBtn.classList.toggle("text-gray-600", !areDimensionsVisible);
+        });
+    }
+    
+    if (copyBtn) {
+        // Clone to remove old listeners
+        const newCopyBtn = copyBtn.cloneNode(true);
+        copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
+        
+        newCopyBtn.addEventListener("click", () => {
+             if(bjsEngine && bjsScene) {
+                 // Create screenshot with HIGH PRECISION (4x)
+                 BABYLON.Tools.CreateScreenshot(bjsEngine, bjsScene.activeCamera, { precision: 4 }, (data) => {
+                     // Data is base64 string
+                     fetch(data)
+                         .then(res => res.blob())
+                         .then(blob => {
+                             const item = new ClipboardItem({ "image/png": blob });
+                             navigator.clipboard.write([item]).then(() => {
+                                 const originalHTML = newCopyBtn.innerHTML;
+                                 newCopyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+                                 setTimeout(() => newCopyBtn.innerHTML = originalHTML, 2000);
+                             });
+                         });
+                 });
+             }
+        });
+    }
+    
+    if (resetBtn) {
+        const newResetBtn = resetBtn.cloneNode(true);
+        resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+         newResetBtn.addEventListener("click", () => {
+             if(bjsScene && bjsScene.activeCamera) {
+                 bjsScene.activeCamera.setTarget(BABYLON.Vector3.Zero());
+                 bjsScene.activeCamera.alpha =  -Math.PI / 2.5;
+                 bjsScene.activeCamera.beta = Math.PI / 2.8;
+                 bjsScene.activeCamera.radius = 60;
+             }
+        });
+    }
+
+    const topViewBtn = document.getElementById("view-top-btn");
+    if (topViewBtn) {
+        const newTopBtn = topViewBtn.cloneNode(true);
+        topViewBtn.parentNode.replaceChild(newTopBtn, topViewBtn);
+        newTopBtn.addEventListener("click", () => {
+             if(bjsScene && bjsScene.activeCamera) {
+                 bjsScene.activeCamera.setTarget(BABYLON.Vector3.Zero());
+                 // Top View: Beta near 0. Alpha 0 aligns Z horizontal? 
+                 // If Z is horizontal, we want X vertical.
+                 // Let's try Alpha -PI/2 to align with user preference (Standard Plan View)
+                 // User said "Rotated", suggesting previous (-PI/2) was wrong? Or they want Z horizontal?
+                 // Let's try Alpha = 0. (Side view usually Alpha 0 is looking from Z? No, Alpha 0 is +Z axis usually)
+                 // If Beam is along Z.
+                 // Looking down Y.
+                 // We want Z horizontal.
+                 bjsScene.activeCamera.alpha = 0; 
+                 bjsScene.activeCamera.beta = 0.001; 
+                 bjsScene.activeCamera.radius = 60;
+                 
+                 // Show Flange Dims, Hide Web Dims
+                 if (dimensionElements) {
+                     if (dimensionElements.meshes) {
+                         dimensionElements.meshes.forEach(m => m.isVisible = (m.metadata?.viewType === 'flange' || m.metadata?.viewType === 'general'));
+                     }
+                     if (dimensionElements.labels) {
+                         dimensionElements.labels.forEach(l => l.isVisible = (l.metadata?.viewType === 'flange' || l.metadata?.viewType === 'general'));
+                     }
+                 }
+             }
+        });
+    }
+
+    const sideViewBtn = document.getElementById("view-side-btn");
+    if (sideViewBtn) {
+        const newSideBtn = sideViewBtn.cloneNode(true);
+        sideViewBtn.parentNode.replaceChild(newSideBtn, sideViewBtn);
+        newSideBtn.addEventListener("click", () => {
+             if(bjsScene && bjsScene.activeCamera) {
+                 bjsScene.activeCamera.setTarget(BABYLON.Vector3.Zero());
+                 bjsScene.activeCamera.alpha = 0; // Align with Top View (Beam Horizontal)
+                 bjsScene.activeCamera.beta = Math.PI / 2;
+                 bjsScene.activeCamera.radius = 60;
+
+                 // Show Web Dims, Hide Flange Dims (except general?)
+                 // Actually side view usually shows Web details.
+                 if (dimensionElements) {
+                     if (dimensionElements.meshes) {
+                         dimensionElements.meshes.forEach(m => m.isVisible = (m.metadata?.viewType === 'web' || m.metadata?.viewType === 'general'));
+                     }
+                     if (dimensionElements.labels) {
+                         dimensionElements.labels.forEach(l => l.isVisible = (l.metadata?.viewType === 'web' || l.metadata?.viewType === 'general'));
+                     }
+                 }
+             }
+        });
+    }
 
 
     // --- 4. Helper functions for Dimensions ---
     const createLabel = (text, anchorMesh) => {
         const label = new BABYLON.GUI.Rectangle();
-        label.height = "18px";
-        label.width = `${text.length * 7}px`;
-        label.cornerRadius = 5;
+        label.height = "36px"; // Significantly taller
+        label.width = `${text.length * 15}px`; // Much wider
+        label.cornerRadius = 6;
         label.thickness = 1;
-        label.background = isDarkMode ? "rgba(40, 40, 40, 0.7)" : "rgba(255, 255, 255, 0.7)";
+        label.background = isDarkMode ? "rgba(20, 20, 20, 0.85)" : "rgba(255, 255, 255, 0.9)";
         label.color = isDarkMode ? "#FFFFFF" : "#000000";
         bjsGuiTexture.addControl(label);
         dimensionElements.labels.push(label); // Track label
         const textBlock = new BABYLON.GUI.TextBlock();
         textBlock.text = text;
-        textBlock.fontSize = 10;
+        textBlock.fontSize = 24; // Large, readable font
+        textBlock.fontWeight = "bold"; 
         label.isVisible = areDimensionsVisible; // Set visibility based on global state
         label.addControl(textBlock);
         label.linkWithMesh(anchorMesh);
         return label;
     };
 
-    const createDimensionLine = (name, value, start, end, offset) => {
+    const createDimensionLine = (name, value, start, end, offset, viewType) => {
         if (!value || value <= 0) return;
         // --- FIX: Use a single, consistent material for all dimension lines ---
         let lineMat = bjsScene.getMaterialByName("dimLineMat");
         if (!lineMat) {
             lineMat = new BABYLON.StandardMaterial("dimLineMat", bjsScene);
         }
-        lineMat.emissiveColor = isDarkMode ? new BABYLON.Color3.White() : new BABYLON.Color3.Black();
+        lineMat.emissiveColor = new BABYLON.Color3.FromHexString("#000000"); // Always Black for Technical look
         lineMat.disableLighting = true;
 
-        const mainLinePoints = [start.add(offset), end.add(offset)];
-        const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: mainLinePoints }, bjsScene);
+        const mainLine = BABYLON.MeshBuilder.CreateLines(`${name}_main`, { points: [start.add(offset), end.add(offset)] }, bjsScene);
         mainLine.material = lineMat;
         mainLine.isVisible = areDimensionsVisible; // Set visibility based on global state
+        mainLine.metadata = { viewType }; // Store view type
         dimensionElements.meshes.push(mainLine);
 
-        const extLine1Points = [start, start.add(offset.scale(1.1))];
-        const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: extLine1Points }, bjsScene);
+        const extLine1 = BABYLON.MeshBuilder.CreateLines(`${name}_ext1`, { points: [start, start.add(offset.scale(1.05))] }, bjsScene);
         extLine1.material = lineMat;
         extLine1.isVisible = areDimensionsVisible; // Set visibility based on global state
+        extLine1.metadata = { viewType }; // Store view type
         dimensionElements.meshes.push(extLine1);
 
-        const extLine2Points = [end, end.add(offset.scale(1.1))];
-        const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: extLine2Points }, bjsScene);
+        const extLine2 = BABYLON.MeshBuilder.CreateLines(`${name}_ext2`, { points: [end, end.add(offset.scale(1.05))] }, bjsScene);
         extLine2.material = lineMat;
         extLine2.isVisible = areDimensionsVisible; // Set visibility based on global state
+        extLine2.metadata = { viewType }; // Store view type
         dimensionElements.meshes.push(extLine2);
 
         const labelAnchor = new BABYLON.AbstractMesh(`${name}_label_anchor`, bjsScene);
-        labelAnchor.position = BABYLON.Vector3.Center(start, end).add(offset.scale(1.2));
-        createLabel(`${name}=${value}"`, labelAnchor);
+        labelAnchor.position = BABYLON.Vector3.Center(start, end).add(offset.scale(1.1)); // Slightly closer label
+        const label = createLabel(`${name}=${value}"`, labelAnchor);
+        if (label) label.metadata = { viewType }; // Store view type on label
     };
 
 
@@ -420,7 +603,7 @@ function draw3dSpliceDiagram() {
         const member = BABYLON.Mesh.MergeMeshes([topFlange, botFlange, web], true, true, undefined, false, true);
         if (member) {
             member.material = memberMaterial;
-            shadowGenerator.addShadowCaster(member);
+            if (shadowGenerator) shadowGenerator.addShadowCaster(member);
             member.receiveShadows = true;
         }
         return member;
@@ -438,7 +621,7 @@ function draw3dSpliceDiagram() {
         const outerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("outer_fp_top", { width: inputs.H_fp, height: inputs.t_fp, depth: inputs.L_fp }, bjsScene);
         outerFlangePlateTop.material = plateMaterial;
         outerFlangePlateTop.position.y = inputs.member_d / 2 + inputs.t_fp / 2;
-        shadowGenerator.addShadowCaster(outerFlangePlateTop);
+        if (shadowGenerator) shadowGenerator.addShadowCaster(outerFlangePlateTop);
         outerFlangePlateTop.receiveShadows = true;
 
         const outerFlangePlateBot = outerFlangePlateTop.clone("outer_fp_bot");
@@ -449,7 +632,7 @@ function draw3dSpliceDiagram() {
         const innerFlangePlateTop = BABYLON.MeshBuilder.CreateBox("inner_fp_top", { width: inputs.H_fp_inner, height: inputs.t_fp_inner, depth: inputs.L_fp_inner }, bjsScene);
         innerFlangePlateTop.material = plateMaterial;
         innerFlangePlateTop.position.y = inputs.member_d / 2 - inputs.member_tf - inputs.t_fp_inner / 2;
-        shadowGenerator.addShadowCaster(innerFlangePlateTop);
+        if (shadowGenerator) shadowGenerator.addShadowCaster(innerFlangePlateTop);
         innerFlangePlateTop.receiveShadows = true;
 
         const innerFlangePlateBot = innerFlangePlateTop.clone("inner_fp_bot");
@@ -463,7 +646,7 @@ function draw3dSpliceDiagram() {
             webPlate.material = plateMaterial;
             const offset = (inputs.member_tw / 2 + inputs.t_wp / 2 + (i > 0 ? inputs.t_wp : 0));
             webPlate.position.x = i % 2 === 0 ? offset : -offset;
-            shadowGenerator.addShadowCaster(webPlate);
+            if (shadowGenerator) shadowGenerator.addShadowCaster(webPlate);
             webPlate.receiveShadows = true;
         }
     }
@@ -493,7 +676,7 @@ function draw3dSpliceDiagram() {
                     if (bolt) {
                         bolt.material = boltMaterial;
                         bolt.rotation.z = Math.PI / 2; // Orient horizontally
-                        shadowGenerator.addShadowCaster(bolt);
+                        if (shadowGenerator) shadowGenerator.addShadowCaster(bolt);
                     }
                 }
             }
@@ -543,7 +726,7 @@ function draw3dSpliceDiagram() {
                     }, bjsScene);
                     if (bolt_top) {
                         bolt_top.material = boltMaterial;
-                        shadowGenerator.addShadowCaster(bolt_top);
+                        if (shadowGenerator) shadowGenerator.addShadowCaster(bolt_top);
                     }
 
                     // Bottom Flange Bolt
@@ -554,7 +737,7 @@ function draw3dSpliceDiagram() {
                     }, bjsScene);
                     if (bolt_bot) {
                         bolt_bot.material = boltMaterial;
-                        shadowGenerator.addShadowCaster(bolt_bot);
+                        if (shadowGenerator) shadowGenerator.addShadowCaster(bolt_bot);
                     }
                 }
             }
@@ -566,27 +749,27 @@ function draw3dSpliceDiagram() {
 
 
     // --- 6. Data-Driven Dimension Creation ---
-    const flangeDimY = inputs.member_d / 2 + inputs.t_fp + 5;
-    const flangeDimX = (inputs.member_bf / 2) + 5;
-    const webDimX = (inputs.member_tw / 2) + inputs.t_wp + 2;
+    const flangeDimY = inputs.member_d / 2 + inputs.t_fp + 2; // Tighter padding (was 5)
+    const flangeDimX = (inputs.member_bf / 2) + 2; // Tighter padding (was 5)
+    const webDimX = (inputs.member_tw / 2) + inputs.t_wp + 1; // Tighter padding (was 2)
 
     const dimensionDefinitions = [
         // --- General ---
-        { name: "Gap", value: inputs.gap, start: [0, flangeDimY, -inputs.gap / 2], end: [0, flangeDimY, inputs.gap / 2], offset: [0, 2, 0] },
+        { name: "Gap", value: inputs.gap, viewType: 'general', start: [0, flangeDimY, -inputs.gap / 2], end: [0, flangeDimY, inputs.gap / 2], offset: [0, 1.0, 0] },
 
         // --- Flange Plate & Bolts ---
-        { name: "L_fp", value: inputs.L_fp, condition: inputs.L_fp > 0 && inputs.H_fp > 0, start: [-inputs.H_fp / 2, flangeDimY, -inputs.L_fp / 2], end: [-inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], offset: [-2, 0, 0] },
-        { name: "H_fp", value: inputs.H_fp, condition: inputs.L_fp > 0 && inputs.H_fp > 0, start: [-inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], end: [inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], offset: [0, 0, 2] },
-        { name: "S1", value: inputs.S1_col_spacing_fp, condition: inputs.Nc_fp > 1, start: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp + inputs.S1_col_spacing_fp)], offset: [2, 0, 0] },
-        { name: "g", value: inputs.g_gage_fp, condition: inputs.g_gage_fp > 0, start: [-inputs.g_gage_fp / 2, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [inputs.g_gage_fp / 2, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], offset: [0, 0, -2] },
-        { name: "S3", value: inputs.S3_end_dist_fp, start: [flangeDimX, flangeDimY, -inputs.gap / 2], end: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], offset: [2, 0, 0] },
+        { name: "L_fp", value: inputs.L_fp, viewType: 'flange', condition: inputs.L_fp > 0 && inputs.H_fp > 0, start: [-inputs.H_fp / 2, flangeDimY, -inputs.L_fp / 2], end: [-inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], offset: [-1.0, 0, 0] },
+        { name: "H_fp", value: inputs.H_fp, viewType: 'flange', condition: inputs.L_fp > 0 && inputs.H_fp > 0, start: [-inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], end: [inputs.H_fp / 2, flangeDimY, inputs.L_fp / 2], offset: [0, 0, 1.0] },
+        { name: "S1", value: inputs.S1_col_spacing_fp, viewType: 'flange', condition: inputs.Nc_fp > 1, start: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp + inputs.S1_col_spacing_fp)], offset: [1.0, 0, 0] },
+        { name: "g", value: inputs.g_gage_fp, viewType: 'flange', condition: inputs.g_gage_fp > 0, start: [-inputs.g_gage_fp / 2, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [inputs.g_gage_fp / 2, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], offset: [0, 0, -1.0] },
+        { name: "S3", value: inputs.S3_end_dist_fp * 2, viewType: 'flange', start: [flangeDimX, flangeDimY, -(inputs.gap / 2 + inputs.S3_end_dist_fp)], end: [flangeDimX, flangeDimY, (inputs.gap / 2 + inputs.S3_end_dist_fp)], offset: [1.0, 0, 0] },
 
         // --- Web Plate & Bolts ---
-        { name: "L_wp", value: inputs.L_wp, condition: inputs.L_wp > 0 && inputs.H_wp > 0, start: [webDimX, -inputs.H_wp / 2, -inputs.L_wp / 2], end: [webDimX, -inputs.H_wp / 2, inputs.L_wp / 2], offset: [2, 0, 0] },
-        { name: "H_wp", value: inputs.H_wp, condition: inputs.L_wp > 0 && inputs.H_wp > 0, start: [webDimX, -inputs.H_wp / 2, inputs.L_wp / 2], end: [webDimX, inputs.H_wp / 2, inputs.L_wp / 2], offset: [2, 0, 0] },
-        { name: "S4", value: inputs.S4_col_spacing_wp, condition: inputs.Nc_wp > 1, start: [webDimX, ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp + inputs.S4_col_spacing_wp)], offset: [2, 0, 0] },
-        { name: "S5", value: inputs.S5_row_spacing_wp, condition: inputs.Nr_wp > 1, start: [webDimX, -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2 + inputs.S5_row_spacing_wp, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], offset: [2, 0, 0] },
-        { name: "S6", value: inputs.S6_end_dist_wp, start: [webDimX, 0, -inputs.gap / 2], end: [webDimX, 0, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], offset: [2, 0, 0] },
+        { name: "L_wp", value: inputs.L_wp, viewType: 'web', condition: inputs.L_wp > 0 && inputs.H_wp > 0, start: [webDimX, -inputs.H_wp / 2, -inputs.L_wp / 2], end: [webDimX, -inputs.H_wp / 2, inputs.L_wp / 2], offset: [1.0, 0, 0] },
+        { name: "H_wp", value: inputs.H_wp, viewType: 'web', condition: inputs.L_wp > 0 && inputs.H_wp > 0, start: [webDimX, -inputs.H_wp / 2, inputs.L_wp / 2], end: [webDimX, inputs.H_wp / 2, inputs.L_wp / 2], offset: [0.5, 0, 0] },
+        { name: "S4", value: inputs.S4_col_spacing_wp, viewType: 'web', condition: inputs.Nc_wp > 1, start: [webDimX, ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, ((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp + inputs.S4_col_spacing_wp)], offset: [1.0, 0, 0] },
+        { name: "S5", value: inputs.S5_row_spacing_wp, viewType: 'web', condition: inputs.Nr_wp > 1, start: [webDimX, -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, -((inputs.Nr_wp - 1) * inputs.S5_row_spacing_wp) / 2 + inputs.S5_row_spacing_wp, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], offset: [1.0, 0, 0] },
+        { name: "S6", value: inputs.S6_end_dist_wp * 2, viewType: 'web', start: [webDimX, 0, -(inputs.gap / 2 + inputs.S6_end_dist_wp)], end: [webDimX, 0, (inputs.gap / 2 + inputs.S6_end_dist_wp)], offset: [1.0, 0, 0] },
     ];
 
     dimensionDefinitions.forEach(dim => {
@@ -601,7 +784,8 @@ function draw3dSpliceDiagram() {
                 dim.value,
                 new BABYLON.Vector3(...dim.start),
                 new BABYLON.Vector3(...dim.end),
-                new BABYLON.Vector3(...dim.offset)
+                new BABYLON.Vector3(...dim.offset),
+                dim.viewType
             );
         }
     });
@@ -2229,7 +2413,8 @@ function generateSpliceBreakdownHtml(name, data, inputs) {
     // Create a common context object to pass to the breakdown generators.
     const common = {
         inputs,
-        fmt: (val, dec = 2) => (val !== undefined && val !== null) ? val.toFixed(dec) : 'N/A',
+        fmt: (val, dec = 2) => (val !== undefined && val !== null && !isNaN(parseFloat(val))) ? parseFloat(val).toFixed(dec) : 'N/A',
+
         format_list: (items) => `<ul class="list-disc list-inside space-y-1">${items.map(i => `<li class="py-1">${i}</li>`).join('')}</ul>`,
         factor_char: design_method === 'LRFD' ? '&phi;' : '&Omega;',
         factor_val: design_method === 'LRFD' ? (check?.phi ?? 0.9) : (check?.omega ?? 1.67),
@@ -2342,7 +2527,7 @@ function renderSpliceInputSummary(inputs) {
         design_method, gap,
         member_d, member_bf, member_tf, member_tw, member_Fy, member_Fu,
         num_flange_plates, H_fp, t_fp, L_fp, flange_plate_Fy, flange_plate_Fu,
-        H_fp_inner, t_fp_inner, L_fp_inner,
+        H_fp_inner, t_fp_inner, L_fp_inner, flange_plate_Fy_inner, flange_plate_Fu_inner,
         Nc_fp, Nr_fp, D_fp, bolt_grade_fp, threads_included_fp, S1_col_spacing_fp, S2_row_spacing_fp, S3_end_dist_fp, g_gage_fp,
         num_web_plates, H_wp, t_wp, L_wp, web_plate_Fy, web_plate_Fu,
         Nc_wp, Nr_wp, D_wp, bolt_grade_wp, threads_included_wp, S4_col_spacing_wp, S5_row_spacing_wp, S6_end_dist_wp
@@ -2361,7 +2546,7 @@ function renderSpliceInputSummary(inputs) {
         {
             title: 'Flange Splice Details',
             rows: [
-                { cells: ['Outer Plate', `PL ${H_fp}" &times; ${L_fp}" &times; ${t_fp}"`] },
+                { cells: ['Outer Plate', `PL ${H_fp}" &times; ${L_fp * 2}" &times; ${t_fp}"`] },
                 { cells: ['Outer Plate Material', `F<sub>y</sub>=${flange_plate_Fy} ksi, F<sub>u</sub>=${flange_plate_Fu} ksi`] },
                 ...(num_flange_plates == 2 ? [
                     { cells: ['Inner Plate', `2 x PL ${H_fp_inner}" &times; ${L_fp_inner * 2}" &times; ${t_fp_inner}"`] },
@@ -2383,7 +2568,7 @@ function renderSpliceInputSummary(inputs) {
         {
             title: 'Web Splice Details',
             rows: [
-                { cells: ['Web Plate(s)', `${num_web_plates} &times; PL ${H_wp}" &times; ${L_wp}" &times; ${t_wp}"`] },
+                { cells: ['Web Plate(s)', `${num_web_plates} &times; PL ${H_wp}" &times; ${L_wp * 2}" &times; ${t_wp}"`] },
                 { cells: ['Web Plate Material', `F<sub>y</sub>=${web_plate_Fy} ksi, F<sub>u</sub>=${web_plate_Fu} ksi`] }
             ]
         },
@@ -2410,7 +2595,8 @@ function renderResults(results, rawInputs) {
     });
 
     // --- 1. Input Summary Sections ---
-    const inputSummarySections = renderSpliceInputSummary(rawInputs);
+    // USE `inputs` (results from calculation) instead of `rawInputs` to show OPTIMIZED values if optimization ran.
+    const inputSummarySections = renderSpliceInputSummary(inputs);
     inputSummarySections.forEach(section => {
         report.addTableSection(section.title, { headers: [getTranslation('parameter'), getTranslation('value')], rows: section.rows });
     });
@@ -2627,11 +2813,21 @@ function renderResults(results, rawInputs) {
     report.addTableSection('Splice Capacity Summary', { headers: ['Capacity Type', 'Value', 'Governing Limit State'], rows: summaryRows }, 'splice-capacity-summary');
 
     report.render('results-container');
+    
+    // Check if we have attachReportEventListeners available (from shared-utils.js)
+    if (typeof attachReportEventListeners === 'function') {
+        attachReportEventListeners('results-container', {
+            reportId: 'splice-report-content', 
+            filenamePrefix: 'Splice-Report',
+            onSendToCombos: null, // Splice results are structural checks, not load combos usually
+            toggleTexts: { show: 'Show', hide: 'Hide', showAll: 'Show All', hideAll: 'Hide All' }
+        });
+    }
 }
 
 // --- Input Gathering and Orchestration (Legacy, kept for reference) ---
 const inputIds = [
-    'design_method', 'jurisdiction', 'gap', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'member_Fy', 'member_Fu', // Added jurisdiction
+    'design_method', 'jurisdiction', 'global_fos', 'gap', 'member_d', 'member_bf', 'member_tf', 'member_tw', 'member_Fy', 'member_Fu', // Added jurisdiction, global_fos
     'member_material', 'member_Zx', 'member_Sx', 'M_load', 'V_load', 'Axial_load', 'develop_capacity_check', 'deformation_is_consideration', 'g_gage_fp', 'optimize_bolts_check', 'optimize_diameter_check', 'optimize_web_plates_check', 'optimize_flange_plates_check',
     'num_flange_plates', 'flange_plate_material', 'flange_plate_Fy', 'flange_plate_Fu', 'H_fp', 't_fp', 'L_fp',
     'flange_plate_material_inner', 'flange_plate_Fy_inner', 'flange_plate_Fu_inner', 'H_fp_inner', 't_fp_inner', 'L_fp_inner',
@@ -2714,8 +2910,8 @@ initializeApp({
         const debouncedRecalculateAndRedraw = debounce(() => {
             draw3dSpliceDiagram(); // Redraw the 3D model
             draw2dSpliceDiagram(); // Redraw the 2D model
-            // handleRunSpliceCheck(); // REMOVED: Calculation will now only run on button click.
         }, 400);
+        
         diagramInputIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -2727,9 +2923,412 @@ initializeApp({
 
         // Initial draw
         setTimeout(() => {
-            draw3dSpliceDiagram();
+      // --- Event Listeners for 3D Interaction ---
+    const toggleBtn = document.getElementById("toggle-dimensions-btn");
+    const copyBtn = document.getElementById("copy-3d-btn");
+    const resetBtn = document.getElementById("camera-reset-btn");
+    
+    if (toggleBtn) {
+        // Clone to clean listeners
+        const newToggleBtn = toggleBtn.cloneNode(true);
+        toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+
+        newToggleBtn.addEventListener("click", () => {
+             areDimensionsVisible = !areDimensionsVisible;
+             
+             // Efficiently toggle without redraw
+             if (dimensionElements) {
+                 if (dimensionElements.meshes) {
+                     dimensionElements.meshes.forEach(m => m.isVisible = areDimensionsVisible);
+                 }
+                 if (dimensionElements.labels) {
+                     dimensionElements.labels.forEach(l => l.isVisible = areDimensionsVisible);
+                 }
+             }
+
+             newToggleBtn.textContent = areDimensionsVisible ? "Hide Dim" : "Show Dim";
+             newToggleBtn.classList.toggle("bg-blue-100", areDimensionsVisible);
+             newToggleBtn.classList.toggle("text-blue-700", areDimensionsVisible);
+             newToggleBtn.classList.toggle("bg-gray-200", !areDimensionsVisible);
+             newToggleBtn.classList.toggle("text-gray-600", !areDimensionsVisible);
+        });
+    }
+    
+    if (copyBtn) {
+        const newCopyBtn = copyBtn.cloneNode(true);
+        copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
+
+        newCopyBtn.addEventListener("click", () => {
+             if(bjsEngine && bjsScene) {
+                 // Create screenshot (4x precision)
+                 BABYLON.Tools.CreateScreenshot(bjsEngine, bjsScene.activeCamera, { precision: 4 }, (data) => {
+                     fetch(data)
+                         .then(res => res.blob())
+                         .then(blob => {
+                             const item = new ClipboardItem({ "image/png": blob });
+                             navigator.clipboard.write([item]).then(() => {
+                                 const originalHTML = newCopyBtn.innerHTML;
+                                 newCopyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+                                 setTimeout(() => newCopyBtn.innerHTML = originalHTML, 2000);
+                             });
+                         });
+                 });
+             }
+        });
+    }
+    
+    if (resetBtn) {
+        const newResetBtn = resetBtn.cloneNode(true);
+        resetBtn.parentNode.replaceChild(newResetBtn, resetBtn);
+
+        newResetBtn.addEventListener("click", () => {
+             if(bjsScene && bjsScene.activeCamera) {
+                 bjsScene.activeCamera.setTarget(BABYLON.Vector3.Zero());
+                 bjsScene.activeCamera.radius = 60;
+                 bjsScene.activeCamera.alpha =  -Math.PI / 2.5;
+                 bjsScene.activeCamera.beta = Math.PI / 2.8;
+             }
+        });
+    }
+
+    // Initial draw
+    draw3dSpliceDiagram();
             draw2dSpliceDiagram();
         }, 100);
+
+        // --- Unified Load/Batch Listeners ---
+        // REMOVED old batch-calc-btn listener if it existed
+        
+        // Use the main run button for the unified logic
+        const runBtn = document.getElementById("run-check-btn");
+        if(runBtn) {
+            // Remove old listeners by cloning
+            const newRunBtn = runBtn.cloneNode(true);
+            runBtn.parentNode.replaceChild(newRunBtn, runBtn);
+            newRunBtn.addEventListener("click", handleUnifiedSpliceCheck);
+        }
+
+        // Add Case / Table Interaction
+        document.getElementById("add-case-btn")?.addEventListener("click", addBatchRow);
+        const batchTable = document.getElementById("batch-table");
+        if(batchTable) {
+            batchTable.addEventListener("input", handleBatchInput);
+            batchTable.addEventListener("click", handleBatchAction);
+            batchTable.addEventListener("paste", handleBatchPaste);
+        }
+        
+        // Excel Import
+        const importInput = document.getElementById("upload-excel");
+        if (importInput && typeof setupBatchExcelImport === 'function') {
+             // We need to define the mapping for Splice specifically if it differs,
+             // or just ensure setupBatchExcelImport handles it.
+             // splice keys: Mu, Vu, Pu.
+             // setupBatchExcelImport is generic if we pass the target array and render function?
+             // Actually setupBatchExcelImport in angle_support.js was specific to angleData.
+             // We need a specific import handler here or make it generic.
+             // Let's implement a local one or reuse logic if available.
+             // For now, let's just re-implement the change listener locally or call a shared one if I made it shared.
+             // I didn't make it shared yet.
+             
+             importInput.addEventListener('change', (e) => {
+                 const file = e.target.files[0];
+                 if (!file) return;
+                 const reader = new FileReader();
+                 reader.onload = function (e) {
+                     const data = new Uint8Array(e.target.result);
+                     const workbook = XLSX.read(data, { type: 'array' });
+                     const firstSheetName = workbook.SheetNames[0];
+                     const worksheet = workbook.Sheets[firstSheetName];
+                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                     
+                     // Expect header row, then data
+                     // Map columns based on headers or indices? 
+                     // Simple assumption: Col A=Mu, B=Vu, C=Pu (or similar)
+                     // Let's look for headers "Mu", "Vu", "Pu"
+                     
+                     if(json.length < 2) return;
+                     const headers = json[0].map(h => String(h).toLowerCase().trim());
+                     
+                     const muIdx = headers.findIndex(h => h.includes('mu') || h.includes('moment'));
+                     const vuIdx = headers.findIndex(h => h.includes('vu') || h.includes('shear'));
+                     const puIdx = headers.findIndex(h => h.includes('pu') || h.includes('axial'));
+                     
+                     const newCases = [];
+                     for(let i=1; i<json.length; i++) {
+                         const row = json[i];
+                         if(row.length === 0) continue;
+                         newCases.push({
+                             Mu: muIdx >= 0 ? (parseFloat(row[muIdx]) || 0) : 0,
+                             Vu: vuIdx >= 0 ? (parseFloat(row[vuIdx]) || 0) : 0,
+                             Pu: puIdx >= 0 ? (parseFloat(row[puIdx]) || 0) : 0
+                         });
+                     }
+                     
+                     if(newCases.length > 0) {
+                         spliceBatch.cases = newCases;
+                         renderBatchTable();
+                     }
+                     importInput.value = ''; // reset
+                 };
+                 reader.readAsArrayBuffer(file);
+             });
+        }
+
+        renderBatchTable();
     }
 });
+
+
+function renderBatchTable() {
+    const tbody = document.querySelector("#batch-table tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    spliceBatch.cases.forEach((c, index) => {
+        const row = document.createElement("tr");
+        row.className = "hover:bg-gray-50 dark:hover:bg-gray-700/50 group";
+        
+        row.innerHTML = `
+            <td class="p-1"><input type="number" data-idx="${index}" data-field="Mu" value="${c.Mu}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
+            <td class="p-1"><input type="number" data-idx="${index}" data-field="Vu" value="${c.Vu}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
+            <td class="p-1"><input type="number" data-idx="${index}" data-field="Pu" value="${c.Pu}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
+            <td class="p-1 text-center">
+                <button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity delete-case-btn" data-idx="${index}">&times;</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function addBatchRow() {
+    spliceBatch.cases.push({ Mu: 0, Vu: 0, Pu: 0 });
+    renderBatchTable();
+}
+
+function handleBatchInput(e) {
+    if (e.target.tagName !== "INPUT") return;
+    const idx = parseInt(e.target.dataset.idx);
+    const field = e.target.dataset.field;
+    let val = parseFloat(e.target.value);
+    if(isNaN(val)) val = 0;
+    
+    if (spliceBatch.cases[idx]) {
+        spliceBatch.cases[idx][field] = val;
+    }
+}
+
+function handleBatchAction(e) {
+    if (e.target.classList.contains("delete-case-btn")) {
+        const idx = parseInt(e.target.dataset.idx);
+        if (spliceBatch.cases.length > 1) {
+            spliceBatch.cases.splice(idx, 1);
+            renderBatchTable();
+        } else {
+            // If only one, just clear it
+            spliceBatch.cases[0] = { Mu: 0, Vu: 0, Pu: 0 };
+            renderBatchTable();
+        }
+    }
+}
+
+function handleBatchPaste(e) {
+    e.preventDefault();
+    const clipText = (e.clipboardData || window.clipboardData).getData('text');
+    const rows = clipText.split(/\r?\n/).filter(r => r.trim() !== "");
+    
+    if (rows.length === 0) return;
+
+    // Logic: if current table has only one empty row (default), replace it.
+    // Otherwise append.
+    const isDefault = spliceBatch.cases.length === 1 && spliceBatch.cases[0].Mu === 0 && spliceBatch.cases[0].Vu === 0 && spliceBatch.cases[0].Pu === 0;
+    
+    if(isDefault) spliceBatch.cases = [];
+
+    rows.forEach(rowStr => {
+        const cols = rowStr.split(/\t/);
+        // Expect at least two columns for Mu, Vu. If 1, maybe just Mu?
+        if (cols.length >= 1) { 
+             spliceBatch.cases.push({
+                 Mu: parseFloat(cols[0]) || 0,
+                 Vu: parseFloat(cols[1]) || 0,
+                 Pu: parseFloat(cols[2]) || 0
+             });
+        }
+    });
+    
+    // Ensure at least one
+    if(spliceBatch.cases.length === 0) spliceBatch.cases.push({ Mu: 0, Vu: 0, Pu: 0 });
+    
+    renderBatchTable();
+}
+
+function renderBatchResults(results) {
+     const batchContainer = document.getElementById("batch-results-container");
+     if(batchContainer) batchContainer.classList.remove("hidden");
+     
+     const tbody = document.getElementById("batch-results-body");
+     if(!tbody) return;
+     tbody.innerHTML = "";
+     
+     results.forEach((res, i) => {
+         // Determine max ratio
+         let maxRatio = 0;
+         let status = "Pass";
+         
+         // Iterate checks
+         Object.values(res.checks).forEach(c => {
+             if(!c.check) return;
+             const capacity = res.inputs.design_method === 'LRFD' ? c.check.Rn * (c.check.phi||0.75) : c.check.Rn / (c.check.omega||2.0);
+             if(Math.abs(c.demand) > 0 && capacity > 0) {
+                 const r = Math.abs(c.demand) / capacity;
+                 if(r > maxRatio) maxRatio = r;
+             }
+         });
+         
+         // Geometry checks
+         let geomFail = false;
+         if(res.geomChecks) {
+             Object.values(res.geomChecks).forEach(cat => {
+                 Object.values(cat).forEach(item => {
+                     if(!item.pass) geomFail = true;
+                 });
+             });
+         }
+         
+         if(maxRatio > 1.0 || geomFail) status = "Fail";
+         
+         const tr = document.createElement("tr");
+         tr.className = status === "Fail" ? "bg-red-50 dark:bg-red-900/20" : "";
+         tr.innerHTML = `
+            <td class="px-4 py-2 font-medium">${i+1}</td>
+            <td class="px-4 py-2">${res.inputs.M_load.toFixed(2)}</td>
+            <td class="px-4 py-2">${res.inputs.V_load.toFixed(2)}</td>
+            <td class="px-4 py-2 font-bold ${maxRatio > 1.0 ? 'text-red-600' : 'text-green-600'}">${maxRatio.toFixed(3)}</td>
+            <td class="px-4 py-2 text-right">
+                <button class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 view-detail-btn" data-idx="${i}">View</button>
+            </td>
+         `;
+         tbody.appendChild(tr);
+     });
+     
+     // Add listeners to view buttons
+     tbody.querySelectorAll(".view-detail-btn").forEach(btn => {
+         btn.addEventListener("click", (e) => {
+             const idx = parseInt(e.target.dataset.idx);
+             const result = results[idx];
+             
+             // Hide batch, show detail
+             // Note: Depending on UX, we might want to keep batch visible or toggle.
+             // Currently the logic in handleUnifiedSpliceCheck hides batch if single result, but here we are in multi mode.
+             // Let's scroll to details.
+             
+             document.getElementById("results-wrapper").classList.remove("hidden");
+             renderResults(result, result.inputs || {}); // renderResults(results, rawInputs)
+             
+             document.getElementById("results-wrapper").scrollIntoView({ behavior: 'smooth' });
+             
+             // Add a banner
+             const container = document.getElementById("results-container");
+             const oldBanner = document.getElementById("batch-banner");
+             if(oldBanner) oldBanner.remove();
+             
+             const banner = document.createElement("div");
+             banner.id = "batch-banner";
+             banner.className = "bg-blue-50 border-l-4 border-blue-500 p-4 mb-4";
+             banner.innerHTML = `<p class="text-sm text-blue-700">Viewing detailed results for <strong>Case #${idx+1}</strong> (Mu=${result.inputs.M_load}, Vu=${result.inputs.V_load})</p>`;
+             container.insertBefore(banner, container.firstChild);
+         });
+     });
+}
+
+// --- Unified Calculation Logic ---
+async function handleUnifiedSpliceCheck() {
+    const btn = document.getElementById("run-check-btn");
+    const feedback = document.getElementById("feedback-message");
+    const originalText = btn.innerHTML;
+    
+    // UI Loading State
+    btn.disabled = true;
+    btn.innerHTML = `<span>RUNNING...</span> <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+    feedback.textContent = "";
+    feedback.className = "text-center text-xs min-h-[20px] mt-2 font-medium text-gray-500";
+    
+    try {
+        // 1. Gather Global Inputs
+        const globalInputs = {};
+        inputIds.forEach(id => {
+             const el = document.getElementById(id);
+             // Skip the old load inputs if they are missing or if we just want global props
+             if(el) globalInputs[id] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        
+        // 2. Prepare Batch Payload
+        // Even for a single case, we use the batch list
+        if (spliceBatch.cases.length === 0) {
+            // Should not happen if we init with 1, but safeguard
+            spliceBatch.cases.push({ Mu: 0, Vu: 0, Pu: 0 });
+        }
+        
+        const batchPayload = spliceBatch.cases.map(c => ({
+            M_load: c.Mu,
+            V_load: c.Vu,
+            Axial_load: c.Pu
+        }));
+        
+        globalInputs.batch_loads = batchPayload;
+        
+        // 3. Call Backend
+        if (typeof eel === 'undefined') throw new Error("Eel not connected");
+        
+        console.log("Sending Unified Batch Payload:", globalInputs);
+        const results = await eel.calculate_splice_all(globalInputs)();
+        
+        // 4. Handle Results
+        if(!Array.isArray(results)) {
+            console.error("Expected array results", results);
+            throw new Error("Invalid response from backend");
+        }
+        
+        if (results.length === 1) {
+            // SINGLE CASE BEHAVIOR: Show Detailed Results directly
+            const singleRes = results[0];
+            
+            // Hide Batch Container if visible
+            const batchContainer = document.getElementById("batch-results-container");
+            if(batchContainer) batchContainer.classList.add("hidden");
+            
+            // Show Detailed Wrapper
+            const resultsWrapper = document.getElementById("results-wrapper");
+            if(resultsWrapper) resultsWrapper.classList.remove("hidden");
+            
+            // Render
+            renderResults(singleRes, singleRes.inputs || globalInputs);
+             
+             // Clear Banner if any
+            const container = document.getElementById("results-container");
+            const oldBanner = document.getElementById("batch-banner");
+            if(oldBanner) oldBanner.remove();
+
+        } else {
+            // MULTI CASE BEHAVIOR: Show Batch Table
+            renderBatchResults(results);
+            
+            // Ensure Batch Container is visible (handled in renderBatchResults)
+            // But make sure Detailed Wrapper is hidden initially
+            const resultsWrapper = document.getElementById("results-wrapper");
+            if(resultsWrapper) resultsWrapper.classList.add("hidden");
+        }
+        
+        feedback.textContent = "Calculation Complete";
+        feedback.className = "text-center text-xs min-h-[20px] mt-2 font-medium text-green-600";
+
+    } catch (e) {
+        console.error(e);
+        feedback.textContent = "Error: " + e.message;
+        feedback.className = "text-center text-xs min-h-[20px] mt-2 font-medium text-red-600";
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
 console.log("splice.js: initializeApp called.");

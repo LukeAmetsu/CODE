@@ -1436,3 +1436,241 @@ function drawStructuralSchematic(canvasId, inputs) {
     ctx.fillText(`L = ${L} ft`, cw/2, beamY + 40);
 
 }
+
+// --- BATCH LOGIC ---
+const steelBatch = {
+    cases: [
+        { P: 100, Mx: 50, My: 0, V: 10 },
+        { P: 200, Mx: 150, My: 20, V: 25 }
+    ] 
+};
+
+function renderBatchTable() {
+    const tbody = document.getElementById("batch-table")?.querySelector("tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    steelBatch.cases.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors";
+
+        tr.innerHTML = `
+            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.P}" data-idx="${index}" data-key="P"></td>
+            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.Mx}" data-idx="${index}" data-key="Mx"></td>
+            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.My}" data-idx="${index}" data-key="My"></td>
+            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.V}" data-idx="${index}" data-key="V"></td>
+            <td class="p-1 text-center"><button class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30" data-idx="${index}" data-action="remove" title="Remove">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function addBatchRow() {
+    steelBatch.cases.push({ P: 0, Mx: 0, My: 0, V: 0 });
+    renderBatchTable();
+}
+
+function handleBatchInput(e) {
+    if (e.target.tagName === "INPUT" && e.target.dataset.idx) {
+        const idx = parseInt(e.target.dataset.idx);
+        const key = e.target.dataset.key;
+        steelBatch.cases[idx][key] = parseFloat(e.target.value) || 0;
+    }
+}
+
+function handleBatchAction(e) {
+    const btn = e.target.closest("button");
+    if (btn && btn.dataset.action === "remove") {
+        const idx = parseInt(btn.dataset.idx);
+        steelBatch.cases.splice(idx, 1);
+        renderBatchTable();
+    }
+}
+
+function handleBatchPaste(e) {
+    const clipboardData = (e.clipboardData || window.clipboardData).getData("text");
+    if (!clipboardData) return;
+    
+    // Check if target deals with batch inputs
+    if(!document.getElementById("batch-table").contains(e.target)) return;
+
+    e.preventDefault();
+    const rows = clipboardData.split(/\r\n|\n|\r/).filter(r => r.trim() !== "");
+    const newCases = [];
+    rows.forEach(rowStr => {
+        let values = rowStr.split("\t");
+        if (values.length < 2) values = rowStr.split(/,|;/);
+        if (values.length >= 1) {
+            newCases.push({
+                P: parseFloat(values[0]) || 0,
+                Mx: parseFloat(values[1]) || 0,
+                My: parseFloat(values[2]) || 0,
+                V: parseFloat(values[3]) || 0
+            });
+        }
+    });
+    if (newCases.length > 0) {
+        let startIdx = steelBatch.cases.length;
+        const activeInput = document.activeElement;
+        if(activeInput && activeInput.dataset.idx) startIdx = parseInt(activeInput.dataset.idx);
+        
+        for(let i=0; i<newCases.length; i++) {
+             if(startIdx + i < steelBatch.cases.length) {
+                 steelBatch.cases[startIdx+i] = newCases[i];
+             } else {
+                 steelBatch.cases.push(newCases[i]);
+             }
+        }
+        renderBatchTable();
+    }
+}
+
+const steelBatchResults = [];
+
+function renderBatchResults(results) {
+    const container = document.getElementById("batch-results-container");
+    const tbody = document.getElementById("batch-results-body");
+    const singleWrapper = document.getElementById("results-wrapper");
+
+    // Hide single view, show batch
+    if(singleWrapper) singleWrapper.classList.add("hidden");
+    container.classList.remove("hidden");
+    tbody.innerHTML = "";
+    
+    steelBatchResults.length = 0;
+    results.forEach(r => steelBatchResults.push(r));
+
+    results.forEach((res, index) => {
+        if(res.error) {
+            tbody.innerHTML += `<tr><td colspan="5" class="text-red-500 p-2">Error Row ${index+1}: ${res.error}</td></tr>`;
+            return;
+        }
+        
+        let maxRatio = 0;
+        let fail = false;
+        
+        // Axial
+        if(res.axial && res.axial.phiPn_or_Pn_omega && res.inputs.Pu_or_Pa) {
+            const r = Math.abs(res.inputs.Pu_or_Pa) / res.axial.phiPn_or_Pn_omega;
+            if(r > maxRatio) maxRatio = r;
+        }
+        // Flexure X
+        if(res.flexure && res.flexure.phiMn_or_Mn_omega && res.inputs.Mux_or_Max) {
+            const r = Math.abs(res.inputs.Mux_or_Max) / res.flexure.phiMn_or_Mn_omega;
+            if(r > maxRatio) maxRatio = r;
+        }
+        // Flexure Y
+        if(res.flexure_y && res.flexure_y.phiMny_or_Mny_omega && res.inputs.Muy_or_May) {
+            const r = Math.abs(res.inputs.Muy_or_May) / res.flexure_y.phiMny_or_Mny_omega;
+            if(r > maxRatio) maxRatio = r;
+        }
+        // Shear
+        if(res.shear && res.shear.phiVn_or_Vn_omega && res.inputs.Vu_or_Va) {
+             const r = Math.abs(res.inputs.Vu_or_Va) / res.shear.phiVn_or_Vn_omega;
+             if(r > maxRatio) maxRatio = r;
+        }
+        // Interaction
+        if(res.interaction && res.interaction.ratio) {
+             if(res.interaction.ratio > maxRatio) maxRatio = res.interaction.ratio;
+        }
+        
+        if (maxRatio > 1.0) fail = true;
+        
+        const inputs = res.inputs || {};
+        
+        const tr = document.createElement("tr");
+        tr.className = "bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer";
+        tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") viewBatchDetails(index); };
+        
+        tr.innerHTML = `
+            <td class="px-4 py-2 font-mono text-gray-500 text-xs">${index+1}</td>
+            <td class="px-4 py-2 text-xs">${(inputs.Pu_or_Pa || 0).toFixed(1)}</td>
+            <td class="px-4 py-2 text-xs">${(inputs.Mux_or_Max || 0).toFixed(1)}</td>
+            <td class="px-4 py-2 font-bold text-xs ${fail ? 'text-red-600' : 'text-green-600'}">${maxRatio.toFixed(2)}</td>
+            <td class="px-4 py-2 text-right">
+                <button onclick='viewBatchDetails(${index})' class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">View</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function viewBatchDetails(index) {
+    const res = steelBatchResults[index];
+    if(!res) return;
+    
+    const singleWrapper = document.getElementById("results-wrapper");
+    if(singleWrapper) singleWrapper.classList.remove("hidden");
+    
+    renderSteelResults(res);
+    
+    // Add banner
+    const container = document.getElementById("steel-results-container");
+    const oldBanner = document.getElementById("batch-banner");
+    if(oldBanner) oldBanner.remove();
+
+    const banner = document.createElement("div");
+    banner.id = "batch-banner";
+    banner.className = "mb-4 p-2 bg-yellow-50 text-yellow-800 text-sm border border-yellow-200 rounded";
+    banner.innerHTML = `<strong>Batch View:</strong> Showing results for Case #${index+1}`;
+    container.prepend(banner);
+    
+    singleWrapper.scrollIntoView({behavior: 'smooth'});
+}
+
+async function handleRunBatchCheck() {
+    const btn = document.getElementById("batch-calc-btn");
+    const originalText = btn.textContent;
+    btn.textContent = "Running...";
+    btn.disabled = true;
+    
+    try {
+        const inputs = {};
+        steelCheckInputIds.forEach(id => {
+             const el = document.getElementById(id);
+             if(el) inputs[id] = el.value;
+        });
+        
+        const batchPayload = steelBatch.cases.map(c => ({
+            Pu_or_Pa: c.P,
+            Mux_or_Max: c.Mx,
+            Muy_or_May: c.My,
+            Vu_or_Va: c.V
+        }));
+        
+        inputs.batch_loads = batchPayload;
+        
+        if (typeof eel === 'undefined') throw new Error("Eel not connected");
+        
+        const results = await eel.calculate_steel_all(inputs)();
+        
+        if(Array.isArray(results)) {
+            renderBatchResults(results);
+        } else {
+            console.error("Expected array for batch results", results);
+            alert("Error in batch calculation.");
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Batch calculation failed: " + e.message);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+// Ensure init
+document.addEventListener("DOMContentLoaded", () => {
+   // --- Batch Listeners ---
+    document.getElementById("batch-calc-btn")?.addEventListener("click", handleRunBatchCheck);
+    document.getElementById("add-case-btn")?.addEventListener("click", addBatchRow);
+    const batchTable = document.getElementById("batch-table");
+    if(batchTable) {
+        batchTable.addEventListener("input", handleBatchInput);
+        batchTable.addEventListener("click", handleBatchAction);
+        batchTable.addEventListener("paste", handleBatchPaste);
+    }
+    renderBatchTable();
+});

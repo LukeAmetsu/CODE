@@ -1,0 +1,15 @@
+Type: <class 'UnboundLocalError'>
+Error: cannot access local variable 'test_inputs' where it is not associated with a value
+Traceback (most recent call last):
+  File "g:\My Drive\CODE-2\backend\tests\test_splice_backend.py", line 120, in <module>
+    test_plate_optimization()
+  File "g:\My Drive\CODE-2\backend\tests\test_splice_backend.py", line 101, in test_plate_optimization
+    res = splice_calc.run(inputs)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "g:\My Drive\CODE-2\backend\calculators\splice.py", line 968, in run
+    return self.run_optimization(raw_inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "g:\My Drive\CODE-2\backend\calculators\splice.py", line 1132, in run_optimization
+    test_inputs['L_fp'] = required_half_len * 2.0
+    ^^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'test_inputs' where it is not associated with a value

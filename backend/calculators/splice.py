@@ -10,7 +10,18 @@ AISC_OMEGA = {
 }
 
 # --- Helper Functions ---
-def get_design_factors(jurisdiction, aisc_phi, aisc_omega):
+def get_design_factors(inputs, aisc_phi, aisc_omega):
+    jurisdiction = inputs.get('jurisdiction')
+    fos_val = inputs.get('global_fos')
+    
+    # Check for global FOS override
+    try:
+        fos = float(fos_val)
+        if fos > 0:
+            return {'phi': 1.0/fos, 'omega': fos}
+    except (TypeError, ValueError):
+        pass
+
     if str(jurisdiction).strip().upper() == 'OSHA':
         return {'phi': 0.25, 'omega': 4.0}
     return {'phi': aisc_phi, 'omega': aisc_omega}
@@ -36,7 +47,7 @@ class SpliceCalculator:
         ab = math.pi * (db**2) / 4.0
         rn = fnv * ab * num_planes
         
-        factors = get_design_factors(inputs.get('jurisdiction'), AISC_PHI['shear'], AISC_OMEGA['shear'])
+        factors = get_design_factors(inputs, AISC_PHI['shear'], AISC_OMEGA['shear'])
         
         return {
             'Rn': rn,
@@ -55,6 +66,7 @@ class SpliceCalculator:
         t_ply = float(inputs.get('t_ply', 0))
         fu_ply = float(inputs.get('Fu_ply', 0))
         le = float(inputs.get('le', 0)) # Edge distance
+
         s = float(inputs.get('s', 0))   # Spacing
         is_edge = inputs.get('is_edge_bolt', False)
         deformation_considered = inputs.get('deformation_considered', True)
@@ -71,7 +83,12 @@ class SpliceCalculator:
         rn_bearing = bearing_coeff * db * t_ply * fu_ply
         
         rn = min(rn_tearout, rn_bearing)
-        factors = get_design_factors(inputs.get('jurisdiction'), AISC_PHI['bearing'], AISC_OMEGA['bearing'])
+        if rn == 0:
+            pass
+
+
+
+        factors = get_design_factors(inputs, AISC_PHI['bearing'], AISC_OMEGA['bearing'])
         
         return {
             'Rn': rn,
@@ -90,7 +107,7 @@ class SpliceCalculator:
         fy = float(inputs.get('Fy', 0))
         
         rn = fy * ag
-        factors = get_design_factors(inputs.get('jurisdiction'), AISC_PHI['yield'], AISC_OMEGA['yield'])
+        factors = get_design_factors(inputs, AISC_PHI['yield'], AISC_OMEGA['yield'])
         
         return {
             'Rn': rn,
@@ -120,7 +137,7 @@ class SpliceCalculator:
         ae = an * u_factor
         
         rn = fu * ae
-        factors = get_design_factors(inputs.get('jurisdiction'), AISC_PHI['rupture'], AISC_OMEGA['rupture'])
+        factors = get_design_factors(inputs, AISC_PHI['rupture'], AISC_OMEGA['rupture'])
         
         return {
             'Rn': rn,
@@ -128,7 +145,10 @@ class SpliceCalculator:
             'omega': factors['omega'],
             'An': an,
             'Ae': ae,
-            'Ag': ag
+            'Ag': ag,
+            'Fu': fu,
+            'hole_dia': hole_dia,
+            'A_holes': a_holes
         }
 
     def check_block_shear(self, inputs):
@@ -147,7 +167,7 @@ class SpliceCalculator:
         shear_yield = 0.6 * fy * avg
         
         rn = min(shear_rupture + tension_rupture, shear_yield + tension_rupture)
-        factors = get_design_factors(inputs.get('jurisdiction'), AISC_PHI['block_shear'], AISC_OMEGA['block_shear'])
+        factors = get_design_factors(inputs, AISC_PHI['block_shear'], AISC_OMEGA['block_shear'])
         
         return {
             'Rn': rn,
@@ -286,7 +306,7 @@ class SpliceCalculator:
         unbraced_len = float(inputs.get('unbraced_length', 0))
         k = float(inputs.get('k', 0.65))
         
-        factors = get_design_factors(inputs.get('jurisdiction'), 0.90, 1.67)
+        factors = get_design_factors(inputs, 0.90, 1.67)
         
         r = t / math.sqrt(12.0)
         if r <= 0:
@@ -313,7 +333,12 @@ class SpliceCalculator:
             'Fcr': fcr,
             'slenderness': slenderness,
             'r': r,
-            'Fe': fe
+            'Fe': fe,
+            't': t,
+            'k': k,
+            'unbraced_length': unbraced_len,
+            'Ag': ag,
+            'Fy': fy
         }
 
     def check_shear_yielding(self, inputs):
@@ -321,7 +346,7 @@ class SpliceCalculator:
         agv = float(inputs.get('Agv', 0))
         fy = float(inputs.get('Fy', 0))
         rn = 0.6 * fy * agv
-        factors = get_design_factors(inputs.get('jurisdiction'), 1.00, 1.50)
+        factors = get_design_factors(inputs, 1.00, 1.50)
         return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 'Agv': agv, 'Fy': fy}
 
     def check_shear_rupture(self, inputs):
@@ -329,7 +354,7 @@ class SpliceCalculator:
         anv = float(inputs.get('Anv', 0))
         fu = float(inputs.get('Fu', 0))
         rn = 0.6 * fu * anv
-        factors = get_design_factors(inputs.get('jurisdiction'), 0.75, 2.00)
+        factors = get_design_factors(inputs, 0.75, 2.00)
         return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 'Anv': anv, 'Fu': fu}
         
     def check_bolt_slip(self, inputs):
@@ -354,7 +379,7 @@ class SpliceCalculator:
         if num_fillers > 1: hf = 0.85
         
         rn = mu * du * hf * tb * num_planes
-        factors = get_design_factors(inputs.get('jurisdiction'), 1.0, 1.5)
+        factors = get_design_factors(inputs, 1.0, 1.5)
         return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega']}
         
     def check_bolt_tension(self, inputs):
@@ -365,7 +390,7 @@ class SpliceCalculator:
         fnt = fnt_map.get(grade, 90.0)
         ab = math.pi * (db**2) / 4.0
         rn = fnt * ab
-        factors = get_design_factors(inputs.get('jurisdiction'), 0.75, 2.00)
+        factors = get_design_factors(inputs, 0.75, 2.00)
         return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 'Fnt': fnt, 'Ab': ab}
         
     def check_beam_flexural_rupture(self, inputs):
@@ -380,7 +405,7 @@ class SpliceCalculator:
         
         afg = bf * tf
         afn = (bf - num_bolts * hole_dia) * tf
-        factors = get_design_factors(inputs.get('jurisdiction'), 0.75, 2.00)
+        factors = get_design_factors(inputs, 0.75, 2.00)
         
         if afn <= 0:
              return {
@@ -403,7 +428,7 @@ class SpliceCalculator:
         mn = (fu * afn / afg) * sx
         return {
             'Rn': mn, 'applies': True, 'phi': factors['phi'], 'omega': factors['omega'],
-            'Afn': afn, 'Afg': afg, 'Yt': yt, 'Fy': fy, 'Fu': fu, 'Sx': sx
+            'Afn': afn, 'Afg': afg, 'Yt': yt, 'Fy': fy, 'Fu': fu, 'Sx': sx, 'hole_dia_net_area': hole_dia
         }
 
     def calculate_bolt_group_geometry(self, inputs):
@@ -433,6 +458,8 @@ class SpliceCalculator:
              pass
         if le_tran < 0: le_tran = 0
         if le_long < 0: le_long = 0
+
+
         
         return {
             'le_long': le_long,
@@ -459,6 +486,7 @@ class SpliceCalculator:
         s_row = config['S_row']
         s_end = config['S_end']
         gage = config['gage']
+
         d_bolt = config['D_bolt']
         hole_net = config['hole_for_net_area']
         hole_bearing = config['hole_for_bearing']
@@ -475,15 +503,29 @@ class SpliceCalculator:
         ag = h_p * t_p
         checks[f"{plate_name} GSY"] = {
             'demand': demand,
-            'check': self.check_gross_section_yielding({'Ag': ag, 'Fy': fy, 'jurisdiction': inputs.get('jurisdiction')})
+            'check': self.check_gross_section_yielding({'Ag': ag, 'Fy': fy, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
         }
+        
+        
+        # 3. Bolt Bearing
+        # Note: Bearing usually controls at the edge towards the force. For tension splice, this is S_end/edge_dist_gap.
+        # le_long is the other edge (gap side). We use S_end for robustness.
+        checks[f"{plate_name} Bolt Bearing"] = {
+            'demand': demand,
+            'check': self.check_bolt_bearing({
+                'db': d_bolt, 't_ply': t_p, 'Fu_ply': fu, 
+                'le': s_end, 's': s_col, 'is_edge_bolt': True, # Use S_end as edge dist
+                'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+            })
+        }
+
         
         # Compression
         checks[f"{plate_name} Compression"] = {
             'demand': demand_comp,
             'check': self.check_plate_compression({
                 'Ag': ag, 'Fy': fy, 't': t_p, 'unbraced_length': s_col,
-                'jurisdiction': inputs.get('jurisdiction')
+                'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
             })
         }
         
@@ -494,7 +536,7 @@ class SpliceCalculator:
             'check': self.check_net_section_rupture({
                 'bf': h_p, 'tf': t_p, 'Fu': fu, 'num_bolts_in_cs': bolts_in_cs,
                 'hole_dia_net_area': hole_net,
-                'jurisdiction': inputs.get('jurisdiction')
+                'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
             })
         }
         
@@ -507,7 +549,7 @@ class SpliceCalculator:
              'demand': demand,
              'check': self.check_block_shear({
                  'Agv': agv, 'Anv': anv, 'Ant': ant, 'Fu': fu, 'Fy': fy,
-                 'jurisdiction': inputs.get('jurisdiction')
+                 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
              })
         }
         
@@ -515,12 +557,12 @@ class SpliceCalculator:
         bearing_edge = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_p, 'Fu_ply': fu, 'le': le_long, 's': s_col,
             'is_edge_bolt': True, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction')
+            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         bearing_int = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_p, 'Fu_ply': fu, 'le': le_long, 's': s_col,
             'is_edge_bolt': False, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction')
+            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         
         num_edge = 2 * nr
@@ -532,7 +574,21 @@ class SpliceCalculator:
             'check': {'Rn': total_bearing, 'phi': 0.75, 'omega': 2.00},
             'details': {'edge': bearing_edge, 'int': bearing_int, 'num_edge': num_edge, 'num_int': num_int}
         }
+        
+        # Finalize checks with pass/fail
+
+        is_lrfd = inputs.get('design_method') == 'LRFD'
+        for k in checks:
+             chk = checks[k]
+             # robust access
+             rn = chk['check'].get('Rn', 0)
+             phi = chk['check'].get('phi', 1.0)
+             omega = chk['check'].get('omega', 1.0)
+             cap = rn * phi if is_lrfd else rn / omega
+             chk['pass'] = cap >= chk['demand'] - 1e-9
+
         return checks
+
         
 
     def perform_beam_connection_checks(self, part_name, inputs, config):
@@ -561,12 +617,12 @@ class SpliceCalculator:
         bearing_edge = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_beam, 'Fu_ply': fu_beam, 'le': le_long, 's': s_col,
             'is_edge_bolt': True, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction')
+            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         bearing_int = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_beam, 'Fu_ply': fu_beam, 'le': float('inf'), 's': s_col,
             'is_edge_bolt': False, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction')
+            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         
         multiplier = 2 if part_name == 'Flange' else 1
@@ -579,7 +635,20 @@ class SpliceCalculator:
             'check': {'Rn': total_bearing, 'phi': bearing_edge['phi'], 'omega': bearing_edge['omega']},
             'details': {'edge': bearing_edge, 'int': bearing_int, 'num_edge': num_edge, 'num_int': num_int}
         }
+
+        
+        # Finalize checks with pass/fail
+        is_lrfd = inputs.get('design_method') == 'LRFD'
+        for k in checks:
+             chk = checks[k]
+             rn = chk['check'].get('Rn', 0)
+             phi = chk['check'].get('phi', 1.0)
+             omega = chk['check'].get('omega', 1.0)
+             cap = rn * phi if is_lrfd else rn / omega
+             chk['pass'] = cap >= chk['demand'] - 1e-9
+             
         return checks
+
 
 
         
@@ -606,6 +675,7 @@ class SpliceCalculator:
         s_row = float(inputs.get('S2_row_spacing_fp', 0))
         s_end = float(inputs.get('S3_end_dist_fp', 0))
         gage = float(inputs.get('g_gage_fp', 0))
+
         
         # Geometry Checks
         geo_geom = self.calculate_bolt_group_geometry({
@@ -627,7 +697,7 @@ class SpliceCalculator:
             'le_long': geo_geom['le_long'],
             'le_tran': geo_geom['le_tran'],
             't_thinner': t_thinner_flange,
-            'jurisdiction': inputs.get('jurisdiction')
+            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         
         # Add edge_dist_gap check manually or via helper if expanded, but helper covers long/tran
@@ -642,7 +712,7 @@ class SpliceCalculator:
         num_shear_planes = 2 if int(inputs.get('num_flange_plates', 0)) == 2 else 1
         bolt_check = self.check_bolt_shear({
             'grade': inputs.get('bolt_grade_fp'), 'db': d_fp, 
-            'num_planes': num_shear_planes, 'jurisdiction': inputs.get('jurisdiction')
+            'num_planes': num_shear_planes, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         
         # Total bolts per side: Nc * (2 * Nr) because Nr is rows PER SIDE OF GAGE in JS logic usually?
@@ -662,6 +732,12 @@ class SpliceCalculator:
             },
             'details': {'Rn_single': bolt_check['Rn'], 'num_bolts': num_bolts_side}
         }
+        
+        # Calculate pass/fail explicitly
+
+        cap_shear = checks['Flange Bolt Shear']['check']['Rn'] * checks['Flange Bolt Shear']['check']['phi'] if inputs.get('design_method') == 'LRFD' else checks['Flange Bolt Shear']['check']['Rn'] / checks['Flange Bolt Shear']['check']['omega']
+        checks['Flange Bolt Shear']['pass'] = cap_shear >= checks['Flange Bolt Shear']['demand'] - 1e-9
+
         
         # 2. Outer Plate Checks
         outer_checks = self.perform_plate_checks("Outer Plate", inputs, {
@@ -723,7 +799,7 @@ class SpliceCalculator:
         })
         
         num_web_planes = 2 # Usually 2 web plates
-        bolt_shear = self.check_bolt_shear({'grade': inputs.get('bolt_grade_wp'), 'db': d_wp, 'num_planes': num_web_planes, 'jurisdiction': inputs.get('jurisdiction')})
+        bolt_shear = self.check_bolt_shear({'grade': inputs.get('bolt_grade_wp'), 'db': d_wp, 'num_planes': num_web_planes, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
         
         resultant_demand = ecc_res['max_R']
         # Calculate details for Web Bolt breakdown
@@ -763,11 +839,11 @@ class SpliceCalculator:
         
         checks['Web Plate Gross Shear Yield'] = {
             'demand': v_load,
-            'check': self.check_shear_yielding({'Agv': agv, 'Fy': float(inputs.get('web_plate_Fy', 0)), 'jurisdiction': inputs.get('jurisdiction')})
+            'check': self.check_shear_yielding({'Agv': agv, 'Fy': float(inputs.get('web_plate_Fy', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
         }
         checks['Web Plate Net Shear Rupture'] = {
             'demand': v_load,
-            'check': self.check_shear_rupture({'Anv': anv, 'Fu': float(inputs.get('web_plate_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction')}),
+            'check': self.check_shear_rupture({'Anv': anv, 'Fu': float(inputs.get('web_plate_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')}),
             'details': {'hole_dia': hole_dia}
         }
         
@@ -785,7 +861,7 @@ class SpliceCalculator:
             'le_long': geo_geom_web['le_long'],
             'le_tran': geo_geom_web['le_tran'],
             't_thinner': t_thinner_web,
-            'jurisdiction': inputs.get('jurisdiction')
+            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         
         min_le_wp = geom_checks['Web Bolts']['edge_dist_long']['min']
@@ -795,7 +871,21 @@ class SpliceCalculator:
             'pass': geo_geom_web['edge_dist_gap'] >= min_le_wp - 1e-9
         }
         
+
+        
+        # Finalize checks with pass/fail
+        is_lrfd = inputs.get('design_method') == 'LRFD'
+        for k in checks:
+             chk = checks[k]
+             # robust access
+             rn = chk['check'].get('Rn', 0)
+             phi = chk['check'].get('phi', 1.0)
+             omega = chk['check'].get('omega', 1.0)
+             cap = rn * phi if is_lrfd else rn / omega
+             chk['pass'] = cap >= chk['demand'] - 1e-9
+
         return {'checks': checks, 'geomChecks': geom_checks}
+
         
     def perform_member_checks(self, inputs, loads, holes):
         checks = {}
@@ -830,7 +920,7 @@ class SpliceCalculator:
         agv_web = (d_beam - 2 * tf_beam) * tw_beam
         checks['Beam Web Shear Yielding'] = {
             'demand': v_load,
-            'check': self.check_shear_yielding({'Agv': agv_web, 'Fy': fy_beam, 'jurisdiction': inputs.get('jurisdiction')})
+            'check': self.check_shear_yielding({'Agv': agv_web, 'Fy': fy_beam, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
         }
         
         # --- Beam Flexural Rupture ---
@@ -840,7 +930,7 @@ class SpliceCalculator:
             'check': self.check_beam_flexural_rupture({
                 'Sx': float(inputs.get('member_Sx', 0)), 'Fy': fy_beam, 'Fu': float(inputs.get('member_Fu', 0)),
                 'bf': float(inputs.get('member_bf', 0)), 'tf': tf_beam, 'num_bolts_in_flange_cs': num_bolts_flange,
-                'hole_dia_net_area': hole_net_fp, 'jurisdiction': inputs.get('jurisdiction')
+                'hole_dia_net_area': hole_net_fp, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
             })
         }
         
@@ -849,7 +939,7 @@ class SpliceCalculator:
         anv_web = (d_beam - 2 * tf_beam - nr_wp * hole_net_wp) * tw_beam
         checks['Beam Web Shear Rupture'] = {
              'demand': v_load,
-             'check': self.check_shear_rupture({'Anv': anv_web, 'Fu': float(inputs.get('member_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction')})
+             'check': self.check_shear_rupture({'Anv': anv_web, 'Fu': float(inputs.get('member_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
         }
         
         # --- Spliced Member Moment Capacity ---
@@ -934,18 +1024,88 @@ class SpliceCalculator:
                 return 0 # Or None? 0 is safer for math
         return data
 
+
     def run(self, raw_inputs):
         """Main entry point simulating splice.js run()"""
+        
+        # --- Batch Processing ---
+        batch_loads = raw_inputs.get('batch_loads')
+        if batch_loads and isinstance(batch_loads, list):
+            results = []
+            base_inputs = raw_inputs.copy()
+            if 'batch_loads' in base_inputs:
+                del base_inputs['batch_loads']
+            
+            for case in batch_loads:
+                if not isinstance(case, dict): continue
+                case_input = base_inputs.copy()
+                case_input.update(case)
+                try:
+                    # Determine if we should optimize for this batch case?
+                    # Usually batch is verification. If optimization is ON, it might be slow.
+                    # But if the user requested it:
+                    if case_input.get('optimize_bolts_check'):
+                         res = self.run_optimization(case_input)
+                    else:
+                         res = self.run(case_input)
+                    results.append(res)
+                except Exception as e:
+                    import traceback
+                    results.append({"error": str(e), "trace": traceback.format_exc()})
+            return results
+
+        if raw_inputs.get('optimize_bolts_check'):
+            return self.run_optimization(raw_inputs)
+
         inputs = raw_inputs.copy()
         
+        # Parse inputs
         # Parse inputs
         inputs['L_fp'] = float(inputs.get('L_fp', 0)) / 2.0
         inputs['L_fp_inner'] = float(inputs.get('L_fp_inner', 0)) / 2.0
         inputs['L_wp'] = float(inputs.get('L_wp', 0)) / 2.0
+
+
         
         m_load = float(inputs.get('M_load', 0))
         v_load = float(inputs.get('V_load', 0))
         axial_load = float(inputs.get('Axial_load', 0))
+        
+        # --- Capacity Design Check ---
+        if inputs.get('develop_capacity_check'):
+            zx = float(inputs.get('member_Zx', 0))
+            if zx > 0:
+                fy = float(inputs.get('member_Fy', 0))
+                mn_kipin = fy * zx
+                # Check design method
+                design_method = inputs.get('design_method', 'ASD')
+                phi_b = 0.90
+                omega_b = 1.67
+                
+                if design_method == 'LRFD':
+                    m_load = (phi_b * mn_kipin) / 12.0
+                else:
+                    m_load = (mn_kipin / omega_b) / 12.0
+                inputs['M_load'] = m_load # Update inputs so report reflects it
+            
+            # Note: JS logic for shear is:
+            # const Aw = (inputs.member_d - 2 * inputs.member_tf) * inputs.member_tw;
+            # Vn = 0.6 * Fy * Aw
+            # V_load = phi * Vn (LRFD) or Vn / omega (ASD)
+            d_mem = float(inputs.get('member_d', 0))
+            tf_mem = float(inputs.get('member_tf', 0))
+            tw_mem = float(inputs.get('member_tw', 0))
+            aw = (d_mem - 2 * tf_mem) * tw_mem
+            if aw > 0:
+                 vn_kips = 0.6 * float(inputs.get('member_Fy', 0)) * aw
+                 phi_v = 1.00
+                 omega_v = 1.50
+                 if inputs.get('design_method', 'ASD') == 'LRFD':
+                     v_load = phi_v * vn_kips
+                 else:
+                     v_load = vn_kips / omega_v
+                 inputs['V_load'] = v_load
+
         
         # Demand Calculations
         d_beam = float(inputs.get('member_d', 0))
@@ -1015,5 +1175,298 @@ class SpliceCalculator:
 
 
 
-# Global instance if needed, or functions can be called directly
+    def run_optimization(self, inputs):
+        """
+        Iteratively finds the minimum number of bolts required.
+        Equivalent to optimizeFlangeBolts + optimizeWebBolts in splice.js.
+        """
+        # Optimize Flange Bolts if check is enabled (or implicit?)
+        # JS only optimizes if checks fail? No, optimizeFlangeBolts loops from 2 bolts up.
+        # It finds the *minimum* passing configuration.
+        
+        optimized_inputs = inputs.copy()
+        found_flange_sol = False
+        found_web_sol = False
+        gap = 0 # Prevent UnboundLocalError
+
+        
+        # --- Optimize Flange Bolts ---
+        if inputs.get('optimize_flange_plates_check', True): # Default to true for now if master switch is on
+             # Reset to minimum to start search
+             max_total_bolts = 48
+             max_rows_cols = 10
+             
+             found_flange_sol = False
+             
+             # Determine diameters to try
+             diameters = [float(inputs.get('D_fp'))]
+             if inputs.get('optimize_diameter_check'):
+                 diameters = [0.75, 0.875, 1.0, 1.125] # Simplified list or from DB
+                 
+             for d_try in diameters:
+                 if found_flange_sol: break
+                 print(f"DEBUG: Trying diameter {d_try}")
+                 
+                 # Pre-fetch geometry constants for this diameter/input set
+                 s_end = float(inputs.get('S3_end_dist_fp', 1.5))
+                 s_col = float(inputs.get('S1_col_spacing_fp', 3))
+                 gap_input = float(inputs.get('gap', 0))
+
+                 for total_bolts in range(2, max_total_bolts + 1, 2):
+                     if found_flange_sol: break
+                     
+                     for nc in range(1, max_rows_cols + 1):
+                         if total_bolts % (2 * nc) != 0: continue
+                         nr = total_bolts // (2 * nc)
+                         if nr > max_rows_cols or nr < 1: continue
+                         
+                         test_inputs = optimized_inputs.copy()
+
+                         test_inputs['D_fp'] = d_try
+                         test_inputs['Nc_fp'] = nc
+                         test_inputs['Nr_fp'] = nr
+                         
+                         # Ensure plate extends enough to provide s_end at the gap side too (for beam web/flange bearing)
+                         # required_half_len = s_end (outer) + (nc - 1) * s_col + max(gap_input/2.0, s_end)
+                         # Actually, beam edge is at gap_input/2.0. Center of splice is 0.
+                         # Bolts start at s_end from outer edge.
+                         # Distance from center to outer edge is L/2.
+                         # Outer bolt is at L/2 - s_end.
+                         # Inner bolt is at L/2 - s_end - (nc-1)*s_col.
+                         # Inner bolt must be >= s_end from Beam Edge (which is at gap/2).
+                         # So (L/2 - s_end - (nc-1)*s_col) - gap/2 >= s_end
+                         # L/2 >= 2*s_end + (nc-1)*s_col + gap/2
+                         required_half_len = 2.0 * s_end + (nc - 1) * s_col + gap_input/2.0
+                         # Original was: s_end + (nc - 1) * s_col + gap_input/2.0 (Missing one s_end buffer)
+
+
+
+                         test_inputs['L_fp'] = required_half_len * 2.0
+                         
+                         # Sync Inner Plate if Double Shear
+                         if int(inputs.get('num_flange_plates', 0)) == 2:
+                             test_inputs['L_fp_inner'] = test_inputs['L_fp']
+                             # Defaults if missing
+                             if 'H_fp_inner' not in test_inputs: test_inputs['H_fp_inner'] = inputs.get('H_fp', 0)
+                             if 'flange_plate_Fy_inner' not in test_inputs: test_inputs['flange_plate_Fy_inner'] = inputs.get('flange_plate_Fy', 36)
+                             if 'flange_plate_Fu_inner' not in test_inputs: test_inputs['flange_plate_Fu_inner'] = inputs.get('flange_plate_Fu', 58)
+
+
+                         
+                         # Basic Plate Thickness Optimization
+                         # If optimize_flange_plates_check is True, we try thicknesses.
+                         # If False, we stick to input 't_fp'.
+                         thicknesses_to_try = [float(inputs.get('t_fp'))]
+                         if inputs.get('optimize_flange_plates_check'):
+                             # Standard fractions: 1/4 to 2 in 1/8 increments?
+                             # Start from max(input, 0.25)? Or just full range?
+                             # Let's try a reasonable range.
+                             base_t = [0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0, 1.25, 1.5, 1.75, 2.0]
+                             thicknesses_to_try = [t for t in base_t if t >= 0.25] 
+                         
+                         for t_try in thicknesses_to_try:
+                             test_inputs['t_fp'] = t_try
+                             if int(inputs.get('num_flange_plates', 0)) == 2:
+                                 test_inputs['t_fp_inner'] = t_try
+
+                             test_inputs['t_fp'] = t_try
+                             # If inner plates exist, handle them too?
+                             if int(inputs.get('num_flange_plates', 0)) == 2 and inputs.get('optimize_flange_plates_check'):
+                                  test_inputs['t_fp_inner'] = t_try # Assume symmetric thickness for now
+                                  test_inputs['L_fp_inner'] = test_inputs['L_fp'] # Align lengths
+                             
+                             # Check strict temporarily disables optimization flag to prevent recursion
+                             test_inputs['optimize_bolts_check'] = False 
+                             
+                             try:
+                                 res = self.run(test_inputs)
+
+                                 
+                                 # Analyze Results
+                                 checks = res['checks']
+                                 geom = res['geomChecks'].get('Flange Bolts', {})
+                                 
+                                 # Check Strength
+                                 strength_fail = False
+                                 for key, data in checks.items():
+                                     if 'Flange' not in key and 'Outer Plate' not in key and 'Inner Plate' not in key: continue
+                                     if 'Beam' in key: continue 
+                                     
+                                     check_obj = data['check']
+                                     demand = data['demand']
+                                     if 'Rn' not in check_obj: continue
+                                     
+                                     cap = check_obj['Rn'] * check_obj['phi'] if inputs.get('design_method') == 'LRFD' else check_obj['Rn'] / check_obj['omega']
+                                     if cap == 0 or abs(demand) > cap:
+                                         strength_fail = True
+                                         break
+                                 
+                                 if strength_fail: 
+                                      # Log first failing check for brevity
+                                      for k, check_obj in checks.items():
+                                          if not check_obj.get('pass'):
+                                              demand = check_obj.get('demand', 0)
+                                              cap = check_obj.get('check', {}).get('Rn', 0) # Raw capacity
+                                              print(f"DEBUG: Fail Nc={nc} Nr={nr} t={t_try} | {k}: D={demand:.2f} C={cap:.2f}")
+                                              break
+                                      continue
+
+                                 
+                                 # Safety: Ensure we actually checked something
+                                 if not any('Flange' in k for k in checks.keys()):
+                                      continue
+                                 
+                                 # Check Geometry
+                                 geom_fail = False
+
+                                 for k, g_data in geom.items():
+                                     if not g_data.get('pass'): 
+                                         geom_fail = True
+                                         break
+                                 
+                                 if not geom_fail:
+                                     # FOUND SOLUTION
+                                     optimized_inputs['D_fp'] = d_try
+
+                                     optimized_inputs['Nc_fp'] = nc
+                                     optimized_inputs['Nr_fp'] = nr
+                                     optimized_inputs['L_fp'] = test_inputs['L_fp']
+                                     optimized_inputs['t_fp'] = test_inputs['t_fp']
+                                     if int(inputs.get('num_flange_plates', 0)) == 2:
+                                         optimized_inputs['L_fp_inner'] = test_inputs['L_fp']
+                                         optimized_inputs['t_fp_inner'] = test_inputs['t_fp']
+                                     
+                                     results = res 
+                                     found_flange_sol = True
+                                     break
+                                     
+                             except Exception as e:
+                                 print(f"DEBUG: Exception in optimization: {e}")
+                                 import traceback
+                                 traceback.print_exc()
+                                 continue
+
+                         if found_flange_sol: break
+
+                             
+        # --- Optimize Web Bolts ---
+        if inputs.get('optimize_web_plates_check', True):
+             found_web_sol = False
+             max_rows_cols = 10
+             
+             diameters = [float(inputs.get('D_wp'))]
+             # If optimize diameter is on, do we optimize web D too? JS says yes.
+             if inputs.get('optimize_diameter_check'):
+                 diameters = [0.75, 0.875, 1.0, 1.125]
+
+             for d_try in diameters:
+                 if found_web_sol: break
+                 
+                 # Web optimization loop: Iterate Nc (cols) then Nr (rows)?
+                 # JS optimizes Nc primarily? 
+                 # JS: optimizeWebBolts iterates Nc from 1 to 10. Nr is usually fixed or iterated?
+                 # JS: loops nc_wp from 1 to 10.
+                 # "const nr_wp = inputs.Nr_wp; // Keep rows fixed?" 
+                 # Let's check JS. JS logic iterates Nc and keeps Nr fixed?
+                 # Wait, usually you want to optimize both.
+                 # I'll implement a simple loop increasing columns, then rows if needed.
+                 # JS Step 1776 iterates `nc_fp`. 
+                 # For Web, let's assume valid range of Nc=1..10, Nr=inputs.Nr (fixed) or 1..10?
+                 # Safer to iterate both for robust solution.
+                 
+                 # Pre-fetch geometry constants
+                 s_end = float(inputs.get('S6_end_dist_wp', 1.5))
+                 s_col = float(inputs.get('S4_col_spacing_wp', 3))
+                 gap_input = float(inputs.get('gap', 0))
+
+                 for nc in range(1, max_rows_cols + 1):
+                     # Checking mostly shear capacity which scales with total bolts.
+                     # Web plates usually have fixed row spacing/fit. 
+                     # Let's keep Nr fixed as per likely user intent on height, unless it fails?
+                     # I will iterate Nc only for now to match typical "add columns" behavior.
+                     
+                     nr = int(inputs.get('Nr_wp', 3)) 
+                     
+                     test_inputs = optimized_inputs.copy()
+                     test_inputs['D_wp'] = d_try
+                     test_inputs['Nc_wp'] = nc
+                     test_inputs['Nr_wp'] = nr
+                     
+                     # Same fix as flange: ensure length creates valid edge dist on both sides (plate edge and gap/beam edge)
+                     required_len = 2.0 * s_end + (nc - 1) * s_col + gap_input/2.0
+                     
+                     test_inputs['L_wp'] = required_len * 2.0
+
+
+                     
+                     # Web Plate Optimization (calc height/thickness?)
+                     # Height H_wp usually fits inside T dimension. 
+                     # If optimizing plates, we maximize H_wp? Or keep input?
+                     # Often users set H_wp to max available (-2k).
+                     # Let's keep H_wp fixed for now as it's geometric constraint.
+                     # Optimize Thickness t_wp.
+                     
+                     thicknesses_to_try = [float(inputs.get('t_wp'))]
+                     if inputs.get('optimize_web_plates_check'):
+                          base_t = [0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0]
+                          thicknesses_to_try = [t for t in base_t if t >= 0.25]
+                     
+                     for t_try in thicknesses_to_try:
+                         test_inputs['t_wp'] = t_try
+                         test_inputs['optimize_bolts_check'] = False
+                         
+                         try:
+                             res = self.run(test_inputs)
+                             checks = res['checks']
+                             geom = res['geomChecks'].get('Web Bolts', {})
+                             
+                             strength_fail = False
+                             for key, data in checks.items():
+                                 if 'Web' not in key: continue
+                                 if 'Beam' in key: continue 
+                                 
+                                 check_obj = data['check']
+                                 demand = data['demand']
+                                 if 'Rn' not in check_obj: continue
+                                 
+                                 cap = check_obj['Rn'] * check_obj['phi'] if inputs.get('design_method') == 'LRFD' else check_obj['Rn'] / check_obj['omega']
+                                 if cap == 0 or abs(demand) > cap:
+                                     strength_fail = True
+                                     break
+                                     
+                             if strength_fail: continue
+                             
+                             geom_fail = False
+                             for k, g_data in geom.items():
+                                 if not g_data.get('pass'):
+                                     geom_fail = True
+                                     break
+                            
+                             if not geom_fail:
+                                 optimized_inputs['D_wp'] = d_try
+                                 optimized_inputs['Nc_wp'] = nc
+                                 optimized_inputs['L_wp'] = test_inputs['L_wp']
+                                 optimized_inputs['t_wp'] = test_inputs['t_wp']
+                                 found_web_sol = True
+                                 break
+                         except:
+                             continue
+                     if found_web_sol: break
+
+
+        # Final Run with Best Inputs
+        optimized_inputs['optimize_bolts_check'] = False
+        final_res = self.run(optimized_inputs)
+        
+        # Add a flag or log to indicate optimization happened
+        final_res['optimizationLog'] = [] 
+        if found_flange_sol: 
+             final_res['optimizationLog'].append(f"Optimized Flange: {optimized_inputs['Nc_fp']} cols x {optimized_inputs['Nr_fp']} rows (D={optimized_inputs['D_fp']} in)")
+        if found_web_sol:
+             final_res['optimizationLog'].append(f"Optimized Web: {optimized_inputs['Nc_wp']} cols (D={optimized_inputs['D_wp']} in)")
+             
+        return final_res
+
+    # Global instance if needed, or functions can be called directly
+
 splice_calc = SpliceCalculator()

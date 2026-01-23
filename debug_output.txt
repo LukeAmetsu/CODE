@@ -1,0 +1,6 @@
+Original t_fp: 0.1, Optimized t_fp: 0.375
+Original L_fp: 6, Optimized L_fp: 6.0
+Optimization Log:
+  Optimized Flange: 2 cols x 1 rows (D=0.875 in)
+PASS: Flange Plate Thickness Increased
+FAIL: Flange Plate Length NOT Increased
