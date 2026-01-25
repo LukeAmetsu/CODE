@@ -597,6 +597,73 @@ function initializeSharedUI() {
     initializeBackToTopButton();
     initializeUiToggles();
     initializeGlobalInputSteps();
+    enableMathInInputs(); // Enable math expressions for all numeric inputs
+}
+
+/**
+ * Enables mathematical expressions in numeric inputs.
+ * Converts type="number" to type="text" to allow characters like +, -, *, /, (, ).
+ * Evaluates the expression on blur.
+ */
+function enableMathInInputs() {
+    const numericInputs = document.querySelectorAll('input[type="number"], input.numeric-input');
+    
+    numericInputs.forEach(input => {
+        // Convert to text to allow typing expressions
+        if (input.type === 'number') {
+            input.type = 'text';
+            input.inputMode = 'decimal'; // Show numeric keyboard on mobile
+            // Optional: pattern to allow numbers and math chars? 
+            // Broad pattern or none is often better for UX to prevent immediate valid checks blocking input
+        }
+        
+        // Remove old listeners to avoid duplicates if re-initializing
+        input.removeEventListener('blur', handleMathInputBlur);
+        input.addEventListener('blur', handleMathInputBlur);
+        
+        // Also handle "Enter" key to evaluate without blurring
+        input.removeEventListener('keydown', handleMathInputKeydown);
+        input.addEventListener('keydown', handleMathInputKeydown);
+    });
+}
+
+function handleMathInputBlur(e) {
+    evaluateInputExpression(e.target);
+}
+
+function handleMathInputKeydown(e) {
+    if (e.key === 'Enter') {
+        evaluateInputExpression(e.target);
+        // Note: We don't preventDefault here usually, so that form submission or other listeners can still happen
+        // assuming they run *after* this sync evaluation or pick up the updated value.
+    }
+}
+
+function evaluateInputExpression(input) {
+    const originalValue = input.value;
+    if (!originalValue) return;
+
+    // Check if it looks like a math expression (contains operators)
+    if (/[+\-*/()]/.test(originalValue)) {
+        const result = safeMathEval(originalValue);
+        if (result !== null && isFinite(result)) {
+            // Update value if valid
+            // Format to reasonable decimals if needed, or keep precision?
+            // Let's keep distinct precision but avoid long float errors like 3.000000004
+            
+            // Check if it's an integer
+            if (Number.isInteger(result)) {
+                input.value = result.toString();
+            } else {
+                // Determine precision based on magnitude? Or just max 6 decimals
+                // parseFloat(toFixed(6)) removes trailing zeros
+                input.value = parseFloat(result.toFixed(6)).toString(); 
+            }
+            
+            // Trigger change event so calculators know value updated
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
 }
 
 /**

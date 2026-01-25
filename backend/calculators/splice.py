@@ -701,7 +701,7 @@ class SpliceCalculator:
         })
         
         # Add edge_dist_gap check manually or via helper if expanded, but helper covers long/tran
-        min_le_fp = geom_checks['Flange Bolts']['edge_dist_long']['min']
+        min_le_fp = geom_checks['Flange Bolts'].get('edge_dist_long', {}).get('min', 0)
         geom_checks['Flange Bolts']['edge_dist_gap'] = {
             'actual': geo_geom['edge_dist_gap'],
             'min': min_le_fp, 
@@ -864,7 +864,7 @@ class SpliceCalculator:
             'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
         })
         
-        min_le_wp = geom_checks['Web Bolts']['edge_dist_long']['min']
+        min_le_wp = geom_checks['Web Bolts'].get('edge_dist_long', {}).get('min', 0)
         geom_checks['Web Bolts']['edge_dist_gap'] = {
             'actual': geo_geom_web['edge_dist_gap'],
             'min': min_le_wp,

@@ -23,9 +23,10 @@ function drawBasePlateDiagram(inputs) {
     const cx = W / 2, cy = H / 2;
     
     // Validate essential inputs to prevent NaN errors
-    const B = parseFloat(inputs.base_plate_width_B);
-    const N = parseFloat(inputs.base_plate_length_N);
-    const d = parseFloat(inputs.column_depth_d);
+    // Use safeMathEval to handle potential math expressions
+    const B = safeMathEval(inputs.base_plate_width_B) || 0;
+    const N = safeMathEval(inputs.base_plate_length_N) || 0;
+    const d = safeMathEval(inputs.column_depth_d) || 0;
     
     // Basic check: Dimensions must be positive numbers
     if (
