@@ -2107,14 +2107,16 @@ function getUnits(unit_system) {
         return {
             p_unit: 'Pa',
             h_unit: 'm',
-            v_unit: 'm/s'
+            v_unit: 'm/s',
+            is_imp: false
         };
     }
     // Default to Imperial
     return {
         p_unit: 'psf',
         h_unit: 'ft',
-        v_unit: 'mph'
+        v_unit: 'mph',
+        is_imp: true
     };
 }
 

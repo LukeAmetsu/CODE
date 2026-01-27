@@ -45,17 +45,17 @@ const validationRules = {
         'anchor_embedment_hef': { min: 1, required: true, label: 'Bolt Embedment (hef)' },
         crossField: [
             {
-                condition: (inputs) => inputs.column_depth_d < inputs.base_plate_length_N,
+                condition: (inputs) => parseFloat(inputs.column_depth_d) < parseFloat(inputs.base_plate_length_N),
                 message: "Column Depth/Diameter (d) must be less than the Plate Length (N)."
             },
             {
-                condition: (inputs) => !inputs.column_flange_width_bf || inputs.column_flange_width_bf < inputs.base_plate_width_B,
+                condition: (inputs) => !inputs.column_flange_width_bf || parseFloat(inputs.column_flange_width_bf) < parseFloat(inputs.base_plate_width_B),
                 message: "Column Flange Width (bf) must be less than the Plate Width (B)."
             },
             {
                 condition: (inputs) => {
                     if (!inputs.column_flange_width_bf) return true; // Not applicable for HSS
-                    return (inputs.base_plate_width_B - inputs.column_flange_width_bf) / 2.0 >= 1.0;
+                    return (parseFloat(inputs.base_plate_width_B) - parseFloat(inputs.column_flange_width_bf)) / 2.0 >= 1.0;
                 },
                 message: "Plate edge distance to column flange is less than 1 inch. This may be insufficient for welding or erection tolerance.",
                 level: 'warning'

@@ -291,6 +291,8 @@ async function findLightestBeam() {
     const nominalDepth = depthChecked ? (safeMathEval(document.getElementById('nominal_depth').value) || 0) : 0;
     const desiredShape = document.getElementById('desired_section').value;
     
+    const checkDouble = document.getElementById('check_double').checked;
+
     const maxRatioPct = safeMathEval(document.getElementById('max_ratio').value) || 100;
     const maxRatio = maxRatioPct / 100.0;
 
@@ -356,6 +358,7 @@ async function findLightestBeam() {
         nominal_depth: nominalDepth,
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
+        check_double: checkDouble,
         max_ratio: maxRatio,
 
         // The New Batch Data
@@ -584,6 +587,7 @@ async function viewBatchDetails(index) {
     const nominalDepth = depthChecked ? (safeMathEval(document.getElementById('nominal_depth').value) || 0) : 0;
 
     const checkDeflection = document.getElementById('check_deflection').checked;
+    const checkDouble = document.getElementById('check_double').checked;
     const desiredShape = document.getElementById('desired_section').value;
     const maxRatioPct = safeMathEval(document.getElementById('max_ratio').value) || 100;
 
@@ -601,6 +605,7 @@ async function viewBatchDetails(index) {
         nominal_depth: nominalDepth,
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
+        check_double: checkDouble,
         max_ratio: maxRatioPct / 100.0, // Re-calc or pass? We didn't grab it in viewBatchDetails local scope yet
         batch_loads: null
     };

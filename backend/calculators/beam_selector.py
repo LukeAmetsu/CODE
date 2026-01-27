@@ -62,6 +62,79 @@ def find_lightest_beam(inputs):
             
         return results
 
+    # --- 2x Beam Analysis Logic (if enabled and NOT in recursion) ---
+    # We want to do this ONLY for single runs (or deeper recursion of single runs, but not infinite).
+    # 'check_double' flag should be removed from recursive calls to prevent infinite loop if we call 'find_lightest_beam' recursively.
+    # Actually, we can just process it right here before gathering inputs.
+    
+    check_double = inputs.get('check_double', False)
+    if check_double:
+        # 1. Run Standard Single Analysis
+        # Create a clean input without 'check_double' to avoid recursion triggers
+        single_inputs = inputs.copy()
+        single_inputs['check_double'] = False 
+        
+        # Get Single Results
+        res_single = find_lightest_beam(single_inputs)
+        candidates_single = res_single.get('candidates', [])
+
+        # REFINE LOGIC: Only look for 2x if NO Standard Single candidates found, OR if very few found (<10).
+        # User wants option to compare if choices are limited.
+        if len(candidates_single) >= 10:
+            return res_single
+        
+        # 2. Run Double Analysis (Half Loads)
+        # We need to halve the DEMAND.
+        # Demand comes from 'mu_req' OR ('w_load' and 'span_ft').
+        double_inputs = inputs.copy()
+        double_inputs['check_double'] = False
+        
+        # Adjust Demand
+        # If Mu is provided, halve it.
+        mu_req_d = float(inputs.get('mu_req', 0))
+        if mu_req_d != 0:
+            double_inputs['mu_req'] = mu_req_d * 0.5
+            
+        # If w_load is provided, halve it.
+        w_load_d = float(inputs.get('w_load', 0))
+        if w_load_d != 0:
+            double_inputs['w_load'] = w_load_d * 0.5
+            
+        # Run calculation for "Half Beam"
+        res_double = find_lightest_beam(double_inputs)
+        candidates_half = res_double.get('candidates', [])
+        
+        # 3. Process Double Candidates
+        candidates_double = []
+        for c in candidates_half:
+            # Scale up properties to reflect 2 beams
+            # We clone to avoid modifying the original references if cached
+            new_c = c.copy()
+            new_c['name'] = "2x " + c['name']
+            new_c['weight'] = c['weight'] * 2
+            new_c['capacity'] = c['capacity'] * 2
+            new_c['Mp'] = c['Mp'] * 2
+            new_c['Mr'] = c['Mr'] * 2
+            new_c['Ix'] = c['Ix'] * 2
+            # Deflection logic:
+            # Deflection of 2 beams carrying Load W is SAME as 1 beam carrying Load W/2.
+            # However, the c['deflection'] we got is for 1 beam carrying Half Load. 
+            # So the deflection value is correct for the SYSTEM.
+            # Defl ratio is also correct.
+            # depth stays same.
+            
+            candidates_double.append(new_c)
+            
+        # 4. Process
+        # Merge single (if any) and double
+        all_candidates = candidates_single + candidates_double
+        all_candidates.sort(key=lambda x: (x['weight'], x['depth']))
+        
+        return {
+            "candidates": all_candidates[:20], 
+            "desired": res_single.get('desired') 
+        }
+
     
     # 1. Gather Inputs
     shape_type = inputs.get('shape_type', 'W')
