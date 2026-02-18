@@ -6,8 +6,8 @@
 
 var beamData = {
     batchCases: [
-        { span: 20, trib: 10, load: 100, lb: 20, cb: 1.0 }, // Example: 100 psf on 10' trib
-        { span: 24, trib: 0, load: 1.2, lb: 24, cb: 1.14 }   // Example: 1.2 klf direct (Trib=0)
+        { span: 20, cant: 0, trib: 10, load: 100, lb: 20, cb: 1.0 }, // Example: 100 psf on 10' trib
+        { span: 24, cant: 6, trib: 0, load: 1.2, lb: 24, cb: 1.0 }   // Example: Cantilever
     ]
 };
 
@@ -34,11 +34,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Depth Checkbox Toggle
     const depthCheck = document.getElementById('depth_limit_check');
     const nominalDepthInput = document.getElementById('nominal_depth');
-    depthCheck.addEventListener('change', (e) => {
+    depthCheck?.addEventListener('change', (e) => {
         if (e.target.checked) {
             nominalDepthInput.classList.remove('hidden');
         } else {
             nominalDepthInput.classList.add('hidden');
+        }
+    });
+
+    // Cantilever Checkbox Toggle
+    const cantCheck = document.getElementById('check_cantilever');
+    const cantInputs = document.getElementById('cantilever_inputs');
+    cantCheck?.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            cantInputs.classList.remove('hidden');
+        } else {
+            cantInputs.classList.add('hidden');
         }
     });
 
@@ -137,6 +148,7 @@ function renderBatchTable() {
             <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.span}" data-idx="${index}" data-key="span"></td>
             <td class="p-1"><input type="number" step="0.5" placeholder="-" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.trib || ''}" data-idx="${index}" data-key="trib"></td>
             <td class="p-1"><input type="number" step="0.1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.load}" data-idx="${index}" data-key="load"></td>
+            <td class="p-1"><input type="number" step="0.5" placeholder="0" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-orange-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-orange-600 font-bold" value="${item.cant || 0}" data-idx="${index}" data-key="cant"></td>
             <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.lb}" data-idx="${index}" data-key="lb"></td>
             <td class="p-1"><input type="number" step="0.01" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.cb}" data-idx="${index}" data-key="cb"></td>
             <td class="p-1 text-center"><button class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" data-idx="${index}" data-action="remove" title="Remove Case">
@@ -148,7 +160,7 @@ function renderBatchTable() {
 }
 
 function addBatchRow() {
-    beamData.batchCases.push({ span: 20, trib: 0, load: 1.0, lb: 20, cb: 1.0 });
+    beamData.batchCases.push({ span: 20, cant: 0, trib: 0, load: 1.0, lb: 20, cb: 1.0 });
     renderBatchTable();
 }
 
@@ -211,11 +223,11 @@ function handleBatchPaste(e) {
             const span = parseFloat(values[0]) || 0;
             const trib = values.length >= 2 ? (parseFloat(values[1]) || 0) : 0;
             const load = values.length >= 3 ? (parseFloat(values[2]) || 0) : 0;
-            // No moment column
-            const lb = values.length >= 4 ? (parseFloat(values[3]) || span) : span;
-            const cb = values.length >= 5 ? (parseFloat(values[4]) || 1.0) : 1.0;
+            const cant = values.length >= 4 ? (parseFloat(values[3]) || 0) : 0;
+            const lb = values.length >= 5 ? (parseFloat(values[4]) || span) : span;
+            const cb = values.length >= 6 ? (parseFloat(values[5]) || 1.0) : 1.0;
 
-            newCases.push({ span, trib, load, lb, cb });
+            newCases.push({ span, trib, load, cant, lb, cb });
         }
     });
 
@@ -256,9 +268,10 @@ function setupBatchExcelImport() {
                     const span = parseFloat(row[0]) || 0;
                     const trib = row.length >= 2 ? (parseFloat(row[1]) || 0) : 0;
                     const load = row.length >= 3 ? (parseFloat(row[2]) || 0) : 0;
-                    const lb = row.length >= 4 ? (parseFloat(row[3]) || span) : span;
-                    const cb = row.length >= 5 ? (parseFloat(row[4]) || 1.0) : 1.0;
-                    newCases.push({ span, trib, load, lb, cb });
+                    const cant = row.length >= 4 ? (parseFloat(row[3]) || 0) : 0;
+                    const lb = row.length >= 5 ? (parseFloat(row[4]) || span) : span;
+                    const cb = row.length >= 6 ? (parseFloat(row[5]) || 1.0) : 1.0;
+                    newCases.push({ span, trib, load, cant, lb, cb });
                 }
             });
 
@@ -284,6 +297,9 @@ async function findLightestBeam() {
     // but for batch we strictly use table values or fallbacks logic.
     const global_Lb = safeMathEval(document.getElementById('Lb').value) || 0;
     const global_Cb = safeMathEval(document.getElementById('Cb').value) || 1.0;
+
+    const isCantilever = document.getElementById('check_cantilever').checked;
+    const global_Cant = isCantilever ? (safeMathEval(document.getElementById('cantilever_ft').value) || 0) : 0;
 
     const checkDeflection = document.getElementById('check_deflection').checked;
 
@@ -320,15 +336,28 @@ async function findLightestBeam() {
         }
 
         // 2. Determine Moment (M_req)
-        // Always calc from wL^2/8
-        const m_req = (w_val * c.span * c.span) / 8.0;
+        // If cantilever (c.cant > 0), load is only on cantilever.
+        // M_cant = (w * cant * cant) / 2
+        // Backspan for stability calc on backend, but for Moment Requirement we send M_calc.
+        let m_req = 0;
+        
+        if (c.cant > 0) {
+            // Cantilever Moment (Negative) at support
+            // Load + SW (SW is added in backend? Or here?)
+            // Backend adds SW. Here we calculate Moment from USER LOAD.
+            m_req = (w_val * c.cant * c.cant) / 2.0;
+        } else {
+            // Simple Span Moment
+            m_req = (w_val * c.span * c.span) / 8.0;
+        }
 
         return {
             span: c.span,
             load: w_val, // Pass the calculated linear load to backend (for logging/display)
             mu_req: m_req, // Explicitly pass the calculated Moment
             lb: c.lb,
-            cb: c.cb
+            cb: c.cb,
+            cantilever_ft: c.cant || 0
         };
     });
 
@@ -340,7 +369,11 @@ async function findLightestBeam() {
     // If mu_direct is set, it overrides span/load calculation for the SINGLE case scenario.
     let single_M_req = mu_direct;
     if (single_M_req === null || single_M_req === 0) {
-        single_M_req = (w_load * span_calc * span_calc) / 8;
+        if (global_Cant > 0) {
+             single_M_req = (w_load * global_Cant * global_Cant) / 2.0;
+        } else {
+             single_M_req = (w_load * span_calc * span_calc) / 8.0;
+        }
     }
 
     const inputs = {
@@ -353,6 +386,7 @@ async function findLightestBeam() {
         mu_req: single_M_req,
         span_ft: span_calc,
         w_load: w_load,
+        cantilever_ft: global_Cant,
 
         nominal_depth: nominalDepth,
         nominal_depth: nominalDepth,
@@ -439,6 +473,13 @@ function renderResults(data, demand) {
         desiredBlock.classList.remove('hidden');
         desiredName.textContent = desired.name;
         desiredStats.textContent = `Weight: ${desired.weight} lb/ft • Depth: ${desired.depth}" • Mode: ${desired.mode}`;
+        
+        let fosHtml = "";
+        if (desired.fos_ot && desired.fos_ot < 999) {
+            fosHtml = ` • OT FOS: <span class="${desired.fos_ot < 1.5 ? 'text-red-600 font-bold' : 'text-green-600'}">${desired.fos_ot.toFixed(2)}</span>`;
+        }
+        desiredStats.innerHTML += fosHtml;
+
         desiredRatio.innerHTML = `<span class="${desired.pass ? 'text-green-600' : 'text-red-600'}">${desired.capacity.toFixed(1)}</span> / <span class="text-gray-500">${demand.toFixed(1)}</span> k-ft <span class="text-xs ml-2 border px-1 rounded ${desired.ratio > 1.0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${(desired.ratio * 100).toFixed(1)}%</span>`;
 
         if (desired.pass) {
@@ -458,6 +499,9 @@ function renderResults(data, demand) {
         const winner = candidates[0];
         winnerName.textContent = winner.name;
         winnerStats.textContent = `Weight: ${winner.weight} lb/ft • Depth: ${winner.depth}" • Mode: ${winner.mode}`;
+        if (winner.fos_ot && winner.fos_ot < 999) {
+             winnerStats.innerHTML += ` • <span title="Overturning Factor of Safety">OT FOS: ${winner.fos_ot.toFixed(2)}</span>`;
+        }
         winnerRatio.innerHTML = `<span class="text-green-600">${winner.capacity.toFixed(1)}</span> / <span class="text-gray-500">${demand.toFixed(1)}</span> k-ft <span class="text-xs ml-2 border px-1 rounded ${winner.ratio > 0.9 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${(winner.ratio * 100).toFixed(1)}%</span>`;
     } else {
         // No candidates found (but desired might have failed)
@@ -526,6 +570,11 @@ function renderBatchResults(data) {
             const rVal = (winner.ratio * 100).toFixed(1);
             const colorClass = winner.ratio > 1.0 ? 'text-red-600 bg-red-100' : (winner.ratio > 0.9 ? 'text-yellow-600 bg-yellow-100' : 'text-green-600 bg-green-100');
             ratio = `<span class="text-xs px-2 py-1 rounded font-bold ${colorClass}">${rVal}%</span>`;
+
+            if (winner.fos_ot && winner.fos_ot < 999) {
+                 const fosClass = winner.fos_ot < 1.5 ? 'text-red-600' : 'text-gray-500';
+                 ratio += `<br><span class="text-[10px] ${fosClass}">FOS ${winner.fos_ot.toFixed(2)}</span>`;
+            }
         }
 
         const tr = document.createElement('tr');
@@ -606,7 +655,9 @@ async function viewBatchDetails(index) {
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
         check_double: checkDouble,
+        check_double: checkDouble,
         max_ratio: maxRatioPct / 100.0, // Re-calc or pass? We didn't grab it in viewBatchDetails local scope yet
+        cantilever_ft: data.cant || 0,
         batch_loads: null
     };
 

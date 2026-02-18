@@ -16,7 +16,7 @@ const diagramInputIds = [
     'H_fp', 't_fp', 'L_fp', 'H_fp_inner', 't_fp_inner', 'L_fp_inner', 'D_fp', 'Nc_fp',
     'Nr_fp', 'S1_col_spacing_fp', 'S2_row_spacing_fp', 'S3_end_dist_fp', 'g_gage_fp',
     'num_web_plates', 'H_wp', 't_wp', 'L_wp', 'D_wp', 'Nc_wp', 'Nr_wp',
-    'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp'
+    'S4_col_spacing_wp', 'S5_row_spacing_wp', 'S6_end_dist_wp', 'member_shape_type'
 ];
 
 let masterBolts = {};
@@ -43,7 +43,7 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
     const tw = safeFloat(inputs.member_tw, 0.355);
     const gap = safeFloat(inputs.gap, 0.5);
     
-    // Flange Plate Data
+    const isHSS = inputs.member_shape_type === 'HSS Rectangular';
     const num_fp = parseInt(inputs.num_flange_plates) || 0;
     const L_fp = safeFloat(inputs.L_fp, 12);
     const H_fp = safeFloat(inputs.H_fp, 6);
@@ -207,11 +207,11 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
             const txt = document.createElementNS(ns, "text");
             txt.setAttribute("x", lineX - 5); txt.setAttribute("y", (ty1 + ty2)/2);
             txt.setAttribute("text-anchor", "end"); txt.setAttribute("dominant-baseline", "middle");
-            txt.setAttribute("font-family", "Arial"); txt.setAttribute("font-size", "10");
+            txt.setAttribute("font-family", "Arial"); txt.setAttribute("font-size", "5");
             // White halo for readability
             txt.setAttribute("paint-order", "stroke");
             txt.setAttribute("stroke", "white");
-            txt.setAttribute("stroke-width", "3px");
+            txt.setAttribute("stroke-width", "1px");
             txt.setAttribute("stroke-linecap", "butt");
             txt.setAttribute("stroke-linejoin", "miter");
             txt.textContent = text;
@@ -238,13 +238,13 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
             g.appendChild(main);
 
             const txt = document.createElementNS(ns, "text");
-            txt.setAttribute("x", (tx1 + tx2)/2); txt.setAttribute("y", lineY - 5);
+            txt.setAttribute("x", (tx1 + tx2)/2); txt.setAttribute("y", lineY - 2.5);
             txt.setAttribute("text-anchor", "middle"); txt.setAttribute("font-family", "Arial");
-            txt.setAttribute("font-size", "10");
+            txt.setAttribute("font-size", "5");
             // White halo
             txt.setAttribute("paint-order", "stroke");
             txt.setAttribute("stroke", "white");
-            txt.setAttribute("stroke-width", "3px");
+            txt.setAttribute("stroke-width", "1px");
             txt.setAttribute("stroke-linecap", "butt");
             txt.setAttribute("stroke-linejoin", "miter");
             txt.setAttribute("fill", "black");
@@ -260,7 +260,7 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
         t.setAttribute("x", x * S);
         t.setAttribute("y", y * S);
         t.setAttribute("font-family", opts.fontFamily || "Arial");
-        t.setAttribute("font-size", opts.fontSize || "10");
+        t.setAttribute("font-size", opts.fontSize || "5");
         t.setAttribute("font-weight", opts.bold ? "bold" : "normal");
         t.setAttribute("text-anchor", opts.anchor || "start");
         t.setAttribute("dominant-baseline", opts.baseline || "hanging");
@@ -270,9 +270,9 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
     };
 
     const drawLegendBox = (parent, x, y, lines, opts = {}) => {
-        const fontSizePx = opts.fontSize ?? 10;
-        const lineHPx    = opts.lineHPx ?? Math.round(fontSizePx * 1.35);
-        const padPx      = opts.padPx ?? Math.round(fontSizePx * 0.7);
+        const fontSizePx = opts.fontSize ?? 5;
+        const lineHPx    = opts.lineHPx ?? (fontSizePx * 1.5);
+        const padPx      = opts.padPx ?? (fontSizePx * 1.0);
 
         // Convert px spacing into your "inch" coordinate system
         const pad   = padPx / S;      // inches
@@ -310,15 +310,25 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
     // 1. ELEVATION VIEW
     if (viewMode === "all" || viewMode === "elevation") {
         // Shift right by legendWidth
-        const elevG = createGroup(svg, legendWidth + beamLen/2 + 2, d/2 + 7); 
+        const elevG = createGroup(svg, legendWidth + beamLen/2 + 4, d/2 + 8); 
         drawText(elevG, 0, (-d/2 - 3.0), "ELEVATION", { anchor: "middle", bold: true, fontSize: 12 });
 
-        drawRect(elevG, -beamLen/2, -d/2, (beamLen - gap)/2, d, "fill");
-        drawRect(elevG, gap/2, -d/2, (beamLen - gap)/2, d, "fill");
-        drawLine(elevG, -beamLen/2, d/2-tf, -gap/2, d/2-tf);
-        drawLine(elevG, -beamLen/2, -d/2+tf, -gap/2, -d/2+tf);
-        drawLine(elevG, gap/2, d/2-tf, beamLen/2, d/2-tf);
-        drawLine(elevG, gap/2, -d/2+tf, beamLen/2, -d/2+tf);
+        if (isHSS) {
+            drawRect(elevG, -beamLen/2, -d/2, (beamLen - gap)/2, d, "fill");
+            drawRect(elevG, gap/2, -d/2, (beamLen - gap)/2, d, "fill");
+            // Inner walls (hidden/dashed)
+            drawLine(elevG, -beamLen/2, d/2-tf, -gap/2, d/2-tf, "dashed");
+            drawLine(elevG, -beamLen/2, -d/2+tf, -gap/2, -d/2+tf, "dashed");
+            drawLine(elevG, gap/2, d/2-tf, beamLen/2, d/2-tf, "dashed");
+            drawLine(elevG, gap/2, -d/2+tf, beamLen/2, -d/2+tf, "dashed");
+        } else {
+            drawRect(elevG, -beamLen/2, -d/2, (beamLen - gap)/2, d, "fill");
+            drawRect(elevG, gap/2, -d/2, (beamLen - gap)/2, d, "fill");
+            drawLine(elevG, -beamLen/2, d/2-tf, -gap/2, d/2-tf);
+            drawLine(elevG, -beamLen/2, -d/2+tf, -gap/2, -d/2+tf);
+            drawLine(elevG, gap/2, d/2-tf, beamLen/2, d/2-tf);
+            drawLine(elevG, gap/2, -d/2+tf, beamLen/2, -d/2+tf);
+        }
 
         if (num_wp > 0) {
             drawRect(elevG, -L_wp/2, -H_wp/2, L_wp, H_wp, "dashed");
@@ -401,7 +411,7 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
         }
         if (elevLegendLines.length) {
             // Place legend in the Gutter (far left relative to group center)
-            drawLegendBox(elevG, (-beamLen/2 - legendWidth), (-d/2 - 2.6), elevLegendLines, { w: 8.0, fontSize: 11 }); // Slightly wider and larger font
+            drawLegendBox(elevG, (-beamLen/2 - legendWidth), (-d/2 - 2.6), elevLegendLines, { w: 8.0, fontSize: 6.5 }); // Larger font for legend vs dims
         }
     }
 
@@ -417,9 +427,15 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
         const sectG = createGroup(svg, finalSectX, d/2 + 7);
         drawText(sectG, 0, (-d/2 - 3.0), "SECTION", { anchor: "middle", bold: true, fontSize: 12 });
         
-        drawRect(sectG, -bf/2, d/2-tf, bf, tf, "fill");
-        drawRect(sectG, -bf/2, -d/2, bf, tf, "fill");
-        drawRect(sectG, -tw/2, -d/2+tf, tw, d-2*tf, "fill");
+        if (isHSS) {
+            // HSS Box
+            drawRect(sectG, -bf/2, -d/2, bf, d, "fill");
+            drawRect(sectG, -bf/2 + tw, -d/2 + tf, bf - 2*tw, d - 2*tf, "fill");
+        } else {
+            drawRect(sectG, -bf/2, d/2-tf, bf, tf, "fill");
+            drawRect(sectG, -bf/2, -d/2, bf, tf, "fill");
+            drawRect(sectG, -tw/2, -d/2+tf, tw, d-2*tf, "fill");
+        }
 
         if (num_wp > 0) {
             drawRect(sectG, -tw/2 - t_wp, -H_wp/2, t_wp, H_wp, "hatch");
@@ -502,10 +518,20 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
         const planG = createGroup(svg, planX, planY);
         drawText(planG, 0, (-bf/2 - 2.5), "PLAN (TOP FLANGE)", { anchor: "middle", bold: true, fontSize: 12 });
 
-        drawRect(planG, -beamLen/2, -bf/2, (beamLen-gap)/2, bf, "fill");
-        drawRect(planG, gap/2, -bf/2, (beamLen-gap)/2, bf, "fill");
-        drawLine(planG, -beamLen/2, 0, -gap/2, 0, "dashed");
-        drawLine(planG, gap/2, 0, beamLen/2, 0, "dashed");
+        if (isHSS) {
+            drawRect(planG, -beamLen/2, -bf/2, (beamLen-gap)/2, bf, "fill");
+            drawRect(planG, gap/2, -bf/2, (beamLen-gap)/2, bf, "fill");
+            // Inner vertical walls (hidden)
+            drawLine(planG, -beamLen/2, -bf/2+tw, -gap/2, -bf/2+tw, "dashed");
+            drawLine(planG, -beamLen/2, bf/2-tw, -gap/2, bf/2-tw, "dashed");
+            drawLine(planG, gap/2, -bf/2+tw, beamLen/2, -bf/2+tw, "dashed");
+            drawLine(planG, gap/2, bf/2-tw, beamLen/2, bf/2-tw, "dashed");
+        } else {
+            drawRect(planG, -beamLen/2, -bf/2, (beamLen-gap)/2, bf, "fill");
+            drawRect(planG, gap/2, -bf/2, (beamLen-gap)/2, bf, "fill");
+            drawLine(planG, -beamLen/2, 0, -gap/2, 0, "dashed");
+            drawLine(planG, gap/2, 0, beamLen/2, 0, "dashed");
+        }
 
         if (num_fp > 0) {
             drawRect(planG, -L_fp/2, -H_fp/2, L_fp, H_fp, "hatch");
@@ -539,33 +565,109 @@ function draw2dSpliceDiagram(targetSvg = null, viewMode = "all") {
         }
     }
     
-    // Auto Zoom (Synchronous attempt for robust report generation)
-    try {
-        const bbox = svg.getBBox();
-        if(bbox.width > 0 && bbox.height > 0) {
-            svg.setAttribute("viewBox", `${bbox.x - 20} ${bbox.y - 20} ${bbox.width + 40} ${bbox.height + 40}`);
-            svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    // --- CALCULATE BOUNDS ---
+    // Instead of getBBox (which requires DOM), we compute the viewBox mathematically.
+    const padding = 10; // Adjusted padding for better fit
+
+    
+    // Group Centers (in SVG units = inches * S)
+    // Elevation: cx = (legendWidth + beamLen/2 + 2)*S, cy = (d/2 + 7)*S
+    // Section: cx = (legendWidth + beamLen + 4 + bf/2)*S, cy = (d/2 + 7)*S (in "all" mode)
+    // Plan: cx = (legendWidth + beamLen/2 + 2)*S, cy = (d + 30 + bf/2)*S (in "all" mode)
+    
+    let minX = 0, minY = 0, maxX = 100, maxY = 100;
+
+    if (viewMode === 'elevation' || viewMode === 'all') {
+        const cx = (legendWidth + beamLen/2 + 2) * S;
+        const cy = (d/2 + 7) * S;
+        // Content Bounds relative to cx,cy:
+        // X: [(-beamLen/2 - legendWidth), beamLen/2] -> Total Width ~ (beamLen + legendWidth)
+        // Y: [-d/2 - 5, d/2 + 5]
+        // Let's be generous
+        const x1 = cx + (-beamLen/2 - legendWidth - 1) * S;
+        const x2 = cx + (beamLen/2 + 1) * S;
+        const y1 = cy + (-d/2 - 5) * S;
+        const y2 = cy + (d/2 + 5) * S;
+        
+        if (viewMode === 'elevation') {
+            minX = x1; maxX = x2; minY = y1; maxY = y2;
+        } else {
+           // 'all' mode accumulation logic could be added here, but usually 'all' is fixed canvas.
+           // Leaving 'all' logic to rely on fixed layout or just initial big box if needed.
+           // Since report uses single views, we mainly care about specific views.
         }
-    } catch(e) {
-        // Fallback or ignore if bbox not ready
     }
+
+    if (viewMode === 'section') {
+        // Section is drawn at x=0 (shifted internally if viewMode!=all, line 416)
+        // const finalSectX = viewMode === "all" ? ... : 0;
+        // So the group is centered at X=0.
+        const cx = 0; 
+        const cy = (d/2 + 7) * S;
+        
+        const w_est = Math.max(bf, tw + 2*t_wp) + 6; // inches width
+        const h_est = d + 10;
+        
+        minX = cx - (w_est/2)*S;
+        maxX = cx + (w_est/2)*S;
+        minY = cy - (h_est/2)*S;
+        maxY = cy + (h_est/2)*S;
+    }
+    
+    if (viewMode === 'plan') {
+         // planY = bf/2 + 20; planX = 0;
+         const cx = 0; // The code uses createGroup(planX, planY). For viewMode=plan, planX=0.
+         // Actually line 500: const planX = viewMode === "all" ? ... : 0;
+         // So cx = 0 * S = 0.
+         const cy = (bf/2 + 20) * S;
+         
+         const w_est = beamLen + legendWidth + 4; 
+         const h_est = bf + H_fp + 10;
+         
+         // Plan draws centered horizontally around planX?
+         // drawRect(planG, -beamLen/2 ...) -> Yes, centered around 0.
+         minX = -(beamLen/2 + 1)*S;
+         maxX = (beamLen/2 + 1)*S;
+         minY = cy - (bf/2 + H_fp/2 + 5)*S;
+         maxY = cy + (bf/2 + H_fp/2 + 5)*S;
+    }
+    
+    // Apply ViewBox
+    svg.setAttribute("viewBox", `${minX - padding} ${minY - padding} ${maxX - minX + padding*2} ${maxY - minY + padding*2}`);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 }
 
 
+
 // --- 3D DIAGRAM LOGIC (Babylon.js) ---
+
 function draw3dSpliceDiagram() {
     const canvas = document.getElementById("splice-3d-canvas");
     if (!canvas || typeof BABYLON === 'undefined') return;
 
+    // --- Clear previous dimensions ---
+    if (dimensionElements) {
+        if (dimensionElements.meshes) dimensionElements.meshes.forEach(m => m.dispose());
+        if (dimensionElements.labels) dimensionElements.labels.forEach(l => l.dispose());
+    }
+    dimensionElements = { meshes: [], labels: [] }; // Reset
+
+    // --- Inputs (Safe Fallbacks) ---
     // --- Inputs (Safe Fallbacks) ---
     const rawInputs = gatherInputsFromIds(diagramInputIds);
     const inputs = {};
-    for (let k in rawInputs) inputs[k] = parseFloat(rawInputs[k]) || 0;
+    for (let k in rawInputs) {
+        // parsing float only for numeric fields, keeping strings for keys like member_shape_type
+        const val = parseFloat(rawInputs[k]);
+        inputs[k] = isNaN(val) ? rawInputs[k] : val; 
+    }
     
-    if (inputs.member_d === 0) inputs.member_d = 18;
-    if (inputs.member_bf === 0) inputs.member_bf = 7.5;
-    if (inputs.D_fp === 0) inputs.D_fp = 0.75;
-    if (inputs.D_wp === 0) inputs.D_wp = 0.75;
+    // Ensure numeric fallbacks for dimensions specifically
+    if (!inputs.member_d || typeof inputs.member_d !== 'number') inputs.member_d = 0; 
+    if (inputs.member_d === 0) inputs.member_d = 18; // Default only if 0
+    if (!inputs.member_bf) inputs.member_bf = 7.5;
+    if (!inputs.D_fp) inputs.D_fp = 0.75;
+    if (!inputs.D_wp) inputs.D_wp = 0.75;
 
     // --- Engine & Scene ---
     if (!bjsEngine) {
@@ -600,10 +702,86 @@ function draw3dSpliceDiagram() {
     const matBolt = new BABYLON.StandardMaterial("bolt", bjsScene);
     matBolt.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
 
+    // --- 3D Dimension Helper ---
+    const create3DDimension = (p1, p2, text, offset, planeNormal = new BABYLON.Vector3(0, 1, 0)) => {
+        const dist = BABYLON.Vector3.Distance(p1, p2);
+        if (dist < 0.01) return;
+
+        // Direction vectors
+        const vDir = p2.subtract(p1).normalize();
+        
+        // Offset vector (perpendicular to direction usually, provided by caller or calculated)
+        // Here we use the passed 'offset' vector directly relative to p1/p2
+        const p1_ext = p1.add(offset);
+        const p2_ext = p2.add(offset);
+        
+        // Extension lines
+        const ext1 = BABYLON.MeshBuilder.CreateLines("ext1", { points: [p1, p1_ext] }, bjsScene);
+        ext1.color = BABYLON.Color3.Black();
+        const ext2 = BABYLON.MeshBuilder.CreateLines("ext2", { points: [p2, p2_ext] }, bjsScene);
+        ext2.color = BABYLON.Color3.Black();
+        
+        // Main line (slightly offset from tip to allow for text clearing or just connect tips)
+        const mainLine = BABYLON.MeshBuilder.CreateLines("dimLine", { points: [p1_ext, p2_ext] }, bjsScene);
+        mainLine.color = BABYLON.Color3.Black();
+        
+        // Arrows (Cones) at p1_ext and p2_ext
+        const arrowSize = 0.5;
+        const arrow1 = BABYLON.MeshBuilder.CreateCylinder("a1", { diameterTop: 0, diameterBottom: arrowSize/2, height: arrowSize, tessellation: 12 }, bjsScene);
+        arrow1.position = p1_ext;
+        // Align to direction
+        arrow1.lookAt(p2_ext);
+        arrow1.rotation.x += Math.PI / 2; // Adjust for Cylinder orientation (Y-up default)
+        arrow1.material = matBolt; // Reuse black material
+
+        const arrow2 = BABYLON.MeshBuilder.CreateCylinder("a2", { diameterTop: 0, diameterBottom: arrowSize/2, height: arrowSize, tessellation: 12 }, bjsScene);
+        arrow2.position = p2_ext;
+        arrow2.lookAt(p1_ext);
+        arrow2.rotation.x += Math.PI / 2;
+        arrow2.material = matBolt;
+
+        // Text Label (Billboard)
+        const midPoint = p1_ext.add(p2_ext).scale(0.5);
+        
+        const planeWidth = 4;
+        const planeHeight = 1.5;
+        const plane = BABYLON.MeshBuilder.CreatePlane("txtVal", { width: planeWidth, height: planeHeight }, bjsScene);
+        plane.position = midPoint.add(offset.normalize().scale(0.5));
+        plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+        
+        const dt = new BABYLON.DynamicTexture("dt", {width:256, height:128}, bjsScene);
+        dt.hasAlpha = true;
+        
+        // Font
+        const ctx = dt.getContext();
+        ctx.font = "bold 60px Arial";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "black";
+        ctx.fillText(text, 128, 64);
+        dt.update();
+        
+        const matTxt = new BABYLON.StandardMaterial("matTxt", bjsScene);
+        matTxt.diffuseTexture = dt;
+        matTxt.opacityTexture = dt;
+        matTxt.emissiveColor = BABYLON.Color3.White(); // Self-lit
+        matTxt.disableLighting = true;
+        plane.material = matTxt;
+
+        // Add to tracking
+        if (dimensionElements && dimensionElements.meshes) {
+             dimensionElements.meshes.push(ext1, ext2, mainLine, arrow1, arrow2, plane);
+             const vis = (typeof areDimensionsVisible !== 'undefined') ? areDimensionsVisible : true;
+             [ext1, ext2, mainLine, arrow1, arrow2, plane].forEach(m => m.isVisible = vis);
+        }
+    };
+
     // --- Geometry: Beams ---
     const createBeam = (zOffset) => {
-        const { member_d: d, member_bf: bf, member_tf: tf, member_tw: tw } = inputs;
+        const { member_d: d, member_bf: bf, member_tf: tf, member_tw: tw, member_shape_type } = inputs;
         const len = 24;
+        const isHSS = member_shape_type === 'HSS Rectangular';
         
         const ft = BABYLON.MeshBuilder.CreateBox("ft", { width: bf, height: tf, depth: len }, bjsScene);
         ft.position.y = (d - tf)/2;
@@ -611,9 +789,25 @@ function draw3dSpliceDiagram() {
         const fb = BABYLON.MeshBuilder.CreateBox("fb", { width: bf, height: tf, depth: len }, bjsScene);
         fb.position.y = -(d - tf)/2;
         
-        const w = BABYLON.MeshBuilder.CreateBox("w", { width: tw, height: d - 2*tf, depth: len }, bjsScene);
+        let parts = [ft, fb];
+
+        if (isHSS) {
+             // Side walls for HSS (Left and Right)
+             const wallHeight = d - 2 * tf;
+             const wl = BABYLON.MeshBuilder.CreateBox("wl", { width: tw, height: wallHeight, depth: len }, bjsScene);
+             wl.position.x = -(bf - tw)/2;
+             
+             const wr = BABYLON.MeshBuilder.CreateBox("wr", { width: tw, height: wallHeight, depth: len }, bjsScene);
+             wr.position.x = (bf - tw)/2;
+             
+             parts.push(wl, wr);
+        } else {
+             // Center web for I-beam
+             const w = BABYLON.MeshBuilder.CreateBox("w", { width: tw, height: d - 2*tf, depth: len }, bjsScene);
+             parts.push(w);
+        }
         
-        const beam = BABYLON.Mesh.MergeMeshes([ft, fb, w], true, true, undefined, false, true);
+        const beam = BABYLON.Mesh.MergeMeshes(parts, true, true, undefined, false, true);
         beam.position.z = zOffset * (len/2 + inputs.gap/2);
         beam.material = matSteel;
     };
@@ -767,6 +961,36 @@ function draw3dSpliceDiagram() {
         });
     }
     
+    // --- Dimensions ---
+    const d = inputs.member_d;
+    const bf = inputs.member_bf;
+    const gap = inputs.gap;
+    const zEnd = 24 + gap/2 - 2; // Near end of right beam
+
+    // 1. Gap Dimension (Side view)
+    create3DDimension(
+        new BABYLON.Vector3(bf/2, 0, -gap/2),
+        new BABYLON.Vector3(bf/2, 0, gap/2),
+        `${gap}"`,
+        new BABYLON.Vector3(4, 0, 0)
+    );
+
+    // 2. Depth Dimension (At end of beam, Side view)
+    create3DDimension(
+        new BABYLON.Vector3(0, d/2, zEnd),
+        new BABYLON.Vector3(0, -d/2, zEnd),
+        `${d}"`,
+        new BABYLON.Vector3(bf/2 + 4, 0, 0)
+    );
+
+    // 3. Width Dimension (At end of beam, Top view)
+    create3DDimension(
+        new BABYLON.Vector3(-bf/2, d/2, zEnd),
+        new BABYLON.Vector3(bf/2, d/2, zEnd),
+        `${bf}"`,
+        new BABYLON.Vector3(0, 4, 0)
+    );
+
     // --- Render ---
     bjsEngine.runRenderLoop(() => bjsScene.render());
 }
@@ -1607,10 +1831,10 @@ const baseBreakdownGenerators = {
         return common.format_list([
             `<u>Nominal Shear Strength per bolt (R<sub>n,bolt</sub>)</u>`,
             `R<sub>n,bolt</sub> = F<sub>nv</sub> &times; A<sub>b</sub> &times; n<sub>planes</sub>`,
-            `R<sub>n,bolt</sub> = ${common.fmt(check.Fnv, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² &times; ${check.num_planes} = ${common.fmt(details.Rn_single)} kips${wasReducedText}`,
+            `R<sub>n,bolt</sub> = ${common.fmt(check.Fnv, 1)} ksi (Gr.${check.grade || '?'}) &times; ${common.fmt(check.Ab, 3)} in² (&empty;${common.fmt(check.db, 3)}") &times; ${check.num_planes} planes = ${common.fmt(details.Rn_single)} kips${wasReducedText}`,
             `<u>Total Nominal Strength (R<sub>n</sub>)</u>`,
             `R<sub>n</sub> = R<sub>n,bolt</sub> &times; n<sub>bolts</sub>`,
-            `R<sub>n</sub> = ${common.fmt(details.Rn_single)} kips &times; ${details.num_bolts} = <b>${common.fmt(check.Rn)} kips</b>`,
+            `R<sub>n</sub> = ${common.fmt(details.Rn_single)} kips &times; ${details.num_bolts} bolts = <b>${common.fmt(check.Rn)} kips</b>`,
             `<u>Design Capacity</u>`,
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
@@ -1618,7 +1842,7 @@ const baseBreakdownGenerators = {
     'GSY': ({ check }, common) => common.format_list([
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4-1</u>`,
         `R<sub>n</sub> = F<sub>y</sub> &times; A<sub>g</sub>`,
-        `R<sub>n</sub> = ${common.fmt(check.Fy, 1)} ksi &times; ${common.fmt(check.Ag, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
+        `R<sub>n</sub> = ${common.fmt(check.Fy, 1)} ksi (F<sub>y</sub>) &times; ${common.fmt(check.Ag, 3)} in² (A<sub>g</sub>) = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
@@ -1626,16 +1850,16 @@ const baseBreakdownGenerators = {
         `<u>Net Area (A<sub>n</sub>) per AISC J4.1</u>`,
         `A<sub>n</sub> = A<sub>g</sub> - A<sub>holes</sub> = ${common.fmt(check.Ag, 3)} - ${common.fmt(check.A_holes, 3)} = <b>${common.fmt(check.An, 3)} in²</b>`,
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.1(b)</u>`,
-        `R<sub>n</sub> = F<sub>u</sub> &times; A<sub>n</sub> (Shear lag factor U=1.0 for splice plates)`,
-        `R<sub>n</sub> = ${common.fmt(check.Fu)} ksi &times; ${common.fmt(check.An, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
+        `R<sub>n</sub> = F<sub>u</sub> &times; A<sub>n</sub> &times; U (Shear lag factor U=${common.fmt(check.U || 1.0)})`,
+        `R<sub>n</sub> = ${common.fmt(check.Fu)} ksi (F<sub>u</sub>) &times; ${common.fmt(check.An, 3)} in² (A<sub>n</sub>) &times; ${common.fmt(check.U || 1.0)} = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Block Shear': ({ check }, common) => common.format_list([
         `<u>Nominal Strength per AISC J4.3</u>`,
-        `Shear Rupture Path: 0.6 × F<sub>u</sub> × A<sub>nv</sub> = ${common.fmt(check.details.shear_rupture_term)} kips`,
-        `Tension Rupture Path: U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.details.tension_rupture_term)} kips`,
-        `Shear Yield Limit: 0.6 × F<sub>y</sub> × A<sub>gv</sub> + U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.details.shear_yield_limit)} kips`,
+        `Shear Rupture Path: 0.6 × F<sub>u</sub> × A<sub>nv</sub> = 0.6 × ${common.fmt(check.Fu)} × ${common.fmt(check.Anv, 3)} = ${common.fmt(check.details.shear_rupture_term)} kips`,
+        `Tension Rupture Path: U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.Ubs)} × ${common.fmt(check.Fu)} × ${common.fmt(check.Ant, 3)} = ${common.fmt(check.details.tension_rupture_term)} kips`,
+        `Shear Yield Limit: 0.6 × F<sub>y</sub> × A<sub>gv</sub> + U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = (0.6 × ${common.fmt(check.Fy)} × ${common.fmt(check.Agv, 3)}) + ${common.fmt(check.details.tension_rupture_term)} = ${common.fmt(check.details.shear_yield_limit)} kips`,
         `R<sub>n</sub> = min(paths) = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
         `Capacity = ${common.capacity_eq} = <b>${common.fmt(common.final_capacity)} kips</b>`
@@ -1643,18 +1867,23 @@ const baseBreakdownGenerators = {
     'Bolt Bearing': ({ check, details, demand }, common) => {
         const tearout_coeff = common.inputs.deformation_is_consideration ? 1.2 : 1.5;
         const bearing_coeff = common.inputs.deformation_is_consideration ? 2.4 : 3.0;
+        const t = check.t_ply ?? check.t ?? 0;
+        const Fu = check.Fu_ply ?? check.Fu ?? 0;
+        const db = check.db ?? 0;
+
         return common.format_list([
             `Bolt Bearing per AISC J3.10`,
             `Deformation at bolt holes is ${common.inputs.deformation_is_consideration ? '' : '<b>not</b> '}a design consideration.`,
+            `Plate Thickness t = ${common.fmt(t, 3)} in, F<sub>u</sub> = ${common.fmt(Fu, 1)} ksi, Bolt &empty; = ${common.fmt(db, 3)} in`,
             `<strong>Edge Bolts (per bolt):</strong>`,
             `L<sub>c</sub> = L<sub>e</sub> - d<sub>h</sub>/2 = ${common.fmt(details.edge.Lc, 3)} in`,
-            `R<sub>n,tearout</sub> = ${tearout_coeff} &times; L<sub>c</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(details.edge.Rn_tearout)} kips`,
-            `R<sub>n,bearing</sub> = ${bearing_coeff} &times; d<sub>b</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(details.edge.Rn_bearing)} kips`,
+            `R<sub>n,tearout</sub> = ${tearout_coeff} &times; L<sub>c</sub> &times; t &times; F<sub>u</sub> = ${tearout_coeff} &times; ${common.fmt(details.edge.Lc, 3)} &times; ${common.fmt(t, 3)} &times; ${common.fmt(Fu, 1)} = ${common.fmt(details.edge.Rn_tearout)} kips`,
+            `R<sub>n,bearing</sub> = ${bearing_coeff} &times; d<sub>b</sub> &times; t &times; F<sub>u</sub> = ${bearing_coeff} &times; ${common.fmt(db, 3)} &times; ${common.fmt(t, 3)} &times; ${common.fmt(Fu, 1)} = ${common.fmt(details.edge.Rn_bearing)} kips`,
             `R<sub>n,edge</sub> = min(Tearout, Bearing) = ${common.fmt(details.edge.Rn)} kips`,
             `<strong>Interior Bolts (per bolt):</strong>`,
             `L<sub>c</sub> = s - d<sub>h</sub> = ${common.fmt(details.int.Lc, 3)} in`,
-            `R<sub>n,tearout</sub> = ${tearout_coeff} &times; L<sub>c</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(details.int.Rn_tearout)} kips`,
-            `R<sub>n,bearing</sub> = ${bearing_coeff} &times; d<sub>b</sub> &times; t &times; F<sub>u</sub> = ${common.fmt(details.int.Rn_bearing)} kips`,
+            `R<sub>n,tearout</sub> = ${tearout_coeff} &times; L<sub>c</sub> &times; t &times; F<sub>u</sub> = ${tearout_coeff} &times; ${common.fmt(details.int.Lc, 3)} &times; ${common.fmt(t, 3)} &times; ${common.fmt(Fu, 1)} = ${common.fmt(details.int.Rn_tearout)} kips`,
+            `R<sub>n,bearing</sub> = ${bearing_coeff} &times; d<sub>b</sub> &times; t &times; F<sub>u</sub> = ${bearing_coeff} &times; ${common.fmt(db, 3)} &times; ${common.fmt(t, 3)} &times; ${common.fmt(Fu, 1)} = ${common.fmt(details.int.Rn_bearing)} kips`,
             `R<sub>n,int</sub> = min(Tearout, Bearing) = ${common.fmt(details.int.Rn)} kips`,
             `<u>Total Nominal Strength (R<sub>n</sub>)</u>`,
             `R<sub>n</sub> = n<sub>edge</sub> &times; R<sub>n,edge</sub> + n<sub>int</sub> &times; R<sub>n,int</sub>`,
@@ -1670,23 +1899,33 @@ const baseBreakdownGenerators = {
             `Resultant Demand = √(V² + H²) = √(${common.fmt(details.V_load)}² + ${common.fmt(details.Hw)}²) = <b>${common.fmt(demand)} kips</b>`,
             `Load Angle (θ) = atan2(H, V) = <b>${common.fmt(details.theta_deg, 1)}°</b>`,
             `Effective Eccentricity (e_eff) = (V × e) / Resultant = (${common.fmt(details.V_load)} × ${common.fmt(details.eccentricity)}) / ${common.fmt(demand)} = <b>${common.fmt(details.e_eff, 2)} in</b>`,
-            `Bolt Group Coefficient (C) = <b>${common.fmt(details.C, 2)}</b> (iterative convergence on ICR location)`,
+            `Bolt Group Coefficient (C) = <b>${common.fmt(details.C, 2)}</b> (from AISC Table 7-1 or iterative calc)`,
             `Single Bolt Capacity (R_n,bolt) = <b>${common.fmt(details.Rn_single)} kips</b>`,
             `Nominal Group Capacity (R_n,group) = C × R_n,bolt = ${common.fmt(details.C, 2)} × ${common.fmt(details.Rn_single)} = <b>${common.fmt(check.Rn)} kips</b>`,
             `Design Capacity = ${common.capacity_eq} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
     },
+    'Web Bolt Slip': ({ check }, common) => common.format_list([
+        `<u>Slip Critical Check per AISC J3.8</u>`,
+        `Surface Class: ${check.fsc || 'A'} (&mu;=${common.fmt(check.mu, 2)}), D<sub>u</sub>=${common.fmt(check.du, 2)}, h<sub>f</sub>=${common.fmt(check.hf, 2)}, T<sub>b</sub>=${common.fmt(check.tb)} kips`,
+        `R<sub>n</sub> = &mu; &times; D<sub>u</sub> &times; h<sub>f</sub> &times; T<sub>b</sub> &times; n<sub>s</sub>`,
+        `R<sub>n</sub> = ${common.fmt(check.mu, 2)} &times; ${common.fmt(check.du, 2)} &times; ${common.fmt(check.hf, 2)} &times; ${common.fmt(check.tb)} &times; ${check.num_planes}`,
+        `R<sub>n</sub> (per bolt) = ${common.fmt(check.Rn / (check.num_bolts || check.num_planes * 1))} kips`, 
+        `Total R<sub>n</sub> = <b>${common.fmt(check.Rn)} kips</b>`,
+        `<u>Design Capacity</u>`,
+        `Capacity = ${common.capacity_eq} = <b>${common.fmt(common.final_capacity)} kips</b>`
+    ]),
     'Shear Yield': ({ check }, common) => common.format_list([
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.2(a)</u>`,
         `R<sub>n</sub> = 0.6 &times; F<sub>y</sub> &times; A<sub>gv</sub>`,
-        `R<sub>n</sub> = 0.6 &times; ${common.fmt(check.Fy, 1)} ksi &times; ${common.fmt(check.Agv, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
+        `R<sub>n</sub> = 0.6 &times; ${common.fmt(check.Fy, 1)} ksi (F<sub>y</sub>) &times; ${common.fmt(check.Agv, 3)} in² (A<sub>gv</sub>) = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
     'Shear Rupture': ({ check }, common) => common.format_list([
         `<u>Nominal Strength (R<sub>n</sub>) per AISC J4.1</u>`,
         `R<sub>n</sub> = 0.6 &times; F<sub>u</sub> &times; A<sub>nv</sub>`,
-        `R<sub>n</sub> = 0.6 &times; ${common.fmt(check.Fu, 1)} ksi &times; ${common.fmt(check.Anv, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
+        `R<sub>n</sub> = 0.6 &times; ${common.fmt(check.Fu, 1)} ksi (F<sub>u</sub>) &times; ${common.fmt(check.Anv, 3)} in² (A<sub>nv</sub>) = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
@@ -1696,7 +1935,8 @@ const baseBreakdownGenerators = {
         `Available Tensile Stress (F'<sub>nt</sub>) = 1.3&times;F<sub>nt</sub> - (${common.factor_char}&times;F<sub>nt</sub>/F<sub>nv</sub>)&times;f<sub>rv</sub>`,
         `F'<sub>nt</sub> = 1.3&times;${common.fmt(check.Fnt, 1)} - (${common.factor_val}&times;${common.fmt(check.Fnt, 1)}/${common.fmt(check.Fnv, 1)})&times;${common.fmt(check.fv)} = ${common.fmt(check.F_nt_prime)} ksi`,
         `<u>Adjusted Nominal Tensile Strength (R<sub>n</sub>)</u>`,
-        `R<sub>n</sub> = F'<sub>nt</sub> &times; A<sub>b</sub> = ${common.fmt(check.F_nt_prime)} &times; ${common.fmt(check.Ab, 3)} = <b>${common.fmt(check.Rn)} kips</b>`,
+        `R<sub>n</sub> = F'<sub>nt</sub> &times; A<sub>b</sub>`,
+        `R<sub>n</sub> = ${common.fmt(check.F_nt_prime)} ksi &times; ${common.fmt(check.Ab, 3)} in² (&empty;${common.fmt(check.db, 3)}") = <b>${common.fmt(check.Rn)} kips</b>`,
         `<u>Design Capacity</u>`,
         `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
     ]),
@@ -1710,7 +1950,7 @@ const baseBreakdownGenerators = {
     ]),
     'Flange Bolt Tension with Prying': (data, common) => {
         const { demand, check, details } = data; 
-        const outer_pry = details.outer ? `Outer Plate Q = ${common.fmt(details.outer.Q)} kips (t<sub>c</sub>=${common.fmt(details.outer.tc, 3)} in)` : '';
+        const outer_pry = details.outer ? `Outer Plate Q = ${common.fmt(details.outer.Q)} kips (t<sub>c</sub>=${common.fmt(details.outer.tc, 3)} in)` : 'Outer Plate: No prying force';
         const inner_pry = details.inner ? `Inner Plate Q = ${common.fmt(details.inner.Q)} kips (t<sub>c</sub>=${common.fmt(details.inner.tc, 3)} in)` : '';
         return common.format_list([
             `Prying action per AISC Manual Part 9.`, outer_pry, inner_pry,
@@ -1718,11 +1958,12 @@ const baseBreakdownGenerators = {
             `T<sub>req</sub> = B + Q = ${common.fmt(details.B_per_bolt)} + ${common.fmt(details.Q_total)} = <b>${common.fmt(demand)} kips</b>`,
             `<u>Bolt Tensile Capacity (R<sub>n</sub>)</u>`,
             `R<sub>n</sub> = F<sub>nt</sub> &times; A<sub>b</sub>`,
-            `R<sub>n</sub> = ${common.fmt(check.Fnt, 1)} ksi &times; ${common.fmt(check.Ab, 3)} in² = <b>${common.fmt(check.Rn)} kips</b>`,
+            `R<sub>n</sub> = ${common.fmt(check.Fnt, 1)} ksi (Gr.${check.grade || '?'}) &times; ${common.fmt(check.Ab, 3)} in² (&empty;${common.fmt(check.db, 3)}") = <b>${common.fmt(check.Rn)} kips</b>`,
             `<u>Design Capacity</u>`,
             `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`
         ]);
     },
+    'Web Bolt Tension with Prying': (data, common) => baseBreakdownGenerators['Flange Bolt Tension with Prying'](data, common),
     'Beam Flexural Yielding': ({ check }, common) => common.format_list([
         `<u>Flexural Yielding Check per AISC F2.1</u>`,
         `Nominal Moment Strength (M<sub>n</sub>) = F<sub>y</sub> &times; Z<sub>x</sub>`,
@@ -1766,7 +2007,8 @@ const baseBreakdownGenerators = {
         const slenderness_limit = 4.71 * Math.sqrt(29000 / check.Fy);
         let fcr_calc = `Since &lambda; &le; 25, F<sub>cr</sub> = F<sub>y</sub> = ${common.fmt(check.Fy)} ksi`;
         if (check.slenderness > 25) {
-            fcr_calc = `<li>Elastic Buckling Stress (F<sub>e</sub>) = (&pi;² &times; E) / &lambda;² = ${common.fmt(check.Fe)} ksi</li><li>Since F<sub>y</sub> / F<sub>e</sub> = ${(check.Fy / check.Fe).toFixed(3)} &le; 2.25, F<sub>cr</sub> = [0.658<sup>(Fy/Fe)</sup>] &times; F<sub>y</sub> = ${common.fmt(check.Fcr)} ksi</li>`;
+            fcr_calc = `<li>Elastic Buckling Stress (F<sub>e</sub>) = (&pi;² &times; E) / &lambda;² = (&pi;² &times; ${common.fmt(check.E)}) / ${common.fmt(check.slenderness)}² = ${common.fmt(check.Fe)} ksi</li>` + 
+                       `<li>Since F<sub>y</sub> / F<sub>e</sub> = ${common.fmt(check.Fy,1)} / ${common.fmt(check.Fe,1)} = ${(check.Fy / check.Fe).toFixed(3)} &le; 2.25, F<sub>cr</sub> = [0.658<sup>(Fy/Fe)</sup>] &times; F<sub>y</sub> = ${common.fmt(check.Fcr)} ksi</li>`;
         }
         return common.format_list([
             `<u>Compressive Strength per AISC Chapter E</u>`,
@@ -1841,12 +2083,39 @@ function generateSpliceBreakdownHtml(name, data, inputs) {
     return generator(data, common);
 }
 
+function updateMemberLabels(type) {
+    const isHSS = (type === 'HSS Rectangular');
+    const setLabel = (id, text) => { const el = document.querySelector(`label[for="${id}"]`); if (el) el.textContent = text; };
+
+    setLabel('member_d', isHSS ? 'Height (Ht)' : 'Depth (d)');
+    setLabel('member_bf', isHSS ? 'Width (B)' : 'Flange (bf)');
+    setLabel('member_tw', isHSS ? 'Wall Des (tdes)' : 'Web (tw)');
+    
+    // For HSS, tf is same as tw (tdes). We can hide tf or just label it.
+    // Let's label it 'Wall Nom (nom)' or similar, but actually HSS usually specifies t_des.
+    // If we want to support both axes having plates, we treat B as "Flange" side and Ht as "Web" side.
+    setLabel('member_tf', isHSS ? 'Wall (tdes)' : 'Flange (tf)');
+    
+    // Hide/Show logic could go here if we wanted to hide tf input for HSS
+    const tfInput = document.getElementById('member_tf');
+    if (tfInput) {
+        if (isHSS) {
+             // Maybe make it read-only and sync with tw? 
+             // Logic in handleShapeSelection will handle values.
+             // Visual hiding might be confusing if user wants to see it?
+             // Let's keep it visible but maybe grayed out if auto-populated?
+        }
+    }
+}
+
 async function populateShapeDropdown() {
     const shapeSelect = document.getElementById('aisc_shape_select');
     const shapeTypeSelect = document.getElementById('member_shape_type');
     if (!shapeSelect || !shapeTypeSelect) return;
     try {
         const selectedType = shapeTypeSelect.value;
+        updateMemberLabels(selectedType); // Update labels based on type
+        
         const shapes = await AISC_SPEC.getShapesByType(selectedType);
         const shapeNames = Object.keys(shapes).sort();
         const currentVal = shapeSelect.value;
@@ -1869,7 +2138,23 @@ async function handleShapeSelection() {
     }
     const shape = await AISC_SPEC.getShape(shapeName);
     if (!shape) return;
-    const propertyMap = { 'member_d': shape.d, 'member_bf': shape.bf, 'member_tf': shape.tf, 'member_tw': shape.tw, 'member_Zx': shape.Zx, 'member_Sx': shape.Sx };
+
+    let d = shape.d;
+    let bf = shape.bf;
+    let tf = shape.tf;
+    let tw = shape.tw;
+
+    if (shape.type === 'HSS' || shape.type === 'HSS Rectangular') {
+        // Database uses d, bf, tf, tw (or tdes)
+        d = shape.d;
+        bf = shape.bf;
+        // Check if tdes exists, otherwise use tf/tw
+        const t = shape.tdes || shape.tf || shape.tw;
+        tf = t;
+        tw = t;
+    }
+
+    const propertyMap = { 'member_d': d, 'member_bf': bf, 'member_tf': tf, 'member_tw': tw, 'member_Zx': shape.Zx, 'member_Sx': shape.Sx };
     Object.keys(propertyMap).forEach(id => {
         const el = document.getElementById(id);
         if (el && propertyMap[id] !== undefined) { el.value = propertyMap[id]; el.readOnly = true; }
@@ -1932,55 +2217,41 @@ async function populateReportDiagrams() {
     
     // Robust 2D Capture
     const ns = "http://www.w3.org/2000/svg";
-    const renderView = async (view) => {
+    // Simplified & Robust 2D Capture (No DOM mounting needed)
+    // const ns = "http://www.w3.org/2000/svg"; // Already declared in scope above if reusing, but let's be safe and check scope.
+    // Actually, `ns` is declared at line 1934 in the previous context of the function? 
+    // Wait, the previous block I replaced STARTED with `// Robust 2D Capture`.
+    // The `ns` was likely inside `populateReportDiagrams`. 
+    // Let's just remove the duplicate declaration if it exists.
+    
+    // In the previous replace, I replaced from `// Robust 2D Capture`...
+    // The new block has `const ns = ...`.
+    // The error says "Cannot redeclare block-scoped variable 'ns'".
+    // This implies `ns` is declared TWICE in the same block.
+    // Let's explicitly scope the helper or just use the existing one.
+    
+    const ns2 = "http://www.w3.org/2000/svg";
+    const renderView = (view) => {
         const targetImg = document.getElementById(`report-img-2d-${view}`);
         if (!targetImg) return;
 
-        const tempSvg = document.createElementNS(ns, "svg");
-        tempSvg.setAttribute("xmlns", ns);
-        // Explicit dimensions for reliable BBox
-        tempSvg.setAttribute("width", "900"); 
-        tempSvg.setAttribute("height", "600");
-        tempSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        
-        // Append to body but hidden (must be in layout for getBBox)
-        tempSvg.style.position = "fixed";
-        tempSvg.style.left = "0";
-        tempSvg.style.top = "0";
-        tempSvg.style.opacity = "0";
-        tempSvg.style.pointerEvents = "none";
-        document.body.appendChild(tempSvg);
+        const tempSvg = document.createElementNS(ns2, "svg");
+        tempSvg.setAttribute("xmlns", ns2);
         
         try {
             draw2dSpliceDiagram(tempSvg, view);
-            
-            // Allow layout cycle
-            await new Promise(requestAnimationFrame);
-            await new Promise(requestAnimationFrame);
-            
-            // Ensure viewBox is set
-            try {
-                const bbox = tempSvg.getBBox();
-                if(bbox.width > 0 && bbox.height > 0) {
-                     tempSvg.setAttribute("viewBox", `${bbox.x - 20} ${bbox.y - 20} ${bbox.width + 40} ${bbox.height + 40}`);
-                }
-            } catch(e) {}
-            
             const xml = new XMLSerializer().serializeToString(tempSvg);
-            // Safe encoding
             const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
             targetImg.src = dataUrl;
         } catch(e) {
             console.warn(`Failed to capture 2D ${view}:`, e);
-            targetImg.alt = "Diagram failed";
-        } finally {
-            if(tempSvg.parentNode) document.body.removeChild(tempSvg);
+            targetImg.alt = "Diagram failed to generate";
         }
     };
 
-    await renderView("elevation");
-    await renderView("section");
-    await renderView("plan");
+    renderView("elevation");
+    renderView("section");
+    renderView("plan");
 }
 
 function renderResults(results, rawInputs) {
@@ -2048,9 +2319,9 @@ function renderResults(results, rawInputs) {
     const appendixHtml = `<div class="mt-12 mb-6 border-b-2 border-gray-300 pb-2 bg-gray-50 p-4 rounded-t-lg"><h2 class="text-2xl font-bold text-gray-800 uppercase tracking-wide">Appendix A: Fabrication & Drafting Details</h2></div>`;
     report.addSection(null, appendixHtml);
 const diagramSectionHtml = `
-<div class="grid grid-cols-1 gap-8 mb-6">
+<div class="grid grid-cols-3 gap-4 mb-6">
   <div class="flex flex-col items-center">
-    <h4 class="font-bold text-lg mb-2 text-gray-800">2D Elevation</h4>
+    <h4 class="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">2D Elevation</h4>
     <div class="border rounded p-2 bg-white w-full h-[350px] flex items-center justify-center shadow-sm overflow-hidden">
       <img id="report-img-2d-elevation"
            src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
@@ -2059,29 +2330,29 @@ const diagramSectionHtml = `
     </div>
   </div>
 
-  <div class="grid grid-cols-2 gap-4 w-full">
-      <div class="flex flex-col items-center">
-        <h4 class="font-bold text-lg mb-2 text-gray-800">2D Section</h4>
-        <div class="border rounded p-2 bg-white w-full h-[350px] flex items-center justify-center shadow-sm overflow-hidden">
-          <img id="report-img-2d-section"
-               src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
-               alt="Section Diagram"
-               class="max-h-full max-w-full object-contain" />
-        </div>
-      </div>
-      <div class="flex flex-col items-center">
-        <h4 class="font-bold text-lg mb-2 text-gray-800">2D Plan</h4>
-        <div class="border rounded p-2 bg-white w-full h-[350px] flex items-center justify-center shadow-sm overflow-hidden">
-          <img id="report-img-2d-plan"
-               src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
-               alt="Plan Diagram"
-               class="max-h-full max-w-full object-contain" />
-        </div>
-      </div>
+  <div class="flex flex-col items-center">
+    <h4 class="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">2D Section</h4>
+    <div class="border rounded p-2 bg-white w-full h-[350px] flex items-center justify-center shadow-sm overflow-hidden">
+      <img id="report-img-2d-section"
+           src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+           alt="Section Diagram"
+           class="max-h-full max-w-full object-contain" />
+    </div>
   </div>
 
+  <div class="flex flex-col items-center">
+    <h4 class="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">2D Plan</h4>
+    <div class="border rounded p-2 bg-white w-full h-[350px] flex items-center justify-center shadow-sm overflow-hidden">
+      <img id="report-img-2d-plan"
+           src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+           alt="Plan Diagram"
+           class="max-h-full max-w-full object-contain" />
+    </div>
+  </div>
+</div>
+
   <div class="flex flex-col items-center mt-4">
-    <h4 class="font-bold text-lg mb-2 text-gray-800">3D Visualization</h4>
+    <h4 class="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">3D Visualization</h4>
     <div class="border rounded p-2 bg-white w-full h-[500px] flex items-center justify-center shadow-sm overflow-hidden">
       <img id="report-img-3d"
            src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="

@@ -1497,6 +1497,13 @@ function generateBasePlateBreakdownHtml(name, data, inputs, results) {
     const { check } = data;
     const details = data.details || check.details;
 
+    // --- Backend Override ---
+    // If the backend provides a pre-formatted breakdown, use it directly.
+    // This allows for "educational" content to be generated on the server side.
+    if (details && details.breakdown) {
+        return details.breakdown;
+    }
+
     // --- Special Handler for Concrete Bearing ---
     if (name === 'Concrete Bearing') {
         const { e_x, e_y, Mux, Muy, P_abs, bearing_case, breakdown_formula, f_p_max } = details;

@@ -270,14 +270,24 @@ def generate_stm_template(template_type, geometry):
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)
     # This exposes 'gui', 'aisc', 'js', etc.
-    project_root = resource_path('.')
+    # We use the parent directory of 'backend' (where this script resides)
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(backend_dir, '..'))
+    
+    # Also support PyInstaller if needed (though _MEIPASS usually handles temp dirs)
+    if hasattr(sys, '_MEIPASS'):
+        project_root = sys._MEIPASS
+        
     print(f"Eel serving from: {project_root}")
     eel.init(project_root)
     
     print("Starting Eel App...")
     # Start the app opening the index.html located in gui/
     # Try port 8000 specifically to allow browser refreshes to work after server restart
-    start_options = {'size': (1200, 800)}
+    start_options = {
+        'size': (1200, 800),
+        'close_callback': lambda route, websockets: None  # Keep running when window closes/navigates
+    }
     
     def start_eel(port):
         try:

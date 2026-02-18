@@ -146,11 +146,11 @@ def find_lightest_beam(inputs):
     cb = float(inputs.get('cb', 1.0))
     
     # Determine Required Moment
+    span_ft = float(inputs.get('span_ft', 0))
+    w_load = float(inputs.get('w_load', 0))
     m_req = float(inputs.get('mu_req', 0))
     if m_req == 0:
-        span = float(inputs.get('span_ft', 0))
-        w = float(inputs.get('w_load', 0))
-        m_req = (w * span * span) / 8.0
+        m_req = (w_load * span_ft * span_ft) / 8.0
         
     max_depth = float(inputs.get('max_depth', 9999))
     max_ratio = float(inputs.get('max_ratio', 1.0))
@@ -166,8 +166,14 @@ def find_lightest_beam(inputs):
     # 3. Iterate
     print(f"DEBUG: Processing {len(shapes)} shapes from DB.")
     
+    cant_ft = float(inputs.get('cantilever_ft', 0))
+    is_cantilever = cant_ft > 0
+    # span_ft and w_load relative to "User" are already defined above.
+
+    if is_cantilever:
+        print(f"DEBUG: CANTILEVER MODE. L_cant={cant_ft}, L_back={span_ft}, w_user={w_load}")
+
     for name, props in shapes.items():
-        # Metric check filter (some DBs have metric)
         # Metric check filter (some DBs have metric)
         if shape_type not in name: 
             # Basic check: Ensure the shape name starts with or contains the type.
@@ -186,6 +192,54 @@ def find_lightest_beam(inputs):
         # Check required props
         if not all(k in props for k in ['Zx', 'Sx', 'ry', 'J']):
             continue
+        
+        # --- STATIC ANALYSIS (Moment & Deflection) ---
+        # Calculate these PER SHAPE because Self-Weight matters
+        
+        current_m_req = m_req # Default from input
+        fos_ot = 999.0
+        
+        if is_cantilever:
+            w_beam = weight / 1000.0 # klf
+            w_cant_total = w_load + w_beam
+            w_back_total = w_beam # Backspan SW only
+            
+            # Moment at Support (Cantilever side) matches User input M usually, but we must add SW
+            # M_cant = (w * a^2) / 2
+            # Note: inputs['mu_req'] passed from frontend ALREADY includes User Load Moment.
+            # But it DOES NOT include Self-Weight Moment.
+            # We should recalculate TOTAL Required Moment here to be safe and accurate.
+            
+            m_cant_load = (w_load * cant_ft**2) / 2.0
+            m_cant_sw = (w_beam * cant_ft**2) / 2.0
+            m_cant_total = m_cant_load + m_cant_sw
+            
+            # Use this as the demand
+            current_m_req = m_cant_total
+            
+            # Stability / Overturning
+            # Overturning Moment about Fulcrum (Cantilever Load + SW)
+            # Center of User Load is L_cant/2. Center of SW is L_cant/2.
+            m_ot = (w_load * cant_ft * (cant_ft/2.0)) + (w_beam * cant_ft * (cant_ft/2.0))
+            
+            # Resisting Moment about Fulcrum (Backspan SW)
+            # Center of Backspan SW is L_span/2
+            m_res = (w_beam * span_ft * (span_ft/2.0))
+            
+            if m_ot > 0:
+                fos_ot = m_res / m_ot
+            else:
+                fos_ot = 999.0 # No overturning force
+            
+        else:
+            # Simple Span: Add SW Moment if M_req was calculated from Load
+            # If M_req was "Direct Input", we assume it includes SW or SW is negligible?
+            # Standard practice: Add SW moment.
+            # M_sw = w_sw * L^2 / 8
+            if inputs.get('w_load') is not None: # Meaning we are using Load-based
+                 w_beam = weight / 1000.0
+                 m_sw = (w_beam * span_ft**2) / 8.0
+                 current_m_req = m_req + m_sw
         
         # --- AISC F2 Logic ---
         ry = props['ry']
@@ -265,7 +319,7 @@ def find_lightest_beam(inputs):
             mp_avail = (mp_nominal / omega_osha) / 12.0
             mr_avail = (mr_nominal / omega_osha) / 12.0
             
-        ratio = m_req / capacity if capacity > 0 else 999
+        ratio = current_m_req / capacity if capacity > 0 else 999
         
         result_obj = {
             "name": name,
@@ -279,7 +333,8 @@ def find_lightest_beam(inputs):
             "Lr": lr_ft,
             "Ix": props.get('Ix', 0),
             "mode": mode,
-            "pass": capacity >= m_req
+            "pass": capacity >= current_m_req,
+            "fos_ot": fos_ot
         }
         
         # Capture Desired Shape (ignore depth limit)
@@ -318,33 +373,62 @@ def find_lightest_beam(inputs):
         defl_limit = 0.0
         defl_ratio = 0.0
         
-        if check_deflection:
-            # Need w_load and span. 
-            # If M_req was entered directly, we might not have reliable w/span unless user entered them.
-            # We will use the ones from inputs if available.
-            w = float(inputs.get('w_load', 0))
-            span = float(inputs.get('span_ft', 0))
-            
-            if w > 0 and span > 0:
-                # Delta = 5 * w * L^4 / (384 * E * I)
-                # w in k/ft -> convert to k/in: w / 12
-                # L in ft -> convert to in: L * 12
-                w_in = w / 12.0
-                L_in = span * 12.0
-                ix_val = props.get('Ix', 0)
-                
-                if ix_val > 0:
-                    numerator = 5 * w_in * (L_in ** 4)
-                    denominator = 384 * E * ix_val
-                    defl_val = numerator / denominator
+        if check_deflection or True: # Always calc deflection for display
+            ix_val = props.get('Ix', 0)
+            if ix_val > 0:
+                if is_cantilever:
+                    # Delta Tip Calculation
+                    # 1. Cantilever Bending (Load + SW)
+                    # Delta_1 = (w_total * L_cant^4) / (8 * E * I)
+                    w_cant_in = w_cant_total / 12.0 # k/in
+                    L_cant_in = cant_ft * 12.0
                     
-                    defl_limit = L_in / 240.0
-                    if defl_limit > 0:
-                        defl_ratio = defl_val / defl_limit
+                    term_bending = (w_cant_in * (L_cant_in**4)) / (8 * E * ix_val)
+                    
+                    # 2. Rotation from Backspan
+                    # Rotation due to Moment M_sup (Load + SW)
+                    # M_sup = m_cant_total (k-ft) -> convert to k-in
+                    M_sup_in = m_cant_total * 12.0
+                    L_back_in = span_ft * 12.0
+                    
+                    theta_moment = (M_sup_in * L_back_in) / (3 * E * ix_val)
+                    
+                    # Rotation due to Backspan SW (Opposing)
+                    # theta_sw = q * L^3 / 24EI
+                    w_back_in = w_back_total / 12.0
+                    theta_sw = (w_back_in * (L_back_in**3)) / (24 * E * ix_val)
+                    
+                    theta_net = theta_moment - theta_sw # Net rotation towards cantilever
+                    
+                    delta_rotation = theta_net * L_cant_in
+                    
+                    defl_val = term_bending + delta_rotation
+                    
+                    # Limit L/180 for cantilever usually, or user's L/240
+                    # Let's use 2x limit (L/120) strictly or just same L/240? 
+                    # Use standard L/240 logic or just report it.
+                    defl_limit = L_cant_in / 180.0 # Common cantilever limit? Or user 240? 
+                    # Let's stick to user prompt "L/240" logic implicitly or 
+                    if inputs.get('check_deflection'):
+                         defl_limit = L_cant_in / 240.0 # Strict
+                    
+                else: 
+                     # Standard Simple Span
+                     if inputs.get('w_load') is not None:
+                        w_total_in = (float(inputs.get('w_load',0)) + (weight/1000.0)) / 12.0
+                        L_in = span_ft * 12.0
                         
-                    if defl_val > defl_limit:
-                        is_valid = False
-                        result_obj['mode'] += " (Fail Defl)" # Append fail reason
+                        numerator = 5 * w_total_in * (L_in ** 4)
+                        denominator = 384 * E * ix_val
+                        defl_val = numerator / denominator
+                        defl_limit = L_in / 240.0
+            
+                if defl_limit > 0:
+                    defl_ratio = defl_val / defl_limit
+                    
+                if check_deflection and defl_val > defl_limit:
+                    is_valid = False
+                    result_obj['mode'] += " (Fail Defl)" # Append fail reason
         
         result_obj['deflection'] = defl_val
         result_obj['defl_limit'] = defl_limit
@@ -362,3 +446,4 @@ def find_lightest_beam(inputs):
         "candidates": top_results,
         "desired": desired_result
     }
+

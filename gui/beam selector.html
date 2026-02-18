@@ -166,6 +166,26 @@
                   1.0 = Conservative. 1.14 = Simple Span Uniform Load.
                 </p>
               </div>
+              
+              <!-- Cantilever Inputs -->
+              <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="check_cantilever" class="sr-only peer">
+                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-orange-600"></div>
+                    <span class="ml-2 text-sm font-bold text-gray-700 dark:text-gray-300">Cantilever</span>
+                  </label>
+                  
+                  <div id="cantilever_inputs" class="hidden mt-2 bg-orange-50 dark:bg-orange-900/20 p-2 rounded border border-orange-200 dark:border-orange-800">
+                    <label class="block text-xs font-semibold text-orange-800 dark:text-orange-300 mb-1">Cantilever Length (ft)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="cantilever_ft" value="5" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 font-bold">
+                        <span class="flex items-center text-xs text-gray-500">ft</span>
+                    </div>
+                    <p class="text-[10px] text-orange-600 dark:text-orange-400 mt-1 leading-tight">
+                        <strong>Note:</strong> User Load applied to <span class="underline">Cantilever Only</span>. Backspan is counterweight.
+                    </p>
+                  </div>
+              </div>
             </div>
 
             <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
@@ -459,6 +479,9 @@
                   </th>
                   <th class="px-3 py-2 font-semibold" data-i18n="area_load_psf">
                     Load (psf)
+                  </th>
+                  <th class="px-3 py-2 font-semibold text-orange-600 dark:text-orange-400">
+                    Cant. (ft)
                   </th>
                   <th
                     class="px-3 py-2 font-semibold"

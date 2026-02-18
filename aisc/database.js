@@ -243,9 +243,22 @@ const AISC_SPEC = (() => {
     async function getShapesByType(shapeType) {
         const db = await loadShapeDatabase();
         const shapes = {};
+        
+        let targetType = shapeType;
+        let filter = null;
+
+        // Map UI types to Database types and valid filters
+        if (shapeType === 'HSS Rectangular') {
+            targetType = 'HSS';
+            filter = (props) => (props.bf > 0); // Rectangular/Square have width
+        } else if (shapeType === 'HSS Round') { // Future proofing
+            targetType = 'HSS';
+            filter = (props) => (!props.bf || props.bf === 0);
+        }
+
         for (const [name, props] of Object.entries(db)) {
-            // With the updated aisc-shapes.json, we can now directly match the type.
-            if (props.type === shapeType || shapeType === 'All') {
+            if (props.type === targetType || targetType === 'All') {
+                if (filter && !filter(props)) continue;
                 shapes[name] = props;
             }
         }

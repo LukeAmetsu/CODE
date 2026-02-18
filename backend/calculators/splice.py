@@ -55,7 +55,10 @@ class SpliceCalculator:
             'omega': factors['omega'],
             'Fnv': fnv,
             'Ab': ab,
-            'num_planes': num_planes
+            'num_planes': num_planes,
+            'grade': grade,
+            'db': db,
+            'threads_excl': not inputs.get('threads_incl', True)
         }
 
     def check_bolt_bearing(self, inputs):
@@ -96,7 +99,17 @@ class SpliceCalculator:
             'omega': factors['omega'],
             'Lc': lc,
             'Rn_tearout': rn_tearout,
-            'Rn_bearing': rn_bearing
+            'Rn_bearing': rn_bearing,
+            'db': db,
+            't_ply': t_ply,
+            'Fu_ply': fu_ply,
+            'le': le,
+            's': s,
+            'tearout_coeff': tearout_coeff,
+            'bearing_coeff': bearing_coeff,
+            'deformation_considered': deformation_considered,
+            'hole_dia': hole_dia,
+            'is_edge_bolt': is_edge
         }
 
     def check_gross_section_yielding(self, inputs):
@@ -114,7 +127,8 @@ class SpliceCalculator:
             'phi': factors['phi'],
             'omega': factors['omega'],
             'Ag': ag,
-            'Fy': fy
+            'Fy': fy,
+            'yield_desc': 'Yielding'
         }
 
     def check_net_section_rupture(self, inputs):
@@ -148,7 +162,11 @@ class SpliceCalculator:
             'Ag': ag,
             'Fu': fu,
             'hole_dia': hole_dia,
-            'A_holes': a_holes
+            'A_holes': a_holes,
+            'bf': bf,
+            'tf': tf,
+            'num_bolts': num_bolts,
+            'U': u_factor
         }
 
     def check_block_shear(self, inputs):
@@ -173,11 +191,12 @@ class SpliceCalculator:
             'Rn': rn,
             'phi': factors['phi'],
             'omega': factors['omega'],
+            'Agv': avg, 'Anv': anv, 'Ant': ant, 'Fu': fu, 'Fy': fy, 'Ubs': ubs,
             'details': {
                 'shear_rupture_term': shear_rupture,
                 'tension_rupture_term': tension_rupture,
                 'shear_yield_limit': shear_yield + tension_rupture,
-                'Agv': avg, 'Anv': anv, 'Ant': ant, 'Fu': fu, 'Fy': fy, 'Ubs': ubs
+                'shear_yield_base': shear_yield
             }
         }
 
@@ -238,7 +257,23 @@ class SpliceCalculator:
             'max_R': max_r,
             'eccentricity': eccentricity,
             'M_ecc': m_ecc,
-            'Ip': ip
+            'Ip': ip,
+            'V_load': v_load,
+            'H_load': h_load,
+            'gap': gap,
+            'Nc': nc,
+            'Nr': nr,
+            'pitch': pitch,
+            'gage': gage,
+            'crit_x': crit_x,
+            'crit_y': crit_y,
+            'rx': rx,
+            'ry': ry,
+            'f_vx_direct': f_vx_direct,
+            'f_vy_direct': f_vy_direct,
+            'f_vx_moment': f_vx_moment,
+            'f_vy_moment': f_vy_moment,
+            'num_bolts': num_bolts
         }
 
     def check_prying_action(self, inputs):
@@ -293,7 +328,16 @@ class SpliceCalculator:
             'tc': tc,
             'alpha_prime': alpha_prime,
             'delta': delta,
-            'rho': rho
+            'rho': rho,
+            't_plate': t_plate,
+            'Fy_plate': fy_plate,
+            'b': b,
+            'a': a,
+            'p': p,
+            'd_bolt': d_bolt,
+            'b_prime': b_prime,
+            'a_prime': a_prime,
+            'B_bolt': b_bolt
         }
 
     def check_plate_compression(self, inputs):
@@ -338,7 +382,8 @@ class SpliceCalculator:
             'k': k,
             'unbraced_length': unbraced_len,
             'Ag': ag,
-            'Fy': fy
+            'Fy': fy,
+            'E': 29000.0
         }
 
     def check_shear_yielding(self, inputs):
@@ -380,7 +425,10 @@ class SpliceCalculator:
         
         rn = mu * du * hf * tb * num_planes
         factors = get_design_factors(inputs, 1.0, 1.5)
-        return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega']}
+        return {
+            'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'],
+            'mu': mu, 'du': du, 'hf': hf, 'tb': tb, 'num_planes': num_planes, 'num_fillers': num_fillers, 'fsc': fsc, 'db': db
+        }
         
     def check_bolt_tension(self, inputs):
         """AISC Table J3.2"""
@@ -391,7 +439,10 @@ class SpliceCalculator:
         ab = math.pi * (db**2) / 4.0
         rn = fnt * ab
         factors = get_design_factors(inputs, 0.75, 2.00)
-        return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 'Fnt': fnt, 'Ab': ab}
+        return {
+            'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 
+            'Fnt': fnt, 'Ab': ab, 'grade': grade, 'db': db
+        }
         
     def check_beam_flexural_rupture(self, inputs):
         """AISC F13.2"""
@@ -728,6 +779,8 @@ class SpliceCalculator:
                 'Fnv': bolt_check['Fnv'],
                 'Ab': bolt_check['Ab'],
                 'num_planes': bolt_check['num_planes'],
+                'grade': bolt_check.get('grade'),
+                'db': bolt_check.get('db'),
                 'wasReduced': bolt_check.get('wasReduced', False)
             },
             'details': {'Rn_single': bolt_check['Rn'], 'num_bolts': num_bolts_side}
@@ -873,6 +926,23 @@ class SpliceCalculator:
         
 
         
+        
+        # Beam Web Bearing (Member Check)
+        t_beam_bearing = float(inputs.get('member_tw', 0))
+        if inputs.get('is_hss'): t_beam_bearing *= 2.0
+        
+        beam_checks = self.perform_beam_connection_checks("Web", inputs, {
+            'demand': v_load,
+            't_beam': t_beam_bearing,
+            'Fu_beam': float(inputs.get('member_Fu', 0)), 'Fy_beam': float(inputs.get('member_Fy', 0)),
+            'Nc': nc_wp, 'Nr': nr_wp, 
+            'S_col': s_col, 'S_row': s_row, 'S_end': s_end, 'gage': 0,
+            'D_bolt': d_wp, 
+            'hole_for_net_area': self.get_nominal_hole_diameter(d_wp) + 1.0/16.0,
+            'hole_for_bearing': self.get_nominal_hole_diameter(d_wp)
+        })
+        checks.update(beam_checks)
+
         # Finalize checks with pass/fail
         is_lrfd = inputs.get('design_method') == 'LRFD'
         for k in checks:
@@ -918,6 +988,7 @@ class SpliceCalculator:
         tf_beam = float(inputs.get('member_tf', 0))
         tw_beam = float(inputs.get('member_tw', 0))
         agv_web = (d_beam - 2 * tf_beam) * tw_beam
+        if inputs.get('is_hss'): agv_web *= 2.0
         checks['Beam Web Shear Yielding'] = {
             'demand': v_load,
             'check': self.check_shear_yielding({'Agv': agv_web, 'Fy': fy_beam, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
@@ -937,6 +1008,7 @@ class SpliceCalculator:
         # --- Beam Web Shear Rupture ---
         nr_wp = int(inputs.get('Nr_wp', 0))
         anv_web = (d_beam - 2 * tf_beam - nr_wp * hole_net_wp) * tw_beam
+        if inputs.get('is_hss'): anv_web *= 2.0
         checks['Beam Web Shear Rupture'] = {
              'demand': v_load,
              'check': self.check_shear_rupture({'Anv': anv_web, 'Fu': float(inputs.get('member_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
@@ -1061,6 +1133,7 @@ class SpliceCalculator:
         
         # Parse inputs
         # Parse inputs
+        inputs['is_hss'] = (inputs.get('member_shape_type') == 'HSS Rectangular')
         inputs['L_fp'] = float(inputs.get('L_fp', 0)) / 2.0
         inputs['L_fp_inner'] = float(inputs.get('L_fp_inner', 0)) / 2.0
         inputs['L_wp'] = float(inputs.get('L_wp', 0)) / 2.0
