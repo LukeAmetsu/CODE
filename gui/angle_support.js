@@ -193,11 +193,7 @@ async function calculateAngleSupport() {
   // Constants: Num Bolts, Dia, Embed, Angle Size, Angle Fy, Config, Method.
 
   const inputs = {
-    // Single case defaults (will be overwritten if running single calc logic)
-    beam_span: safeMathEval(document.getElementById("beam_span").value) || 0,
-    beam_spacing:
-      safeMathEval(document.getElementById("beam_spacing").value) || 0,
-    area_load: safeMathEval(document.getElementById("area_load").value) || 0,
+    // Single case defaults removed
 
     num_bolts: Math.floor(
       safeMathEval(document.getElementById("num_bolts").value) || 1
@@ -305,11 +301,7 @@ async function calculateAngleSupport() {
       renderBatchResults(data.batch_results);
       document.getElementById("results-area").classList.add("hidden");
     } else {
-      // Single result
-      renderResults(data);
-      document
-        .getElementById("batch-results-container")
-        .classList.add("hidden");
+      // Single result removed
     }
   } catch (e) {
     console.error(e);
@@ -616,7 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Interactive Listeners
     document.getElementById("add-case-btn")?.addEventListener("click", addBatchRow);
     document.getElementById("batch-calc-btn")?.addEventListener("click", calculateAngleSupport);
-    document.getElementById("calc-btn")?.addEventListener("click", calculateAngleSupport);
+    // Note: removed document.getElementById("calc-btn")?.addEventListener("click", calculateAngleSupport);
 
     // Staggered Toggle
     const staggeredCheck = document.getElementById("staggered_check");

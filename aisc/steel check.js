@@ -6,7 +6,7 @@ var steelCheckInputIds = [
     'section_type', 'aisc_shape_select',
     'd', 'bf', 'tf', 'tw', 'stiffener_spacing_a', 'Ag_manual', 'I_manual', 'Sx_manual', 'Zx_manual', 'ry_manual', 'rts_manual', 'J_manual', 'Cw_manual',
     'Iy_manual', 'Sy_manual', 'Zy_manual', 'lb_bearing', 'is_end_bearing', 'k_des', 'Cm', 'Lb_input', 'K', 'Cb',
-    'Pu_or_Pa', 'Mux_or_Max', 'Muy_or_May', 'Vu_or_Va', 'Tu_or_Ta', 'deflection_span', 'deflection_limit', 'actual_deflection_input'
+    'deflection_span', 'deflection_limit', 'actual_deflection_input'
 ];
 
 // --- Refactored Steel UI Controller (Logic moved to SteelMath) ---
@@ -999,8 +999,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleRunSteelCheck = createCalculationHandler({
         gatherInputsFunction: () => {
             const inputs = gatherInputsFromIds(steelCheckInputIds);
-            // Unified Batch: Case 0 is main inputs (empty override), followed by batch table cases
-            inputs.batch_loads = [{}, ...steelBatch.cases];
+            if (typeof steelBatch !== 'undefined' && steelBatch.cases && steelBatch.cases.length > 0) {
+                inputs.batch_loads = [...steelBatch.cases];
+            }
             return inputs;
         },
         storageKey: 'steel-check-inputs',

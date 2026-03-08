@@ -211,33 +211,7 @@
 
                     <!-- Loads Tab -->
                     <div id="tab-loads" class="tab-content hidden space-y-4">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Applied Loads</h2>
-                        <p class="text-[10px] mb-2 text-gray-400">Use negative for compression. Units: kips, kip-ft, kip-in.</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="Pu_or_Pa" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Axial</label>
-                                <input type="number" id="Pu_or_Pa" value="0" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label for="Vu_or_Va" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Shear</label>
-                                <input type="number" id="Vu_or_Va" value="35" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label for="Mux_or_Max" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (Major)</label>
-                                <input type="number" id="Mux_or_Max" value="350" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label for="Muy_or_May" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (Minor)</label>
-                                <input type="number" id="Muy_or_May" value="0" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div class="col-span-2">
-                                <label for="Tu_or_Ta" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Torsion (kip-in)</label>
-                                <input type="number" id="Tu_or_Ta" value="0" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                        </div>
-
-                         <div class="mt-6 pt-6 border-t dark:border-gray-700">
+                         <div>
                              <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-2 rounded mb-2">
                                 <h3 class="text-xs font-bold text-gray-500 dark:text-gray-300">Batch Cases</h3>
                                 <div class="flex gap-1">
@@ -265,7 +239,7 @@
                                     </tbody>
                                  </table>
                             </div>
-                            <p class="text-[10px] text-gray-500 italic mt-1">Single inputs above + Batch table below will be calculated together.</p>
+                            <p class="text-[10px] text-gray-500 italic mt-1">Only the Batch table below will be calculated.</p>
                         </div>
                     </div>
 

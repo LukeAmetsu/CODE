@@ -188,131 +188,9 @@
               </div>
             </div>
 
-            <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
-              <h3
-                class="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase"
-                data-i18n="option_a_known_moment"
-              >
-                Option A: Known Moment
-              </h3>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="required_moment_mreq"
-                  >Required Moment (M<sub>req</sub>)</label
-                >
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="Mu_direct"
-                    value=""
-                    placeholder="e.g. 45"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  />
-                  <span class="flex items-center text-sm text-gray-500"
-                    >k-ft</span
-                  >
-                </div>
-              </div>
-              <p
-                class="text-xs text-gray-500 italic"
-                data-i18n="overrides_option_b"
-              >
-                If filled, this overrides Option B.
-              </p>
-            </div>
+              <!-- Option A Removed -->
 
-            <div class="space-y-4 bg-gray-50 dark:bg-gray-700/50 p-3 rounded">
-              <h3
-                class="font-semibold text-gray-700 dark:text-gray-300 text-sm uppercase"
-                data-i18n="option_b_calc_from_load"
-              >
-                Option B: Calc from Load
-              </h3>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="beam_span_l"
-                  >Beam Span (L)</label
-                >
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="span_calc"
-                    value="20"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  />
-                  <span class="flex items-center text-sm text-gray-500"
-                    >ft</span
-                  >
-                </div>
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="trib_width_spacing_ft"
-                  >Tributary Width / Spacing (ft)</label
-                >
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="beam_spacing"
-                    value=""
-                    placeholder="Optional (e.g. 5 or 2+3)"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  />
-                  <span class="flex items-center text-sm text-gray-500"
-                    >ft</span
-                  >
-                </div>
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="area_load_psf"
-                  >Area Load (psf)</label
-                >
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="area_load"
-                    value=""
-                    placeholder="Optional"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  />
-                  <span class="flex items-center text-sm text-gray-500"
-                    >psf</span
-                  >
-                </div>
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="uniform_load_w"
-                  >Uniform Load (w)</label
-                >
-                <div class="flex gap-2">
-                  <input
-                    type="text"
-                    id="w_load"
-                    value="0.6"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 bg-gray-50 dark:bg-gray-600"
-                  />
-                  <span class="flex items-center text-sm text-gray-500"
-                    >klf</span
-                  >
-                </div>
-                <p
-                  class="text-xs text-gray-400 mt-1"
-                  data-i18n="auto_calc_if_area_load"
-                >
-                  Auto-calculated if Area Load & Spacing set.
-                </p>
-              </div>
-              <div class="text-xs text-center text-gray-500" id="calc_preview">
-                M = wL²/8 = <span id="moment_preview">30.0</span> k-ft
-              </div>
-            </div>
+              <!-- Option B Removed -->
           </div>
 
           <div
@@ -398,13 +276,7 @@
               </label>
             </div>
 
-            <button
-              id="run-selector-btn"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105"
-              data-i18n="find_lightest_beam"
-            >
-              Find Lightest Beam
-            </button>
+            <!-- Single run button removed -->
           </div>
         </div>
 

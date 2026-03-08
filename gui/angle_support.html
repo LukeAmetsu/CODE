@@ -60,38 +60,7 @@
               >
                 Beam Geometry & Load
               </h3>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="beam_span_ft"
-                  >Beam Span (ft)</label
-                >
-                <input
-                  type="text"
-                  id="beam_span"
-                  value="15"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                />
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="trib_width_spacing_ft"
-                  >Tributary Width / Spacing (ft)</label
-                >
-                <input
-                  type="text"
-                  id="beam_spacing"
-                  value="5"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                />
-                <p
-                  class="text-xs text-gray-500 mt-1"
-                  data-i18n="trib_width_desc"
-                >
-                  Width of deck supported by this beam.
-                </p>
-              </div>
+              <!-- Single Load Inputs Removed -->
               <div>
                 <label
                   class="block text-sm font-medium mb-1"
@@ -105,25 +74,7 @@
                   class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                 />
               </div>
-              <div>
-                <label
-                  class="block text-sm font-medium mb-1"
-                  data-i18n="area_load_psf"
-                  >Area Load (psf)</label
-                >
-                <input
-                  type="text"
-                  id="area_load"
-                  value="50"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                />
-                <p
-                  class="text-xs text-gray-500 mt-1"
-                  data-i18n="total_dead_live_load"
-                >
-                  Total Dead + Live Load
-                </p>
-              </div>
+              <!-- Area Load Input Removed -->
             </div>
 
             <div
@@ -344,17 +295,7 @@
             </div>
 
             <div class="flex flex-col justify-center space-y-4">
-              <button
-                id="calc-btn"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105"
-                data-i18n="calculate_capacity"
-              >
-                Calculate Capacity
-              </button>
-              <div
-                id="quick-status"
-                class="hidden text-center p-3 rounded font-bold"
-              ></div>
+              <!-- Single Calc Button Removed -->
             </div>
           </div>
         </div>

@@ -13,19 +13,16 @@ var beamData = {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Input Event Listeners for Real-time Calculation Preview
-    const calcInputs = ['span_calc', 'w_load', 'beam_spacing', 'area_load', 'Mu_direct', 'Lb', 'Fy', 'Cb', 'nominal_depth'];
+    // Input Event Listeners for equation parsing
+    const calcInputs = ['Lb', 'Fy', 'Cb', 'nominal_depth'];
     calcInputs.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            // Update preview on typing (keeps equation)
-            el.addEventListener('input', updateMomentPreview);
-
             // Evaluate and replace with number on blur (loss of focus)
             el.addEventListener('blur', () => {
                 const val = safeMathEval(el.value);
                 if (val !== null) {
                     el.value = val % 1 !== 0 ? val.toFixed(3).replace(/\.?0+$/, '') : val; // Clean format
-                    updateMomentPreview(); // Re-run preview with final number
                 }
             });
         }
@@ -53,8 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Main Run Button
-    document.getElementById('run-selector-btn').addEventListener('click', findLightestBeam);
+    // Main Run Button (Removed)
 
     // Batch Controls
     if (document.getElementById('batch-run-selector-btn')) {
@@ -74,9 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupBatchExcelImport();
 
-    // Initial Preview
-    updateMomentPreview();
-
+    // Initial Preview Removed
     // Populate Desired Section Dropdown
     populateShapesDropdown('W');
 
@@ -109,28 +103,7 @@ async function populateShapesDropdown(type) {
     }
 }
 
-function updateMomentPreview(e) {
-    // If Area Load & Spacing are present, update w_load
-    const spacing = safeMathEval(document.getElementById('beam_spacing').value);
-    const areaLoad = safeMathEval(document.getElementById('area_load').value);
-    const wInput = document.getElementById('w_load');
-
-    // Only update w_load if the trigger wasn't w_load itself (allow manual override)
-    // And if we have valid inputs for calculation
-    if (e && e.target.id !== 'w_load' && spacing !== null && areaLoad !== null) {
-        // w (klf) = (psf * ft) / 1000
-        const w = (areaLoad * spacing) / 1000;
-        wInput.value = w.toFixed(2);
-        wInput.classList.add('bg-gray-100', 'text-gray-600'); // Visual cue it's calculated
-    } else if (e && e.target.id === 'w_load') {
-        wInput.classList.remove('bg-gray-100', 'text-gray-600'); // Removed cue on manual edit
-    }
-
-    const L = safeMathEval(document.getElementById('span_calc').value) || 0;
-    const w = safeMathEval(wInput.value) || 0;
-    const M = (w * L * L) / 8;
-    document.getElementById('moment_preview').textContent = M.toFixed(1);
-}
+// updateMomentPreview removed
 
 // --- BATCH TABLE LOGIC ---
 
@@ -361,43 +334,31 @@ async function findLightestBeam() {
         };
     });
 
-    // Single case inputs (fallback or "Option B" usage)
-    const span_calc = safeMathEval(document.getElementById('span_calc').value) || 0;
-    const w_load = safeMathEval(document.getElementById('w_load').value) || 0;
-    const mu_direct = safeMathEval(document.getElementById('Mu_direct').value);
-
-    // If mu_direct is set, it overrides span/load calculation for the SINGLE case scenario.
-    let single_M_req = mu_direct;
-    if (single_M_req === null || single_M_req === 0) {
-        if (global_Cant > 0) {
-             single_M_req = (w_load * global_Cant * global_Cant) / 2.0;
-        } else {
-             single_M_req = (w_load * span_calc * span_calc) / 8.0;
-        }
-    }
-
     const inputs = {
         shape_type: shapeType,
         design_method: method,
         fy: Fy,
-        // Global Single Inputs (used if batch is null)
+        // Single inputs are obsolete, batch is the only entry point
         lb_ft: global_Lb,
         cb: global_Cb,
-        mu_req: single_M_req,
-        span_ft: span_calc,
-        w_load: w_load,
-        cantilever_ft: global_Cant,
+        mu_req: 0,
+        span_ft: 0,
+        w_load: 0,
+        cantilever_ft: 0,
 
-        nominal_depth: nominalDepth,
         nominal_depth: nominalDepth,
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
         check_double: checkDouble,
         max_ratio: maxRatio,
 
-        // The New Batch Data
-        batch_loads: batchPayload.length > 0 ? batchPayload : null
+        batch_loads: batchPayload
     };
+
+    if (batchPayload.length === 0) {
+        alert("Please add at least one case to the batch table.");
+        return;
+    }
 
     // 2. Call Python Backend (Eel)
     try {

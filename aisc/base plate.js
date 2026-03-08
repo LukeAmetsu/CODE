@@ -521,8 +521,8 @@ var basePlateInputIds = [ // FIX: Corrected variable name
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
     'anchor_embedment_hef', 'total_anchors',
-    'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_type', 'weld_size', 'weld_effective_throat', 'axial_load_P_in',
-    'moment_Mx_in', 'moment_My_in', 'shear_V_in', 'assume_cracked_concrete', 'concrete_edge_dist_ca1'
+    'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_type', 'weld_size', 'weld_effective_throat',
+    'assume_cracked_concrete', 'concrete_edge_dist_ca1'
 ];
 
 var basePlateCalculator = (() => {
@@ -2129,35 +2129,25 @@ async function handleRunBasePlateCheck() {
         }
 
         // 3. Prepare Batch Data
-        // Always include the current UI inputs as the first "case" or part of the batch
         // The backend expects 'batch_loads' to override P, Mx, My, V if present.
         
-        const currentCase = {
-            id: 'UI_Input',
-            P: parseFloat(inputs.axial_load_P_in) || 0,
-            Mx: parseFloat(inputs.moment_Mx_in) || 0,
-            My: parseFloat(inputs.moment_My_in) || 0,
-            V: parseFloat(inputs.shear_V_in) || 0
-        };
-
-        let finalBatch = [currentCase];
+        let finalBatch = [];
 
         // Add table cases if they exist
-        if (basePlateBatch && basePlateBatch.length > 0) {
-             const tableCases = basePlateBatch.map((row, index) => ({
+        if (basePlateBatch && basePlateBatch.cases && basePlateBatch.cases.length > 0) {
+             const tableCases = basePlateBatch.cases.map((row, index) => ({
                 id: `Batch_${index + 1}`,
-                P: parseFloat(row.P) || 0,
-                Mx: parseFloat(row.Mx) || 0,
-                My: parseFloat(row.My) || 0, // Base plate currently only has Mx in batch table HTML? 
-                // Wait, HTML table has P, Mx, V. My is missing from table but present in inputs.
-                // We should assume My=0 for batch rows unless column is added.
-                // Let's stick to P, Mx, V per HTML table columns.
-                V: parseFloat(row.V) || 0
+                P: parseFloat(row.Pu) || parseFloat(row.P) || 0,
+                Mx: parseFloat(row.Mux) || parseFloat(row.Mx) || 0,
+                My: parseFloat(row.Muy) || parseFloat(row.My) || 0, 
+                V: parseFloat(row.Vu) || parseFloat(row.V) || 0
             }));
-            finalBatch = [...finalBatch, ...tableCases];
+            finalBatch = [...tableCases];
         }
 
-        inputs.batch_loads = finalBatch;
+        if (finalBatch.length > 0) {
+            inputs.batch_loads = finalBatch;
+        }
 
         // 4. Call Python Backend
         showFeedback('Calculating on server...', false, feedbackId);

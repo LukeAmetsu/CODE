@@ -1,29 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="h-full">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AISC Base Plate Design Checker</title>
     <!-- Use Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <script>
-        // Theme Script
-        (function () {
-            if (localStorage.getItem('theme') === 'dark' ||
-                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-        })();
+      // Theme Script
+      (function () {
+        if (
+          localStorage.getItem("theme") === "dark" ||
+          (!("theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      })();
     </script>
-    <link rel="stylesheet" href="../styles.min.css">
+    <link rel="stylesheet" href="../styles.min.css" />
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
@@ -33,467 +38,1018 @@
     <script src="database.js" defer></script>
 
     <style>
-        .table-container::-webkit-scrollbar {
-            height: 8px;
-            width: 8px;
-        }
+      .table-container::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+      }
 
-        .table-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
+      .table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
 
-        .table-container::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
+      .table-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
 
-        .table-container::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+      .table-container::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
 
-        .dark .table-container::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
+      .dark .table-container::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
 
-        .dark .table-container::-webkit-scrollbar-thumb {
-            background: #475569;
-        }
-        
-        /* Hide number input arrows */
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
+      .dark .table-container::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
 
-        .tab-btn.active {
-            background-color: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
+      /* Hide number input arrows */
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
 
-        .dark .tab-btn.active {
-            background-color: #2563eb;
-            border-color: #2563eb;
-        }
+      .tab-btn.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+
+      .dark .tab-btn.active {
+        background-color: #2563eb;
+        border-color: #2563eb;
+      }
     </style>
-</head>
+  </head>
 
-<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300 flex flex-col overflow-hidden">
-
+  <body
+    class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300 flex flex-col overflow-hidden"
+  >
     <div class="flex-grow flex flex-col h-full">
-        <!-- Header Placeholder -->
-        <div id="header-placeholder" class="flex-shrink-0" style="min-height: 64px;"></div>
+      <!-- Header Placeholder -->
+      <div
+        id="header-placeholder"
+        class="flex-shrink-0"
+        style="min-height: 64px"
+      ></div>
 
-        <main id="baseplate-app" class="flex flex-col lg:flex-row flex-grow overflow-hidden">
+      <main
+        id="baseplate-app"
+        class="flex flex-col lg:flex-row flex-grow overflow-hidden"
+      >
+        <!-- Left Panel: Inputs ONLY -->
+        <div
+          class="w-full lg:w-[410px] flex flex-col bg-white dark:bg-gray-800 border-r dark:border-gray-700 shadow-lg z-10 flex-shrink-0"
+        >
+          <!-- Ribbon Tabs -->
+          <div
+            class="flex overflow-x-auto border-b dark:border-gray-700 p-2 gap-1 bg-gray-50 dark:bg-gray-900 flex-shrink-0"
+          >
+            <button
+              class="tab-btn active px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              data-target="tab-general"
+            >
+              General
+            </button>
+            <button
+              class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              data-target="tab-column"
+            >
+              Column
+            </button>
+            <button
+              class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              data-target="tab-materials"
+            >
+              Materials
+            </button>
+            <button
+              class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              data-target="tab-anchors"
+            >
+              Anchors
+            </button>
+            <button
+              class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              data-target="tab-loads"
+            >
+              Loads
+            </button>
+            <button
+              class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              data-target="tab-batch"
+            >
+              Batch
+            </button>
+          </div>
 
-            <!-- Left Panel: Inputs ONLY -->
-            <div class="w-full lg:w-[410px] flex flex-col bg-white dark:bg-gray-800 border-r dark:border-gray-700 shadow-lg z-10 flex-shrink-0">
-
-                <!-- Ribbon Tabs -->
-                <div class="flex overflow-x-auto border-b dark:border-gray-700 p-2 gap-1 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
-                    <button class="tab-btn active px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-general">General</button>
-                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-column">Column</button>
-                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-materials">Materials</button>
-                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-anchors">Anchors</button>
-                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-loads">Loads</button>
-                    <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-batch">Batch</button>
+          <!-- Tab Contents (Scrollable part) -->
+          <div
+            class="flex-grow overflow-y-auto p-4 custom-scrollbar"
+            id="baseplate-calculator-form"
+          >
+            <!-- General Tab -->
+            <div id="tab-general" class="tab-content space-y-4">
+              <h2
+                class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1"
+              >
+                General Parameters
+              </h2>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    for="design_method"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Design Method</label
+                  >
+                  <select
+                    id="design_method"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="LRFD">LRFD</option>
+                    <option value="ASD" selected>ASD</option>
+                  </select>
                 </div>
-
-                <!-- Tab Contents (Scrollable part) -->
-                <div class="flex-grow overflow-y-auto p-4 custom-scrollbar" id="baseplate-calculator-form">
-
-                    <!-- General Tab -->
-                    <div id="tab-general" class="tab-content space-y-4">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            General Parameters</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="design_method" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Design Method</label>
-                                <select id="design_method" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <option value="LRFD">LRFD</option>
-                                    <option value="ASD" selected>ASD</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="jurisdiction" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Jurisdiction</label>
-                                <select id="jurisdiction" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <option value="AISC" selected>AISC</option>
-                                    <option value="OSHA">OSHA</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="global_fos" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Global FOS (Override)</label>
-                                <input type="number" id="global_fos" placeholder="Optional" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label for="design_code" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Design Code</label>
-                                <input type="text" id="design_code" value="AISC 360-16 / ACI 318-19" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 cursor-not-allowed" readonly>
-                            </div>
-                             <div class="col-span-2">
-                                <label for="unit_system" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Unit System</label>
-                                <select id="unit_system" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <option value="Imperial" selected>Imperial (ksi, in, ft)</option>
-                                    <option value="Metric">Metric (MPa, mm, m)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                         <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
-                             <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Analysis Options</h3>
-                                <div>
-                                    <label for="assume_cracked_concrete" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Concrete Condition</label>
-                                    <select id="assume_cracked_concrete" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                        <option value="true" selected>Cracked Concrete</option>
-                                        <option value="false">Uncracked Concrete</option>
-                                    </select>
-                                </div>
-                         </div>
-                    </div>
-
-                    <!-- Column Tab -->
-                    <div id="tab-column" class="tab-content hidden space-y-4">
-                        
-                         <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Column & Pedestal</h2>
-                        
-                        <div class="space-y-4">
-                            <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Column Properties</h3>
-                             <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2">
-                                    <label for="column_type" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Column Type</label>
-                                    <select id="column_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                        <option value="W-Shape">W-Shape</option>
-                                        <option value="S-Shape">S-Shape</option>
-                                        <option value="Round HSS" selected>Round HSS</option>
-                                        <option value="Rectangular HSS">Rectangular HSS</option>
-                                        <option value="Pipe">Pipe</option>
-                                    </select>
-                                </div>
-                                <div class="col-span-2">
-                                    <label for="aisc_shape_select" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Select Shape</label>
-                                    <select id="aisc_shape_select" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                        <option value="">-- Manual Input --</option>
-                                        <!-- Options will be populated by JS -->
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="column_depth_d" id="label_column_dim1" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Depth (d)</label>
-                                    <input type="number" id="column_depth_d" value="3.5" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive">
-                                </div>
-                                <div id="container_column_dim2">
-                                    <label for="column_flange_width_bf" id="label_column_dim2" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Width (bf)</label>
-                                    <input type="number" id="column_flange_width_bf" value="3.5" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive">
-                                </div>
-                                <div id="container_column_tf">
-                                    <label for="column_flange_tf" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Flange Thick (tf)</label>
-                                    <input type="number" id="column_flange_tf" value="0.25" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                </div>
-                                <div id="container_column_tw">
-                                    <label for="column_web_tw" id="label_column_tw" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Web Thick (tw)</label>
-                                    <input type="number" id="column_web_tw" value="0.17" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                </div>
-                             </div>
-                        </div>
-
-                         <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
-                             <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Base Plate Geometry</h3>
-                             <div class="grid grid-cols-2 gap-4">
-                                <div><label for="base_plate_length_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate N</label><input type="number" id="base_plate_length_N" value="8" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                                <div><label for="base_plate_width_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate B</label><input type="number" id="base_plate_width_B" value="8" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                                <div><label for="provided_plate_thickness_tp" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate t_p</label><input type="number" id="provided_plate_thickness_tp" value="0.5" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
-                             <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Concrete Pedestal</h3>
-                             <div class="grid grid-cols-2 gap-4">
-                                <div><label for="pedestal_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Pedestal N</label><input type="number" id="pedestal_N" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                                <div><label for="pedestal_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Pedestal B</label><input type="number" id="pedestal_B" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Materials Tab -->
-                    <div id="tab-materials" class="tab-content hidden space-y-4">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Materials & Weld</h2>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="col-span-2">
-                                <label for="base_plate_material" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate Material</label>
-                                <select id="base_plate_material" data-fy-target="base_plate_Fy" data-fu-target="base_plate_Fu" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <!-- Options will be populated by JS -->
-                                </select>
-                                <input type="hidden" id="base_plate_Fy" value="36">
-                                <input type="hidden" id="base_plate_Fu" value="58">
-                            </div>
-                            <div><label for="concrete_fc" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Concrete f'c (ksi)</label><input type="number" id="concrete_fc" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                        </div>
-                        
-                        <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
-                             <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Anchor Bolts</h3>
-                             <div class="grid grid-cols-2 gap-4">
-                                  <div class="col-span-2">
-                                    <label for="anchor_bolt_grade" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolt Grade</label>
-                                    <select id="anchor_bolt_grade" data-is-bolt-grade-select="true" data-fut-target="anchor_bolt_Fut" data-fnv-target="anchor_bolt_Fnv" data-threads-checkbox="anchor_threads_included" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                        <!-- Options will be populated by JS -->
-                                    </select>
-                                </div>
-                                <div class="col-span-2">
-                                    <label for="anchor_threads_included" class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
-                                        <input type="checkbox" id="anchor_threads_included" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Threads included in shear plane?</span>
-                                    </label>
-                                </div>
-                                <input type="hidden" id="anchor_bolt_Fut" value="58">
-                                <input type="hidden" id="anchor_bolt_Fnv" value="22">
-                             </div>
-                        </div>
-
-                         <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
-                            <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Weld Properties</h3>
-                             <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2">
-                                    <label for="weld_electrode" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Weld Electrode</label>
-                                    <select id="weld_electrode" data-fexx-target="weld_Fexx" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
-                                    <input type="hidden" id="weld_Fexx" value="70">
-                                </div>
-                                <div>
-                                    <label for="weld_type" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Weld Type</label>
-                                    <select id="weld_type" data-ui-toggle-controller class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                        <option value="Fillet" selected>Fillet</option>
-                                        <option value="PJP">PJP Groove</option>
-                                        <option value="CJP">CJP Groove</option>
-                                    </select>
-                                </div>
-                                <div id="fillet-weld-inputs" data-ui-toggle-target-for="weld_type" data-ui-toggle-condition-value="Fillet">
-                                    <label for="weld_size" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Fillet Size (w)</label>
-                                    <input type="number" id="weld_size" value="0.25" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                </div>
-                                <div id="pjp-weld-inputs" class="hidden" data-ui-toggle-target-for="weld_type" data-ui-toggle-condition-value="PJP">
-                                    <label for="weld_effective_throat" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Eff. Throat (E)</label>
-                                    <input type="number" id="weld_effective_throat" value="0.25" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                </div>
-                                <div class="col-span-2">
-                                     <p id="cjp-weld-info" class="text-[10px] text-gray-500 dark:text-gray-400 hidden" data-ui-toggle-target-for="weld_type" data-ui-toggle-condition-value="CJP">CJP welds develop the full strength of the base metal.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- Anchors Tab -->
-                    <div id="tab-anchors" class="tab-content hidden space-y-4">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Anchor Configuration</h2>
-                         <div class="grid grid-cols-2 gap-4">
-                            <div><label for="anchor_bolt_diameter" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Diameter</label><input type="number" id="anchor_bolt_diameter" value="0.75" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                            <div><label for="total_anchors" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Total Bolts</label><input type="number" id="total_anchors" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="integer,positive"></div>
-                            <div><label for="anchor_embedment_hef" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Embedment (hef)</label><input type="number" id="anchor_embedment_hef" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                            <div>
-                                <label for="bolt_type" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolt Type</label>
-                                <select id="bolt_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <option>Cast-in</option>
-                                    <option selected>Post-installed</option>
-                                </select>
-                            </div>
-                        </div>
-
-                         <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
-                             <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Pattern Details</h3>
-                             <div class="grid grid-cols-2 gap-4">
-                                <div><label for="num_bolts_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolts along N</label><input type="number" id="num_bolts_N" value="2" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="integer,positive"></div>
-                                <div><label for="num_bolts_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Bolts along B</label><input type="number" id="num_bolts_B" value="2" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="integer,positive"></div>
-                                <div><label for="bolt_spacing_N" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (N)</label><input type="number" id="bolt_spacing_N" value="6" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                                <div><label for="bolt_spacing_B" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (B)</label><input type="number" id="bolt_spacing_B" value="6" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" data-validate="positive"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Loads Tab (Unified) -->
-                    <div id="tab-loads" class="tab-content hidden space-y-4">
-                        <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Calculated Loads</h2>
-                        <div class="space-y-4">
-                            <div><label for="axial_load_P_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Axial (P)</label><input type="number" id="axial_load_P_in" value="-20" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                            <div><label for="moment_Mx_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (Mx)</label><input type="number" id="moment_Mx_in" value="50" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                            <div><label for="moment_My_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment (My)</label><input type="number" id="moment_My_in" value="0" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                            <div><label for="shear_V_in" class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Shear (V)</label><input type="number" id="shear_V_in" value="10" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></div>
-                        </div>
-                        
-                        <div class="mt-6 pt-6 border-t dark:border-gray-700">
-                             <div class="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-2 rounded mb-2">
-                                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-300">Batch Cases</h3>
-                                <div class="flex gap-1">
-                                    <label class="cursor-pointer bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded border border-gray-200 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-[10px] items-center gap-1 inline-flex">
-                                        <input type="file" id="upload-excel" accept=".xlsx,.xls" class="hidden">
-                                        <span>Import</span>
-                                    </label>
-                                    <button id="add-case-btn" class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]">Add</button>
-                                </div>
-                             </div>
-                             
-                             <div class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[200px] overflow-y-auto custom-scrollbar">
-                                 <table id="batch-table" class="w-full text-xs text-left">
-                                    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0 z-10">
-                                        <tr>
-                                            <th class="px-2 py-1">P</th>
-                                            <th class="px-2 py-1">Mx</th>
-                                            <th class="px-2 py-1">V</th>
-                                            <th class="w-6"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                        <!-- JS Populates -->
-                                    </tbody>
-                                 </table>
-                            </div>
-                            <p class="text-[10px] text-gray-500 italic mt-1">Single inputs above + Batch table below will be calculated together.</p>
-                        </div>
-                    </div>
-                
-                    <div id="file-actions" class="mt-8 pt-4 border-t dark:border-gray-700">
-                         <div class="flex justify-center items-center gap-2 flex-wrap">
-                            <button id="load-inputs-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 text-xs">Load Inputs</button>
-                            <button id="save-inputs-btn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-xs">Save Inputs</button>
-                            <input type="file" id="file-input" class="hidden" accept=".txt">
-                            <span id="file-name-display" class="text-xs text-gray-500 dark:text-gray-400"></span>
-                        </div>
-                    </div>
+                <div>
+                  <label
+                    for="jurisdiction"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Jurisdiction</label
+                  >
+                  <select
+                    id="jurisdiction"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="AISC" selected>AISC</option>
+                    <option value="OSHA">OSHA</option>
+                  </select>
                 </div>
+                <div>
+                  <label
+                    for="global_fos"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Global FOS (Override)</label
+                  >
+                  <input
+                    type="number"
+                    id="global_fos"
+                    placeholder="Optional"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label
+                    for="design_code"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Design Code</label
+                  >
+                  <input
+                    type="text"
+                    id="design_code"
+                    value="AISC 360-16 / ACI 318-19"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 cursor-not-allowed"
+                    readonly
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label
+                    for="unit_system"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Unit System</label
+                  >
+                  <select
+                    id="unit_system"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="Imperial" selected>
+                      Imperial (ksi, in, ft)
+                    </option>
+                    <option value="Metric">Metric (MPa, mm, m)</option>
+                  </select>
+                </div>
+              </div>
 
-                <!-- Action Footer -->
-                <div class="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
-                    <button id="run-steel-check-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform active:scale-[0.98] flex items-center justify-center gap-2">
-                        <span>RUN CHECK</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
+              <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Analysis Options
+                </h3>
+                <div>
+                  <label
+                    for="assume_cracked_concrete"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Concrete Condition</label
+                  >
+                  <select
+                    id="assume_cracked_concrete"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="true" selected>Cracked Concrete</option>
+                    <option value="false">Uncracked Concrete</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column Tab -->
+            <div id="tab-column" class="tab-content hidden space-y-4">
+              <h2
+                class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1"
+              >
+                Column & Pedestal
+              </h2>
+
+              <div class="space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Column Properties
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="col-span-2">
+                    <label
+                      for="column_type"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Column Type</label
+                    >
+                    <select
+                      id="column_type"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="W-Shape">W-Shape</option>
+                      <option value="S-Shape">S-Shape</option>
+                      <option value="Round HSS" selected>Round HSS</option>
+                      <option value="Rectangular HSS">Rectangular HSS</option>
+                      <option value="Pipe">Pipe</option>
+                    </select>
+                  </div>
+                  <div class="col-span-2">
+                    <label
+                      for="aisc_shape_select"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Select Shape</label
+                    >
+                    <select
+                      id="aisc_shape_select"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="">-- Manual Input --</option>
+                      <!-- Options will be populated by JS -->
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      for="column_depth_d"
+                      id="label_column_dim1"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Depth (d)</label
+                    >
+                    <input
+                      type="number"
+                      id="column_depth_d"
+                      value="3.5"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div id="container_column_dim2">
+                    <label
+                      for="column_flange_width_bf"
+                      id="label_column_dim2"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Width (bf)</label
+                    >
+                    <input
+                      type="number"
+                      id="column_flange_width_bf"
+                      value="3.5"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div id="container_column_tf">
+                    <label
+                      for="column_flange_tf"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Flange Thick (tf)</label
+                    >
+                    <input
+                      type="number"
+                      id="column_flange_tf"
+                      value="0.25"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div id="container_column_tw">
+                    <label
+                      for="column_web_tw"
+                      id="label_column_tw"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Web Thick (tw)</label
+                    >
+                    <input
+                      type="number"
+                      id="column_web_tw"
+                      value="0.17"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Base Plate Geometry
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      for="base_plate_length_N"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Plate N</label
+                    ><input
+                      type="number"
+                      id="base_plate_length_N"
+                      value="8"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="base_plate_width_B"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Plate B</label
+                    ><input
+                      type="number"
+                      id="base_plate_width_B"
+                      value="8"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="provided_plate_thickness_tp"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Plate t_p</label
+                    ><input
+                      type="number"
+                      id="provided_plate_thickness_tp"
+                      value="0.5"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Concrete Pedestal
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      for="pedestal_N"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Pedestal N</label
+                    ><input
+                      type="number"
+                      id="pedestal_N"
+                      value="12"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="pedestal_B"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Pedestal B</label
+                    ><input
+                      type="number"
+                      id="pedestal_B"
+                      value="12"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Materials Tab -->
+            <div id="tab-materials" class="tab-content hidden space-y-4">
+              <h2
+                class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1"
+              >
+                Materials & Weld
+              </h2>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label
+                    for="base_plate_material"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Plate Material</label
+                  >
+                  <select
+                    id="base_plate_material"
+                    data-fy-target="base_plate_Fy"
+                    data-fu-target="base_plate_Fu"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <!-- Options will be populated by JS -->
+                  </select>
+                  <input type="hidden" id="base_plate_Fy" value="36" />
+                  <input type="hidden" id="base_plate_Fu" value="58" />
+                </div>
+                <div>
+                  <label
+                    for="concrete_fc"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Concrete f'c (ksi)</label
+                  ><input
+                    type="number"
+                    id="concrete_fc"
+                    value="4"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Anchor Bolts
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="col-span-2">
+                    <label
+                      for="anchor_bolt_grade"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Bolt Grade</label
+                    >
+                    <select
+                      id="anchor_bolt_grade"
+                      data-is-bolt-grade-select="true"
+                      data-fut-target="anchor_bolt_Fut"
+                      data-fnv-target="anchor_bolt_Fnv"
+                      data-threads-checkbox="anchor_threads_included"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    >
+                      <!-- Options will be populated by JS -->
+                    </select>
+                  </div>
+                  <div class="col-span-2">
+                    <label
+                      for="anchor_threads_included"
+                      class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        id="anchor_threads_included"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span
+                        class="text-xs font-medium text-gray-700 dark:text-gray-300"
+                        >Threads included in shear plane?</span
+                      >
+                    </label>
+                  </div>
+                  <input type="hidden" id="anchor_bolt_Fut" value="58" />
+                  <input type="hidden" id="anchor_bolt_Fnv" value="22" />
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Weld Properties
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="col-span-2">
+                    <label
+                      for="weld_electrode"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Weld Electrode</label
+                    >
+                    <select
+                      id="weld_electrode"
+                      data-fexx-target="weld_Fexx"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    ></select>
+                    <input type="hidden" id="weld_Fexx" value="70" />
+                  </div>
+                  <div>
+                    <label
+                      for="weld_type"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Weld Type</label
+                    >
+                    <select
+                      id="weld_type"
+                      data-ui-toggle-controller
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    >
+                      <option value="Fillet" selected>Fillet</option>
+                      <option value="PJP">PJP Groove</option>
+                      <option value="CJP">CJP Groove</option>
+                    </select>
+                  </div>
+                  <div
+                    id="fillet-weld-inputs"
+                    data-ui-toggle-target-for="weld_type"
+                    data-ui-toggle-condition-value="Fillet"
+                  >
+                    <label
+                      for="weld_size"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Fillet Size (w)</label
+                    >
+                    <input
+                      type="number"
+                      id="weld_size"
+                      value="0.25"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div
+                    id="pjp-weld-inputs"
+                    class="hidden"
+                    data-ui-toggle-target-for="weld_type"
+                    data-ui-toggle-condition-value="PJP"
+                  >
+                    <label
+                      for="weld_effective_throat"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Eff. Throat (E)</label
+                    >
+                    <input
+                      type="number"
+                      id="weld_effective_throat"
+                      value="0.25"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <div class="col-span-2">
+                    <p
+                      id="cjp-weld-info"
+                      class="text-[10px] text-gray-500 dark:text-gray-400 hidden"
+                      data-ui-toggle-target-for="weld_type"
+                      data-ui-toggle-condition-value="CJP"
+                    >
+                      CJP welds develop the full strength of the base metal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Anchors Tab -->
+            <div id="tab-anchors" class="tab-content hidden space-y-4">
+              <h2
+                class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1"
+              >
+                Anchor Configuration
+              </h2>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    for="anchor_bolt_diameter"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Diameter</label
+                  ><input
+                    type="number"
+                    id="anchor_bolt_diameter"
+                    value="0.75"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    data-validate="positive"
+                  />
+                </div>
+                <div>
+                  <label
+                    for="total_anchors"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Total Bolts</label
+                  ><input
+                    type="number"
+                    id="total_anchors"
+                    value="4"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    data-validate="integer,positive"
+                  />
+                </div>
+                <div>
+                  <label
+                    for="anchor_embedment_hef"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Embedment (hef)</label
+                  ><input
+                    type="number"
+                    id="anchor_embedment_hef"
+                    value="12"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    data-validate="positive"
+                  />
+                </div>
+                <div>
+                  <label
+                    for="bolt_type"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Bolt Type</label
+                  >
+                  <select
+                    id="bolt_type"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option>Cast-in</option>
+                    <option selected>Post-installed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t dark:border-gray-700 space-y-4">
+                <h3
+                  class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
+                >
+                  Pattern Details
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      for="num_bolts_N"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Bolts along N</label
+                    ><input
+                      type="number"
+                      id="num_bolts_N"
+                      value="2"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="integer,positive"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="num_bolts_B"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Bolts along B</label
+                    ><input
+                      type="number"
+                      id="num_bolts_B"
+                      value="2"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="integer,positive"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="bolt_spacing_N"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Spacing (N)</label
+                    ><input
+                      type="number"
+                      id="bolt_spacing_N"
+                      value="6"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="bolt_spacing_B"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Spacing (B)</label
+                    ><input
+                      type="number"
+                      id="bolt_spacing_B"
+                      value="6"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loads Tab (Unified) -->
+            <div id="tab-loads" class="tab-content hidden space-y-4">
+              <div>
+                <div
+                  class="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-2 rounded mb-2"
+                >
+                  <h3
+                    class="text-xs font-bold text-gray-500 dark:text-gray-300"
+                  >
+                    Batch Cases
+                  </h3>
+                  <div class="flex gap-1">
+                    <label
+                      class="cursor-pointer bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded border border-gray-200 dark:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 text-[10px] items-center gap-1 inline-flex"
+                    >
+                      <input
+                        type="file"
+                        id="upload-excel"
+                        accept=".xlsx,.xls"
+                        class="hidden"
+                      />
+                      <span>Import</span>
+                    </label>
+                    <button
+                      id="add-case-btn"
+                      class="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200 hover:bg-blue-100 text-[10px]"
+                    >
+                      Add
                     </button>
-                    <div id="feedback-message" class="text-center text-xs min-h-[20px] mt-2 font-medium"></div>
+                  </div>
                 </div>
 
-            </div>
-
-             <!-- Right Panel: Results -->
-            <div class="flex-grow flex flex-col h-full overflow-hidden bg-gray-100 dark:bg-gray-900 relative">
-                  <!-- Result Content -->
-                <div class="flex-grow overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar">
-
-                    <!-- Top Row: Diagrams -->
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[500px] min-h-[500px]">
-                        
-                        <!-- 3D Diagram -->
-                        <div class="col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                            <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">3D Visualization</h3>
-                                <div class="flex gap-2">
-                                     <button id="toggle-dimensions-btn" class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-gray-600 text-[10px]">Dim</button>
-                                     <button id="copy-3d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-[10px]">Copy</button>
-                                </div>
-                            </div>
-                            <div id="3d-diagram-container" class="diagram flex-grow relative w-full h-full">
-                                <canvas id="baseplate-3d-canvas" class="w-full h-full"></canvas>
-                            </div>
-                        </div>
-
-                         <!-- 2D Diagram -->
-                        <div class="col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                            <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">2D Plan View</h3>
-                                 <button id="copy-2d-diagram-btn" class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-[10px]">Copy</button>
-                            </div>
-                            <div id="diagram-2d-container" class="diagram flex-grow relative w-full h-full bg-white dark:bg-gray-900">
-                                <svg id="baseplate-diagram" viewBox="0 0 500 350" class="w-full h-full"></svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Batch Results Container -->
-                    <div id="batch-results-container" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px] hidden">
-                         <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                            <h3 class="font-bold text-slate-800 dark:text-white text-sm">Batch Results</h3>
-                            <button id="download-batch-btn" class="text-xs text-blue-600 hover:text-blue-800">Export</button>
-                        </div>
-                        <div class="flex-grow overflow-y-auto p-0 custom-scrollbar">
-                             <table class="w-full text-xs text-left" id="batch-results-table">
-                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase">
-                                    <tr>
-                                        <th class="px-4 py-2">#</th>
-                                        <th class="px-4 py-2">P</th>
-                                        <th class="px-4 py-2">Mx</th>
-                                        <th class="px-4 py-2">Ratio</th>
-                                        <th class="px-4 py-2 text-right">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800" id="batch-results-body">
-                                </tbody>
-                             </table>
-                        </div>
-                    </div>
-
-                    <!-- Single Results Table Container -->
-                    <div id="results-wrapper" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px]">
-                         <div class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                            <h3 class="font-bold text-slate-800 dark:text-white text-sm">Detailed Results</h3>
-                        </div>
-                        <div class="flex-grow overflow-y-auto p-4 custom-scrollbar">
-                             <div id="steel-results-container" class="results-container w-full"></div>
-                        </div>
-                    </div>
-                     <div id="footer-placeholder"></div>
+                <div
+                  class="overflow-x-auto border rounded dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[200px] overflow-y-auto custom-scrollbar"
+                >
+                  <table id="batch-table" class="w-full text-xs text-left">
+                    <thead
+                      class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
+                    >
+                      <tr>
+                        <th class="px-2 py-1">P</th>
+                        <th class="px-2 py-1">Mx</th>
+                        <th class="px-2 py-1">V</th>
+                        <th class="w-6"></th>
+                      </tr>
+                    </thead>
+                    <tbody
+                      class="divide-y divide-gray-100 dark:divide-gray-700"
+                    >
+                      <!-- JS Populates -->
+                    </tbody>
+                  </table>
                 </div>
+                <p class="text-[10px] text-gray-500 italic mt-1">
+                  Only the Batch table below will be calculated.
+                </p>
+              </div>
             </div>
 
-        </main>
+            <div
+              id="file-actions"
+              class="mt-8 pt-4 border-t dark:border-gray-700"
+            >
+              <div class="flex justify-center items-center gap-2 flex-wrap">
+                <button
+                  id="load-inputs-btn"
+                  class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 text-xs"
+                >
+                  Load Inputs
+                </button>
+                <button
+                  id="save-inputs-btn"
+                  class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-xs"
+                >
+                  Save Inputs
+                </button>
+                <input
+                  type="file"
+                  id="file-input"
+                  class="hidden"
+                  accept=".txt"
+                />
+                <span
+                  id="file-name-display"
+                  class="text-xs text-gray-500 dark:text-gray-400"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Footer -->
+          <div
+            class="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0"
+          >
+            <button
+              id="run-steel-check-btn"
+              class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <span>RUN CHECK</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+            <div
+              id="feedback-message"
+              class="text-center text-xs min-h-[20px] mt-2 font-medium"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Results -->
+        <div
+          class="flex-grow flex flex-col h-full overflow-hidden bg-gray-100 dark:bg-gray-900 relative"
+        >
+          <!-- Result Content -->
+          <div
+            class="flex-grow overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar"
+          >
+            <!-- Top Row: Diagrams -->
+            <div
+              class="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[500px] min-h-[500px]"
+            >
+              <!-- 3D Diagram -->
+              <div
+                class="col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+              >
+                <div
+                  class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center"
+                >
+                  <h3 class="font-bold text-slate-800 dark:text-white text-sm">
+                    3D Visualization
+                  </h3>
+                  <div class="flex gap-2">
+                    <button
+                      id="toggle-dimensions-btn"
+                      class="bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg hover:bg-gray-600 text-[10px]"
+                    >
+                      Dim
+                    </button>
+                    <button
+                      id="copy-3d-diagram-btn"
+                      class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-[10px]"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div
+                  id="3d-diagram-container"
+                  class="diagram flex-grow relative w-full h-full"
+                >
+                  <canvas
+                    id="baseplate-3d-canvas"
+                    class="w-full h-full"
+                  ></canvas>
+                </div>
+              </div>
+
+              <!-- 2D Diagram -->
+              <div
+                class="col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+              >
+                <div
+                  class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center"
+                >
+                  <h3 class="font-bold text-slate-800 dark:text-white text-sm">
+                    2D Plan View
+                  </h3>
+                  <button
+                    id="copy-2d-diagram-btn"
+                    class="bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-[10px]"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div
+                  id="diagram-2d-container"
+                  class="diagram flex-grow relative w-full h-full bg-white dark:bg-gray-900"
+                >
+                  <svg
+                    id="baseplate-diagram"
+                    viewBox="0 0 500 350"
+                    class="w-full h-full"
+                  ></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Batch Results Container -->
+            <div
+              id="batch-results-container"
+              class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px] hidden"
+            >
+              <div
+                class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center"
+              >
+                <h3 class="font-bold text-slate-800 dark:text-white text-sm">
+                  Batch Results
+                </h3>
+                <button
+                  id="download-batch-btn"
+                  class="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Export
+                </button>
+              </div>
+              <div class="flex-grow overflow-y-auto p-0 custom-scrollbar">
+                <table
+                  class="w-full text-xs text-left"
+                  id="batch-results-table"
+                >
+                  <thead
+                    class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase"
+                  >
+                    <tr>
+                      <th class="px-4 py-2">#</th>
+                      <th class="px-4 py-2">P</th>
+                      <th class="px-4 py-2">Mx</th>
+                      <th class="px-4 py-2">Ratio</th>
+                      <th class="px-4 py-2 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800"
+                    id="batch-results-body"
+                  ></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Single Results Table Container -->
+            <div
+              id="results-wrapper"
+              class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden min-h-[600px]"
+            >
+              <div
+                class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center"
+              >
+                <h3 class="font-bold text-slate-800 dark:text-white text-sm">
+                  Detailed Results
+                </h3>
+              </div>
+              <div class="flex-grow overflow-y-auto p-4 custom-scrollbar">
+                <div
+                  id="steel-results-container"
+                  class="results-container w-full"
+                ></div>
+              </div>
+            </div>
+            <div id="footer-placeholder"></div>
+          </div>
+        </div>
+      </main>
     </div>
 
     <script src="base plate.js" defer></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabs = document.querySelectorAll('.tab-btn');
-            const contents = document.querySelectorAll('.tab-content');
+      document.addEventListener("DOMContentLoaded", () => {
+        const tabs = document.querySelectorAll(".tab-btn");
+        const contents = document.querySelectorAll(".tab-content");
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    // Remove active class from all tabs
-                    tabs.forEach(t => t.classList.remove('active'));
-                    // Add active class to click tab
-                    tab.classList.add('active');
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            // Remove active class from all tabs
+            tabs.forEach((t) => t.classList.remove("active"));
+            // Add active class to click tab
+            tab.classList.add("active");
 
-                    // Hide all contents
-                    contents.forEach(c => c.classList.add('hidden'));
-                    // Show target content
-                    const target = document.getElementById(tab.dataset.target);
-                    if (target) target.classList.remove('hidden');
-                });
-            });
+            // Hide all contents
+            contents.forEach((c) => c.classList.add("hidden"));
+            // Show target content
+            const target = document.getElementById(tab.dataset.target);
+            if (target) target.classList.remove("hidden");
+          });
         });
+      });
     </script>
-     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-             // Re-apply toggle logic that might have been missed by initial load
-            if (window.sharedUtils && window.sharedUtils.initToggleControllers) {
-                 window.sharedUtils.initToggleControllers();
-            }
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Re-apply toggle logic that might have been missed by initial load
+        if (window.sharedUtils && window.sharedUtils.initToggleControllers) {
+          window.sharedUtils.initToggleControllers();
+        }
 
-            if (typeof injectHeader === 'function') {
-                injectHeader({
-                    activePage: 'base-plate', // Verify key in nav-config.json
-                    pageTitle: 'base_plate',
-                    headerPlaceholderId: 'header-placeholder',
-                    pathPrefix: '../'
-                });
-            }
-            if (typeof injectFooter === 'function') {
-                injectFooter({
-                    footerPlaceholderId: 'footer-placeholder',
-                    pathPrefix: '../'
-                });
-            }
-        });
+        if (typeof injectHeader === "function") {
+          injectHeader({
+            activePage: "base-plate", // Verify key in nav-config.json
+            pageTitle: "base_plate",
+            headerPlaceholderId: "header-placeholder",
+            pathPrefix: "../",
+          });
+        }
+        if (typeof injectFooter === "function") {
+          injectFooter({
+            footerPlaceholderId: "footer-placeholder",
+            pathPrefix: "../",
+          });
+        }
+      });
     </script>
-</body>
-
+  </body>
 </html>
