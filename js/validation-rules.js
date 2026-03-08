@@ -78,9 +78,30 @@ const validationRules = {
         'Fu': { min: 1, max: 200, required: true, label: 'Ultimate Strength (Fu)' },
         'E': { min: 28000, max: 31000, required: true, label: 'Modulus of Elasticity (E)' },
         'd': { min: 0.1, required: true, label: 'Depth/Height' },
-        'bf': { min: 0.1, required: true, label: 'Width/Flange Width' },
-        'tf': { min: 0.1, required: true, label: 'Thickness/Flange Thickness' },
-        'tw': { min: 0.1, required: true, label: 'Web Thickness' },
+        'bf': { 
+            label: 'Width/Flange Width',
+            validator: (value, inputs) => {
+                if (['Pipe', 'Round HSS'].includes(inputs.section_type)) return true;
+                if (!value || value < 0.1) return "Width/Flange Width must be at least 0.1";
+                return true;
+            }
+        },
+        'tf': { 
+            label: 'Thickness/Flange Thickness',
+            validator: (value, inputs) => {
+                if (['Pipe', 'Round HSS'].includes(inputs.section_type)) return true;
+                if (!value || value < 0.1) return "Thickness/Flange Thickness must be at least 0.1";
+                return true;
+            }
+        },
+        'tw': { 
+            label: 'Web Thickness',
+            validator: (value, inputs) => {
+                if (['Pipe', 'Round HSS', 'Rectangular HSS'].includes(inputs.section_type)) return true;
+                if (!value || value < 0.1) return "Web Thickness must be at least 0.1";
+                return true;
+            }
+        },
         'K': { min: 0.1, required: true, label: 'Effective length factor (K)' },
         'Lb_input': { min: 0, required: true, label: 'Unbraced Length (Lb)' },
         'actual_deflection_input': { min: 0, required: false, label: 'Actual Deflection' },

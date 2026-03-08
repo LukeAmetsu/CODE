@@ -244,20 +244,35 @@ const AISC_SPEC = (() => {
         const db = await loadShapeDatabase();
         const shapes = {};
         
-        let targetType = shapeType;
         let filter = null;
 
-        // Map UI types to Database types and valid filters
-        if (shapeType === 'HSS Rectangular') {
-            targetType = 'HSS';
-            filter = (props) => (props.bf > 0); // Rectangular/Square have width
-        } else if (shapeType === 'HSS Round') { // Future proofing
-            targetType = 'HSS';
+        const typeMapping = {
+            'W-Shape': ['W', 'W-Shape'],
+            'M-Shape': ['M', 'M-Shape'],
+            'S-Shape': ['S', 'S-Shape'],
+            'HP-Shape': ['HP', 'HP-Shape'],
+            'WT-Shape': ['WT', 'WT-Shape'],
+            'Channel': ['C', 'MC', 'Channel'],
+            'Angle': ['L', 'Angle'],
+            'Double Angle': ['2L', 'Double Angle'],
+            'HSS Rectangular': ['HSS', 'HSS-Rect'],
+            'Rectangular HSS': ['HSS', 'HSS-Rect'],
+            'HSS Round': ['HSS', 'HSS-Round'],
+            'Round HSS': ['HSS', 'HSS-Round'],
+            'Pipe': ['PIPE', 'Pipe']
+        };
+
+        const targetTypes = typeMapping[shapeType] || [shapeType];
+
+        if (shapeType === 'Rectangular HSS' || shapeType === 'HSS Rectangular') {
+            filter = (props) => (props.bf > 0);
+        } else if (shapeType === 'Round HSS' || shapeType === 'HSS Round') {
             filter = (props) => (!props.bf || props.bf === 0);
         }
 
         for (const [name, props] of Object.entries(db)) {
-            if (props.type === targetType || targetType === 'All') {
+            const dbType = props.Type || props.type;
+            if (targetTypes.includes(dbType) || targetTypes.includes('All') || dbType === shapeType) {
                 if (filter && !filter(props)) continue;
                 shapes[name] = props;
             }

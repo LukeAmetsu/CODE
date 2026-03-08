@@ -622,7 +622,14 @@ class SpliceCalculator:
         
         checks[f"{plate_name} Bolt Bearing"] = {
             'demand': demand,
-            'check': {'Rn': total_bearing, 'phi': 0.75, 'omega': 2.00},
+            'check': {
+                'Rn': total_bearing, 
+                'phi': bearing_edge['phi'], 
+                'omega': bearing_edge['omega'],
+                't_ply': t_p,
+                'Fu_ply': fu,
+                'db': d_bolt
+            },
             'details': {'edge': bearing_edge, 'int': bearing_int, 'num_edge': num_edge, 'num_int': num_int}
         }
         
@@ -683,7 +690,14 @@ class SpliceCalculator:
         
         checks[f"Beam {part_name} Bolt Bearing"] = {
             'demand': demand,
-            'check': {'Rn': total_bearing, 'phi': bearing_edge['phi'], 'omega': bearing_edge['omega']},
+            'check': {
+                'Rn': total_bearing, 
+                'phi': bearing_edge['phi'], 
+                'omega': bearing_edge['omega'],
+                't_ply': t_beam,
+                'Fu_ply': fu_beam,
+                'db': d_bolt
+            },
             'details': {'edge': bearing_edge, 'int': bearing_int, 'num_edge': num_edge, 'num_int': num_int}
         }
 
@@ -978,9 +992,10 @@ class SpliceCalculator:
         fy_beam = float(inputs.get('member_Fy', 0))
         zx = float(inputs.get('member_Zx', 0))
         mn_yield = fy_beam * zx
+        flex_yield_factors = get_design_factors(inputs, 0.90, 1.67)
         checks['Beam Flexural Yielding'] = {
             'demand': m_load * 12, 
-            'check': {'Rn': mn_yield, 'phi': 0.90, 'omega': 1.67, 'Fy': fy_beam, 'Zx': zx}
+            'check': {'Rn': mn_yield, 'phi': flex_yield_factors['phi'], 'omega': flex_yield_factors['omega'], 'Fy': fy_beam, 'Zx': zx}
         }
         
         # --- Beam Web Shear Yielding ---
@@ -1027,9 +1042,10 @@ class SpliceCalculator:
              mn_rupture = checks['Beam Flexural Rupture']['check']['Rn']
              # mn_yield already calculated
              mn_cap = min(mn_yield, mn_rupture)
+             moment_cap_factors = get_design_factors(inputs, 0.90, 1.67)
              checks['Spliced Member Moment Capacity'] = {
                  'demand': m_load * 12,
-                 'check': {'Rn': mn_cap, 'phi': 0.90, 'omega': 1.67},
+                 'check': {'Rn': mn_cap, 'phi': moment_cap_factors['phi'], 'omega': moment_cap_factors['omega']},
                  'details': {'yielding': checks['Beam Flexural Yielding']['check'], 'rupture': checks['Beam Flexural Rupture']['check']}
              }
         
@@ -1146,37 +1162,42 @@ class SpliceCalculator:
         
         # --- Capacity Design Check ---
         if inputs.get('develop_capacity_check'):
+            jurisdiction = str(inputs.get('jurisdiction', '')).strip().upper()
+            
             zx = float(inputs.get('member_Zx', 0))
             if zx > 0:
                 fy = float(inputs.get('member_Fy', 0))
                 mn_kipin = fy * zx
-                # Check design method
-                design_method = inputs.get('design_method', 'ASD')
-                phi_b = 0.90
-                omega_b = 1.67
                 
-                if design_method == 'LRFD':
-                    m_load = (phi_b * mn_kipin) / 12.0
+                if jurisdiction == 'OSHA':
+                    m_load = (mn_kipin / 4.0) / 12.0
                 else:
-                    m_load = (mn_kipin / omega_b) / 12.0
+                    design_method = inputs.get('design_method', 'ASD')
+                    phi_b = 0.90
+                    omega_b = 1.67
+                    
+                    if design_method == 'LRFD':
+                        m_load = (phi_b * mn_kipin) / 12.0
+                    else:
+                        m_load = (mn_kipin / omega_b) / 12.0
                 inputs['M_load'] = m_load # Update inputs so report reflects it
             
-            # Note: JS logic for shear is:
-            # const Aw = (inputs.member_d - 2 * inputs.member_tf) * inputs.member_tw;
-            # Vn = 0.6 * Fy * Aw
-            # V_load = phi * Vn (LRFD) or Vn / omega (ASD)
             d_mem = float(inputs.get('member_d', 0))
             tf_mem = float(inputs.get('member_tf', 0))
             tw_mem = float(inputs.get('member_tw', 0))
             aw = (d_mem - 2 * tf_mem) * tw_mem
             if aw > 0:
                  vn_kips = 0.6 * float(inputs.get('member_Fy', 0)) * aw
-                 phi_v = 1.00
-                 omega_v = 1.50
-                 if inputs.get('design_method', 'ASD') == 'LRFD':
-                     v_load = phi_v * vn_kips
+                 
+                 if jurisdiction == 'OSHA':
+                     v_load = vn_kips / 4.0
                  else:
-                     v_load = vn_kips / omega_v
+                     phi_v = 1.00
+                     omega_v = 1.50
+                     if inputs.get('design_method', 'ASD') == 'LRFD':
+                         v_load = phi_v * vn_kips
+                     else:
+                         v_load = vn_kips / omega_v
                  inputs['V_load'] = v_load
 
         

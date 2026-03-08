@@ -31,7 +31,9 @@ var steelChecker = (() => {
         }
 
         if (inputs.d <= 0) errors.push({ field: 'd', msg: "Section depth must be positive." });
-        if (inputs.tf <= 0) errors.push({ field: 'tf', msg: "Flange thickness must be positive." });
+        if (!['Pipe', 'Round HSS'].includes(inputs.section_type) && inputs.tf <= 0) {
+            errors.push({ field: 'tf', msg: "Flange thickness must be positive." });
+        }
 
         if (Math.abs(inputs.Pu_or_Pa) > 10000) {
             warnings.push("Very high axial load - verify units (kips expected).");
@@ -1460,7 +1462,7 @@ function drawStructuralSchematic(canvasId, inputs) {
 }
 
 // --- BATCH LOGIC ---
-const steelBatch = {
+var steelBatch = {
     cases: [] 
 };
 
@@ -1546,7 +1548,7 @@ function handleBatchPaste(e) {
     }
 }
 
-const steelBatchResults = [];
+var steelBatchResults = [];
 
 function renderBatchResults(results) {
     const container = document.getElementById("batch-results-container");
