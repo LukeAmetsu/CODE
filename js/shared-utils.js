@@ -604,17 +604,18 @@ function initializeSharedUI() {
  * Enables mathematical expressions in numeric inputs.
  * Converts type="number" to type="text" to allow characters like +, -, *, /, (, ).
  * Evaluates the expression on blur.
+ * Also sets up a MutationObserver to handle dynamically added inputs.
  */
 function enableMathInInputs() {
-    const numericInputs = document.querySelectorAll('input[type="number"], input.numeric-input');
-    
-    numericInputs.forEach(input => {
+    const processInput = (input) => {
+        // Only process inputs that are numbers or have the numeric-input class
+        if (input.tagName !== 'INPUT') return;
+        if (input.type !== 'number' && !input.classList.contains('numeric-input')) return;
+
         // Convert to text to allow typing expressions
         if (input.type === 'number') {
             input.type = 'text';
             input.inputMode = 'decimal'; // Show numeric keyboard on mobile
-            // Optional: pattern to allow numbers and math chars? 
-            // Broad pattern or none is often better for UX to prevent immediate valid checks blocking input
         }
         
         // Remove old listeners to avoid duplicates if re-initializing
@@ -624,6 +625,41 @@ function enableMathInInputs() {
         // Also handle "Enter" key to evaluate without blurring
         input.removeEventListener('keydown', handleMathInputKeydown);
         input.addEventListener('keydown', handleMathInputKeydown);
+    };
+
+    // 1. Process existing inputs
+    const numericInputs = document.querySelectorAll('input[type="number"], input.numeric-input');
+    numericInputs.forEach(processInput);
+
+    // 2. Set up MutationObserver for dynamically added inputs (e.g., in batch tables)
+    // Prevent multiple observers if initializeSharedUI is called multiple times
+    if (window._mathInputsObserver) {
+        window._mathInputsObserver.disconnect();
+    }
+
+    window._mathInputsObserver = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    // Check if the added node is an element
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // If the node itself is an input
+                        if (node.tagName === 'INPUT') {
+                            processInput(node);
+                        }
+                        // Check for inputs inside the added node
+                        const inputs = node.querySelectorAll('input[type="number"], input.numeric-input');
+                        inputs.forEach(processInput);
+                    }
+                });
+            }
+        });
+    });
+
+    // Start observing the body for added nodes
+    window._mathInputsObserver.observe(document.body, {
+        childList: true,
+        subtree: true
     });
 }
 
@@ -2318,4 +2354,135 @@ class ProjectManager {
         saveRow.append(input, saveBtn);
         container.append(header, list, saveRow);
     }
+}
+
+// --- Generic Batch Table Utilities ---
+
+/**
+ * Handle deleting a row from a generic batch array, maintaining a minimum 1 row length.
+ * @param {Event} e - The DOM Event.
+ * @param {Array} casesArray - The batch array attached to the table.
+ * @param {Function} renderCallback - Renders the data array back to HTML (e.g. renderBatchTable)
+ * @param {Object} defaultRowTemplate - Object schema to inject when clearing the last remaining row.
+ */
+function handleBatchDelete(e, casesArray, renderCallback, defaultRowTemplate) {
+    const btn = e.target.closest("button");
+    if (btn && btn.dataset.action === "remove") {
+        const idx = parseInt(btn.dataset.idx);
+        if (!isNaN(idx)) {
+            if (casesArray.length > 1) {
+                casesArray.splice(idx, 1);
+            } else if (defaultRowTemplate) {
+                casesArray[0] = {...defaultRowTemplate};
+            }
+            renderCallback();
+        }
+    }
+}
+
+/**
+ * Synchronizes HTML `input` value with a batch data array. Uses safeMathEval.
+ * @param {Event} e - DOM event representing "input" or "change".
+ * @param {Array} casesArray - Array of JSON rows.
+ * @param {string} indexAttribute - DOM data-attr storing the row index. Default: 'idx'.
+ * @param {string} propertyAttribute - DOM data-attr storing the object property key string. Default: 'key' or 'field'.
+ */
+function updateBatchInputs(e, casesArray, indexAttribute='idx', propertyAttribute='key') {
+    if (e.target.tagName !== "INPUT") return;
+    const idxStr = e.target.getAttribute(`data-${indexAttribute}`);
+    // Support varying schema datasets over different older module iterations
+    const key = e.target.getAttribute(`data-${propertyAttribute}`) || e.target.getAttribute(`data-field`);
+    
+    if (idxStr !== null && idxStr !== undefined && key) {
+        const idx = parseInt(idxStr);
+        if (!isNaN(idx) && casesArray[idx]) {
+            let val = safeMathEval(e.target.value);
+            if(val === null || isNaN(val)) val = 0;
+            casesArray[idx][key] = val;
+        }
+    }
+}
+
+/**
+ * Applies clipboard blob over text entries and maps into an array row via rowMapper.
+ * @param {Event} e - The native paste event 
+ * @param {Array} casesArray - Target table data array
+ * @param {Function} rowMapper - Ex: (columns) => ({ span: p(columns[0]), load: p(columns[1]) }) where `p` is parsed fallback
+ * @param {Function} renderCallback - Triggered if any rows push successfully 
+ */
+function parsePasteToBatch(e, casesArray, rowMapper, renderCallback) {
+    const clipboardData = (e.clipboardData || window.clipboardData).getData("text");
+    if (!clipboardData) return;
+    
+    // Ignore input text overrides unless it's a multi-line paste sequence
+    const rows = clipboardData.split(/\r\n|\n|\r/).filter((r) => r.trim() !== "");
+    if (rows.length <= 1 && e.target.tagName === "INPUT") return;
+    e.preventDefault();
+
+    let startIndex = casesArray.length;
+    const activeInput = document.activeElement;
+    if (activeInput && activeInput.tagName === "INPUT" && activeInput.dataset.idx) startIndex = parseInt(activeInput.dataset.idx);
+
+    const newCases = [];
+    rows.forEach((rowStr) => {
+        let values = rowStr.split("\t");
+        if (values.length === 1) values = rowStr.split(/,|;/);
+
+        const mappedObj = rowMapper(values);
+        if(mappedObj) newCases.push(mappedObj);
+    });
+
+    if (newCases.length > 0) {
+        for (let i = 0; i < newCases.length; i++) {
+            if (startIndex + i < casesArray.length) {
+                casesArray[startIndex + i] = newCases[i];
+            } else {
+                casesArray.push(newCases[i]);
+            }
+        }
+        if(renderCallback) renderCallback();
+    }
+}
+
+/**
+ * Validates a `.xlsx` file upload using sheet_to_json, applying it to casesArray via rowMapper. 
+ * @param {Event} e - "change" DOM Event emitted by a file `input` tag.
+ * @param {Array} casesArray - Primary application array storing tabular context 
+ * @param {Function} rowMapper - Function dictating how numeric keys translate to a specific domain model obj constraint
+ * @param {Function} renderCallback - Function triggered to trigger DOM rewrite.
+ * @param {String} errorMessage - Shown if Excel rows return totally unmappable.
+ */
+function parseExcelToBatch(e, casesArray, rowMapper, renderCallback, errorMessage) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        if(typeof XLSX === 'undefined') {
+            console.error("XLSX is not defined. Ensure SheetJS library dependency is connected in your HTML block.");
+            return;
+        }
+
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        const newCases = [];
+        json.forEach((row) => {
+             const mappedObj = rowMapper(row);
+             if(mappedObj) newCases.push(mappedObj);
+        });
+
+        if (newCases.length > 0) {
+            // Discard arrays and replace entirely if importing
+            casesArray.length = 0;
+            casesArray.push(...newCases);
+            renderCallback();
+        } else {
+            alert(errorMessage || "No valid data found in Excel spreadsheet.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = ''; // Clean input for repeated selections
 }

@@ -45,16 +45,16 @@ function renderBatchTable() {
 
     tr.innerHTML = `
             <td class="p-1 text-center text-xs text-gray-400">${index + 1}</td>
-            <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.5" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
               item.span
             }" data-idx="${index}" data-key="span"></td>
-            <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.5" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
               item.trib
             }" data-idx="${index}" data-key="trib"></td>
-            <td class="p-1"><input type="number" step="5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
+            <td class="p-1"><input type="text" inputmode="decimal" step="5" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
               item.load
             }" data-idx="${index}" data-key="load"></td>
-            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
+            <td class="p-1"><input type="text" inputmode="decimal" step="1" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${
               item.bolts || 2
             }" data-idx="${index}" data-key="bolts"></td>
             <td class="p-1 text-center"><button class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" data-idx="${index}" data-action="remove" title="Remove Case">
@@ -71,78 +71,26 @@ function addBatchRow() {
 }
 
 function handleBatchInput(e) {
-  if (e.target.tagName === "INPUT") {
-    const idx = parseInt(e.target.dataset.idx);
-    const key = e.target.dataset.key;
-    if (!isNaN(idx) && key) {
-      if (key === 'bolts') {
-         angleData.batchCases[idx][key] = Math.floor(parseFloat(e.target.value) || 2);
-      } else {
-         angleData.batchCases[idx][key] = parseFloat(e.target.value) || 0;
-      }
-    }
-  }
+  updateBatchInputs(e, angleData.batchCases);
 }
 
 function handleBatchAction(e) {
-  const btn = e.target.closest("button");
-  if (btn && btn.dataset.action === "remove") {
-    const idx = parseInt(btn.dataset.idx);
-    if (!isNaN(idx)) {
-      angleData.batchCases.splice(idx, 1);
-      renderBatchTable();
-    }
-  }
+  handleBatchDelete(e, angleData.batchCases, renderBatchTable, { span: 20, trib: 5, load: 100, bolts: 2 });
 }
 
 function handleBatchPaste(e) {
-  const clipboardData = (e.clipboardData || window.clipboardData).getData(
-    "text"
-  );
-  if (!clipboardData) return;
-
-  const rows = clipboardData.split(/\r\n|\n|\r/).filter((r) => r.trim() !== "");
-  if (rows.length <= 1 && e.target.tagName === "INPUT") return;
-
-  e.preventDefault();
-
-  let startIndex = angleData.batchCases.length;
-  const activeInput = document.activeElement;
-  if (
-    activeInput &&
-    activeInput.tagName === "INPUT" &&
-    activeInput.dataset.idx
-  ) {
-    startIndex = parseInt(activeInput.dataset.idx);
-  }
-
-  const newCases = [];
-  rows.forEach((rowStr) => {
-    let values = rowStr.split("\t");
-    if (values.length === 1) values = rowStr.split(/,|;/);
-
-    // Expected columns: Span | Trib | Load | [Bolts]
+  const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
+  const rowMapper = (values) => {
     if (values.length >= 2) {
-      const span = parseFloat(values[0]) || 0;
-      const trib = parseFloat(values[1]) || 0;
-      const load = parseFloat(values[2]) || 0;
+      const span = p(values[0], 0);
+      const trib = values.length >= 2 ? p(values[1], 0) : 0;
+      const load = values.length >= 3 ? p(values[2], 0) : 0;
       const bolts = values.length >= 4 ? parseInt(values[3]) : 2;
-
-      newCases.push({ span, trib, load, bolts: bolts || 2 });
+      return { span, trib, load, bolts: bolts || 2 };
     }
-  });
-
-  if (newCases.length > 0) {
-    for (let i = 0; i < newCases.length; i++) {
-      const targetIdx = startIndex + i;
-      if (targetIdx < angleData.batchCases.length) {
-        angleData.batchCases[targetIdx] = newCases[i];
-      } else {
-        angleData.batchCases.push(newCases[i]);
-      }
-    }
-    renderBatchTable();
-  }
+    return null;
+  };
+  parsePasteToBatch(e, angleData.batchCases, rowMapper, renderBatchTable);
 }
 
 function setupBatchExcelImport() {
@@ -150,37 +98,18 @@ function setupBatchExcelImport() {
   if (!fileInput) return;
 
   fileInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-      const newCases = [];
-      json.forEach((row) => {
-        if (row.length >= 2 && !isNaN(parseFloat(row[0]))) {
-          const span = parseFloat(row[0]) || 0;
-          const trib = parseFloat(row[1]) || 0;
-          const load = parseFloat(row[2]) || 0;
-          const bolts = parseInt(row[3]) || 2;
-          newCases.push({ span, trib, load, bolts });
-        }
-      });
-
-      if (newCases.length > 0) {
-        angleData.batchCases = newCases;
-        renderBatchTable();
-      } else {
-        alert(
-          "No valid data found in Excel. Expected columns: Span, Trib Width, Load, [Bolts]"
-        );
+    const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
+    const rowMapper = (row) => {
+      if (row.length >= 2 && p(row[0], null) !== null) {
+        const span = p(row[0], 0);
+        const trib = row.length >= 2 ? p(row[1], 0) : 0;
+        const load = row.length >= 3 ? p(row[2], 0) : 0;
+        const bolts = parseInt(row[3]) || 2;
+        return { span, trib, load, bolts };
       }
+      return null;
     };
-    reader.readAsArrayBuffer(file);
-    fileInput.value = "";
+    parseExcelToBatch(e, angleData.batchCases, rowMapper, renderBatchTable, "No valid data found in Excel. Expected columns: Span, Trib Width, Load, [Bolts]");
   });
 }
 
@@ -598,6 +527,7 @@ function viewBatchDetails(index) {
 
 // --- INITIALIZATION ---
 document.addEventListener("DOMContentLoaded", () => {
+  if (typeof initializeSharedUI === 'function') initializeSharedUI();
     // Initialize Embedment Dropdown
     const boltSelect = document.getElementById("bolt_diameter");
     if (boltSelect) {

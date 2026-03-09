@@ -1477,10 +1477,10 @@ function renderBatchTable() {
         tr.className = "border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors";
 
         tr.innerHTML = `
-            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.P}" data-idx="${index}" data-key="P"></td>
-            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.Mx}" data-idx="${index}" data-key="Mx"></td>
-            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.My}" data-idx="${index}" data-key="My"></td>
-            <td class="p-1"><input type="number" step="1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.V}" data-idx="${index}" data-key="V"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="1" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.P}" data-idx="${index}" data-key="P"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="1" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.Mx}" data-idx="${index}" data-key="Mx"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="1" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.My}" data-idx="${index}" data-key="My"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="1" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500" value="${item.V}" data-idx="${index}" data-key="V"></td>
             <td class="p-1 text-center"><button class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30" data-idx="${index}" data-action="remove" title="Remove">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button></td>
@@ -1495,58 +1495,28 @@ function addBatchRow() {
 }
 
 function handleBatchInput(e) {
-    if (e.target.tagName === "INPUT" && e.target.dataset.idx) {
-        const idx = parseInt(e.target.dataset.idx);
-        const key = e.target.dataset.key;
-        steelBatch.cases[idx][key] = parseFloat(e.target.value) || 0;
-    }
+    updateBatchInputs(e, steelBatch.cases);
 }
 
 function handleBatchAction(e) {
-    const btn = e.target.closest("button");
-    if (btn && btn.dataset.action === "remove") {
-        const idx = parseInt(btn.dataset.idx);
-        steelBatch.cases.splice(idx, 1);
-        renderBatchTable();
-    }
+    handleBatchDelete(e, steelBatch.cases, renderBatchTable, { P: 0, Mx: 0, My: 0, V: 0 });
 }
 
 function handleBatchPaste(e) {
-    const clipboardData = (e.clipboardData || window.clipboardData).getData("text");
-    if (!clipboardData) return;
-    
-    // Check if target deals with batch inputs
     if(!document.getElementById("batch-table").contains(e.target)) return;
-
-    e.preventDefault();
-    const rows = clipboardData.split(/\r\n|\n|\r/).filter(r => r.trim() !== "");
-    const newCases = [];
-    rows.forEach(rowStr => {
-        let values = rowStr.split("\t");
-        if (values.length < 2) values = rowStr.split(/,|;/);
+    const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
+    const rowMapper = (values) => {
         if (values.length >= 1) {
-            newCases.push({
-                P: parseFloat(values[0]) || 0,
-                Mx: parseFloat(values[1]) || 0,
-                My: parseFloat(values[2]) || 0,
-                V: parseFloat(values[3]) || 0
-            });
+            return {
+                P: p(values[0], 0),
+                Mx: p(values[1], 0),
+                My: p(values[2], 0),
+                V: p(values[3], 0)
+            };
         }
-    });
-    if (newCases.length > 0) {
-        let startIdx = steelBatch.cases.length;
-        const activeInput = document.activeElement;
-        if(activeInput && activeInput.dataset.idx) startIdx = parseInt(activeInput.dataset.idx);
-        
-        for(let i=0; i<newCases.length; i++) {
-             if(startIdx + i < steelBatch.cases.length) {
-                 steelBatch.cases[startIdx+i] = newCases[i];
-             } else {
-                 steelBatch.cases.push(newCases[i]);
-             }
-        }
-        renderBatchTable();
-    }
+        return null;
+    };
+    parsePasteToBatch(e, steelBatch.cases, rowMapper, renderBatchTable);
 }
 
 var steelBatchResults = [];

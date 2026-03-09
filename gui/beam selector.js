@@ -12,6 +12,7 @@ var beamData = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initializeSharedUI === 'function') initializeSharedUI();
     // Input Event Listeners for Real-time Calculation Preview
     // Input Event Listeners for equation parsing
     const calcInputs = ['Lb', 'Fy', 'Cb', 'nominal_depth'];
@@ -118,12 +119,12 @@ function renderBatchTable() {
 
         tr.innerHTML = `
             <td class="p-1 text-center text-xs text-gray-400">${index + 1}</td>
-            <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.span}" data-idx="${index}" data-key="span"></td>
-            <td class="p-1"><input type="number" step="0.5" placeholder="-" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.trib || ''}" data-idx="${index}" data-key="trib"></td>
-            <td class="p-1"><input type="number" step="0.1" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.load}" data-idx="${index}" data-key="load"></td>
-            <td class="p-1"><input type="number" step="0.5" placeholder="0" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-orange-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-orange-600 font-bold" value="${item.cant || 0}" data-idx="${index}" data-key="cant"></td>
-            <td class="p-1"><input type="number" step="0.5" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.lb}" data-idx="${index}" data-key="lb"></td>
-            <td class="p-1"><input type="number" step="0.01" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.cb}" data-idx="${index}" data-key="cb"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.5" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.span}" data-idx="${index}" data-key="span"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.5" placeholder="-" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.trib || ''}" data-idx="${index}" data-key="trib"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.1" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.load}" data-idx="${index}" data-key="load"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.5" placeholder="0" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-orange-400 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none transition-all text-orange-600 font-bold" value="${item.cant || 0}" data-idx="${index}" data-key="cant"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.5" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.lb}" data-idx="${index}" data-key="lb"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" step="0.01" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all" value="${item.cb}" data-idx="${index}" data-key="cb"></td>
             <td class="p-1 text-center"><button class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" data-idx="${index}" data-action="remove" title="Remove Case">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button></td>
@@ -138,125 +139,49 @@ function addBatchRow() {
 }
 
 function handleBatchInput(e) {
-    if (e.target.tagName === 'INPUT') {
-        const idx = parseInt(e.target.dataset.idx);
-        const key = e.target.dataset.key;
-        if (!isNaN(idx) && key) {
-            beamData.batchCases[idx][key] = parseFloat(e.target.value) || 0;
-        }
-    }
+    updateBatchInputs(e, beamData.batchCases);
 }
 
 function handleBatchAction(e) {
-    const btn = e.target.closest('button');
-    if (btn && btn.dataset.action === 'remove') {
-        const idx = parseInt(btn.dataset.idx);
-        if (!isNaN(idx)) {
-            beamData.batchCases.splice(idx, 1);
-            renderBatchTable();
-        }
-    }
+    handleBatchDelete(e, beamData.batchCases, renderBatchTable, { span: 0, trib: 0, load: 0, cant: 0, lb: 0, cb: 1.0 });
 }
 
 function handleBatchPaste(e) {
-    // Only capture if pasting into the table container itself or an input within it
-    // But we want to allow pasting rows.
-
-    // Prevent default paste behavior to handle it manually
-    // e.preventDefault(); 
-    // Wait, if user pastes into an input, we might just want let them paste typical text. 
-    // But if it's a multi-line paste, we should intercept.
-
-    const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
-    if (!clipboardData) return;
-
-    const rows = clipboardData.split(/\r\n|\n|\r/).filter(r => r.trim() !== '');
-
-    // If only one line/value and inside an input, let default behavior happen (or handle single cell)
-    // But here we want to support excel copy-paste of multiple rows.
-    if (rows.length <= 1 && e.target.tagName === 'INPUT') return;
-
-    e.preventDefault();
-
-    let startIndex = beamData.batchCases.length;
-    // Check if we are pasting starting from a specific row
-    const activeInput = document.activeElement;
-    if (activeInput && activeInput.tagName === 'INPUT' && activeInput.dataset.idx) {
-        startIndex = parseInt(activeInput.dataset.idx);
-    }
-
-    const newCases = [];
-    rows.forEach(rowStr => {
-        // Support Tab or Comma (Excel uses Tab usually)
-        let values = rowStr.split('\t');
-        if (values.length === 1) values = rowStr.split(/,|;/);
-
-        // Expected columns: Span | Trib | Load | Lb | Cb
+    const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
+    const rowMapper = (values) => {
         if (values.length >= 2) {
-            const span = parseFloat(values[0]) || 0;
-            const trib = values.length >= 2 ? (parseFloat(values[1]) || 0) : 0;
-            const load = values.length >= 3 ? (parseFloat(values[2]) || 0) : 0;
-            const cant = values.length >= 4 ? (parseFloat(values[3]) || 0) : 0;
-            const lb = values.length >= 5 ? (parseFloat(values[4]) || span) : span;
-            const cb = values.length >= 6 ? (parseFloat(values[5]) || 1.0) : 1.0;
-
-            newCases.push({ span, trib, load, cant, lb, cb });
+            const span = p(values[0], 0);
+            const trib = values.length >= 2 ? p(values[1], 0) : 0;
+            const load = values.length >= 3 ? p(values[2], 0) : 0;
+            const cant = values.length >= 4 ? p(values[3], 0) : 0;
+            const lb = values.length >= 5 ? p(values[4], span) : span;
+            const cb = values.length >= 6 ? p(values[5], 1.0) : 1.0;
+            return { span, trib, load, cant, lb, cb };
         }
-    });
-
-    if (newCases.length > 0) {
-        // Insert or Append
-        for (let i = 0; i < newCases.length; i++) {
-            const targetIdx = startIndex + i;
-            if (targetIdx < beamData.batchCases.length) {
-                // Overwrite
-                beamData.batchCases[targetIdx] = newCases[i];
-            } else {
-                // Append
-                beamData.batchCases.push(newCases[i]);
-            }
-        }
-        renderBatchTable();
-    }
+        return null;
+    };
+    parsePasteToBatch(e, beamData.batchCases, rowMapper, renderBatchTable);
 }
 
 function setupBatchExcelImport() {
     const fileInput = document.getElementById('upload-excel');
     if (!fileInput) return;
-
+    
     fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-            // Process JSON array of arrays
-            const newCases = [];
-            json.forEach(row => {
-                if (row.length >= 1 && !isNaN(parseFloat(row[0]))) {
-                    const span = parseFloat(row[0]) || 0;
-                    const trib = row.length >= 2 ? (parseFloat(row[1]) || 0) : 0;
-                    const load = row.length >= 3 ? (parseFloat(row[2]) || 0) : 0;
-                    const cant = row.length >= 4 ? (parseFloat(row[3]) || 0) : 0;
-                    const lb = row.length >= 5 ? (parseFloat(row[4]) || span) : span;
-                    const cb = row.length >= 6 ? (parseFloat(row[5]) || 1.0) : 1.0;
-                    newCases.push({ span, trib, load, cant, lb, cb });
-                }
-            });
-
-            if (newCases.length > 0) {
-                beamData.batchCases = newCases;
-                renderBatchTable();
-            } else {
-                alert("No valid data found in Excel. Expected columns: Span, Load, [Lb], [Cb]");
+        const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
+        const rowMapper = (row) => {
+            if (row.length >= 1 && p(row[0], null) !== null) {
+                const span = p(row[0], 0);
+                const trib = row.length >= 2 ? p(row[1], 0) : 0;
+                const load = row.length >= 3 ? p(row[2], 0) : 0;
+                const cant = row.length >= 4 ? p(row[3], 0) : 0;
+                const lb = row.length >= 5 ? p(row[4], span) : span;
+                const cb = row.length >= 6 ? p(row[5], 1.0) : 1.0;
+                return { span, trib, load, cant, lb, cb };
             }
+            return null;
         };
-        reader.readAsArrayBuffer(file);
-        fileInput.value = '';
+        parseExcelToBatch(e, beamData.batchCases, rowMapper, renderBatchTable, "No valid data found in Excel. Expected columns: Span, Load, [Lb], [Cb]");
     });
 }
 

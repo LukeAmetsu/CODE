@@ -2135,12 +2135,13 @@ async function handleRunBasePlateCheck() {
 
         // Add table cases if they exist
         if (basePlateBatch && basePlateBatch.cases && basePlateBatch.cases.length > 0) {
+             const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
              const tableCases = basePlateBatch.cases.map((row, index) => ({
                 id: `Batch_${index + 1}`,
-                P: parseFloat(row.Pu) || parseFloat(row.P) || 0,
-                Mx: parseFloat(row.Mux) || parseFloat(row.Mx) || 0,
-                My: parseFloat(row.Muy) || parseFloat(row.My) || 0, 
-                V: parseFloat(row.Vu) || parseFloat(row.V) || 0
+                P: p(row.Pu, p(row.P, 0)),
+                Mx: p(row.Mux, p(row.Mx, 0)),
+                My: p(row.Muy, p(row.My, 0)), 
+                V: p(row.Vu, p(row.V, 0))
             }));
             finalBatch = [...tableCases];
         }
@@ -2371,10 +2372,10 @@ function renderBatchTable() {
         const row = document.createElement("tr");
         row.className = "hover:bg-gray-50 dark:hover:bg-gray-700/50 group";
         row.innerHTML = `
-            <td class="p-1"><input type="number" data-idx="${index}" data-field="Pu" value="${c.Pu}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
-            <td class="p-1"><input type="number" data-idx="${index}" data-field="Mux" value="${c.Mux}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
-            <td class="p-1"><input type="number" data-idx="${index}" data-field="Muy" value="${c.Muy}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
-            <td class="p-1"><input type="number" data-idx="${index}" data-field="Vu" value="${c.Vu}" class="w-full bg-transparent border-none focus:ring-0 p-1 text-center font-mono placeholder-gray-400" placeholder="0"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 outline-none transition-all" value="${c.Pu}" data-idx="${index}" data-field="Pu"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 outline-none transition-all" value="${c.Mux}" data-idx="${index}" data-field="Mux"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 outline-none transition-all" value="${c.Muy}" data-idx="${index}" data-field="Muy"></td>
+            <td class="p-1"><input type="text" inputmode="decimal" class="numeric-input w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-600 dark:text-white dark:border-gray-500 hover:border-blue-400 focus:border-blue-500 outline-none transition-all" value="${c.Vu}" data-idx="${index}" data-field="Vu"></td>
             <td class="p-1 text-center"><button class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity delete-case-btn" data-idx="${index}">&times;</button></td>
         `;
         tbody.appendChild(row);
@@ -2387,32 +2388,17 @@ function addBatchRow() {
 }
 
 function handleBatchInput(e) {
-    if (e.target.tagName !== "INPUT") return;
-    const idx = parseInt(e.target.dataset.idx); 
-    const field = e.target.dataset.field;
-    let val = parseFloat(e.target.value); 
-    if(isNaN(val)) val = 0;
-    if (basePlateBatch.cases[idx]) { 
-        basePlateBatch.cases[idx][field] = val; 
-    }
+    updateBatchInputs(e, basePlateBatch.cases, 'idx', 'field');
 }
 
 function handleBatchPaste(e) {
+    // Paste logic not historically implemented correctly here, but could theoretically wire it up.
+    // Preserving simple placeholder behaviour as defined originally.
     e.preventDefault();
-    // Simple placeholder for paste
 }
 
 function handleBatchAction(e) {
-    if (e.target.classList.contains("delete-case-btn")) {
-        const idx = parseInt(e.target.dataset.idx);
-        if (basePlateBatch.cases.length > 1) { 
-            basePlateBatch.cases.splice(idx, 1); 
-            renderBatchTable(); 
-        } else { 
-            basePlateBatch.cases[0] = { Pu: 0, Mux: 0, Muy: 0, Vu: 0 }; 
-            renderBatchTable(); 
-        }
-    }
+    handleBatchDelete(e, basePlateBatch.cases, renderBatchTable, { Pu: 0, Mux: 0, Muy: 0, Vu: 0 });
 }
 
 async function handleRunBatchCheck() {
