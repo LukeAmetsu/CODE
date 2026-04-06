@@ -1,0 +1,9 @@
+=== OPTIMIZED SHEAR EQUATION (Best Fit) ===
+Vc = 0.002 * (1 + 200/d)^0.298 * rho^0.239 * fck^0.572 * (a/d)^-0.932 * bw * d
+
+Optimization Statistics:
+Count: 1025
+Mean V_test/V_calc: 1.000
+CoV: 0.394
+
+Suggested parameters for code committee proposal.

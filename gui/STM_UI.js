@@ -383,3 +383,31 @@ function update3D(inputs, results) {
         tube.material = mat;
     });
 }
+
+function init3D() {
+    const canvas = document.getElementById('renderCanvas');
+    if (!canvas) {
+        console.warn('stmScene canvas not found. 3D visualization disabled.');
+        return;
+    }
+    stmEngine = new BABYLON.Engine(canvas, true);
+    stmScene = new BABYLON.Scene(stmEngine);
+    stmScene.clearColor = new BABYLON.Color4(0.95, 0.95, 0.95, 1);
+    
+    // Camera
+    const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 4, Math.PI / 3, 30, BABYLON.Vector3.Zero(), stmScene);
+    camera.attachControl(canvas, true);
+    camera.wheelPrecision = 50;
+
+    // Light
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), stmScene);
+    light.intensity = 0.7;
+
+    stmEngine.runRenderLoop(() => {
+        stmScene.render();
+    });
+
+    window.addEventListener("resize", () => {
+        stmEngine.resize();
+    });
+}

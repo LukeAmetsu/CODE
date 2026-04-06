@@ -1,0 +1,42 @@
+Record ID (Notation)
+B>2D
+B>5D
+B>600mm
+bw (mm)
+b (mm)
+h (mm)
+d (mm)
+a:M/V (mm)
+bw/d ratio
+pw (%)
+rho
+As (Area of steel in mmÂ²)
+fc' (MPa)
+fck_eq
+fck (MPa)
+fct,test (MPa)
+fct,calc (MPa)
+fck^(1/2)
+fctm
+fctk,inf
+ag (mm)
+fy (MPa)
+fyp (MPa)
+Sigma_CP
+NBR 6118-2023
+R_6118
+Eurocode 2-2004
+R_EC_2004
+Eurocode 2-2023
+R_EC_2023
+ACI 318-14
+R_ACI318_14
+ACI 318-19
+R_ACI318_19
+Fib Model Code 2010
+R_MC2010
+Unnamed: 37
+Unnamed: 38
+Unnamed: 39
+Unnamed: 40
+Unnamed: 41

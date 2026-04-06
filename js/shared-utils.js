@@ -204,8 +204,9 @@ function gatherInputsFromIds(ids) {
         if (el) {
             if (el.type === 'checkbox') {
                 inputs[id] = el.checked;
-            } else if (el.type === 'number') {
-                inputs[id] = parseFloat(el.value);
+            } else if (el.type === 'number' || el.classList.contains('numeric-input') || el.inputMode === 'decimal') {
+                const mathVal = safeMathEval(el.value);
+                inputs[id] = mathVal !== null ? mathVal : parseFloat(el.value);
             } else {
                 inputs[id] = el.value;
             }

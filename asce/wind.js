@@ -1534,7 +1534,7 @@ const windLoadCalculator = (() => {
         }
 
         // --- Strategy Execution ---
-        const intermediate_globals = { Kzt: inputs.topographic_factor_Kzt, Kd, Ke, V_in: v_input, effective_standard, abs_gcpi, G, qz };
+        const intermediate_globals = { Kzt: inputs.topographic_factor_Kzt, Kd, Ke, V_in: v_input, effective_standard, abs_gcpi, G, qz, Kz };
         const strategy = structureStrategies[inputs.structure_type] || structureStrategies['Buildings (MWFRS, C&C)'];
         const strategyResults = strategy(inputs, intermediate_globals);
 

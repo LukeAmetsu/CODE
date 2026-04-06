@@ -932,7 +932,7 @@ function renderInputSummary(inputs, checks) {
 
 function renderCalculatedProperties(checks, inputs) {
     const { properties, materials, loads, moments } = checks;
-    const fmt = (val, dec = 2) => (val !== undefined && val !== null && !isNaN(val)) ? val.toFixed(dec) : 'N/A';
+    const fmt = (val, dec = 2) => (val !== undefined && val !== null && !isNaN(val)) ? Number(val).toFixed(dec) : 'N/A';
 
     const geometricRows = [
         ['Área da Seção (A)', `${fmt(properties.area, 2)} cm²`],

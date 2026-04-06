@@ -88,6 +88,7 @@ const handleRunRainCheck = createCalculationHandler({
 
 initializeApp({
     inputIds: rainInputIds,
+    buttonId: 'run-rain-calculation-btn',
     calculationHandler: handleRunRainCheck,
     onReady: () => {
         document.getElementById('rain_city_selector').addEventListener('change', (event) => {
@@ -117,9 +118,9 @@ function renderRainResults(results) {
     const { inputs, jurisdiction_note, dh_calc_note, warnings } = results;
     const { R_nominal, R_strength, R_asd, dh_final } = results.results;
     const p_unit = inputs.rain_unit_system === 'imperial' ? 'psf' : 'kPa';
-    const d_unit = inputs.unit_system === 'imperial' ? 'in' : 'mm';
-    const i_unit = inputs.unit_system === 'imperial' ? 'in/hr' : 'mm/hr';
-    const a_unit = inputs.unit_system === 'imperial' ? 'ft²' : 'm²';
+    const d_unit = inputs.rain_unit_system === 'imperial' ? 'in' : 'mm';
+    const i_unit = inputs.rain_unit_system === 'imperial' ? 'in/hr' : 'mm/hr';
+    const a_unit = inputs.rain_unit_system === 'imperial' ? 'ft²' : 'm²';
 
     const report = new ReportBuilder({
         reportId: 'rain-report-content',

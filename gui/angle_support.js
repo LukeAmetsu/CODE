@@ -267,34 +267,32 @@ function renderResults(data) {
   const desc = document.getElementById("status-desc");
   const valDisplay = document.getElementById("interaction-value");
 
-  resultsArea.classList.remove("hidden");
+  if (resultsArea) resultsArea.classList.remove("hidden");
 
   // Update Banner Style
   let statusText = "";
   if (data.passAll) {
-    banner.className =
+    if (banner) banner.className =
       "p-6 rounded-lg shadow-md border-l-8 flex flex-col md:flex-row justify-between items-center gap-4 bg-green-50 dark:bg-green-900/20 border-green-500 text-green-900 dark:text-green-100";
-    title.textContent = "PASS";
-    title.className = "text-2xl font-bold text-green-700 dark:text-green-400";
-    desc.textContent = "Capacity is sufficient.";
+    if (title) { title.textContent = "PASS"; title.className = "text-2xl font-bold text-green-700 dark:text-green-400"; }
+    if (desc) desc.textContent = "Capacity is sufficient.";
 
     statusText = "PASS";
-    quickStatus.className =
+    if (quickStatus) quickStatus.className =
       "mt-4 text-center p-3 rounded font-bold bg-green-100 text-green-800";
   } else {
-    banner.className =
+    if (banner) banner.className =
       "p-6 rounded-lg shadow-md border-l-8 flex flex-col md:flex-row justify-between items-center gap-4 bg-red-50 dark:bg-red-900/20 border-red-500 text-red-900 dark:text-red-100";
-    title.textContent = "FAIL";
-    title.className = "text-2xl font-bold text-red-700 dark:text-red-400";
+    if (title) { title.textContent = "FAIL"; title.className = "text-2xl font-bold text-red-700 dark:text-red-400"; }
 
     let failReasons = [];
     if (data.interaction > 1.0) failReasons.push("Anchors");
     if (data.ratio_bend > 1.0) failReasons.push("Loc. Bend");
     if (data.ratio_long > 1.0) failReasons.push("Long. Bend");
-    desc.textContent = "Fail: " + failReasons.join(", ");
+    if (desc) desc.textContent = "Fail: " + failReasons.join(", ");
 
     statusText = "FAIL";
-    quickStatus.className =
+    if (quickStatus) quickStatus.className =
       "mt-4 text-center p-3 rounded font-bold bg-red-100 text-red-800";
   }
 
@@ -304,10 +302,11 @@ function renderResults(data) {
     data.ratio_bend,
     data.ratio_long || 0
   );
-  quickStatus.textContent = statusText + " (" + maxRatio.toFixed(2) + ")";
-
-  quickStatus.classList.remove("hidden");
-  valDisplay.textContent = maxRatio.toFixed(2);
+  if (quickStatus) {
+    quickStatus.textContent = statusText + " (" + maxRatio.toFixed(2) + ")";
+    quickStatus.classList.remove("hidden");
+  }
+  if (valDisplay) valDisplay.textContent = maxRatio.toFixed(2);
 
   // Update Tables
   document.getElementById("res-w").textContent = data.w_klf.toFixed(2) + " klf";
@@ -387,7 +386,7 @@ function renderResults(data) {
     // Let's append to status-desc
     // Check if unique
     const warnText = data.warnings.join("; ");
-    desc.innerHTML += `<br><span class="text-red-600 font-bold">WARNING: ${warnText}</span>`;
+    if (desc) desc.innerHTML += `<br><span class="text-red-600 font-bold">WARNING: ${warnText}</span>`;
   }
 
   // Longitudinal Bending Results

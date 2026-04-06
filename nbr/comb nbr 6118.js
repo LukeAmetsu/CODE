@@ -49,7 +49,7 @@ var nbrComboCalculator = (() => {
                 combinations.elu.push({
                     title: `ELU (Principal: ${q_principal.name})`,
                     formula: formulaString.join(' + '),
-                    result: eval(formula.join(' + '))
+                    result: eval(formula.join(' + ')) || 0
                 });
             });
         } else { // Only permanent loads
@@ -58,7 +58,7 @@ var nbrComboCalculator = (() => {
             combinations.elu.push({
                 title: 'ELU (Apenas Cargas Permanentes)',
                 formula: formulaString.join(' + '),
-                result: eval(formula.join(' + '))
+                result: eval(formula.join(' + ')) || 0
             });
         }
 
@@ -73,7 +73,7 @@ var nbrComboCalculator = (() => {
         combinations.els_qp.push({
             title: 'ELS - Quase-Permanente',
             formula: els_qp_formulaString.join(' + '),
-            result: eval(els_qp_formula.join(' + '))
+            result: eval(els_qp_formula.join(' + ')) || 0
         });
 
         // ELS - Frequente & Rara (iterate through each variable load as principal)
@@ -103,12 +103,12 @@ var nbrComboCalculator = (() => {
                 combinations.els_freq.push({
                     title: `ELS - Frequente (Principal: ${q_principal.name})`,
                     formula: els_freq_formulaString.join(' + '),
-                    result: eval(els_freq_formula.join(' + '))
+                    result: eval(els_freq_formula.join(' + ')) || 0
                 });
                 combinations.els_rara.push({
                     title: `ELS - Rara (Principal: ${q_principal.name})`,
                     formula: els_rara_formulaString.join(' + '),
-                    result: eval(els_rara_formula.join(' + '))
+                    result: eval(els_rara_formula.join(' + ')) || 0
                 });
             });
         }

@@ -515,14 +515,15 @@ function draw3dBasePlateDiagram(currentInputs) {
     }
 }
 
-var basePlateInputIds = [ // FIX: Corrected variable name
+var basePlateInputIds = [ 
     'design_method', 'jurisdiction', 'design_code', 'unit_system', 'global_fos', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx',
+    'support_material', 'wood_support_N', 'wood_support_B', 'wood_fc_perp', 'wood_specific_gravity',
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
     'column_flange_width_bf', 'column_type', 'anchor_bolt_diameter',
     'anchor_embedment_hef', 'total_anchors',
     'bolt_spacing_N', 'bolt_spacing_B', 'bolt_type', 'weld_type', 'weld_size', 'weld_effective_throat',
-    'assume_cracked_concrete', 'concrete_edge_dist_ca1'
+    'assume_cracked_concrete'
 ];
 
 var basePlateCalculator = (() => {
@@ -1922,9 +1923,15 @@ function renderResults(results) {
 
             let ratio, demand_val, capacity_val;
             if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
-                demand_val = design_capacity;
-                capacity_val = demand;
-                ratio = capacity_val > 0 ? demand_val / capacity_val : (demand_val > 0 ? Infinity : 0);
+                if (name === 'Plate Bending (Yield Line)') {
+                    demand_val = demand;
+                    capacity_val = design_capacity;
+                    ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
+                } else {
+                    demand_val = design_capacity;
+                    capacity_val = demand;
+                    ratio = capacity_val > 0 ? demand_val / capacity_val : (demand_val > 0 ? Infinity : 0);
+                }
             } else if (name === 'Concrete Bearing') {
                  // Bearing Check is Stress-based (ksi)
                  demand_val = demand; // f_p_max

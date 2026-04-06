@@ -251,6 +251,21 @@
                     <option value="false">Uncracked Concrete</option>
                   </select>
                 </div>
+                <div>
+                  <label
+                    for="support_material"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Support Material</label
+                  >
+                  <select
+                    id="support_material"
+                    data-ui-toggle-controller
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="Concrete" selected>Concrete</option>
+                    <option value="Wood">Wood</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -413,10 +428,10 @@
                 <h3
                   class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2"
                 >
-                  Concrete Pedestal
+                  Support Base Dimensions
                 </h3>
                 <div class="grid grid-cols-2 gap-4">
-                  <div>
+                  <div data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Concrete">
                     <label
                       for="pedestal_N"
                       class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
@@ -428,7 +443,7 @@
                       class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
                     />
                   </div>
-                  <div>
+                  <div data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Concrete">
                     <label
                       for="pedestal_B"
                       class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
@@ -438,6 +453,36 @@
                       id="pedestal_B"
                       value="12"
                       class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div class="col-span-2 hidden text-xs text-gray-500 dark:text-gray-400" data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Wood">
+                    Wood support dimensions are usually dictated by the member size. Enter the bearing area dimensions below.
+                  </div>
+                  <div class="hidden" data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Wood">
+                    <label
+                      for="wood_support_N"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Wood Support N</label
+                    ><input
+                      type="number"
+                      id="wood_support_N"
+                      value="12"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
+                    />
+                  </div>
+                  <div class="hidden" data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Wood">
+                    <label
+                      for="wood_support_B"
+                      class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                      >Wood Support B</label
+                    ><input
+                      type="number"
+                      id="wood_support_B"
+                      value="12"
+                      class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                      data-validate="positive"
                     />
                   </div>
                 </div>
@@ -480,6 +525,32 @@
                     id="concrete_fc"
                     value="4"
                     class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div class="hidden" data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Wood">
+                  <label
+                    for="wood_fc_perp"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Allowable Bearing Fc (psi)</label
+                  ><input
+                    type="number"
+                    id="wood_fc_perp"
+                    value="625"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    data-validate="positive"
+                  />
+                </div>
+                <div class="hidden" data-ui-toggle-target-for="support_material" data-ui-toggle-condition-value="Wood">
+                  <label
+                    for="wood_specific_gravity"
+                    class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
+                    >Specific Gravity (G)</label
+                  ><input
+                    type="number"
+                    id="wood_specific_gravity"
+                    value="0.50"
+                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    data-validate="positive"
                   />
                 </div>
               </div>
@@ -673,6 +744,7 @@
                   >
                     <option>Cast-in</option>
                     <option selected>Post-installed</option>
+                    <option>Wood Screw</option>
                   </select>
                 </div>
               </div>
@@ -780,9 +852,10 @@
                       class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
                     >
                       <tr>
-                        <th class="px-2 py-1">P</th>
-                        <th class="px-2 py-1">Mx</th>
-                        <th class="px-2 py-1">V</th>
+                        <th class="px-2 py-1 text-center font-semibold">P</th>
+                        <th class="px-2 py-1 text-center font-semibold">Mx</th>
+                        <th class="px-2 py-1 text-center font-semibold">My</th>
+                        <th class="px-2 py-1 text-center font-semibold">V</th>
                         <th class="w-6"></th>
                       </tr>
                     </thead>

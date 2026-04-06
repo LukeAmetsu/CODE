@@ -1,6 +1,7 @@
 import eel
 import sys
 import os
+import threading
 
 # Ensure backend module can be imported
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -266,6 +267,80 @@ def generate_stm_template(template_type, geometry):
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
 
+
+@eel.expose
+def run_shear_plots():
+    """Trigger shear plot generation in a background thread and stream progress to the frontend."""
+    try:
+        # Import from the project root (one level above backend/)
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(backend_dir, '..'))
+        sys.path.insert(0, project_root)
+        from generate_shear_plots import generate_plots
+
+        # Resolve absolute paths once — no os.chdir needed
+        abs_excel = os.path.join(project_root, 'master_shear_database_v8_GRAPH.xlsx')
+        abs_plots = os.path.join(project_root, 'plots')
+
+        def _worker():
+            try:
+                generate_plots(
+                    eel_callback=lambda pct, msg, img: eel.update_shear_progress(pct, msg, img)(),
+                    file_path=abs_excel,
+                    out_dir=abs_plots,
+                )
+            except Exception as exc:
+                import traceback
+                print(f"Shear plots error: {exc}")
+                traceback.print_exc()
+                eel.update_shear_progress(0, f"Error: {exc}", None)()
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        return {"status": "started"}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_shear_dataset():
+    """Returns the shear database points to JS for fast client-side rendering."""
+    try:
+        from backend.calculators.interactive_shear import load_and_clean_data
+        return load_and_clean_data()
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_all_codes_dataset():
+    """Returns the raw ALL DATA database points to JS for the universal explorer."""
+    try:
+        from backend.calculators.interactive_shear import get_all_codes_dataset as get_all
+        return get_all()
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_python_lowess(x, y, frac=0.3):
+    """Offloads LOWESS smoothing calculations seamlessly back to Python."""
+    try:
+        from backend.calculators.interactive_shear import get_lowess
+        return get_lowess(x, y, frac)
+    except Exception as e:
+        import traceback
+        return []
+
+@eel.expose
+def run_scipy_optimization(target_safety=1.0):
+    """Runs Nelder-Mead to auto-fit the best power-law exponents."""
+    try:
+        from backend.calculators.interactive_shear import run_optimization
+        return run_optimization(target_safety)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
 
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)
