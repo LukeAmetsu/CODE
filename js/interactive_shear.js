@@ -256,10 +256,10 @@ async function optimizeEquation() {
 }
 
 function calculateBins(dataPoints, numBins = 10) {
-    if (dataPoints.length === 0) return { p05: [], p10: [] };
+    if (dataPoints.length === 0) return { p05: [], p10: [], pMean: [] };
     let minX = Math.min(...dataPoints.map(d => d.x));
     let maxX = Math.max(...dataPoints.map(d => d.x));
-    if (minX === maxX) return { p05: [], p10: [] };
+    if (minX === maxX) return { p05: [], p10: [], pMean: [] };
 
     let binWidth = (maxX - minX) / numBins;
     let bins = Array.from({ length: numBins }, () => []);
@@ -273,10 +273,17 @@ function calculateBins(dataPoints, numBins = 10) {
 
     let p05 = [];
     let p10 = [];
+    let pMean = [];
 
     for (let i = 0; i < numBins; i++) {
         let bData = bins[i].sort((a, b) => a - b);
         let centerX = minX + (i + 0.5) * binWidth;
+
+        if (bData.length > 0) {
+            let sum = bData.reduce((a, b) => a + b, 0);
+            let mean = sum / bData.length;
+            pMean.push({ x: centerX, y: mean });
+        }
 
         if (bData.length >= 3) {
             let idx05 = Math.floor(0.05 * bData.length);
@@ -285,7 +292,7 @@ function calculateBins(dataPoints, numBins = 10) {
             p10.push({ x: centerX, y: bData[idx10] });
         }
     }
-    return { p05, p10 };
+    return { p05, p10, pMean };
 }
 
 async function updateDatabaseChart() {
@@ -367,7 +374,8 @@ async function updateDatabaseChart() {
     dbChart.data.datasets[1].data = lowessLine;
     dbChart.data.datasets[2].data = perc.p10;
     dbChart.data.datasets[3].data = perc.p05;
-    dbChart.data.datasets[4].data = [{ x: 0, y: 1.0 }, { x: maxX, y: 1.0 }];
+    dbChart.data.datasets[4].data = perc.pMean;
+    dbChart.data.datasets[5].data = [{ x: 0, y: 1.0 }, { x: maxX, y: 1.0 }];
 
     dbChart.options.scales.x.title.text = varKey;
     dbChart.options.scales.y.title.text = codeName + (codeKey === 'LIVE_MODEL' ? ' (V_test / V_calc)' : ' (V_test / V_code)');
@@ -430,6 +438,17 @@ function initDatabaseChart() {
                     type: 'line',
                     borderColor: 'rgba(239, 68, 68, 1)',
                     borderDash: [2, 2],
+                    pointRadius: 4,
+                    borderWidth: 2,
+                    fill: false,
+                    order: 2
+                },
+                {
+                    label: 'Mean (Bin)',
+                    data: [],
+                    type: 'line',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderDash: [5, 5],
                     pointRadius: 4,
                     borderWidth: 2,
                     fill: false,

@@ -1,0 +1,7 @@
+﻿minX: 57.15, maxX: 3840.0, length: 1877
+Bin 1 len 1564: 5th: 0.703, 10th: 0.815
+Bin 2 len 209: 5th: 0.646, 10th: 0.771
+Bin 3 len 80: 5th: 0.500, 10th: 0.557
+Bin 4 len 16: 5th: 0.485, 10th: 0.600
+Bin 5 len 3: 5th: 0.565, 10th: 0.565
+Bin 6 len 4: 5th: 0.541, 10th: 0.541

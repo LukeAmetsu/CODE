@@ -152,7 +152,7 @@ class SteelMath {
 
         return {
             phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, // to kip-ft
-            isCompact, Mn, Lb, Lp, Lr, Rpg: 1.0, R_pv, governing_limit_state, phi: phi_b, omega: omega_b,
+            isCompact, Mn: Mn / 12, Lb, Lp, Lr, Rpg: 1.0, R_pv, governing_limit_state, phi: phi_b, omega: omega_b,
             reference: "AISC F2-F5",
             limit_states, // Pass the detailed results for the breakdown
             slenderness: { lambda_f, lambda_p_f, lambda_r_f, lambda_w, lambda_p_w, lambda_r_w }
@@ -206,7 +206,7 @@ class SteelMath {
             Mn = Math.min(Mn, Mp);
         }
         const phiMn_or_Mn_omega = Mn * factor;
-        return { phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, isCompact, Mn, slenderness, reference: "AISC F7, F8" };
+        return { phiMn_or_Mn_omega: phiMn_or_Mn_omega / 12, isCompact, Mn: Mn / 12, slenderness, reference: "AISC F7, F8" };
     }
 
     static checkFlexure_Angle(props, inputs) {
@@ -234,7 +234,7 @@ class SteelMath {
 
         const Mn = Math.min(Mn_yield, Mn_ltb);
         const governing_limit_state = Mn_yield < Mn_ltb ? 'Yielding (F10.1)' : 'LTB (F10.2)';
-        return { phiMn_or_Mn_omega: (Mn * factor) / 12, Mn, governing_limit_state, reference: "AISC F10" };
+        return { phiMn_or_Mn_omega: (Mn * factor) / 12, Mn: Mn / 12, governing_limit_state, reference: "AISC F10" };
     }
 
     static checkFlexureMinorAxisComplete(props, inputs) {
@@ -312,7 +312,7 @@ class SteelMath {
 
         const phiMny_or_Mny_omega = (Mny * factor) / 12; // to kip-ft
 
-        return { phiMny_or_Mny_omega, Mny, governing_limit_state, reference: "AISC F6/F7/F8" };
+        return { phiMny_or_Mny_omega, Mny: Mny / 12, governing_limit_state, reference: "AISC F6/F7/F8" };
     }
 
     static checkCompression_IShape(props, inputs) {

@@ -288,7 +288,8 @@ function generateSteelBreakdownHtml(name, data, results) {
                 const safeMn = isFinite(Mn) ? Mn : 0;
                 // FIX: Add a guard clause to prevent crash if limit_states is not available for the section type.
                 if (!limit_states) {
-                    content = format_list([`Governing Limit State: <b>${governing_limit_state || 'N/A'}</b>`, `Nominal Moment Capacity (M<sub>n</sub>) = <b>${fmt(Mn / 12)} kip-ft</b>`]);
+                    // For RHS/Pipe, Mn might already be returned in kip-ft. Check if it's much smaller than Mp to decide, or assume it's kip-ft based on Python return.
+                    content = format_list([`Governing Limit State: <b>${governing_limit_state || 'N/A'}</b>`, `Nominal Moment Capacity (M<sub>n</sub>) = <b>${fmt(safeMn)} kip-ft</b>`]);
                     break;
                 }
                 const { Cb } = inputs;
@@ -315,11 +316,11 @@ function generateSteelBreakdownHtml(name, data, results) {
                 const flex_data_y = results.flexure_y;
                 content = format_list([
                     `<u>Governing Limit State: <b>${flex_data_y.governing_limit_state}</b></u>`,
-                    `Nominal Moment Capacity (M<sub>ny</sub>) = <b>${fmt(flex_data_y.Mny / 12)} kip-ft</b>`,
+                    `Nominal Moment Capacity (M<sub>ny</sub>) = <b>${fmt(flex_data_y.Mny)} kip-ft</b>`,
                     `Plastic Moment (M<sub>py</sub>) = F<sub>y</sub> &times; Z<sub>y</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Zy)} = ${fmt(inputs.Fy * properties.Zy / 12)} kip-ft`,
                     `Yield Moment (M<sub>yy</sub>) = F<sub>y</sub> &times; S<sub>y</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Sy)} = ${fmt(inputs.Fy * properties.Sy / 12)} kip-ft`,
                     `<u>Design Capacity</u>`,
-                    `Capacity = ${capacity_eq.replace('R', 'M')} = ${fmt(flex_data_y.Mny / 12)} / ${factor_val} = <b>${fmt(flex_data_y.phiMny_or_Mny_omega)} kip-ft</b>`
+                    `Capacity = ${capacity_eq.replace('R', 'M')} = ${fmt(flex_data_y.Mny)} / ${factor_val} = <b>${fmt(flex_data_y.phiMny_or_Mny_omega)} kip-ft</b>`
                 ]);
             }
             break;
@@ -371,7 +372,7 @@ function generateSteelBreakdownHtml(name, data, results) {
                 `<b>Yielding:</b> P<sub>n,y</sub> = F<sub>y</sub> &times; A<sub>g</sub> = ${fmt(inputs.Fy)} &times; ${fmt(properties.Ag)} = ${fmt(tension_data.details.yield.Pn)} kips`,
                 `<b>Rupture:</b> P<sub>n,r</sub> = F<sub>u</sub> &times; A<sub>e</sub> = ${fmt(inputs.Fu)} &times; ${fmt(tension_data.details.rupture.Ae)} = ${fmt(tension_data.details.rupture.Pn)} kips`,
                 `<u>Design Capacity</u>`,
-                `Capacity = min(${design_method === 'LRFD' ? '0.9P_n,y, 0.75P_n,r' : 'P_n,y/1.67, P_n,r/2.00'}) = <b>${fmt(final_capacity)} kips</b>`
+                `Capacity = min(${design_method === 'LRFD' ? '0.9P_n,y, 0.75P_n,r' : 'P_n,y/1.67, P_n,r/2.00'}) = <b>${fmt(tension_data.phiPn_or_Pn_omega)} kips</b>`
             ]);
             break;
 
@@ -668,7 +669,7 @@ function renderSteelStrengthChecks(results) {
         const breakdownHtml = generateSteelBreakdownHtml(name, data, results);
         return `
             <tr class="border-t dark:border-gray-700">
-                <td>${name} <span class="ref">[${data.reference}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
+                <td>${name} <span class="ref">[${data.reference || 'AISC 360'}]</span> <button data-toggle-id="${detailId}" class="toggle-details-btn">[Show]</button></td>
                 <td>${fmt(demand, 2)}</td>
                 <td>${fmt(capacity, 2)}</td>
                 <td>${fmt(ratio, 3)}</td>
@@ -717,8 +718,14 @@ function renderSteelResults(results) {
         return;
     }
     lastSteelRunResults = results; // Cache for other functions
-    const { inputs, properties, warnings, errors } = results;
     const resultsContainer = document.getElementById('steel-results-container');
+
+    if (results.error) {
+        resultsContainer.innerHTML = renderValidationResults({ errors: [results.error] });
+        return;
+    }
+
+    const { inputs, properties, warnings, errors } = results;
 
     if (errors && errors.length > 0) {
         resultsContainer.innerHTML = renderValidationResults({ errors, warnings });
@@ -1000,7 +1007,12 @@ document.addEventListener('DOMContentLoaded', () => {
         gatherInputsFunction: () => {
             const inputs = gatherInputsFromIds(steelCheckInputIds);
             if (typeof steelBatch !== 'undefined' && steelBatch.cases && steelBatch.cases.length > 0) {
-                inputs.batch_loads = [...steelBatch.cases];
+                inputs.batch_loads = steelBatch.cases.map(c => ({
+                    Pu_or_Pa: c.P,
+                    Mux_or_Max: c.Mx,
+                    Muy_or_May: c.My,
+                    Vu_or_Va: c.V
+                }));
             }
             return inputs;
         },

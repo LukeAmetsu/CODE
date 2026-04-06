@@ -749,6 +749,7 @@ def check_concrete_bearing(inputs):
         phi = get_phi('bearing', method, jurisdiction, inputs.get('global_fos'))
         omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction, inputs.get('global_fos'))
 
+    Fp = Pp / A1 if (A1 and A1 > 0) else 0.0
     Rn = Fp
     if Pu > 0:
         return {"demand": 0, "check": {"Rn": Rn, "phi": phi, "omega": omega}, "details": {"bearing_case": "Uplift", "Pu": Pu, "f_p_max": 0, "P_abs": abs(Pu), "Mux": Mux/12.0, "Muy": Muy/12.0, "e_x": (Mux / abs(Pu)) if abs(Pu) > 0 else 0, "e_y": (Muy / abs(Pu)) if abs(Pu) > 0 else 0, "A1": N*B, "A2": pedestal_N*pedestal_B, "confinement_factor": 1.0, "Rn_force": Pp, "breakdown_formula": "Uplift: No bearing pressure."}}

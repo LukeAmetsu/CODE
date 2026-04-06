@@ -179,6 +179,8 @@ class SpliceCalculator:
         fu = float(inputs.get('Fu', 0))
         fy = float(inputs.get('Fy', 0))
         ubs = float(inputs.get('Ubs', 1.0))
+        anv_calc = inputs.get('Anv_calc')
+        ant_calc = inputs.get('Ant_calc')
         
         shear_rupture = 0.6 * fu * anv
         tension_rupture = ubs * fu * ant
@@ -196,7 +198,9 @@ class SpliceCalculator:
                 'shear_rupture_term': shear_rupture,
                 'tension_rupture_term': tension_rupture,
                 'shear_yield_limit': shear_yield + tension_rupture,
-                'shear_yield_base': shear_yield
+                'shear_yield_base': shear_yield,
+                'Anv_calc': anv_calc,
+                'Ant_calc': ant_calc
             }
         }
 
@@ -596,10 +600,14 @@ class SpliceCalculator:
         anv = agv - (nc * 2) * hole_net * t_p
         ant = (gage - nr * hole_net) * t_p
         
+        anv_calc = f"A<sub>gv</sub> - n<sub>c</sub> &times; 2 &times; d<sub>h</sub> &times; t = {agv:.3f} - ({nc} &times; 2 &times; {hole_net:.3f} &times; {t_p:.3f})"
+        ant_calc = f"(g - n<sub>r</sub> &times; d<sub>h</sub>) &times; t = ({gage:.3f} - {nr} &times; {hole_net:.3f}) &times; {t_p:.3f}"
+        
         checks[f"{plate_name} Block Shear"] = {
              'demand': demand,
              'check': self.check_block_shear({
                  'Agv': agv, 'Anv': anv, 'Ant': ant, 'Fu': fu, 'Fy': fy,
+                 'Anv_calc': anv_calc, 'Ant_calc': ant_calc,
                  'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
              })
         }

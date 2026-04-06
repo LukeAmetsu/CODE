@@ -278,26 +278,33 @@ class SteelChecker:
         
     def get_section_properties(self, inputs):
         """Parses inputs to get properties, similar to JS helper."""
+        def safe_float(val, default=0.0):
+            try:
+                if val == "" or val is None: return default
+                return float(val)
+            except:
+                return default
+
         # In this backend context, inputs likely already contain some properties or need parsing
         # Replicating JS logic:
         props = {
             'type': inputs.get('section_type', ''),
-            'd': float(inputs.get('d', 0)),
-            'bf': float(inputs.get('bf', 0)),
-            'tf': float(inputs.get('tf', 0)),
-            'tw': float(inputs.get('tw', 0)),
-            'Ag': float(inputs.get('Ag_manual', 0)),
-            'Ix': float(inputs.get('I_manual', 0)),
-            'Sx': float(inputs.get('Sx_manual', 0)),
-            'Zx': float(inputs.get('Zx_manual', 0)),
-            'Iy': float(inputs.get('Iy_manual', 0)),
-            'Sy': float(inputs.get('Sy_manual', 0)),
-            'Zy': float(inputs.get('Zy_manual', 0)),
-            'ry': float(inputs.get('ry_manual', 0)),
-            'rts': float(inputs.get('rts_manual', 0)),
-            'J': float(inputs.get('J_manual', 0)),
-            'Cw': float(inputs.get('Cw_manual', 0)),
-            'k_des': float(inputs.get('k_des', 0)) or float(inputs.get('tf', 0)),
+            'd': safe_float(inputs.get('d', 0)),
+            'bf': safe_float(inputs.get('bf', 0)),
+            'tf': safe_float(inputs.get('tf', 0)),
+            'tw': safe_float(inputs.get('tw', 0)),
+            'Ag': safe_float(inputs.get('Ag_manual', 0)),
+            'Ix': safe_float(inputs.get('I_manual', 0)),
+            'Sx': safe_float(inputs.get('Sx_manual', 0)),
+            'Zx': safe_float(inputs.get('Zx_manual', 0)),
+            'Iy': safe_float(inputs.get('Iy_manual', 0)),
+            'Sy': safe_float(inputs.get('Sy_manual', 0)),
+            'Zy': safe_float(inputs.get('Zy_manual', 0)),
+            'ry': safe_float(inputs.get('ry_manual', 0)),
+            'rts': safe_float(inputs.get('rts_manual', 0)),
+            'J': safe_float(inputs.get('J_manual', 0)),
+            'Cw': safe_float(inputs.get('Cw_manual', 0)),
+            'k_des': safe_float(inputs.get('k_des', 0)) or safe_float(inputs.get('tf', 0)),
         }
         # Derived
         props['h'] = props['d'] - 2*props['k_des']
@@ -341,15 +348,22 @@ class SteelChecker:
                     results.append({"error": str(e), "trace": traceback.format_exc()})
             return results
             
+        def safe_float_input(val, default=0.0):
+            try:
+                if val == "" or val is None: return default
+                return float(val)
+            except:
+                return default
+
         inputs = inputs.copy() # Avoid mutating original
         # Parse basic numerics
-        inputs['Fy'] = float(inputs.get('Fy', 0))
-        inputs['Fu'] = float(inputs.get('Fu', 0))
-        inputs['Pu_or_Pa'] = float(inputs.get('Pu_or_Pa', 0))
-        inputs['Mux_or_Max'] = float(inputs.get('Mux_or_Max', 0))
-        inputs['Muy_or_May'] = float(inputs.get('Muy_or_May', 0))
-        inputs['Vu_or_Va'] = float(inputs.get('Vu_or_Va', 0))
-        inputs['Tu_or_Ta'] = float(inputs.get('Tu_or_Ta', 0))
+        inputs['Fy'] = safe_float_input(inputs.get('Fy', 0))
+        inputs['Fu'] = safe_float_input(inputs.get('Fu', 0))
+        inputs['Pu_or_Pa'] = safe_float_input(inputs.get('Pu_or_Pa', 0))
+        inputs['Mux_or_Max'] = safe_float_input(inputs.get('Mux_or_Max', 0))
+        inputs['Muy_or_May'] = safe_float_input(inputs.get('Muy_or_May', 0))
+        inputs['Vu_or_Va'] = safe_float_input(inputs.get('Vu_or_Va', 0))
+        inputs['Tu_or_Ta'] = safe_float_input(inputs.get('Tu_or_Ta', 0))
         
         props = self.get_section_properties(inputs)
         

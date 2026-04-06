@@ -1568,7 +1568,7 @@ const spliceCalculator = (() => {
     return { Rn, ...factors, An, Ag, A_holes, Fu, hole_dia_net_area };
   }
 
-  function checkBlockShear({ Agv, Anv, Ant, Fu, Fy, Ubs = 1.0, jurisdiction }) {
+  function checkBlockShear({ Agv, Anv, Ant, Fu, Fy, Ubs = 1.0, Anv_calc, Ant_calc, jurisdiction }) {
     const shear_rupture_term = 0.6 * Fu * Anv;
     const tension_rupture_term = Ubs * Fu * Ant;
     const shear_yield_term = 0.6 * Fy * Agv;
@@ -1580,6 +1580,12 @@ const spliceCalculator = (() => {
 
     return {
       Rn,
+      Fu,
+      Fy,
+      Agv,
+      Anv,
+      Ant,
+      Ubs,
       ...factors,
       details: {
         shear_rupture_term,
@@ -1588,6 +1594,8 @@ const spliceCalculator = (() => {
         Anv,
         Ant,
         Ubs,
+        Anv_calc,
+        Ant_calc,
       },
     };
   }
@@ -2050,6 +2058,8 @@ const spliceCalculator = (() => {
     const Agv = (S_end + (Nc - 1) * S_col) * t_p * 2;
     const Anv = Agv - Nc * 2 * hole_for_net_area * t_p;
     const Ant = (gage - Nr * hole_for_net_area) * t_p;
+    const Anv_calc = `A<sub>gv</sub> - n<sub>c</sub> &times; 2 &times; d<sub>h</sub> &times; t = ${Agv.toFixed(3)} - (${Nc} &times; 2 &times; ${hole_for_net_area.toFixed(3)} &times; ${t_p.toFixed(3)})`;
+    const Ant_calc = `(g - n<sub>r</sub> &times; d<sub>h</sub>) &times; t = (${gage.toFixed(3)} - ${Nr} &times; ${hole_for_net_area.toFixed(3)}) &times; ${t_p.toFixed(3)}`;
     plateChecks[`${plateName} Block Shear`] = {
       demand,
       check: checkBlockShear({
@@ -2059,6 +2069,8 @@ const spliceCalculator = (() => {
         Fu,
         Fy,
         Ubs: 1.0,
+        Anv_calc,
+        Ant_calc,
         jurisdiction: inputs.jurisdiction,
       }),
     };
@@ -2292,6 +2304,8 @@ const spliceCalculator = (() => {
       (inputs.g_gage_fp - 2 * inputs.Nr_fp * hole_for_net_area_fp) *
       inputs.member_tf;
     const Agt_beam_f = inputs.g_gage_fp * inputs.member_tf;
+    const Anv_calc_beam = `(L<sub>gv</sub> - (n<sub>c</sub> - 0.5) &times; d<sub>h</sub>) &times; t = (${L_gv_beam_f.toFixed(3)} - (${inputs.Nc_fp} - 0.5) &times; ${hole_for_net_area_fp.toFixed(3)}) &times; ${inputs.member_tf.toFixed(3)}`;
+    const Ant_calc_beam = `(g - 2 &times; n<sub>r</sub> &times; d<sub>h</sub>) &times; t = (${inputs.g_gage_fp.toFixed(3)} - 2 &times; ${inputs.Nr_fp} &times; ${hole_for_net_area_fp.toFixed(3)}) &times; ${inputs.member_tf.toFixed(3)}`;
     checks["Beam Flange Block Shear"] = {
       demand: total_flange_demand_tension,
       check: checkBlockShear({
@@ -2301,6 +2315,8 @@ const spliceCalculator = (() => {
         Fu: inputs.member_Fu,
         Fy: inputs.member_Fy,
         Ubs: 1.0,
+        Anv_calc: Anv_calc_beam,
+        Ant_calc: Ant_calc_beam,
         num_shear_paths: 2,
         jurisdiction: inputs.jurisdiction,
       }),
@@ -2680,6 +2696,8 @@ const spliceCalculator = (() => {
       Agv_bs - 2 * inputs.Nc_wp * hole_for_net_area_wp * total_t_wp_bs_calc;
     const Ant_bs =
       (inputs.H_wp - inputs.Nr_wp * hole_for_net_area_wp) * total_t_wp_bs_calc;
+    const Anv_calc_wp = `A<sub>gv</sub> - 2 &times; n<sub>c</sub> &times; d<sub>h</sub> &times; t<sub>total</sub> = ${Agv_bs.toFixed(3)} - 2 &times; ${inputs.Nc_wp} &times; ${hole_for_net_area_wp.toFixed(3)} &times; ${total_t_wp_bs_calc.toFixed(3)}`;
+    const Ant_calc_wp = `(H<sub>p</sub> - n<sub>r</sub> &times; d<sub>h</sub>) &times; t<sub>total</sub> = (${inputs.H_wp.toFixed(3)} - ${inputs.Nr_wp} &times; ${hole_for_net_area_wp.toFixed(3)}) &times; ${total_t_wp_bs_calc.toFixed(3)}`;
     checks["Web Plate Block Shear"] = {
       demand: V_load,
       check: checkBlockShear({
@@ -2689,6 +2707,8 @@ const spliceCalculator = (() => {
         Fu: inputs.web_plate_Fu,
         Fy: inputs.web_plate_Fy,
         Ubs: 1.0,
+        Anv_calc: Anv_calc_wp,
+        Ant_calc: Ant_calc_wp,
         jurisdiction: inputs.jurisdiction,
       }),
     };
@@ -3287,16 +3307,26 @@ const baseBreakdownGenerators = {
       `<u>Design Capacity</u>`,
       `Capacity = ${common.capacity_eq} = ${common.fmt(check.Rn)} / ${common.factor_val} = <b>${common.fmt(common.final_capacity)} kips</b>`,
     ]),
-  "Block Shear": ({ check }, common) =>
-    common.format_list([
+  "Block Shear": ({ check }, common) => {
+    const anv_line = check.details.Anv_calc
+      ? `A<sub>nv</sub> = ${check.details.Anv_calc} = <b>${common.fmt(check.Anv, 3)} in²</b>`
+      : `A<sub>nv</sub> = <b>${common.fmt(check.Anv, 3)} in²</b>`;
+    const ant_line = check.details.Ant_calc
+      ? `A<sub>nt</sub> = ${check.details.Ant_calc} = <b>${common.fmt(check.Ant, 3)} in²</b>`
+      : `A<sub>nt</sub> = <b>${common.fmt(check.Ant, 3)} in²</b>`;
+
+    return common.format_list([
       `<u>Nominal Strength per AISC J4.3</u>`,
+      anv_line,
+      ant_line,
       `Shear Rupture Path: 0.6 × F<sub>u</sub> × A<sub>nv</sub> = 0.6 × ${common.fmt(check.Fu)} × ${common.fmt(check.Anv, 3)} = ${common.fmt(check.details.shear_rupture_term)} kips`,
       `Tension Rupture Path: U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = ${common.fmt(check.Ubs)} × ${common.fmt(check.Fu)} × ${common.fmt(check.Ant, 3)} = ${common.fmt(check.details.tension_rupture_term)} kips`,
       `Shear Yield Limit: 0.6 × F<sub>y</sub> × A<sub>gv</sub> + U<sub>bs</sub> × F<sub>u</sub> × A<sub>nt</sub> = (0.6 × ${common.fmt(check.Fy)} × ${common.fmt(check.Agv, 3)}) + ${common.fmt(check.details.tension_rupture_term)} = ${common.fmt(check.details.shear_yield_limit)} kips`,
       `R<sub>n</sub> = min(paths) = <b>${common.fmt(check.Rn)} kips</b>`,
       `<u>Design Capacity</u>`,
       `Capacity = ${common.capacity_eq} = <b>${common.fmt(common.final_capacity)} kips</b>`,
-    ]),
+    ]);
+  },
   "Bolt Bearing": ({ check, details, demand }, common) => {
     const tearout_coeff = common.inputs.deformation_is_consideration
       ? 1.2
