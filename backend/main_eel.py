@@ -43,6 +43,15 @@ def calculate_angle_support(inputs):
         return {"error": str(e)}
 
 @eel.expose
+def calculate_shed_span(inputs):
+    try:
+        from backend.calculators.shed_span import calculate_max_span
+        return calculate_max_span(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
 def find_lightest_beam(inputs):
     try:
         return py_find_lightest(inputs)
