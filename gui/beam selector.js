@@ -51,11 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Inventory Checkbox Toggle
+    const invCheck = document.getElementById('check_inventory');
+    const invInputs = document.getElementById('inventory_inputs');
+    invCheck?.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            invInputs.classList.remove('hidden');
+        } else {
+            invInputs.classList.add('hidden');
+        }
+    });
+
     // Main Run Button (Removed)
 
     // Batch Controls
     if (document.getElementById('batch-run-selector-btn')) {
         document.getElementById('batch-run-selector-btn').addEventListener('click', findLightestBeam);
+    }
+
+    if (document.getElementById('export-excel-btn')) {
+        document.getElementById('export-excel-btn').addEventListener('click', exportBatchToExcel);
     }
 
     document.getElementById('add-case-btn')?.addEventListener('click', () => {
@@ -259,6 +274,30 @@ async function findLightestBeam() {
         };
     });
 
+    const cb = document.getElementById('Cb'); // ... existing logic ignores Single Lb/Cb if batch
+
+    // Parse restricted inventory
+    let restricted_pool = null;
+    if (document.getElementById('check_inventory').checked) {
+        const text = document.getElementById('inventory_data').value;
+        if (text.trim()) {
+            restricted_pool = {};
+            const lines = text.split('\n');
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                const parts = line.split(/[\t ,]+/);
+                if (parts.length >= 2) {
+                    const shape = parts[0].toUpperCase();
+                    const lb = safeMathEval(parts[1]);
+                    if (shape && lb !== null) {
+                        restricted_pool[shape] = lb;
+                    }
+                }
+            }
+        }
+    }
+
     const inputs = {
         shape_type: shapeType,
         design_method: method,
@@ -277,7 +316,8 @@ async function findLightestBeam() {
         check_double: checkDouble,
         max_ratio: maxRatio,
 
-        batch_loads: batchPayload
+        batch_loads: batchPayload,
+        restricted_pool: restricted_pool
     };
 
     if (batchPayload.length === 0) {
@@ -491,6 +531,55 @@ function renderBatchResults(data) {
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function exportBatchToExcel() {
+    if (!beamBatchResults || beamBatchResults.length === 0) {
+        alert("No results to export. Please run your calculation first.");
+        return;
+    }
+
+    const exportData = beamBatchResults.map((resultRow, index) => {
+        const inputRow = beamData.batchCases[index] || {};
+        
+        let winnerName = "No Valid Shape";
+        let weight = "-";
+        let ratio = "-";
+        let capacity = "-";
+        let mode = "-";
+        let reaction = "-";
+        
+        if (resultRow.winner) {
+            winnerName = resultRow.winner.name;
+            weight = resultRow.winner.weight;
+            ratio = (resultRow.winner.ratio * 100).toFixed(1) + "%";
+            capacity = resultRow.winner.capacity.toFixed(2);
+            mode = resultRow.winner.mode;
+            reaction = resultRow.winner.rxn_kips !== undefined ? resultRow.winner.rxn_kips.toFixed(2) : "-";
+        }
+
+        return {
+            "Case #": index + 1,
+            "Span (ft)": inputRow.span !== undefined ? inputRow.span : resultRow.span,
+            "Trib (ft)": inputRow.trib || 0,
+            "Load": inputRow.load !== undefined ? inputRow.load : resultRow.load,
+            "Cantilever (ft)": inputRow.cant || 0,
+            "Lb (ft)": inputRow.lb !== undefined ? inputRow.lb : (inputRow.span || resultRow.span),
+            "Cb": inputRow.cb || 1.0,
+            "Winner": winnerName,
+            "Weight (lb/ft)": weight,
+            "Capacity (k-ft)": capacity,
+            "Max Reaction (kips)": reaction,
+            "Ratio (D/C)": ratio,
+            "Governing Mode": mode
+        };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Batch Results");
+    
+    XLSX.writeFile(workbook, "Beam_Batch_Results.xlsx");
+}
+
 async function viewBatchDetails(index) {
     // FIX: Use the SOURCE input data, not the result data (which lacks lb info)
     const data = beamData.batchCases[index];
@@ -506,8 +595,12 @@ async function viewBatchDetails(index) {
     }
 
     // 2. Determine Moment (M_req)
-    // Always calc from wL^2/8
-    const m_req = (w_val * data.span * data.span) / 8.0;
+    let m_req = 0;
+    if (data.cant > 0) {
+        m_req = (w_val * data.cant * data.cant) / 2.0;
+    } else {
+        m_req = (w_val * data.span * data.span) / 8.0;
+    }
 
     // Calculate demand for display reference
     const M_req = m_req;
@@ -544,8 +637,30 @@ async function viewBatchDetails(index) {
         check_double: checkDouble,
         max_ratio: maxRatioPct / 100.0, // Re-calc or pass? We didn't grab it in viewBatchDetails local scope yet
         cantilever_ft: data.cant || 0,
-        batch_loads: null
+        batch_loads: null,
+        restricted_pool: null
     };
+
+    // Evaluate restricted pool again correctly in this scope
+    if (document.getElementById('check_inventory').checked) {
+        const text = document.getElementById('inventory_data').value;
+        if (text.trim()) {
+            singleInputs.restricted_pool = {};
+            const lines = text.split('\n');
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                const parts = line.split(/[\t ,]+/);
+                if (parts.length >= 2) {
+                    const shape = parts[0].toUpperCase();
+                    const lb = safeMathEval(parts[1]);
+                    if (shape && lb !== null) {
+                        singleInputs.restricted_pool[shape] = lb;
+                    }
+                }
+            }
+        }
+    }
 
     try {
         // Show loading state?

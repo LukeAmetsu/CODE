@@ -464,33 +464,35 @@ def check_anchors_aci_best(inputs, geo, forces):
         }
     # Concrete breakout (group)
     Tu_total = forces['total_tension']
-    if Tu_total > 0:
-        kc = 24
-        fc_psi = fc * 1000.0
-        hef_power = hef ** 1.5
-        Nb = kc * 1.0 * math.sqrt(fc_psi) * hef_power / 1000.0
-        ca1 = float(inputs.get('concrete_edge_dist_ca1', 0))
-        ca2 = float(inputs.get('concrete_edge_dist_ca2', 0))
-        num_N = int(inputs.get('num_bolts_N', 1))
-        num_B = int(inputs.get('num_bolts_B', 1))
-        sp_N = float(inputs.get('bolt_spacing_N', 0))
-        sp_B = float(inputs.get('bolt_spacing_B', 0))
-        c1 = min(ca1, 1.5 * hef)
-        dim_1 = c1 + (num_N - 1) * sp_N + c1
-        c2 = min(ca2, 1.5 * hef)
-        dim_2 = c2 + (num_B - 1) * sp_B + c2
-        Anc = dim_1 * dim_2
-        Anco = 9 * (hef**2)
-        c_min = min(ca1, ca2)
-        psi_ed = 1.0
-        Ncbg = 0
-        if hef > 0:
-            if c_min < 1.5 * hef:
-                psi_ed = 0.7 + 0.3 * (c_min / (1.5 * hef))
-            if Anco > 0:
-                Ncbg = (Anc / Anco) * psi_ed * 1.25 * 1.0 * Nb
-        phi_conc = 0.70
-        
+    
+    # Calculate Ncbg unconditionally (used for Pryout check even if Tu_total = 0)
+    kc = 24
+    fc_psi = fc * 1000.0
+    hef_power = hef ** 1.5
+    Nb = kc * 1.0 * math.sqrt(fc_psi) * hef_power / 1000.0
+    ca1 = float(inputs.get('concrete_edge_dist_ca1', 0))
+    ca2 = float(inputs.get('concrete_edge_dist_ca2', 0))
+    num_N = int(inputs.get('num_bolts_N', 1))
+    num_B = int(inputs.get('num_bolts_B', 1))
+    sp_N = float(inputs.get('bolt_spacing_N', 0))
+    sp_B = float(inputs.get('bolt_spacing_B', 0))
+    c1 = min(ca1, 1.5 * hef)
+    dim_1 = c1 + (num_N - 1) * sp_N + c1
+    c2 = min(ca2, 1.5 * hef)
+    dim_2 = c2 + (num_B - 1) * sp_B + c2
+    Anc = dim_1 * dim_2
+    Anco = 9 * (hef**2)
+    c_min = min(ca1, ca2)
+    psi_ed = 1.0
+    Ncbg = 0
+    if hef > 0:
+        if c_min < 1.5 * hef:
+            psi_ed = 0.7 + 0.3 * (c_min / (1.5 * hef))
+        if Anco > 0:
+            Ncbg = (Anc / Anco) * psi_ed * 1.25 * 1.0 * Nb
+    phi_conc = 0.70
+    
+    if True: # Always calculate and return breakout for Pryout reference
         steps_breakout = [
             {
                 "label": "Basic Breakout Strength (Nb)",
@@ -623,7 +625,7 @@ def calculate_base_plate(raw_inputs):
                         pass # bearing ratio logic is complex, ignore for governing sort for now unless necessary
                     else:
                         is_anchor = 'Anchor' in k
-                        if is_anchor and dm == 'ASD':
+                        if is_anchor and dm == 'ASD' and k != 'Anchor Interaction (T+V)':
                             demand *= 1.6
                         if dm == 'LRFD' or is_anchor:
                             cap = rn * float(c_info.get('phi', 0.75))
@@ -683,17 +685,24 @@ def calculate_base_plate(raw_inputs):
     inter_res = check_interaction(inputs, checks)
     checks['Anchor Interaction (T+V)'] = inter_res
     
+    # [NEW] Weld Checks
+    weld_props = calculate_weld_properties(inputs)
+    weld_check = check_weld_stress(inputs, forces, weld_props)
+    if weld_check:
+        checks['Weld Strength'] = weld_check
+
     # Return results
     # Add geomChecks to match expected JS structure
     geom_checks = check_geometry_limits(inputs)
     
     return _sanitize_output({
+        "inputs": inputs,
+        "geometry": geo,
+        "forces": forces,
         "checks": checks,
         "geomChecks": geom_checks,
-        "inputs": inputs,
         "details": {"max_bolt_tension": forces['max_tension'], "yield_line_status": yl_status}
     })
-
 def _sanitize_output(data):
     """Recursively sanitize output for JSON serialization."""
     if isinstance(data, dict):
@@ -803,6 +812,7 @@ def check_concrete_bearing(inputs):
             f_p_max = (P_abs / (B*N)) * (1 + term_x + term_y)
             Y = N
             X = B
+            breakdown_formula = "f_p,max = (P/A) * (1 + 6e_x/N + 6e_y/B)"
         elif (e_x/N + e_y/B) <= 0.5:
             bearing_case = "Partial Bearing"
             if e_y == 0:
@@ -829,6 +839,7 @@ def check_concrete_bearing(inputs):
                     Y_curr = max(0.1, min(N, Y_curr))
                 Y = Y_curr
                 f_p_max = (2 * P_abs) / (B * Y)
+            breakdown_formula = "Iterative partial bearing analysis"
         else:
             bearing_case = "Corner Bearing"
             g_x = N/2 - e_x
@@ -837,9 +848,11 @@ def check_concrete_bearing(inputs):
                 f_p_max = (2 * P_abs) / (3 * g_x * g_y)
                 Y = 3 * g_x
                 X = 3 * g_y
+                breakdown_formula = "f_p,max = (2P) / (3 * g_x * g_y)"
             else:
                 f_p_max = 0
                 bearing_case = "Unstable (Load outside)"
+                breakdown_formula = "N/A"
     
     # Generate Breakdown
     steps = [
@@ -1160,34 +1173,34 @@ def check_interaction(inputs, checks):
     if 'Anchor Steel Tension' in checks:
         c = checks['Anchor Steel Tension']
         denom = c['check']['Rn'] * c['check']['phi']
-        t_ratio = max(t_ratio, c['demand'] / denom if denom > 0 else 999.0)
+        t_ratio = max(t_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
         
     if 'Anchor Concrete Breakout (Group)' in checks:
         c = checks['Anchor Concrete Breakout (Group)']
         denom = c['check']['Rn'] * c['check']['phi']
-        t_ratio = max(t_ratio, c['demand'] / denom if denom > 0 else 999.0)
+        t_ratio = max(t_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
         
     if 'Wood Screw Pullout (Withdrawal)' in checks:
         c = checks['Wood Screw Pullout (Withdrawal)']
         denom = c['check']['Rn'] * c['check']['phi']
-        t_ratio = max(t_ratio, c['demand'] / denom if denom > 0 else 999.0)
+        t_ratio = max(t_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
 
     # Shear Ratio
     v_ratio = 0
     if 'Anchor Steel Shear' in checks:
         c = checks['Anchor Steel Shear']
         denom = c['check']['Rn'] * c['check']['phi']
-        v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else 999.0)
+        v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
         
     if 'Anchor Concrete Pryout (Group)' in checks:
         c = checks['Anchor Concrete Pryout (Group)']
         denom = c['check']['Rn'] * c['check']['phi']
-        v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else 999.0)
+        v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
 
     if 'Wood Screw Shear (Lateral)' in checks:
         c = checks['Wood Screw Shear (Lateral)']
         denom = c['check']['Rn'] * c['check']['phi']
-        v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else 999.0)
+        v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
 
     # 2. Interaction Formula
     # If both <= 0.2, OK.
@@ -1478,120 +1491,3 @@ def check_weld_stress(inputs, forces, weld_props):
         }
     }
 
-def calculate_base_plate(raw_inputs):
-    # --- Batch Processing ---
-    batch_loads = raw_inputs.get('batch_loads')
-    if batch_loads and isinstance(batch_loads, list):
-        results = []
-        base_inputs = raw_inputs.copy()
-        if 'batch_loads' in base_inputs:
-            del base_inputs['batch_loads']
-        
-        for case in batch_loads:
-            if not isinstance(case, dict): continue
-            case_input = base_inputs.copy()
-            # Maps from JS 'P', 'Mx', etc.
-            if 'P' in case: case_input['axial_load_P_in'] = float(case['P'])
-            elif 'Pu' in case: case_input['axial_load_P_in'] = float(case['Pu'])
-            
-            if 'Mx' in case: case_input['moment_Mx_in'] = float(case['Mx'])
-            elif 'Mux' in case: case_input['moment_Mx_in'] = float(case['Mux'])
-            
-            if 'My' in case: case_input['moment_My_in'] = float(case['My'])
-            elif 'Muy' in case: case_input['moment_My_in'] = float(case['Muy'])
-            
-            if 'V' in case: case_input['shear_V_in'] = float(case['V'])
-            elif 'Vu' in case: case_input['shear_V_in'] = float(case['Vu'])
-            
-            res = calculate_base_plate(case_input)
-            results.append(res)
-            
-        # Post-process to find max ratio and assign it for JS
-        for res in results:
-            max_r = 0.0
-            for k, v in res.get('checks', {}).items():
-                try:
-                    demand = float(v.get('demand', 0))
-                    c_info = v.get('check', {})
-                    rn = float(c_info.get('Rn', 0))
-                    dm = raw_inputs.get('design_method', 'ASD')
-                    
-                    if k in ['Plate Bending (Compression)', 'Plate Thickness']:
-                        cap = rn
-                    elif k == 'Concrete Bearing':
-                        pass 
-                    else:
-                        is_anchor = 'Anchor' in k
-                        if is_anchor and dm == 'ASD':
-                            demand *= 1.6
-                        if dm == 'LRFD' or is_anchor:
-                            cap = rn * float(c_info.get('phi', 0.75))
-                        else:
-                            cap = rn / float(c_info.get('omega', 2.0))
-                        
-                        ratio = abs(demand) / cap if cap > 0 else (0.0 if abs(demand) == 0 else 999.0)
-                        if ratio > max_r: max_r = ratio
-                except Exception as e:
-                    pass
-            res['summary'] = {'ratio': max_r}
-            
-        # Sort by worst ratio descending
-        results.sort(key=lambda x: x.get('summary', {}).get('ratio', 0), reverse=True)
-        return _sanitize_output(results)
-
-    inputs = raw_inputs.copy()
-    # Geometry & Rigid Analysis
-    geo = calculate_group_geometry(inputs)
-    forces = analyze_bolt_forces(inputs, geo)
-    # Bearing check (reuse existing function)
-    bearing_res = check_concrete_bearing(inputs)
-    checks = {'Concrete Bearing': bearing_res}
-    # Plate bending unified
-    bending_checks = check_plate_bending_unified(inputs, geo, forces, bearing_res)
-    checks.update(bending_checks)
-    # If Yield Line fails, flag
-    yl_status = "OK"
-    if 'Plate Bending (Yield Line)' in checks:
-        yl = checks['Plate Bending (Yield Line)']
-        if yl['demand'] > yl['check']['Rn']:
-            yl_status = "FAIL"
-            checks['SYSTEM WARNING'] = {
-                "demand": 1,
-                "check": {"Rn": 0, "phi": 1, "omega": 1},
-                "details": {"error": "Plate is too thin (Yield Line Fail). Bolt forces are invalid. Increase thickness."}
-            }
-    # Anchor checks only if Yield Line passed
-    Ncbg_val = 0 # Default if check doesn't run
-    anchor_checks = {}
-    if yl_status == "OK":
-        anchor_checks = check_anchors_aci_best(inputs, geo, forces)
-        checks.update(anchor_checks)
-        # Capture Ncbg for Pryout check
-        if 'Anchor Concrete Breakout (Group)' in anchor_checks:
-            c = anchor_checks['Anchor Concrete Breakout (Group)']
-            Ncbg_val = c['check']['Rn'] # Nominal value
-
-    # [NEW] Shear Checks
-    shear_checks = check_anchors_shear_best(inputs, forces, Ncbg_val)
-    checks.update(shear_checks)
-    
-    # [NEW] Interaction
-    inter_res = check_interaction(inputs, checks)
-    checks['Anchor Interaction (T+V)'] = inter_res
-
-    # [NEW] Weld Checks
-    weld_props = calculate_weld_properties(inputs)
-    weld_check = check_weld_stress(inputs, forces, weld_props)
-    if weld_check:
-        checks['Weld Strength'] = weld_check
-        
-    # [NEW] Geometry Limits
-    geom_checks = check_geometry_limits(inputs)
-    
-    return _sanitize_output({
-        "inputs": inputs,
-        "geometry": geo,
-        "forces": forces,
-        "checks": checks,
-        "geomChecks": geom_checks
-    })

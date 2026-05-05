@@ -1138,49 +1138,42 @@ function draw3dSpliceDiagram() {
     } = inputs;
     const len = 24;
     const isHSS = member_shape_type === "HSS Rectangular";
+    const isAngle = member_shape_type === "Angle" || member_shape_type === "L-Shape" || member_shape_type === "L";
 
-    const ft = BABYLON.MeshBuilder.CreateBox(
-      "ft",
-      { width: bf, height: tf, depth: len },
-      bjsScene,
-    );
-    ft.position.y = (d - tf) / 2;
-
-    const fb = BABYLON.MeshBuilder.CreateBox(
-      "fb",
-      { width: bf, height: tf, depth: len },
-      bjsScene,
-    );
-    fb.position.y = -(d - tf) / 2;
-
-    let parts = [ft, fb];
+    let parts = [];
 
     if (isHSS) {
-      // Side walls for HSS (Left and Right)
+      const ft = BABYLON.MeshBuilder.CreateBox("ft", { width: bf, height: tf, depth: len }, bjsScene);
+      ft.position.y = (d - tf) / 2;
+      const fb = BABYLON.MeshBuilder.CreateBox("fb", { width: bf, height: tf, depth: len }, bjsScene);
+      fb.position.y = -(d - tf) / 2;
+      
       const wallHeight = d - 2 * tf;
-      const wl = BABYLON.MeshBuilder.CreateBox(
-        "wl",
-        { width: tw, height: wallHeight, depth: len },
-        bjsScene,
-      );
+      const wl = BABYLON.MeshBuilder.CreateBox("wl", { width: tw, height: wallHeight, depth: len }, bjsScene);
       wl.position.x = -(bf - tw) / 2;
 
-      const wr = BABYLON.MeshBuilder.CreateBox(
-        "wr",
-        { width: tw, height: wallHeight, depth: len },
-        bjsScene,
-      );
+      const wr = BABYLON.MeshBuilder.CreateBox("wr", { width: tw, height: wallHeight, depth: len }, bjsScene);
       wr.position.x = (bf - tw) / 2;
 
-      parts.push(wl, wr);
+      parts.push(ft, fb, wl, wr);
+    } else if (isAngle) {
+      const w = BABYLON.MeshBuilder.CreateBox("w", { width: tw, height: d, depth: len }, bjsScene);
+      w.position.y = 0;
+      w.position.x = 0;
+      
+      const fb = BABYLON.MeshBuilder.CreateBox("fb", { width: bf, height: tf, depth: len }, bjsScene);
+      fb.position.y = -(d - tf) / 2;
+      fb.position.x = bf / 2 - tw / 2;
+      
+      parts.push(w, fb);
     } else {
-      // Center web for I-beam
-      const w = BABYLON.MeshBuilder.CreateBox(
-        "w",
-        { width: tw, height: d - 2 * tf, depth: len },
-        bjsScene,
-      );
-      parts.push(w);
+      const ft = BABYLON.MeshBuilder.CreateBox("ft", { width: bf, height: tf, depth: len }, bjsScene);
+      ft.position.y = (d - tf) / 2;
+      const fb = BABYLON.MeshBuilder.CreateBox("fb", { width: bf, height: tf, depth: len }, bjsScene);
+      fb.position.y = -(d - tf) / 2;
+      
+      const w = BABYLON.MeshBuilder.CreateBox("w", { width: tw, height: d - 2 * tf, depth: len }, bjsScene);
+      parts.push(ft, fb, w);
     }
 
     const beam = BABYLON.Mesh.MergeMeshes(
@@ -1197,18 +1190,25 @@ function draw3dSpliceDiagram() {
   createBeam(-1);
   createBeam(1);
 
+  const isAngle = inputs.member_shape_type === "Angle" || inputs.member_shape_type === "L-Shape" || inputs.member_shape_type === "L";
+  const angleXShift = isAngle ? (inputs.member_bf / 2 - inputs.member_tw / 2) : 0;
+
   // --- Geometry: Plates ---
   if (inputs.num_flange_plates > 0) {
     const H = inputs.H_fp,
       t = inputs.t_fp,
       L = inputs.L_fp;
-    const topP = BABYLON.MeshBuilder.CreateBox(
-      "fp_top",
-      { width: H, height: t, depth: L },
-      bjsScene,
-    );
-    topP.position.y = inputs.member_d / 2 + t / 2;
-    topP.material = matPlate;
+    
+    let topP = null;
+    if (!isAngle) {
+       topP = BABYLON.MeshBuilder.CreateBox(
+        "fp_top",
+        { width: H, height: t, depth: L },
+        bjsScene,
+      );
+      topP.position.y = inputs.member_d / 2 + t / 2;
+      topP.material = matPlate;
+    }
 
     const botP = BABYLON.MeshBuilder.CreateBox(
       "fp_bot",
@@ -1216,6 +1216,7 @@ function draw3dSpliceDiagram() {
       bjsScene,
     );
     botP.position.y = -(inputs.member_d / 2 + t / 2);
+    botP.position.x = angleXShift;
     botP.material = matPlate;
 
     // [NEW] Inner Flange Plates
@@ -1228,23 +1229,24 @@ function draw3dSpliceDiagram() {
       const d = inputs.member_d;
 
       // Top Inner (Inside Top Flange)
-      // Y position: d/2 - tf - t_in/2
-      const innerTop = BABYLON.MeshBuilder.CreateBox(
-        "fp_top_in",
-        { width: H_in, height: t_in, depth: L_in },
-        bjsScene,
-      );
-      innerTop.position.y = d / 2 - tf - t_in / 2;
-      innerTop.material = matPlate;
+      if (!isAngle) {
+        const innerTop = BABYLON.MeshBuilder.CreateBox(
+          "fp_top_in",
+          { width: H_in, height: t_in, depth: L_in },
+          bjsScene,
+        );
+        innerTop.position.y = d / 2 - tf - t_in / 2;
+        innerTop.material = matPlate;
+      }
 
       // Bottom Inner (Inside Bottom Flange)
-      // Y position: -(d/2 - tf - t_in/2)
       const innerBot = BABYLON.MeshBuilder.CreateBox(
         "fp_bot_in",
         { width: H_in, height: t_in, depth: L_in },
         bjsScene,
       );
       innerBot.position.y = -(d / 2 - tf - t_in / 2);
+      innerBot.position.x = angleXShift;
       innerBot.material = matPlate;
     }
   }
@@ -1350,23 +1352,22 @@ function draw3dSpliceDiagram() {
       for (let c = 0; c < inputs.Nc_fp; c++) {
         const z = side * (inputs.gap / 2 + S_end + c * S_col);
 
-        let b1 = getBoltMesh(inputs.D_fp, thick);
-        b1.isVisible = true;
-        b1.position = new BABYLON.Vector3(gage / 2, centerTop, z);
-        let b2 = b1.clone();
-        b2.position.x = -gage / 2;
+        if (!isAngle) {
+          let b1 = getBoltMesh(inputs.D_fp, thick);
+          b1.isVisible = true;
+          b1.position = new BABYLON.Vector3(gage / 2 + angleXShift, centerTop, z);
+          let b2 = b1.clone();
+          b2.position.x = -gage / 2 + angleXShift;
+        }
 
-        let b3 = b1.clone();
-        b3.position = new BABYLON.Vector3(gage / 2, centerBot, z);
-        // Flip bottom bolts? Usually heads are on outside.
-        // If drawBoltMesh puts head at +y (top), then for bottom assembly:
-        // We want Head at bottom (most negative Y).
-        // So we need to rotate bottom bolts 180 deg (PI) around X or Z?
-        // Let's rotate Z by PI.
+        let b3 = getBoltMesh(inputs.D_fp, thick);
+        b3.isVisible = true;
+        b3.position = new BABYLON.Vector3(gage / 2 + angleXShift, centerBot, z);
+        // Flip bottom bolts
         b3.rotation.x = Math.PI;
 
         let b4 = b3.clone();
-        b4.position = new BABYLON.Vector3(-gage / 2, centerBot, z);
+        b4.position = new BABYLON.Vector3(-gage / 2 + angleXShift, centerBot, z);
       }
     });
   }
@@ -3589,21 +3590,31 @@ function generateSpliceBreakdownHtml(name, data, inputs) {
   return generator(data, common);
 }
 
-function updateMemberLabels(type) {
-  const isHSS = type === "HSS Rectangular";
+function updateMemberLabels(selectedType) {
+  const isHSS = selectedType === "HSS Rectangular";
+  const isAngle = selectedType === "Angle" || selectedType === "L-Shape";
+
   const setLabel = (id, text) => {
     const el = document.querySelector(`label[for="${id}"]`);
     if (el) el.textContent = text;
   };
 
-  setLabel("member_d", isHSS ? "Height (Ht)" : "Depth (d)");
-  setLabel("member_bf", isHSS ? "Width (B)" : "Flange (bf)");
-  setLabel("member_tw", isHSS ? "Wall Des (tdes)" : "Web (tw)");
-
-  // For HSS, tf is same as tw (tdes). We can hide tf or just label it.
-  // Let's label it 'Wall Nom (nom)' or similar, but actually HSS usually specifies t_des.
-  // If we want to support both axes having plates, we treat B as "Flange" side and Ht as "Web" side.
-  setLabel("member_tf", isHSS ? "Wall (tdes)" : "Flange (tf)");
+  if (isHSS) {
+    setLabel("member_d", "Height (Ht)");
+    setLabel("member_bf", "Width (B)");
+    setLabel("member_tw", "Wall Des (tdes)");
+    setLabel("member_tf", "Wall (tdes)");
+  } else if (isAngle) {
+    setLabel("member_d", "Leg 1 (d)");
+    setLabel("member_bf", "Leg 2 (b)");
+    setLabel("member_tw", "Thickness (t)");
+    setLabel("member_tf", "Thickness (t)");
+  } else {
+    setLabel("member_d", "Depth (d)");
+    setLabel("member_bf", "Flange (bf)");
+    setLabel("member_tw", "Web (tw)");
+    setLabel("member_tf", "Flange (tf)");
+  }
 
   // Hide/Show logic could go here if we wanted to hide tf input for HSS
   const tfInput = document.getElementById("member_tf");
@@ -3675,6 +3686,12 @@ async function handleShapeSelection() {
     bf = shape.bf;
     // Check if tdes exists, otherwise use tf/tw
     const t = shape.tdes || shape.tf || shape.tw;
+    tf = t;
+    tw = t;
+  } else if (shape.type === "L" || shape.type === "Angle") {
+    d = shape.d;
+    bf = shape.bf || shape.b;
+    const t = shape.tf || shape.tw || shape.t;
     tf = t;
     tw = t;
   }
@@ -4153,9 +4170,26 @@ function renderResults(results, rawInputs) {
     ? "text-red-700 bg-red-100"
     : "text-green-700 bg-green-100";
   const statusText = isFail ? "DOES NOT PASS" : "PASSES";
-  const summaryText = isFail
-    ? `The splice connection <strong>DOES NOT PASS</strong> the design requirements. <br/>The governing issue is <strong>${failReason || geomFailInfo || governingCheckName}</strong>.`
-    : `The splice connection <strong>PASSES</strong> all design checks. <br/>The governing factor is <strong>${governingCheckName}</strong> with a utilization ratio of <strong>${(maxRatio * 100).toFixed(1)}%</strong>.`;
+  const isAngle = inputs.member_shape_type === "Angle" || inputs.member_shape_type === "L-Shape" || inputs.member_shape_type === "L";
+  
+  // Create display names for governing factor
+  let displayGoverning = governingCheckName;
+  if (isAngle) {
+    displayGoverning = displayGoverning.replace(/Beam Flange/gi, "Angle Leg 2")
+      .replace(/Beam Web/gi, "Angle Leg 1")
+      .replace(/Flange Plate/gi, "Leg 2 Plate")
+      .replace(/Web Plate/gi, "Leg 1 Plate")
+      .replace(/Outer Plate/gi, "Outer Leg 2 Plate")
+      .replace(/Inner Plate/gi, "Inner Leg 2 Plate");
+  }
+
+  let summaryText = isFail
+    ? `The splice connection <strong>DOES NOT PASS</strong> the design requirements. <br/>The governing issue is <strong>${failReason || geomFailInfo || displayGoverning}</strong>.`
+    : `The splice connection <strong>PASSES</strong> all design checks. <br/>The governing factor is <strong>${displayGoverning}</strong> with a utilization ratio of <strong>${(maxRatio * 100).toFixed(1)}%</strong>.`;
+
+  if (isAngle && Math.abs(final_loads.M_load) > 0.1) {
+    summaryText += `<br/><br/><span class="text-orange-700 font-medium"><strong>⚠️ Structural Limitation:</strong> Deriving splice plate forces from a global bending moment via classic force-couples [T = M/(d-t)] assumes symmetric double-flanges. Applying this directly to asymmetrical single-angles acts as a crude estimate and does not fully emulate Principal Axis elastic derivations prescribed in AISC Chapter F10.</span>`;
+  }
 
   const report = new ReportBuilder({
     reportId: "splice-report-content",
@@ -4220,9 +4254,22 @@ function renderResults(results, rawInputs) {
             capacity_unit = "kip-ft";
           }
           const breakdownHtml = generateSpliceBreakdownHtml(name, data, inputs);
+          
+          let displayName = name;
+          if (isAngle) {
+            displayName = displayName.replace(/Beam Flange/gi, "Angle Leg 2")
+              .replace(/Beam Web/gi, "Angle Leg 1")
+              .replace(/Flange Plate/gi, "Leg 2 Plate")
+              .replace(/Web Plate/gi, "Leg 1 Plate")
+              .replace(/Beam Flexural/gi, "Angle Flexural")
+              .replace(/Beam Section/gi, "Angle Section")
+              .replace(/Outer Plate/gi, "Outer Leg 2 Plate")
+              .replace(/Inner Plate/gi, "Inner Leg 2 Plate");
+          }
+
           categoryRows.push({
             cells: [
-              name,
+              displayName,
               `${display_demand.toFixed(2)} ${demand_unit}`,
               `${display_capacity.toFixed(2)} ${capacity_unit}`,
               ratio.toFixed(3),
@@ -4232,7 +4279,15 @@ function renderResults(results, rawInputs) {
           });
         }
       });
-      const tableTitle = `${categoryTitle} (${inputs.design_method})`;
+      let categoryTitleDisplay = categoryTitle;
+      if (isAngle) {
+          categoryTitleDisplay = categoryTitleDisplay.replace(/Beam Flange/gi, "Angle Leg 2")
+            .replace(/Beam Web/gi, "Angle Leg 1")
+            .replace(/Flange Plate/gi, "Leg 2 Plate")
+            .replace(/Web Plate/gi, "Leg 1 Plate")
+            .replace(/Full Member/gi, "Full Angle");
+      }
+      const tableTitle = `${categoryTitleDisplay} (${inputs.design_method})`;
       report.addTableSection(tableTitle, {
         headers: [
           getTranslation("limit_state"),

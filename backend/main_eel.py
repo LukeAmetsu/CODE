@@ -278,6 +278,17 @@ def generate_stm_template(template_type, geometry):
 
 
 @eel.expose
+def calculate_weld_group(inputs):
+    try:
+        from backend.calculators.weld_group import calculate_weld_group as backend_calculate
+        return backend_calculate(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+
+
+@eel.expose
 def run_shear_plots():
     """Trigger shear plot generation in a background thread and stream progress to the frontend."""
     try:

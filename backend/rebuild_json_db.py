@@ -71,6 +71,9 @@ def rebuild_db():
                 tw = safe_float(item.get('tw', 0))
                 tf = safe_float(item.get('tf', 0))
                 tdes = safe_float(item.get('tdes', 0))
+                
+                b_angle = safe_float(item.get('b', 0))
+                t_angle = safe_float(item.get('t', 0))
 
                 if shape_type in ['PIPE']:
                     # OD is usually mapped to d
@@ -86,6 +89,11 @@ def rebuild_db():
                     mapped_item['bf'] = safe_float(item.get('B', bf))
                     mapped_item['tw'] = tdes
                     mapped_item['tf'] = tdes
+                elif shape_type in ['L', 'Angle']:
+                    mapped_item['d'] = d
+                    mapped_item['bf'] = b_angle
+                    mapped_item['tw'] = t_angle
+                    mapped_item['tf'] = t_angle
                 else:
                     mapped_item['d'] = d
                     mapped_item['bf'] = bf

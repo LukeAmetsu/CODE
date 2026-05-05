@@ -2317,6 +2317,51 @@ function renderHeightVaryingChart(canvasId, pressureData, design_method, units) 
         console.error('Height-varying chart initialization failed:', error);
     }
 }
+
+/**
+ * Renders the Qz vs Height chart line chart
+ * @param {string} canvasId - The ID of the canvas element.
+ * @param {Array} pressureData - The array of height-varying pressure results.
+ * @param {object} units - The units object.
+ */
+function renderQzHeightVaryingChart(canvasId, pressureData, units) {
+    const labels = pressureData.map(p => safeToFixed(p.height, 1));
+    const data = pressureData.map(p => safeToFixed(p.qz, 2));
+
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || typeof Chart === 'undefined') {
+        console.warn('Chart.js not available or canvas not found for qz height-varying chart.');
+        if (ctx) ctx.parentElement.innerHTML = `<div class="text-center text-red-500">Chart.js library not loaded.</div>`;
+        return;
+    }
+
+    try {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Velocity Pressure (qz) (${units.p_unit})`,
+                    data: data,
+                    borderColor: '#3b82f6', // blue-500
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: `Height (${units.h_unit})` } },
+                    y: { title: { display: true, text: `Velocity Pressure (${units.p_unit})` }, beginAtZero: true }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Qz height-varying chart initialization failed:', error);
+    }
+}
+
 /**
  * Renders the Torsional Load Case section.
  */
@@ -3052,6 +3097,7 @@ function renderWindResults(results) {
                 const leeward_pressure_L = directional_results.perp_to_L.find(r => r.surface.includes("Leeward"))?.p_pos || 0;
                 report.addSection('Height-Varying Windward Wall Pressures', renderHeightVaryingTable(heightVaryingResults_L, leeward_pressure_L, inputs, units), 'height-varying-section');
                 report.addChartSection('Windward Pressure vs. Height', 'height-varying-chart', 'height-varying-chart-section', { height: '300px' });
+                report.addChartSection('Velocity Pressure (qz) vs. Height', 'qz-height-varying-chart', 'qz-height-varying-chart-section', { height: '300px' });
             }
         }
         report.addSection('Torsional Load Cases', renderTorsionalCase(torsional_case, inputs, units), 'torsional-section');
@@ -3078,6 +3124,7 @@ function renderWindResults(results) {
     // Render the new height-varying chart
     if (heightVaryingResults_L && heightVaryingResults_L.length > 0) {
         renderHeightVaryingChart('height-varying-chart', heightVaryingResults_L, inputs.design_method, units);
+        renderQzHeightVaryingChart('qz-height-varying-chart', heightVaryingResults_L, units);
     }
 }
 

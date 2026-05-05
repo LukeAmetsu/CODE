@@ -1010,7 +1010,14 @@ class SpliceCalculator:
         d_beam = float(inputs.get('member_d', 0))
         tf_beam = float(inputs.get('member_tf', 0))
         tw_beam = float(inputs.get('member_tw', 0))
-        agv_web = (d_beam - 2 * tf_beam) * tw_beam
+        
+        is_angle = str(inputs.get('member_shape_type', '')).upper() in ['L', 'ANGLE', 'L-SHAPE']
+
+        if is_angle:
+            agv_web = d_beam * tw_beam
+        else:
+            agv_web = (d_beam - 2 * tf_beam) * tw_beam
+
         if inputs.get('is_hss'): agv_web *= 2.0
         checks['Beam Web Shear Yielding'] = {
             'demand': v_load,
@@ -1030,7 +1037,11 @@ class SpliceCalculator:
         
         # --- Beam Web Shear Rupture ---
         nr_wp = int(inputs.get('Nr_wp', 0))
-        anv_web = (d_beam - 2 * tf_beam - nr_wp * hole_net_wp) * tw_beam
+        if is_angle:
+            anv_web = (d_beam - nr_wp * hole_net_wp) * tw_beam
+        else:
+            anv_web = (d_beam - 2 * tf_beam - nr_wp * hole_net_wp) * tw_beam
+            
         if inputs.get('is_hss'): anv_web *= 2.0
         checks['Beam Web Shear Rupture'] = {
              'demand': v_load,

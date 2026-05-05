@@ -188,7 +188,26 @@
               </div>
             </div>
 
-              <!-- Option A Removed -->
+              <div class="space-y-4">
+              <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">
+                Inventory / Limitations
+              </h3>
+              <div class="pt-2">
+                  <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="check_inventory" class="sr-only peer">
+                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    <span class="ml-2 text-sm font-bold text-gray-700 dark:text-gray-300">Limit to Inventory</span>
+                  </label>
+                  
+                  <div id="inventory_inputs" class="hidden mt-2">
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Available Options (Shape | Lb)</label>
+                    <textarea id="inventory_data" rows="4" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 font-mono text-xs" placeholder="W8X13&#9;4.3&#10;W8X15&#9;5.2"></textarea>
+                    <p class="text-[10px] text-gray-500 mt-1 leading-tight">
+                        <strong>Note:</strong> Paste table data here. Overrides shape pool and Lb for each listed beam.
+                    </p>
+                  </div>
+              </div>
+            </div>
 
               <!-- Option B Removed -->
           </div>
@@ -402,12 +421,23 @@
         </div>
 
         <div id="batch-results-container" class="hidden mb-12">
-          <h3
-            class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200"
-            data-i18n="results_table"
-          >
-            Results Table
-          </h3>
+          <div class="flex justify-between items-center mb-4">
+            <h3
+              class="font-bold text-lg text-gray-800 dark:text-gray-200"
+              data-i18n="results_table"
+            >
+              Results Table
+            </h3>
+            <button
+              id="export-excel-btn"
+              class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm flex items-center gap-2 shadow transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export Excel
+            </button>
+          </div>
           <div
             class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden max-h-[500px] overflow-y-auto custom-scrollbar"
           >

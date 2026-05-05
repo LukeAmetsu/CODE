@@ -173,12 +173,23 @@ def find_lightest_beam(inputs):
     if is_cantilever:
         print(f"DEBUG: CANTILEVER MODE. L_cant={cant_ft}, L_back={span_ft}, w_user={w_load}")
 
+    restricted_pool = inputs.get('restricted_pool')
+    
     for name, props in shapes.items():
         # Metric check filter (some DBs have metric)
         if shape_type not in name: 
             # Basic check: Ensure the shape name starts with or contains the type.
             # For 'W' it works. For 'S' (S12x30) it works.
             continue 
+            
+        current_lb_ft = lb_ft
+        current_lb_in = lb_in
+        
+        if restricted_pool is not None:
+            if name not in restricted_pool:
+                continue
+            current_lb_ft = float(restricted_pool[name])
+            current_lb_in = current_lb_ft * 12.0
         
         # Parse Weight from name W12x26 -> 26
         try:
@@ -198,6 +209,7 @@ def find_lightest_beam(inputs):
         
         current_m_req = m_req # Default from input
         fos_ot = 999.0
+        max_reaction = 0.0
         
         if is_cantilever:
             w_beam = weight / 1000.0 # klf
@@ -231,6 +243,11 @@ def find_lightest_beam(inputs):
             else:
                 fos_ot = 999.0 # No overturning force
             
+            # Reactions
+            R_fulcrum = (w_cant_total * cant_ft * (span_ft + cant_ft/2.0) + w_back_total * span_ft * (span_ft/2.0)) / span_ft
+            R_back = w_back_total * span_ft / 2.0 - w_cant_total * cant_ft * (cant_ft/2.0) / span_ft
+            max_reaction = max(abs(R_fulcrum), abs(R_back))
+            
         else:
             # Simple Span: Add SW Moment if M_req was calculated from Load
             # If M_req was "Direct Input", we assume it includes SW or SW is negligible?
@@ -240,6 +257,7 @@ def find_lightest_beam(inputs):
                  w_beam = weight / 1000.0
                  m_sw = (w_beam * span_ft**2) / 8.0
                  current_m_req = m_req + m_sw
+                 max_reaction = (w_load + w_beam) * span_ft / 2.0
         
         # --- AISC F2 Logic ---
         ry = props['ry']
@@ -282,17 +300,17 @@ def find_lightest_beam(inputs):
         mn = 0.0
         mode = ""
         
-        if lb_in <= lp_in:
+        if current_lb_in <= lp_in:
             mn = mp_nominal
             mode = "Plastic (Z1)"
-        elif lb_in <= lr_in:
-            term = (lb_in - lp_in) / (lr_in - lp_in)
+        elif current_lb_in <= lr_in:
+            term = (current_lb_in - lp_in) / (lr_in - lp_in)
             mn = cb * (mp_nominal - (mp_nominal - mr_nominal) * term)
             mn = min(mn, mp_nominal)
             mode = "Inelastic LTB (Z2)"
         else:
-            fcr_term1 = (cb * math.pi * math.pi * E) / ((lb_in / rts) ** 2)
-            fcr_term2 = math.sqrt(1 + 0.078 * (j * c / (sx * ho)) * ((lb_in / rts) ** 2))
+            fcr_term1 = (cb * math.pi * math.pi * E) / ((current_lb_in / rts) ** 2)
+            fcr_term2 = math.sqrt(1 + 0.078 * (j * c / (sx * ho)) * ((current_lb_in / rts) ** 2))
             fcr = fcr_term1 * fcr_term2
             mn = fcr * sx
             mn = min(mn, mp_nominal)
@@ -334,7 +352,8 @@ def find_lightest_beam(inputs):
             "Ix": props.get('Ix', 0),
             "mode": mode,
             "pass": capacity >= current_m_req,
-            "fos_ot": fos_ot
+            "fos_ot": fos_ot,
+            "rxn_kips": max_reaction
         }
         
         # Capture Desired Shape (ignore depth limit)

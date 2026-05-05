@@ -1923,22 +1923,17 @@ function renderResults(results) {
 
             let ratio, demand_val, capacity_val;
             if (name.includes('Plate Bending') || name.includes('Plate Thickness')) {
-                if (name === 'Plate Bending (Yield Line)') {
-                    demand_val = demand;
-                    capacity_val = design_capacity;
-                    ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
-                } else {
-                    demand_val = design_capacity;
-                    capacity_val = demand;
-                    ratio = capacity_val > 0 ? demand_val / capacity_val : (demand_val > 0 ? Infinity : 0);
-                }
+                demand_val = demand;
+                capacity_val = design_capacity;
+                ratio = capacity_val > 0 ? demand_val / capacity_val : (demand_val > 0 ? Infinity : 0);
             } else if (name === 'Concrete Bearing') {
                  // Bearing Check is Stress-based (ksi)
                  demand_val = demand; // f_p_max
                  capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
                  ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : 0;
             } else {
-                demand_val = (is_anchor_check && design_method === 'ASD') ? demand * 1.6 : demand;
+                const needsAsdMultiplier = is_anchor_check && design_method === 'ASD' && name !== 'Anchor Interaction (T+V)';
+                demand_val = needsAsdMultiplier ? demand * 1.6 : demand;
                 capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
                 ratio = capacity_val > 0 ? Math.abs(demand_val) / capacity_val : (Math.abs(demand_val) > 0 ? Infinity : 0);
             }
@@ -2399,9 +2394,20 @@ function handleBatchInput(e) {
 }
 
 function handleBatchPaste(e) {
-    // Paste logic not historically implemented correctly here, but could theoretically wire it up.
-    // Preserving simple placeholder behaviour as defined originally.
-    e.preventDefault();
+    if(!document.getElementById("batch-table").contains(e.target)) return;
+    const p = (v, def) => { let r = safeMathEval(v); return r !== null && !isNaN(r) ? r : def; };
+    const rowMapper = (values) => {
+        if (values.length >= 1) {
+            return {
+                Pu: p(values[0], 0),
+                Mux: p(values[1], 0),
+                Muy: p(values[2], 0),
+                Vu: p(values[3], 0)
+            };
+        }
+        return null;
+    };
+    parsePasteToBatch(e, basePlateBatch.cases, rowMapper, renderBatchTable);
 }
 
 function handleBatchAction(e) {
