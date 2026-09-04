@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Liquefação de Solos - Método NCEER / Youd & Idriss</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="liquefaction.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'liquefaction',
+                    pageTitle: 'liquefaction',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-6">
+            <!-- Header Section -->
+            <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🌊</span>
+                        <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
+                            Análise de Potencial de Liquefação
+                        </h1>
+                        <span class="bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                            NCEER / Youd & Idriss (2001)
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Avaliação de gatilho de liquefação induzida por abalos sísmicos com base em ensaios SPT, correção por teor de finos FC, tensões de confinamento e magnitude sísmica Mw.
+                    </p>
+                </div>
+
+                <!-- Reference Preset Action -->
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
+                    <button type="button" onclick="loadReferencePreset()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-3.5 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-2" title="Carregar sondagem de referência SPT">
+                        <span>📋</span> Carregar Ref. Planilha
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mode Switcher Tabs -->
+            <div class="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
+                <button id="tab-btn-profile" type="button" onclick="switchMode('profile')" class="px-5 py-2.5 text-sm font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm flex items-center gap-2">
+                    <span>📊</span> Análise Paramétrica por Perfil (Aba 1)
+                </button>
+                <button id="tab-btn-layers" type="button" onclick="switchMode('layers')" class="px-5 py-2.5 text-sm font-medium rounded-lg transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                    <span>📑</span> Sondagem SPT por Camadas (Aba 2)
+                </button>
+            </div>
+
+            <!-- Global Status Banner -->
+            <div id="status-banner" class="mb-8 p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-700 dark:text-emerald-200">
+                <div class="flex items-center gap-3">
+                    <span id="banner-icon" class="text-3xl">🛡️</span>
+                    <div>
+                        <h2 id="banner-title" class="text-base font-bold">SOLO ESTÁVEL / SEGURO CONTRA LIQUEFAÇÃO</h2>
+                        <p id="banner-desc" class="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
+                            O fator de segurança mínimo calculado em todas as profundidades é superior ao limiar regulamentar.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6 shrink-0 text-sm">
+                    <div>
+                        <div class="text-xs uppercase font-semibold opacity-75">Menor FS</div>
+                        <div id="banner-min-fs" class="text-2xl font-black">1.22</div>
+                    </div>
+                    <div>
+                        <div class="text-xs uppercase font-semibold opacity-75">Prof. Crítica</div>
+                        <div id="banner-crit-depth" class="text-2xl font-black">9.0 m</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE 1: PARAMETRIC PROFILE VIEW -->
+            <div id="view-profile" class="space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Left: Parameters Form (4 cols) -->
+                    <div class="lg:col-span-4 space-y-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-base font-bold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
+                                <span>⚙️</span> Parâmetros Globais do Terreno
+                            </h3>
+
+                            <div class="space-y-4 text-sm">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block font-medium mb-1">Nível d'Água NA (m)</label>
+                                        <input type="number" id="prof_na" value="3.5" step="0.1" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium mb-1">γ Solo (kN/m³)</label>
+                                        <input type="number" id="prof_gamma" value="19.0" step="0.5" min="10" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block font-medium mb-1">Teor de Finos FC (%)</label>
+                                    <input type="number" id="prof_fc" value="10.0" step="1" min="0" max="100" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+
+                                <!-- N1(60) Range -->
+                                <div>
+                                    <label class="block font-medium mb-1">Faixa N1(60) [Mín, Méd, Máx]</label>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <input type="number" id="prof_n1_min" value="27" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mínimo">
+                                        <input type="number" id="prof_n1_med" value="33" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Médio">
+                                        <input type="number" id="prof_n1_max" value="58" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Máximo">
+                                    </div>
+                                </div>
+
+                                <!-- Aceleração a0 -->
+                                <div>
+                                    <label class="block font-medium mb-1">Aceleração a0 / a_max (g) [Mín, Máx]</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="number" id="prof_a0_min" value="0.55" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Mínimo">
+                                        <input type="number" id="prof_a0_max" value="0.70" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Máximo">
+                                    </div>
+                                </div>
+
+                                <!-- Magnitude Mw -->
+                                <div>
+                                    <label class="block font-medium mb-1">Magnitude Mw [Mín, Méd, Máx]</label>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <input type="number" id="prof_mw_min" value="6.0" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Mínimo">
+                                        <input type="number" id="prof_mw_med" value="7.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Médio">
+                                        <input type="number" id="prof_mw_max" value="8.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Máximo">
+                                    </div>
+                                </div>
+
+                                <!-- Profundidade máxima -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block font-medium mb-1">Prof. Máx (m)</label>
+                                        <input type="number" id="prof_max_depth" value="20.0" step="1.0" min="5.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    </div>
+                                    <div>
+                                        <label class="block font-medium mb-1">Passo Δz (m)</label>
+                                        <input type="number" id="prof_depth_step" value="0.5" step="0.1" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scenarios Matrix Card -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
+                                📌 Matriz de Cenários e Menor FS
+                            </h3>
+                            <div class="text-xs space-y-2">
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <div class="font-bold text-blue-600 dark:text-blue-400 mb-1">Cenário a0 = 0.55g (Mín)</div>
+                                    <div class="flex justify-between py-0.5"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0min-min" class="text-emerald-600">FS 1.223 @ 9m</strong></div>
+                                    <div class="flex justify-between py-0.5"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0min-med" class="text-emerald-600">FS 2.002 @ 9m</strong></div>
+                                    <div class="flex justify-between py-0.5"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0min-max" class="text-emerald-600">FS 3.289 @ 9m</strong></div>
+                                </div>
+
+                                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <div class="font-bold text-red-600 dark:text-red-400 mb-1">Cenário a0 = 0.70g (Máx)</div>
+                                    <div class="flex justify-between py-0.5"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0max-min" class="text-red-600 font-black">FS 0.961 @ 9m</strong></div>
+                                    <div class="flex justify-between py-0.5"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0max-med" class="text-emerald-600">FS 1.573 @ 9m</strong></div>
+                                    <div class="flex justify-between py-0.5"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0max-max" class="text-emerald-600">FS 2.585 @ 9m</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Charts & Table (8 cols) -->
+                    <div class="lg:col-span-8 space-y-6">
+                        <!-- Chart 1: FS vs Depth -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <span>📈</span> Fator de Segurança (FS) vs Profundidade (m)
+                            </h3>
+                            <div class="h-72">
+                                <canvas id="chartFsProfile"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Parametric Profile Table -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span>📑</span> Matriz de Resultados ao Longo da Profundidade
+                                </h3>
+                                <button type="button" onclick="exportProfileCSV()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 transition-colors">
+                                    <span>📥</span> Exportar CSV
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto max-h-[360px] border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <table class="min-w-full text-xs text-left">
+                                    <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 sticky top-0 uppercase font-semibold">
+                                        <tr>
+                                            <th class="py-2.5 px-3">Prof (m)</th>
+                                            <th class="py-2.5 px-3">σv (kPa)</th>
+                                            <th class="py-2.5 px-3">u (kPa)</th>
+                                            <th class="py-2.5 px-3">σv' (kPa)</th>
+                                            <th class="py-2.5 px-3">rd</th>
+                                            <th class="py-2.5 px-3">CSR (Mín)</th>
+                                            <th class="py-2.5 px-3">CSR (Máx)</th>
+                                            <th class="py-2.5 px-3">FS-a0mín-mín</th>
+                                            <th class="py-2.5 px-3">FS-a0mín-méd</th>
+                                            <th class="py-2.5 px-3">FS-a0máx-mín</th>
+                                            <th class="py-2.5 px-3">FS-a0máx-méd</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="profile-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        <!-- Dynamically filled -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE 2: BOREHOLE SPT LAYERS VIEW -->
+            <div id="view-layers" class="space-y-8 hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Left: Default Parameters (3 cols) -->
+                    <div class="lg:col-span-3 space-y-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-base font-bold text-amber-600 dark:text-amber-400 mb-4 flex items-center gap-2">
+                                <span>🎯</span> Sismo de Projeto (Global)
+                            </h3>
+                            <div class="space-y-4 text-sm">
+                                <div>
+                                    <label class="block font-medium mb-1">Aceleração a_max (g)</label>
+                                    <input type="number" id="layer_def_amax" value="0.55" step="0.05" min="0.05" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-amber-600">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Magnitude Mw</label>
+                                    <input type="number" id="layer_def_mw" value="7.5" step="0.1" min="5.0" max="9.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-blue-600">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">NA Padrão (m)</label>
+                                    <input type="number" id="layer_def_na" value="3.5" step="0.1" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">γ Padrão (kN/m³)</label>
+                                    <input type="number" id="layer_def_gamma" value="19.0" step="0.5" min="10" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block font-medium mb-1">Formulação de Verificação</label>
+                                    <select id="layer_formulation" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-xs text-blue-700 dark:text-blue-300">
+                                        <option value="nceer" selected>NCEER / Youd & Idriss (Canônico: Kσ na Resistência)</option>
+                                        <option value="spreadsheet">Planilha LZC-3 (Legado: Kσ no denom. do CSR)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Card -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Diagnóstico Sísmico</h3>
+                            <div class="text-xs space-y-2">
+                                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+                                    <span>Camadas com Liquefação:</span>
+                                    <strong id="stat-num-liq" class="text-red-600 font-bold">--</strong>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-700">
+                                    <span>Espessura Vulnerável Est.:</span>
+                                    <strong id="stat-thick-liq" class="text-amber-600 font-bold">-- m</strong>
+                                </div>
+                                <div class="flex justify-between py-1">
+                                    <span>Status Geral:</span>
+                                    <strong id="stat-overall" class="text-gray-800 dark:text-gray-200 font-bold">--</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Table & Chart (9 cols) -->
+                    <div class="lg:col-span-9 space-y-6">
+                        <!-- Chart: CSR vs CRR -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                <span>⚖️</span> Comparativo Demanda Sísmica (CSR) vs Resistência (CRR)
+                            </h3>
+                            <div class="h-64">
+                                <canvas id="chartCsrCrr"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Editable Borehole Layers Table -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                                <div>
+                                    <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>📝</span> Ensaio SPT por Camada de Sondagem
+                                    </h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Edite a cota, índice N1(60), teor de finos FC (%) e veja o Fator de Segurança instantâneo.
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="addBoreholeLayer()" class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 shadow-sm transition-colors">
+                                        <span>➕</span> Adicionar Cota
+                                    </button>
+                                    <button type="button" onclick="exportLayersCSV()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 transition-colors">
+                                        <span>📥</span> Exportar CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto max-h-[420px] border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <table class="min-w-full text-xs text-left">
+                                    <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 sticky top-0 uppercase font-semibold">
+                                        <tr>
+                                            <th class="py-2.5 px-3">Prof. (m)</th>
+                                            <th class="py-2.5 px-3">N1(60)</th>
+                                            <th class="py-2.5 px-3">FC (%)</th>
+                                            <th class="py-2.5 px-3">σv' (kPa)</th>
+                                            <th class="py-2.5 px-3">(N1)60cs</th>
+                                            <th class="py-2.5 px-3">CSR</th>
+                                            <th class="py-2.5 px-3">CRR_7.5</th>
+                                            <th class="py-2.5 px-3 font-bold text-blue-600 dark:text-blue-400" title="FS segundo formulação canônica NCEER">FS (NCEER)</th>
+                                            <th class="py-2.5 px-3 font-semibold text-gray-500" title="FS reproduzindo a planilha de referência LZC-3">FS (Planilha)</th>
+                                            <th class="py-2.5 px-3 text-center">Diagnóstico</th>
+                                            <th class="py-2.5 px-3 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="layers-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <div id="footer-placeholder"></div>
+    </div>
+</body>
+
+</html>

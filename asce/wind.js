@@ -1801,12 +1801,16 @@ function generateWindSummary(inputs, directional_results, candc, p_unit) {
 
     if (directional_results) {
         const all_mwfrs_pressures = [];
-        Object.values(directional_results).forEach(resultSet => {
-            resultSet.forEach(r => {
-                const val_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
-                const val_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
-                if (isFinite(val_pos)) all_mwfrs_pressures.push({ value: val_pos, surface: r.surface });
-                if (isFinite(val_neg)) all_mwfrs_pressures.push({ value: val_neg, surface: r.surface });
+        const resultSets = Array.isArray(directional_results) ? [directional_results] : Object.values(directional_results);
+        resultSets.forEach(resultSet => {
+            const items = Array.isArray(resultSet) ? resultSet : [resultSet];
+            items.forEach(r => {
+                if (r && typeof r === 'object') {
+                    const val_pos = inputs.design_method === 'ASD' ? r.p_pos_asd : r.p_pos;
+                    const val_neg = inputs.design_method === 'ASD' ? r.p_neg_asd : r.p_neg;
+                    if (isFinite(val_pos)) all_mwfrs_pressures.push({ value: val_pos, surface: r.surface || 'Unknown' });
+                    if (isFinite(val_neg)) all_mwfrs_pressures.push({ value: val_neg, surface: r.surface || 'Unknown' });
+                }
             });
         });
         if (all_mwfrs_pressures.length > 0) {

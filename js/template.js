@@ -43,13 +43,26 @@ async function injectHeader(config) {
     // Fetch navigation config if not already loaded globally
     let navConfig = window.NAV_CONFIG;
     if (!navConfig) {
-        try {
-            const response = await fetch(`${pathPrefix.replace(/\/+$/, '')}/js/nav-config.json`);
-            navConfig = await response.json();
-            window.NAV_CONFIG = navConfig;
-        } catch (error) {
-            console.error("Failed to load nav-config.json", error);
-            // Fallback minimal config if fetch fails
+        const candidatePaths = [
+            `${pathPrefix.replace(/\/+$/, '')}/js/nav-config.json`,
+            '../js/nav-config.json',
+            './js/nav-config.json',
+            'js/nav-config.json'
+        ];
+        for (const p of candidatePaths) {
+            try {
+                const response = await fetch(p);
+                if (response.ok) {
+                    navConfig = await response.json();
+                    window.NAV_CONFIG = navConfig;
+                    break;
+                }
+            } catch (e) {
+                // Try next
+            }
+        }
+        if (!navConfig) {
+            console.error("Failed to load nav-config.json from any candidate path");
             navConfig = { mainNav: [] };
         }
     }
@@ -140,6 +153,9 @@ async function injectHeader(config) {
     // Logo/Brand text
     const brandText = safeTranslate('engineering_hub', 'Engineering Hub');
 
+    // Determine if we are on the launcher index page
+    const isIndexPage = currentFilename === 'index.html';
+
     const headerHTML = `
     <!-- Skip to Content Link for Accessibility -->
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[100] focus:p-4 focus:bg-white focus:text-blue-600 focus:font-bold">
@@ -165,6 +181,21 @@ async function injectHeader(config) {
 
             <!-- Right: Actions (Fixed size, anchored to right) -->
             <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
+                <!-- Save & Load Project Buttons -->
+                ${!isIndexPage ? `
+                <div class="flex items-center space-x-1.5 mr-1">
+                    <button type="button" id="header-save-btn" onclick="window.universalSaveProject()" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer" title="Save Project Inputs (JSON)">
+                        <span>💾</span>
+                        <span class="hidden sm:inline" data-i18n="save">Save</span>
+                    </button>
+                    <button type="button" id="header-load-btn" onclick="document.getElementById('universal-project-input').click()" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer" title="Load Project Inputs (JSON)">
+                        <span>📂</span>
+                        <span class="hidden sm:inline" data-i18n="load">Load</span>
+                    </button>
+                    <input type="file" id="universal-project-input" accept=".json,.txt" onchange="window.universalLoadProject(event)" class="hidden">
+                </div>
+                ` : ''}
+
                 <!-- Language Selector -->
                 <div class="relative">
                     <select id="language-selector" onchange="i18n.setLanguage(this.value)" class="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-auto p-1.5 cursor-pointer">
@@ -190,6 +221,16 @@ async function injectHeader(config) {
 
         <!-- Mobile Menu (Hidden by default) -->
         <div class="hidden md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 w-full" id="mobile-menu">
+            ${!isIndexPage ? `
+            <div class="flex items-center gap-2 p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <button type="button" onclick="window.universalSaveProject()" class="flex-1 text-xs font-semibold py-2 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 shadow-sm">
+                    <span>💾</span> <span data-i18n="save_project">Save Project</span>
+                </button>
+                <button type="button" onclick="document.getElementById('universal-project-input').click()" class="flex-1 text-xs font-semibold py-2 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center gap-1.5 shadow-sm">
+                    <span>📂</span> <span data-i18n="load_project">Load Project</span>
+                </button>
+            </div>
+            ` : ''}
             <ul class="flex flex-col font-medium p-4 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 md:mt-0 md:text-sm md:font-medium md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
                 ${mainNavLinks.replace(/px-3 py-2/g, 'block py-2 pr-4 pl-3 rounded')} <!-- Adjust classes for mobile -->
             </ul>
@@ -219,8 +260,250 @@ async function injectHeader(config) {
         if (langSelect && window.i18n && window.i18n.currentLocale) {
             langSelect.value = window.i18n.currentLocale;
         }
+
+        // Initialize in-page save/load buttons if present
+        initializeSaveLoadBindings();
+
+        // Translate injected header elements
+        if (window.i18n && typeof window.i18n.translatePage === 'function') {
+            window.i18n.translatePage();
+        }
     }, 0);
 }
+
+/**
+ * Modern floating toast notification
+ */
+function showUniversalToast(message, isError = false) {
+    let toast = document.getElementById('universal-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'universal-toast';
+        document.body.appendChild(toast);
+    }
+    toast.className = `fixed bottom-6 right-6 z-[9999] px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold transition-all duration-300 transform flex items-center gap-2.5 border ${
+        isError
+            ? 'bg-rose-600 text-white border-rose-700'
+            : 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900 border-gray-700 dark:border-gray-200'
+    }`;
+    toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <span>${message}</span>`;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+
+    clearTimeout(window._universalToastTimeout);
+    window._universalToastTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+    }, 3200);
+}
+
+/**
+ * Universal Project Save Handler
+ * Checks for custom page exporters or performs deep DOM form serialization
+ */
+window.universalSaveProject = function () {
+    // Check for custom save handlers on the page
+    if (typeof window.saveProjectJSON === 'function') {
+        return window.saveProjectJSON();
+    }
+    if (typeof window.exportProjectJSON === 'function') {
+        return window.exportProjectJSON();
+    }
+    if (typeof window.saveProject === 'function') {
+        return window.saveProject();
+    }
+
+    const currentPath = window.location.pathname;
+    let pageName = decodeURIComponent(currentPath.substring(currentPath.lastIndexOf('/') + 1)).replace(/\.[^/.]+$/, "");
+    if (!pageName || pageName === 'index') pageName = 'project';
+
+    const inputs = {};
+    const elements = document.querySelectorAll('input, select, textarea');
+    let inputCount = 0;
+
+    elements.forEach(el => {
+        if (el.type === 'file' || el.id === 'universal-project-input' || el.id === 'file-input') return;
+        const key = el.id || el.name;
+        if (!key) return;
+
+        if (el.type === 'checkbox') {
+            inputs[key] = el.checked;
+        } else if (el.type === 'radio') {
+            if (el.checked) {
+                inputs[key] = el.value;
+            }
+        } else {
+            inputs[key] = el.value;
+        }
+        inputCount++;
+    });
+
+    // Capture active tabs / view toggles
+    const activeTabs = document.querySelectorAll('.tab-btn.active, .nav-tab.active, .view-btn.active, [data-tab].active');
+    const tabTargets = Array.from(activeTabs).map(t => t.dataset.target || t.dataset.view || t.dataset.tab || t.id).filter(Boolean);
+
+    const projectData = {
+        app: "EngineeringHub",
+        page: pageName,
+        title: document.title,
+        timestamp: new Date().toISOString(),
+        activeTabs: tabTargets,
+        inputs: inputs
+    };
+
+    const jsonStr = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `${pageName.replace(/\s+/g, '_')}_project_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showUniversalToast(`Project saved! (${inputCount} fields exported)`);
+};
+
+/**
+ * Universal Project Load Handler
+ * Restores inputs, triggers reactive events, switches tabs, and re-calculates
+ */
+window.universalLoadProject = function (event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    // Check for custom load handlers on the page
+    if (typeof window.loadProjectJSON === 'function') {
+        return window.loadProjectJSON(event);
+    }
+    if (typeof window.importProjectJSON === 'function') {
+        return window.importProjectJSON(event);
+    }
+    if (typeof window.loadProject === 'function') {
+        return window.loadProject(event);
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            const inputs = parsed.inputs || parsed;
+
+            let restoredCount = 0;
+            for (const [key, val] of Object.entries(inputs)) {
+                if (key.startsWith('_')) continue;
+                let el = document.getElementById(key) || document.querySelector(`[name="${key}"]`);
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        el.checked = Boolean(val);
+                    } else if (el.type === 'radio') {
+                        const radio = document.querySelector(`input[name="${el.name}"][value="${val}"]`);
+                        if (radio) radio.checked = true;
+                    } else {
+                        el.value = val;
+                    }
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                    restoredCount++;
+                }
+            }
+
+            // Restore active tabs if saved
+            if (parsed.activeTabs && Array.isArray(parsed.activeTabs)) {
+                parsed.activeTabs.forEach(target => {
+                    const tabBtn = document.querySelector(`[data-target="${target}"]`) ||
+                                   document.querySelector(`[data-view="${target}"]`) ||
+                                   document.querySelector(`[data-tab="${target}"]`) ||
+                                   document.getElementById(target);
+                    if (tabBtn) tabBtn.click();
+                });
+            }
+
+            // Trigger primary calculation button if available
+            setTimeout(() => {
+                const runBtn = document.getElementById('run-check-btn') ||
+                               document.getElementById('run-steel-check-btn') ||
+                               document.getElementById('calculate-btn') ||
+                               document.getElementById('calculateBtn') ||
+                               document.getElementById('calculate_btn') ||
+                               document.getElementById('btn-calculate') ||
+                               document.getElementById('btn-run-check') ||
+                               document.getElementById('btn-run-fea') ||
+                               document.getElementById('generate-btn') ||
+                               document.querySelector('button[type="submit"]') ||
+                               document.querySelector('.run-calculation-btn');
+
+                if (runBtn && typeof runBtn.click === 'function') {
+                    runBtn.click();
+                } else if (typeof window.triggerCalculation === 'function') {
+                    window.triggerCalculation();
+                } else if (typeof window.runCheck === 'function') {
+                    window.runCheck();
+                }
+            }, 200);
+
+            showUniversalToast(`Project loaded! (${restoredCount} fields restored)`);
+        } catch (err) {
+            console.error('Failed to parse project file:', err);
+            showUniversalToast('Error loading file. Invalid JSON format.', true);
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+};
+
+/**
+ * Automatically binds or hides any existing in-page Save/Load buttons to avoid duplicates
+ */
+function initializeSaveLoadBindings() {
+    const hasHeaderButtons = !!document.getElementById('header-save-btn');
+    const pageSaveBtn = document.getElementById('save-inputs-btn');
+    const pageLoadBtn = document.getElementById('load-inputs-btn');
+
+    if (hasHeaderButtons) {
+        // Hide redundant in-page save/load buttons to prevent duplicate rendering
+        if (pageSaveBtn) pageSaveBtn.style.display = 'none';
+        if (pageLoadBtn) pageLoadBtn.style.display = 'none';
+    } else {
+        if (pageSaveBtn && !pageSaveBtn.hasAttribute('data-universal-bound')) {
+            pageSaveBtn.setAttribute('data-universal-bound', 'true');
+            pageSaveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.universalSaveProject();
+            });
+        }
+
+        if (pageLoadBtn && !pageLoadBtn.hasAttribute('data-universal-bound')) {
+            pageLoadBtn.setAttribute('data-universal-bound', 'true');
+            pageLoadBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('universal-project-input') || document.getElementById('file-input');
+                if (input) input.click();
+            });
+        }
+    }
+
+    const pageFileInput = document.getElementById('file-input');
+    if (pageFileInput && !pageFileInput.hasAttribute('data-universal-bound')) {
+        pageFileInput.setAttribute('data-universal-bound', 'true');
+        pageFileInput.setAttribute('accept', '.json,.txt');
+        pageFileInput.addEventListener('change', (e) => {
+            window.universalLoadProject(e);
+        });
+    }
+}
+
+// Global DOM ready listener for bindings
+document.addEventListener('DOMContentLoaded', initializeSaveLoadBindings);
+
+// Explicitly attach to window to prevent reference errors in other scripts
+window.injectHeader = injectHeader;
+window.injectFooter = injectFooter;
+window.showUniversalToast = showUniversalToast;
+window.initializeSaveLoadBindings = initializeSaveLoadBindings;
 
 /**
  * Injects the footer into the specified placeholder element.

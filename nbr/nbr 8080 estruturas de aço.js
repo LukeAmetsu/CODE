@@ -22,7 +22,7 @@ var nbr8800Calculator = (() => {
         const h = i.d - 2 * i.tf;
         const lambda_alma = h / i.tw;
         const lambda_p_alma = 3.76 * Math.sqrt(i.E / i.fy);
-        res.classificacao_alma = lambda_alma <= lambda_p_alma ? 'Compacta' : 'Compacta';
+        res.classificacao_alma = lambda_alma <= lambda_p_alma ? 'Compacta' : 'Não Compacta';
 
         // 2. Resistência à Compressão Axial
         const K = 1.0; // Fator de flambagem
@@ -38,9 +38,47 @@ var nbr8800Calculator = (() => {
         res.lambda_0 = lambda_0;
         res.chi = chi;
 
-        // 3. Resistência à Flexão
-        const Mrd = (i.Zx * i.fy) / gamma_a1;
+        // 3. Resistência à Flexão com Verificação de FLT (NBR 8800:2008 Item 5.4.2)
+        const Cb = Math.max(1.0, Number(i.Cb) || 1.0);
+        const Mpl = i.Zx * i.fy;
+        const Lp = 1.76 * i.ry * Math.sqrt(i.E / i.fy);
+
+        const h_w = Math.max(1.0, i.d - 2 * i.tf);
+        const Ix_approx = (1 / 12) * i.tw * (h_w ** 3) + 2 * ((1 / 12) * i.bf * (i.tf ** 3) + i.bf * i.tf * (((i.d - i.tf) / 2) ** 2));
+        const Wx_approx = Ix_approx / (i.d / 2);
+        const Mr = 0.7 * i.fy * Wx_approx;
+
+        const r_ts_denom = 12 * (1 + (1 / 6) * (h_w * i.tw) / (i.bf * i.tf));
+        const r_ts = i.bf / Math.sqrt(Math.max(1.0, r_ts_denom));
+        const J_approx = (2 * i.bf * (i.tf ** 3) + h_w * (i.tw ** 3)) / 3;
+        const h0 = Math.max(1.0, i.d - i.tf);
+
+        const term_bracket = J_approx / (Wx_approx * h0);
+        const inner_root = Math.sqrt(term_bracket ** 2 + 6.76 * ((0.7 * i.fy / i.E) ** 2));
+        const Lr = 1.95 * r_ts * (i.E / (0.7 * i.fy)) * Math.sqrt(Math.max(0.0, term_bracket + inner_root));
+
+        let Mn = Mpl;
+        let regime_flt = 'Contido (Sem FLT)';
+        if (i.Lb <= Lp) {
+            Mn = Mpl;
+            regime_flt = 'Contido (Sem FLT)';
+        } else if (i.Lb <= Lr) {
+            Mn = Cb * (Mpl - (Mpl - Mr) * ((i.Lb - Lp) / (Lr - Lp)));
+            Mn = Math.min(Mpl, Math.max(0.0, Mn));
+            regime_flt = 'Inelástico (FLT Inelástica)';
+        } else {
+            const slenderness = i.Lb / r_ts;
+            const Mcr = (Cb * (Math.PI ** 2) * i.E / (slenderness ** 2)) * Math.sqrt(1 + 0.078 * (J_approx / (Wx_approx * h0)) * (slenderness ** 2));
+            Mn = Math.min(Mpl, Math.max(0.0, Mcr));
+            regime_flt = 'Elástico (FLT Elástica)';
+        }
+
+        const Mrd = Mn / gamma_a1;
         res.Mrd = Mrd; // em N·mm
+        res.Mpl = Mpl;
+        res.Lp = Lp;
+        res.Lr = Lr;
+        res.regime_flt = regime_flt;
 
         // 4. Verificação da Interação
         let interaction_ratio = 0;
@@ -95,9 +133,11 @@ function generateSteelBreakdownHtml(check) {
         case 'Flexão (Eixo X)':
             return `
                 <ul>
-                    <li>Momento de Plastificação (M<sub>pl</sub>) = Z<sub>x</sub> &times; f<sub>y</sub> = <b>${((check.details.Zx * check.details.fy) / 10 ** 6).toFixed(2)} kN·m</b></li>
-                    <li>Resistência (M<sub>Rd,x</sub>) = M<sub>pl</sub> / &gamma;<sub>a1</sub> = <b>${(check.capacity).toFixed(2)} kN·m</b></li>
-                    <li><small>Nota: Flambagem lateral com torção (FLT) não foi verificada neste cálculo simplificado.</small></li>
+                    <li>Momento de Plastificação (M<sub>pl</sub>) = Z<sub>x</sub> &times; f<sub>y</sub> = <b>${((check.details.Mpl || (check.details.Zx * check.details.fy)) / 10 ** 6).toFixed(2)} kN·m</b></li>
+                    <li>Comprimento de Contenção (L<sub>b</sub>) = <b>${((check.details.inputs?.Lb || check.details.Lb || 0) / 1000).toFixed(2)} m</b></li>
+                    <li>Limites FLT: L<sub>p</sub> = <b>${((check.details.Lp || 0) / 1000).toFixed(2)} m</b>, L<sub>r</sub> = <b>${((check.details.Lr || 0) / 1000).toFixed(2)} m</b></li>
+                    <li>Regime FLT: <b>${check.details.regime_flt || 'Verificado'}</b></li>
+                    <li>Resistência (M<sub>Rd,x</sub>) = M<sub>n</sub> / &gamma;<sub>a1</sub> = <b>${(check.capacity).toFixed(2)} kN·m</b></li>
                 </ul>`;
         case 'Interação N + M':
             return `
@@ -128,7 +168,7 @@ function renderNbr8800Results(calc_results) {
             capacity: results.Mrd / 10 ** 6,
             ratio: results.Mrd > 0 ? (calc_results.inputs.Msdx / results.Mrd) : Infinity,
             unit: 'kN·m',
-            details: { ...results, Zx: inputs.Zx, fy: inputs.fy }
+            details: { ...results, Zx: inputs.Zx, fy: inputs.fy, Lb: inputs.Lb }
         },
         {
             name: 'Interação N + M',

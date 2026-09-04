@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculador de Estabilidade de Muro de Arrimo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="retaining_wall.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'retaining-wall',
+                    pageTitle: 'retaining_wall',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-6">
+            <!-- Title Header -->
+            <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                        <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h9m-9 0V11m4 10V11m-4 0h4"></path>
+                        </svg>
+                        Estabilidade de Muro de Arrimo
+                    </h1>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Análise completa de estabilidade geotécnica (tombamento, deslizamento, capacidade de carga e excentricidade) e dimensionamento geométrico com representação gráfica 2D detalhada.
+                    </p>
+                </div>
+
+                <!-- Action Presets -->
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
+                    <button type="button" onclick="loadReferenceMemoV3()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-2" title="Carregar parâmetros de referência calibrados">
+                        <span>📋</span> Carregar Ref. Planilha (v3)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Layout Grid: Inputs Left (5 cols) & Canvas/Results Right (7 cols) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left Input Panels (5 cols) -->
+                <div class="lg:col-span-5 space-y-6">
+                    <form id="retaining-wall-form" onsubmit="event.preventDefault(); triggerCalculation();" class="space-y-6">
+                        
+                        <!-- Panel 1: Geometria do Muro -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h2 class="text-lg font-bold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
+                                <span>📐</span> Geometria do Muro
+                            </h2>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <label class="block font-medium mb-1">Altura Haste H_haste (m)</label>
+                                    <input type="number" id="stem_height" value="4.0" step="0.1" min="0.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Espessura Sapata e (m)</label>
+                                    <input type="number" id="base_thickness" value="0.50" step="0.05" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Largura Topo b_topo (m)</label>
+                                    <input type="number" id="stem_top_width" value="0.30" step="0.05" min="0.15" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Largura Base Haste (m)</label>
+                                    <input type="number" id="stem_bot_width" value="0.50" step="0.05" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Comprimento Puntera (m)</label>
+                                    <input type="number" id="toe_length" value="0.80" step="0.1" min="0.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Comprimento Calcanhar (m)</label>
+                                    <input type="number" id="heel_length" value="1.70" step="0.1" min="0.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block font-medium mb-1">Inclinação Frontal da Haste (m)</label>
+                                    <input type="number" id="stem_front_batter" value="0.0" step="0.05" min="0.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2" title="Deslocamento da inclinação da face frontal da haste. Limitado à diferença entre largura da base e do topo.">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Deslocamento da face frontal (máx = Largura Base - Largura Topo)</span>
+                                </div>
+                            </div>
+
+                            <!-- Toggle Shear Key -->
+                            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-900 dark:text-white">
+                                    <input type="checkbox" id="has_key" onchange="toggleKeyOptions()" class="w-4 h-4 text-blue-600 rounded">
+                                    <span>Incluir Dente de Chave (Resistência ao Deslizamento)</span>
+                                </label>
+                                <div id="key-options" class="hidden grid grid-cols-3 gap-3 mt-3 text-xs">
+                                    <div>
+                                        <label class="block mb-1">Profundidade d (m)</label>
+                                        <input type="number" id="key_depth" value="0.50" step="0.05" min="0.1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1">Largura w (m)</label>
+                                        <input type="number" id="key_width" value="0.40" step="0.05" min="0.1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    </div>
+                                    <div>
+                                        <label class="block mb-1">Posição x_key (m)</label>
+                                        <input type="number" id="key_pos" value="1.00" step="0.1" min="0.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2" title="Distância do início do dente até a ponta da puntera">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Solo do Aterro & Carregamento -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h2 class="text-lg font-bold text-green-600 dark:text-green-400 mb-4 flex items-center gap-2">
+                                <span>🏔️</span> Solo do Aterro & Carregamentos
+                            </h2>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <label class="block font-medium mb-1">Peso Esp. Aterro γ (kN/m³)</label>
+                                    <input type="number" id="gamma_soil" value="18.0" step="0.5" min="10" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Ângulo Atrito Interno φ' (°)</label>
+                                    <input type="number" id="phi_soil" value="30.0" step="1" min="10" max="45" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Inclinação Aterro β (°)</label>
+                                    <input type="number" id="backfill_slope" value="0.0" step="1" min="0" max="35" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Sobrecarga Uniforme q (kPa)</label>
+                                    <input type="number" id="q_surcharge" value="10.0" step="1" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Nível d'Água no Aterro H_w (m)</label>
+                                    <input type="number" id="water_height" value="0.0" step="0.2" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Eficiência da Drenagem (%)</label>
+                                    <select id="drainage_eff" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="1.0" selected>100% (Totalmente Drenado)</option>
+                                        <option value="0.5">50% (Drenagem Parcial)</option>
+                                        <option value="0.0">0% (Sem Drenagem - Hidrostática Total)</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block font-medium mb-1">Teoria de Empuxo</label>
+                                    <select id="theory" onchange="toggleTheoryOptions()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="rankine" selected>Rankine (Empuxo Ativo - Sem Atrito no Dorso do Muro)</option>
+                                        <option value="coulomb">Coulomb (Considera Atrito Solo-Muro δ & Inclinação)</option>
+                                    </select>
+                                </div>
+                                <div id="coulomb-options" class="col-span-2 hidden bg-blue-50/70 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div class="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <label class="block font-medium mb-1">Atrito Solo-Muro δ (°)</label>
+                                            <input type="number" id="wall_friction" value="20.0" step="1" min="0" max="45" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2" title="Ângulo de atrito entre o solo e o dorso do muro">
+                                        </div>
+                                        <div class="flex items-center text-xs text-blue-700 dark:text-blue-300 pt-5">
+                                            <span>💡 Sugestão NBR 11682: δ ≈ ⅔ · φ' (<span id="delta-suggested" class="font-bold">20.0</span>°)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 3: Solo Frontal / Aterro Passivo -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h2 class="text-lg font-bold text-teal-600 dark:text-teal-400 mb-4 flex items-center gap-2">
+                                <span>🌱</span> Solo Frontal / Aterro Menor (Lado da Puntera)
+                            </h2>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <label class="block font-medium mb-1">Altura Aterro Frontal H_front (m)</label>
+                                    <input type="number" id="toe_embedment" value="0.50" step="0.1" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2" title="Altura do solo de cobrimento sobre a puntera">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Peso Esp. Frontal γ_front (kN/m³)</label>
+                                    <input type="number" id="gamma_front" value="18.0" step="0.5" min="10" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Ângulo Atrito Frontal φ_front (°)</label>
+                                    <input type="number" id="phi_front" value="30.0" step="1" min="10" max="45" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Coesão Frontal c_front (kPa)</label>
+                                    <input type="number" id="cohesion_front" value="0.0" step="5" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div class="col-span-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                    <label class="flex items-center gap-2 cursor-pointer font-semibold text-gray-900 dark:text-white">
+                                        <input type="checkbox" id="use_passive" class="w-4 h-4 text-blue-600 rounded">
+                                        <span>Considerar Empuxo Passivo Frontal (P_p) no Deslizamento</span>
+                                    </label>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 block mt-1">Recomenda-se desmarcar se houver risco de escavação futura à frente do muro (NBR 11682).</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 4: Solo de Fundação -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h2 class="text-lg font-bold text-amber-600 dark:text-amber-400 mb-4 flex items-center gap-2">
+                                <span>🏗️</span> Fundação & Solo de Apoio
+                            </h2>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <label class="block font-medium mb-1">Atrito Fundação φ_fund (°)</label>
+                                    <input type="number" id="phi_found" value="30.0" step="1" min="10" max="45" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Atrito da Base μ (Planilha = 0.30)</label>
+                                    <input type="number" id="base_friction_coef" value="0.30" step="0.05" min="0.10" max="1.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-amber-600 dark:text-amber-400" title="Coeficiente de atrito concreto-solo da base (μ). Padrão da planilha = 0.30">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block font-medium mb-1">Coesão Fundação c' (kPa)</label>
+                                    <input type="number" id="cohesion_found" value="0.0" step="5" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block font-medium mb-1">Tensão Admissível q_adm (kPa)</label>
+                                    <input type="number" id="q_adm" value="200.0" step="10" min="50" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Tipo de Solo da Base</label>
+                                    <select id="base_soil_type" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="Silte" selected>Silte (ks = 2000·SPT)</option>
+                                        <option value="Areia">Areia (ks = 2500·SPT)</option>
+                                        <option value="Argila">Argila (ks = 1500·SPT)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">N_SPT da Base (golpes)</label>
+                                    <input type="number" id="base_spt" value="15" step="1" min="1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-blue-600 dark:text-blue-400">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 5: Verificação de Armadura (NBR 6118) -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h2 class="text-lg font-bold text-rose-600 dark:text-rose-400 mb-4 flex items-center gap-2">
+                                <span>🧱</span> Verificação de Armadura (NBR 6118 Simplificado)
+                            </h2>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <label class="block font-medium mb-1">Resistência Concreto f<sub>ck</sub> (MPa)</label>
+                                    <select id="fck" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="20">C20 (fck = 20 MPa)</option>
+                                        <option value="25" selected>C25 (fck = 25 MPa)</option>
+                                        <option value="30">C30 (fck = 30 MPa)</option>
+                                        <option value="35">C35 (fck = 35 MPa)</option>
+                                        <option value="40">C40 (fck = 40 MPa)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Resistência Aço f<sub>yk</sub> (MPa)</label>
+                                    <select id="fyk" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="250">CA-25 (fyk = 250 MPa)</option>
+                                        <option value="500" selected>CA-50 (fyk = 500 MPa)</option>
+                                        <option value="600">CA-60 (fyk = 600 MPa)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Cobrimento Haste c<sub>haste</sub> (mm)</label>
+                                    <input type="number" id="cover_stem" value="40" step="5" min="20" max="80" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Cobrimento Sapata c<sub>sapata</sub> (mm)</label>
+                                    <input type="number" id="cover_base" value="50" step="5" min="25" max="100" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Diâmetro das Barras φ (mm)</label>
+                                    <select id="bar_diam" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="8">φ 8 mm</option>
+                                        <option value="10">φ 10 mm</option>
+                                        <option value="12.5">φ 12,5 mm</option>
+                                        <option value="16" selected>φ 16 mm</option>
+                                        <option value="20">φ 20 mm</option>
+                                        <option value="25">φ 25 mm</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-medium mb-1">Fator de Carga γ<sub>f</sub></label>
+                                    <select id="gamma_f" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <option value="1.3">1,3 (ELS / Verificação)</option>
+                                        <option value="1.4" selected>1,4 (ELU Padrão NBR 6118)</option>
+                                        <option value="1.5">1,5 (Conservador)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
+                            <span>⚡</span> Calcular Estabilidade
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Graphical Canvas & Stability Dashboard (7 cols) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- 2D Canvas Display -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>🎨</span> Representação Gráfica 2D com Cotas Técnicas
+                            </h2>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Perfil & Cotas Geométricas</span>
+                        </div>
+                        <div class="relative w-full aspect-[4/3] bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+                            <canvas id="wallCanvas" class="w-full h-full block"></canvas>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between text-xs text-gray-600 dark:text-gray-400 mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 gap-2">
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> Muro Concreto</div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-700 inline-block"></span> Solo Aterro</div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-cyan-500 inline-block"></span> Nível d'Água</div>
+                                <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500 inline-block"></span> Tensão Solo</div>
+                            </div>
+                            <label class="flex items-center gap-1.5 cursor-pointer font-bold text-rose-600 dark:text-rose-400 hover:text-rose-700">
+                                <input type="checkbox" id="toggle-rebar-view" onchange="triggerCalculation()" checked class="w-4 h-4 text-rose-600 rounded">
+                                <span>🧱 Desenhar Armadura Estimada</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Stability Status Badges Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        <!-- Overturning Card -->
+                        <div id="card-overturning" class="bg-white dark:bg-gray-800 rounded-xl shadow p-3 border border-gray-200 dark:border-gray-700 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Tombamento</div>
+                            <div id="val-fs-overturning" class="text-xl font-extrabold my-1 text-gray-900 dark:text-white">-</div>
+                            <div id="badge-overturning" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">AGUARDANDO</div>
+                        </div>
+
+                        <!-- Sliding Card -->
+                        <div id="card-sliding" class="bg-white dark:bg-gray-800 rounded-xl shadow p-3 border border-gray-200 dark:border-gray-700 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Deslizamento</div>
+                            <div id="val-fs-sliding" class="text-xl font-extrabold my-1 text-gray-900 dark:text-white">-</div>
+                            <div id="badge-sliding" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">AGUARDANDO</div>
+                        </div>
+
+                        <!-- Eccentricity Card -->
+                        <div id="card-eccentricity" class="bg-white dark:bg-gray-800 rounded-xl shadow p-3 border border-gray-200 dark:border-gray-700 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Excentricidade</div>
+                            <div id="val-eccentricity" class="text-base font-bold my-1 text-gray-900 dark:text-white">-</div>
+                            <div id="badge-eccentricity" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">AGUARDANDO</div>
+                        </div>
+
+                        <!-- Bearing Capacity Card -->
+                        <div id="card-bearing" class="bg-white dark:bg-gray-800 rounded-xl shadow p-3 border border-gray-200 dark:border-gray-700 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Tensões Solo</div>
+                            <div id="val-qmax" class="text-base font-bold my-1 text-gray-900 dark:text-white">-</div>
+                            <div id="badge-bearing" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">AGUARDANDO</div>
+                        </div>
+
+                        <!-- Top Displacement Card (Ref v3) -->
+                        <div id="card-displacement" class="bg-white dark:bg-gray-800 rounded-xl shadow p-3 border border-gray-200 dark:border-gray-700 text-center">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-semibold">Desloc. Topo</div>
+                            <div id="val-disp-total" class="text-base font-bold my-1 text-blue-600 dark:text-blue-400">-</div>
+                            <div id="badge-displacement" class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">AGUARDANDO</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Technical & Executive Summary Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 space-y-4">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 flex items-center justify-between">
+                            <span class="flex items-center gap-2">📋 Resumo Executivo & Quantitativos</span>
+                            <span class="text-xs font-normal text-gray-500 dark:text-gray-400">(por metro linear de muro)</span>
+                        </h3>
+                        
+                        <div class="overflow-x-auto text-sm">
+                            <table class="w-full text-left border-collapse">
+                                <tbody>
+                                    <!-- Group 1: Volume & Quantitativos -->
+                                    <tr class="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
+                                        <td colspan="2" class="py-1.5 px-2 rounded">📊 Quantitativos de Concreto (por metro linear)</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Volume de Concreto Armado</td>
+                                        <td id="res-vol-concrete" class="py-2 px-2 font-bold text-right text-emerald-600 dark:text-emerald-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Peso Próprio de Concreto (γ = 25 kN/m³)</td>
+                                        <td id="res-weight-concrete" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+
+                                    <!-- Group 2: Esforços Estruturais Máximos para Dimensionamento -->
+                                    <tr class="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
+                                        <td colspan="2" class="pt-3 pb-1.5 px-2 rounded">🧱 Esforços Solicitantes Estruturais (Cálculo de Armadura)</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Fletor na Base da Haste (M_u,haste)</td>
+                                        <td id="res-M-stem" class="py-2 px-2 font-bold text-right text-blue-600 dark:text-blue-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Esforço Cortante na Base da Haste (V_u,haste)</td>
+                                        <td id="res-V-stem" class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Fletor Solicitante na Puntera (M_u,puntera)</td>
+                                        <td id="res-M-toe" class="py-2 px-2 font-semibold text-right text-indigo-600 dark:text-indigo-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Fletor Solicitante no Calcanhar (M_u,calcanhar)</td>
+                                        <td id="res-M-heel" class="py-2 px-2 font-semibold text-right text-indigo-600 dark:text-indigo-400">-</td>
+                                    </tr>
+
+                                    <!-- Group 3: Geometria & Estabilidade Geotécnica -->
+                                    <tr class="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
+                                        <td colspan="2" class="pt-3 pb-1.5 px-2 rounded">📐 Geometria & Estabilidade Geotécnica</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Teoria de Empuxo & Atrito (δ)</td>
+                                        <td id="res-theory-info" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Coeficiente de Empuxo Ativo (K<sub>a</sub>)</td>
+                                        <td id="res-Ka" class="py-2 px-2 font-bold text-right text-blue-600 dark:text-blue-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Largura Total da Base (B)</td>
+                                        <td id="res-base-B" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Empuxo Ativo Horizontal Solicitante (P<sub>a,h</sub>)</td>
+                                        <td id="res-P-h" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Empuxo Ativo Vertical Estabilizante (P<sub>a,v</sub>)</td>
+                                        <td id="res-P-v" class="py-2 px-2 font-semibold text-right text-emerald-600 dark:text-emerald-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Capotante (M_tombamento)</td>
+                                        <td id="res-M-overturning" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Resistente (M_resistente)</td>
+                                        <td id="res-M-resisting" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Resistência ao Deslizamento (R_deslizamento)</td>
+                                        <td id="res-R-sliding" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Tensão Máxima na Puntera (q_toe)</td>
+                                        <td id="res-q-toe" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Tensão no Calcanhar (q_heel)</td>
+                                        <td id="res-q-heel" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+
+                                    <!-- Group 4: Interação Solo-Estrutura & Deslocamento do Topo (Ref v3) -->
+                                    <tr class="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
+                                        <td colspan="2" class="pt-3 pb-1.5 px-2 rounded">🌐 Interação Solo-Estrutura & Deslocamento do Topo (Ref v3)</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Módulo de Reação do Solo (k_s)</td>
+                                        <td id="res-ks" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Rigidez Rotacional da Sapata (K_θ)</td>
+                                        <td id="res-k-theta" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Deslocamento por Rotação (d_rot)</td>
+                                        <td id="res-d-rot" class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Deslocamento por Translação (d_trans)</td>
+                                        <td id="res-d-trans" class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Deslocamento por Flexão da Haste (d_flex)</td>
+                                        <td id="res-d-flex" class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 px-2 text-gray-800 dark:text-gray-200 font-bold">Deslocamento Total do Topo (d_tot vs Limite H/300)</td>
+                                        <td id="res-d-total-limit" class="py-2 px-2 font-bold text-right text-blue-700 dark:text-blue-300">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Reinforcement Verification Table (NBR 6118) -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-bold text-rose-700 dark:text-rose-400 border-b border-gray-200 dark:border-gray-700 pb-2 mb-4 flex items-center justify-between">
+                            <span>🧱 Verificação de Armadura — NBR 6118</span>
+                            <span id="res-rebar-materials" class="text-xs font-normal text-gray-400 dark:text-gray-500">-</span>
+                        </h3>
+
+                        <!-- Section Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                            <!-- Haste -->
+                            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-1.5">
+                                <div class="font-bold text-blue-600 dark:text-blue-400 text-sm mb-2 flex items-center justify-between">
+                                    <span>Haste (Cantilever)</span>
+                                    <span id="badge-rebar-haste" class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                    <div class="flex justify-between"><span>Largura da Seção (h)</span><span id="res-haste-h" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                    <div class="flex justify-between"><span>Altura Útil (d)</span><span id="res-haste-d" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                    <div class="flex justify-between"><span>Momento Design (Md)</span><span id="res-haste-Md" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                    <div class="flex justify-between"><span>As,req (cálculo)</span><span id="res-haste-As-req" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                    <div class="flex justify-between"><span>As,min (NBR 6118)</span><span id="res-haste-As-min" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                    <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1"><span class="font-bold text-gray-700 dark:text-gray-200">As,final ★</span><span id="res-haste-As-final" class="font-bold text-rose-600 dark:text-rose-400">-</span></div>
+                                     <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                         <span class="font-bold text-[11px] text-gray-500">Bitola / Passo:</span>
+                                         <span id="res-haste-detailing" class="px-2 py-0.5 rounded font-mono font-bold text-xs bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">-</span>
+                                     </div>
+                                 </div>
+                             </div>
+                             <!-- Puntera -->
+                             <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-1.5">
+                                 <div class="font-bold text-indigo-600 dark:text-indigo-400 text-sm mb-2 flex items-center justify-between">
+                                     <span>Puntera (Toe Slab)</span>
+                                     <span id="badge-rebar-puntera" class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
+                                 </div>
+                                 <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                     <div class="flex justify-between"><span>Espessura (h)</span><span id="res-puntera-h" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>Altura Útil (d)</span><span id="res-puntera-d" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>Momento Design (Md)</span><span id="res-puntera-Md" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>As,req (cálculo)</span><span id="res-puntera-As-req" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>As,min (NBR 6118)</span><span id="res-puntera-As-min" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1"><span class="font-bold text-gray-700 dark:text-gray-200">As,final ★</span><span id="res-puntera-As-final" class="font-bold text-indigo-600 dark:text-indigo-400">-</span></div>
+                                     <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                         <span class="font-bold text-[11px] text-gray-500">Bitola / Passo:</span>
+                                         <span id="res-puntera-detailing" class="px-2 py-0.5 rounded font-mono font-bold text-xs bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">-</span>
+                                     </div>
+                                 </div>
+                             </div>
+                             <!-- Calcanhar -->
+                             <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-1.5">
+                                 <div class="font-bold text-purple-600 dark:text-purple-400 text-sm mb-2 flex items-center justify-between">
+                                     <span>Calcanhar (Heel Slab)</span>
+                                     <span id="badge-rebar-calcanhar" class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
+                                 </div>
+                                 <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                     <div class="flex justify-between"><span>Espessura (h)</span><span id="res-calcanhar-h" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>Altura Útil (d)</span><span id="res-calcanhar-d" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>Momento Design (Md)</span><span id="res-calcanhar-Md" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>As,req (cálculo)</span><span id="res-calcanhar-As-req" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between"><span>As,min (NBR 6118)</span><span id="res-calcanhar-As-min" class="font-semibold text-gray-900 dark:text-white">-</span></div>
+                                     <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1"><span class="font-bold text-gray-700 dark:text-gray-200">As,final ★</span><span id="res-calcanhar-As-final" class="font-bold text-purple-600 dark:text-purple-400">-</span></div>
+                                     <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                                         <span class="font-bold text-[11px] text-gray-500">Bitola / Passo:</span>
+                                         <span id="res-calcanhar-detailing" class="px-2 py-0.5 rounded font-mono font-bold text-xs bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">-</span>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <!-- Shear Check -->
+                         <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg px-4 py-2 text-sm border border-gray-200 dark:border-gray-600">
+                             <span class="text-gray-600 dark:text-gray-300 font-medium">✂️ Esforço Cortante na Base da Haste (τ<sub>v</sub> ≤ τ<sub>lim</sub>)</span>
+                             <span id="res-shear-info" class="font-semibold text-gray-800 dark:text-gray-100">-</span>
+                             <span id="badge-shear" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
+                         </div>
+
+                         <!-- Steel Takeoff & Secondary Rebar Summary -->
+                         <div class="mt-4 p-4 rounded-xl bg-gradient-to-r from-rose-50 to-orange-50 dark:from-rose-950/30 dark:to-orange-950/30 border border-rose-200 dark:border-rose-900">
+                             <div class="flex items-center justify-between mb-3 border-b border-rose-200 dark:border-rose-800 pb-2">
+                                 <span class="font-bold text-sm text-rose-800 dark:text-rose-300 flex items-center gap-2">
+                                     <span>📊</span> Consumo Estimado de Aço & Armaduras Secundárias (NBR 6118)
+                                 </span>
+                                 <span class="text-xs text-rose-600 dark:text-rose-400 font-semibold">(por metro linear de muro)</span>
+                             </div>
+                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 shadow-xs border border-rose-100 dark:border-rose-900/50">
+                                     <div class="text-[11px] text-gray-500 dark:text-gray-400">Aço Total Estimado</div>
+                                     <div id="res-total-steel-kg" class="text-lg font-extrabold text-rose-600 dark:text-rose-400 my-0.5">-</div>
+                                     <div class="text-[10px] text-gray-400">kg / m de muro</div>
+                                 </div>
+                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 shadow-xs border border-rose-100 dark:border-rose-900/50">
+                                     <div class="text-[11px] text-gray-500 dark:text-gray-400">Taxa de Armadura</div>
+                                     <div id="res-steel-ratio" class="text-lg font-extrabold text-orange-600 dark:text-orange-400 my-0.5">-</div>
+                                     <div class="text-[10px] text-gray-400">kg de aço / m³ conc.</div>
+                                 </div>
+                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 shadow-xs border border-rose-100 dark:border-rose-900/50">
+                                     <div class="text-[11px] text-gray-500 dark:text-gray-400">Arm. Horizontal (Haste)</div>
+                                     <div id="res-haste-horiz" class="text-xs font-bold text-gray-800 dark:text-gray-200 my-1">-</div>
+                                     <div class="text-[10px] text-gray-400">distribuição face posterior</div>
+                                 </div>
+                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 shadow-xs border border-rose-100 dark:border-rose-900/50">
+                                     <div class="text-[11px] text-gray-500 dark:text-gray-400">Arm. Frontal (Pele)</div>
+                                     <div id="res-haste-front" class="text-xs font-bold text-gray-800 dark:text-gray-200 my-1">-</div>
+                                     <div class="text-[10px] text-gray-400">face exposta / retração</div>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">★ As,final = max(As,req, As,min). Os momentos solicitantes de cálculo (Md) já incluem o fator γ<sub>f</sub> selecionado.</p>
+                     </div>
+
+                </div>
+            </div>
+        </main>
+
+        <div id="footer-placeholder"></div>
+    </div>
+
+</body>
+
+</html>

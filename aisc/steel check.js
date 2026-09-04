@@ -853,25 +853,24 @@ function drawInteractionDiagram(canvasId, results) {
 
 
     // 3. User Demand Point
-    const Pu = inputs.Pu_or_Pa || 0; // Positive = Tens/Comp? 
+    const Pu = Number(inputs.Pu_or_Pa) || 0; // Positive = Tens/Comp? 
     // Usually inputs.Pu is Axial Load. In logic: >0 is Tens, <0 is Comp?
     // Check main logic: if (inputs.Pu_or_Pa > 0) axial_results.type='Tension'.
     // So +P is Tension, -P is Compression.
     // BUT in Diagrams, usually Up (+Y) is Compression for Civil Engineers, or Tension?
     // Let's standard: +Y = Compression (common in column interaction), +X = Moment.
     // Or standard math: +Y = Tension.
-    // Let's stick to: Y axis = P (Compression Positive typically for columns, but let's label it).
     // Let's use: Up = Compression (+P), Down = Tension (-P).
     // So if input Pu < 0 (Compression), we plot as +Y.
     // If input Pu > 0 (Tension), we plot as -Y.
     
     const demandP = -Pu; // Invert sign for plotting (Comp +, Tens -)
-    const demandM = Math.abs(inputs.Mux_or_Max); // Plot magnitude on right, or signed?
+    const demandM = Math.abs(Number(inputs.Mux_or_Max) || 0); // Plot magnitude on right, or signed?
     // Usually interaction is checked against absolute moment.
     // Let's plot absolute M on X axis (first quadrant mostly) but show full envelope.
     // Since envelope is symmetric, plotting demand M as positive is fine, or signed if we have it?
     // Input Mux can be negative. Let's use real value.
-    const demandM_real = inputs.Mux_or_Max;
+    const demandM_real = Number(inputs.Mux_or_Max) || 0;
     
     // 4. Setup Canvas Scaling
     const padding = 60;

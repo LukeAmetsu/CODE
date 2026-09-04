@@ -35,14 +35,26 @@ class I18nManager {
      * @private
      */
     async _loadAllTranslations() {
-        const isRoot = window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html');
-        const pathPrefix = isRoot ? './' : '../';
-        try {
-            const response = await fetch(`${pathPrefix}js/locales/locales.json`);
-            if (!response.ok) throw new Error('Failed to load locales.json');
-            this.translations = await response.json();
-        } catch (error) {
-            console.error("Fatal Error: Could not load any translation files.", error);
+        const candidatePaths = [
+            '../js/locales/locales.json',
+            './js/locales/locales.json',
+            'js/locales/locales.json'
+        ];
+        let loaded = false;
+        for (const p of candidatePaths) {
+            try {
+                const response = await fetch(p);
+                if (response.ok) {
+                    this.translations = await response.json();
+                    loaded = true;
+                    break;
+                }
+            } catch (e) {
+                // Continue to next candidate
+            }
+        }
+        if (!loaded) {
+            console.error("Fatal Error: Could not load any translation files from candidate paths.");
             this.translations = { en: { "error_loading": "Error loading content." } };
         }
     }

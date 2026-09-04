@@ -111,14 +111,32 @@
                                 data-i18n="go_to_steel_design">Go to Steel Design</a>
                         </div>
 
+                        <!-- AISC Beam-Column Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Beam-Column
+                                    Connection</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">Design
+                                and check shear and moment connections (single plate, flange plates) for beam-to-column
+                                joints.</p>
+                            <a href="../aisc/beam_column.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Go
+                                to Connection Design</a>
+                        </div>
+
                         <!-- Weld Group Calculator Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Weld Group Calculator</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Weld Group
+                                    Calculator</h3>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">Calculate the properties and maximum stress of a 3D weld group based on input coordinates using the elastic method.</p>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">Calculate the properties and
+                                maximum stress of a 3D weld group based on input coordinates using the elastic method.
+                            </p>
                             <a href="weld_group.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Go to Weld Group Calcs</a>
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Go
+                                to Weld Group Calcs</a>
                         </div>
 
 
@@ -148,6 +166,20 @@
                                 data-i18n="go_to_beam_selector">Go to Beam Selector</a>
                         </div>
 
+                        <!-- Shed Matrix Generator Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Shed Matrix
+                                    Generator</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Generate header beam sizing matrices and evaluate pipe leg capacities for full sidewalk
+                                shed spans.</p>
+                            <a href="shed_matrix.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Generate
+                                Matrices</a>
+                        </div>
+
                         <!-- Angle Support Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
@@ -160,41 +192,22 @@
                                 class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
                                 data-i18n="go_to_angle_support">Go to Angle Support</a>
                         </div>
-                        
-                        <!-- Shed Max Span Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Shed Max Span</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Calculate the maximum allowable span for a sidewalk shed header beam accounting for knee braces.</p>
-                            <a href="shed_span.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Go to Shed Span</a>
-                        </div>
 
-                        <!-- STM Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="strut_and_tie">Strut & Tie Method</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="stm_desc">
-                                Analyze 3D Strut and Tie models using the Direct Stiffness Method. Visualize nodes, members, and forces.</p>
-                            <a href="STM_UI.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_stm">Go to STM</a>
-                        </div>
+
 
 
                         <!-- Interactive Shear Model Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Interactive Shear Model</h3>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Interactive Shear
+                                    Model</h3>
                             </div>
                             <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Real-time customizable scatter plot of the shear databases using mathematical optimizations.</p>
+                                Real-time customizable scatter plot of the shear databases using mathematical
+                                optimizations.</p>
                             <a href="interactive_shear.html"
-                                class="mt-auto bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 text-center transition-colors self-start">Open Simulator</a>
+                                class="mt-auto bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 text-center transition-colors self-start">Open
+                                Simulator</a>
                         </div>
                     </div>
                 </div>
@@ -204,6 +217,120 @@
                     <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6"
                         data-i18n="brazilian_codes">Brazilian Codes (NBR)</h2>
                     <div class="flex-grow grid grid-auto-rows-fr gap-y-9" id="nbr-codes-container">
+                        <!-- RS2 Geotechnical 2D FEM Card -->
+                        <div class="form-section flex flex-col group border-2 border-blue-500/40 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
+                                RS2 / Phase2 FEM
+                            </div>
+                            <div class="flex items-center mb-3">
+                                <span class="text-2xl">🌋</span>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
+                                    RS2 - Geotecnia por Elementos Finitos 2D
+                                </h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Software completo similar ao Rocscience RS2 (Phase2). Análise elasto-plástica (Mohr-Coulomb), malhador 2D automático (Delaunay), Fator de Segurança via Redução de Resistência ao Cisalhamento (SSR), escavações profundas, túneis, fundações e lençol freático com mapas de contorno e estado de plastificação.
+                            </p>
+                            <a href="rs2_fem.html"
+                                class="mt-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
+                                Abrir RS2 Geotechnical FEA
+                            </a>
+                        </div>
+
+                        <!-- Retaining Wall Stability Card -->
+                        <div class="form-section flex flex-col group">
+                            <div class="flex items-center mb-3">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Estabilidade de Muro
+                                    de Arrimo</h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Análise de estabilidade geotécnica de muros de arrimo (tombamento, deslizamento,
+                                capacidade de carga e excentricidade) com múltiplas geometrias, dente de chave, água,
+                                sobrecargas e representação gráfica 2D.</p>
+                            <a href="retaining_wall.html"
+                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Calcular
+                                Muro de Arrimo</a>
+                        </div>
+
+                        <!-- Aoki-Velloso Piles & Foundation Stiffness Card -->
+                        <div class="form-section flex flex-col group border-2 border-emerald-500/40 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
+                                Geotecnia / Estacas
+                            </div>
+                            <div class="flex items-center mb-3">
+                                <span class="text-2xl">🏗️</span>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
+                                    Aoki-Velloso - Estacas & Rigidez de Fundação
+                                </h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Cálculo de capacidade de carga de estacas pelo método Aoki-Velloso (1975) (atrito lateral Rl e ponta Rp), molas estáticas verticais/horizontais (Kz, Kh), rigidezes dinâmicas e amortecimento crítico (Dgz, Dgxy) de grupos de fundação.
+                            </p>
+                            <a href="aoki_velloso.html"
+                                class="mt-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
+                                Calcular Estacas (Aoki-Velloso)
+                            </a>
+                        </div>
+
+                        <!-- Soil Liquefaction Triggering Analysis Card -->
+                        <div class="form-section flex flex-col group border-2 border-amber-500/40 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-amber-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
+                                NCEER / Youd & Idriss
+                            </div>
+                            <div class="flex items-center mb-3">
+                                <span class="text-2xl">🌊</span>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
+                                    Análise de Liquefação de Solos
+                                </h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Avaliação de suscetibilidade e gatilho de liquefação sísmica (método simplificado NCEER / Youd & Idriss / Idriss & Boulanger) por perfil contínuo de profundidade e por camadas reais de sondagem SPT, com determinação de FS, CSR, CRR e zonas críticas.
+                            </p>
+                            <a href="liquefaction.html"
+                                class="mt-auto bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
+                                Analisar Liquefação Sísmica
+                            </a>
+                        </div>
+
+                        <!-- Piled Raft Foundation Card (Transbordo & Heavy Rigging) -->
+                        <div class="form-section flex flex-col group border-2 border-indigo-500/40 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
+                                NBR 6118 / NBR 6122
+                            </div>
+                            <div class="flex items-center mb-3">
+                                <span class="text-2xl">🏗️</span>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
+                                    Radier Estaqueado (Transbordo & Rigging)
+                                </h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Interação solo-estrutura com molas elásticas discretas de estacas, descarte de camada colapsível superficial, carretas hidráulicas SPMT e cargas pesadas concentradas, verificação de punção (NBR 6118) com studs e controle de fadiga ELS-W.
+                            </p>
+                            <a href="piled_raft.html"
+                                class="mt-auto bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
+                                Calcular Radier Estaqueado
+                            </a>
+                        </div>
+
+                        <!-- Piled Gantry Beam Card (Viga de Coroamento Estaqueada) -->
+                        <div class="form-section flex flex-col group border-2 border-cyan-500/40 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-cyan-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
+                                Trem-Tipo / Envoltórias
+                            </div>
+                            <div class="flex items-center mb-3">
+                                <span class="text-2xl">🛤️</span>
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
+                                    Viga Estaqueada sob Trem-Tipo (Pórtico)
+                                </h3>
+                            </div>
+                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
+                                Viga contínua sobre estacas elásticas discretas sujeita ao trem-tipo de pórtico rolante (148,42 tf com coeficiente dinâmico e frenagem). Envoltórias de momento fletor e cortante, dimensionamento NBR 6118 e estudo de otimização de vãos.
+                            </p>
+                            <a href="piled_beam.html"
+                                class="mt-auto bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
+                                Calcular Viga sob Trem-Tipo
+                            </a>
+                        </div>
                         <!-- NBR Combinations Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
@@ -272,11 +399,13 @@
                         <!-- M-N Interaction Diagram Card -->
                         <div class="form-section flex flex-col group">
                             <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="mn_diagram">
+                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
+                                    data-i18n="mn_diagram">
                                     M-N Interaction Diagram</h3>
                             </div>
                             <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="mn_desc">
-                                Generate the N-M interaction diagram for reinforced concrete sections (Rectangular, T, I) according to NBR 6118.</p>
+                                Generate the N-M interaction diagram for reinforced concrete sections (Rectangular, T,
+                                I) according to NBR 6118.</p>
                             <a href="../nbr/M-N.html"
                                 class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
                                 data-i18n="go_to_mn">Go to M-N Diagram</a>

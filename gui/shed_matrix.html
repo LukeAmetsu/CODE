@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shed Matrix Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        const isDark =
+          localStorage.getItem("color-theme") === "dark" ||
+          (!("color-theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", isDark);
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css" />
+    <style>
+      .bg-p3 { background-color: #dcfce7; color: #166534; }
+      .bg-p35 { background-color: #fef08a; color: #854d0e; }
+      .bg-ng { background-color: #fee2e2; color: #991b1b; }
+      .dark .bg-p3 { background-color: rgba(22, 163, 74, 0.2); color: #86efac; }
+      .dark .bg-p35 { background-color: rgba(202, 138, 4, 0.2); color: #fde047; }
+      .dark .bg-ng { background-color: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+    </style>
+  </head>
+
+  <body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200">
+    <div class="container mx-auto p-4 md:p-8 max-w-[1400px]">
+      <div id="header-placeholder" style="min-height: 110px"></div>
+
+      <main>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+          <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+              Shed Header Beam Matrix Generator
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Generate W-shape beam sizing matrices and evaluate Pipe Leg capacities across all standard Transverse and Longitudinal spans.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-4">
+              <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">
+                Design Parameters
+              </h3>
+              
+              <div>
+                <label class="block text-sm font-medium mb-1">Vertical Load</label>
+                <div class="flex gap-2">
+                  <input type="number" step="1" id="load_psf" value="325" class="w-full font-bold text-blue-700 dark:text-blue-300 p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                  <span class="flex items-center text-sm text-gray-500">psf</span>
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium mb-1">Pipe Leg Height (KL)</label>
+                <div class="flex gap-2">
+                  <input type="number" step="1" id="pipe_height" value="14" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                  <span class="flex items-center text-sm text-gray-500">ft</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="space-y-4 md:col-span-2">
+              <h3 class="font-semibold text-purple-600 dark:text-purple-400 border-b pb-1">
+                Legend & Criteria
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                  <div class="p-3 rounded border border-green-200 bg-p3">
+                      <span class="font-bold block">(P3) Standard</span>
+                      <span class="text-xs">Reaction safely supported by a Pipe 3 Std column.</span>
+                  </div>
+                  <div class="p-3 rounded border border-yellow-200 bg-p35">
+                      <span class="font-bold block">(P3.5) Heavy</span>
+                      <span class="text-xs">Reaction exceeds Pipe 3, but works with a Pipe 3.5 Std.</span>
+                  </div>
+                  <div class="p-3 rounded border border-red-200 bg-ng">
+                      <span class="font-bold block">(NG-Leg) Fails</span>
+                      <span class="text-xs">Reaction exceeds capacity of both 3" and 3.5" standard pipes.</span>
+                  </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">Assumptions: A992 Steel ($F_y = 50 \text{ ksi}$), ASD method ($\Omega = 1.67$). Table uses unbraced length approximations. Joists must provide lateral restraint.</p>
+            </div>
+          </div>
+          
+          <div class="mt-8 flex justify-end gap-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+            <button id="export-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition hover:scale-105 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Export to Excel
+            </button>
+            <button id="generate-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105">
+              Generate Matrix
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Block -->
+        <div id="results-container" class="hidden mb-12">
+            
+            <div id="error-alert" class="hidden mb-6 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 rounded shadow-sm text-red-600 dark:text-red-400">
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <h3 class="font-bold text-lg text-gray-800 dark:text-gray-200">Generated Matrix</h3>
+                    <div class="text-sm font-semibold bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded text-gray-600 dark:text-gray-300">
+                        <span id="disp_load"></span> PSF | Height: <span id="disp_height"></span> ft
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+                    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        <thead id="matrix-head" class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            <!-- Populated by JS -->
+                        </thead>
+                        <tbody id="matrix-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Lb Reference Table -->
+            <div class="mt-8 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
+                <div class="mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <h3 class="font-bold text-lg text-gray-800 dark:text-gray-200">Lb Reference Guide</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Fixed required lateral bracing limits ($L_b$) for the specific header beams selected.</p>
+                </div>
+                
+                <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+                    <table class="min-w-64 text-sm text-left text-gray-500 dark:text-gray-400">
+                        <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                            <tr>
+                                <th class="px-4 py-3 border-r dark:border-gray-600 font-bold">Beam Size</th>
+                                <th class="px-4 py-3 font-bold text-center">Lb (FT)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lb-ref-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+      </main>
+
+      <div id="footer-placeholder" class="mt-12"></div>
+    </div>
+
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="shed_matrix.js" defer></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof injectHeader === "function") {
+          injectHeader({
+            activePage: "shed_matrix",
+            pageTitle: "Shed Matrix Generator",
+            headerPlaceholderId: "header-placeholder",
+            pathPrefix: "../",
+          });
+        }
+        if (typeof injectFooter === "function") {
+          injectFooter({
+            footerPlaceholderId: "footer-placeholder",
+            pathPrefix: "../",
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

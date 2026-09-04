@@ -11,6 +11,7 @@ var LOAD_TYPES = {
     'Temperatura (T)': { isVariable: true, psi0: 0.6, psi1: 0.5, psi2: 0.3, gamma_q: 1.4 },
     'Líquidos (Truncado)': { isVariable: true, psi0: 0.5, psi1: 0.4, psi2: 0.3, gamma_q: 1.4 },
     'Outras Ações Variáveis (Q)': { isVariable: true, psi0: 0.8, psi1: 0.6, psi2: 0.4, gamma_q: 1.4 },
+    'Guarda-Corpo (Q)': { isVariable: true, psi0: 0.8, psi1: 0.6, psi2: 0.4, gamma_q: 1.4 },
 };
 
 var nbrComboCalculator = (() => {
@@ -19,99 +20,147 @@ var nbrComboCalculator = (() => {
         const variaveis = userLoads.filter(l => LOAD_TYPES[l.type].isVariable);
         const combinations = { elu: [], els_rara: [], els_freq: [], els_qp: [] };
 
-        // --- 1. ELU - Combinações Normais ---
-        if (variaveis.length > 0) {
-            variaveis.forEach((q_principal, index) => {
-                let formula = [];
-                let formulaString = [];
+        // 1. Group variables
+        const groups = {};
+        let singletons = 0;
+        variaveis.forEach(v => {
+            let g = v.group;
+            if (!g) { g = `__singleton_${singletons++}__`; }
+            if (!groups[g]) groups[g] = [];
+            groups[g].push(v);
+        });
 
-                // Add permanent loads
-                permanentes.forEach(g => {
-                    const factor = LOAD_TYPES[g.type].gamma_g;
-                    formula.push(`${factor} * ${g.value}`);
-                    formulaString.push(`${factor.toFixed(2)}*${g.name}`);
-                });
-
-                // Add principal variable load
-                const qp_type = LOAD_TYPES[q_principal.type];
-                formula.push(`${qp_type.gamma_q} * ${q_principal.value}`);
-                formulaString.push(`${qp_type.gamma_q.toFixed(2)}*${q_principal.name}`);
-
-                // Add other variable loads
-                variaveis.forEach((q_sec, sec_index) => {
-                    if (index === sec_index) return; // Skip the principal one
-                    const qs_type = LOAD_TYPES[q_sec.type];
-                    const factor = qp_type.gamma_q * qs_type.psi0;
-                    formula.push(`${factor} * ${q_sec.value}`);
-                    formulaString.push(`${factor.toFixed(2)}*${q_sec.name}`);
-                });
-
-                combinations.elu.push({
-                    title: `ELU (Principal: ${q_principal.name})`,
-                    formula: formulaString.join(' + '),
-                    result: eval(formula.join(' + ')) || 0
-                });
-            });
-        } else { // Only permanent loads
-            let formula = permanentes.map(g => `${LOAD_TYPES[g.type].gamma_g} * ${g.value}`);
-            let formulaString = permanentes.map(g => `${LOAD_TYPES[g.type].gamma_g.toFixed(2)}*${g.name}`);
-            combinations.elu.push({
-                title: 'ELU (Apenas Cargas Permanentes)',
-                formula: formulaString.join(' + '),
-                result: eval(formula.join(' + ')) || 0
-            });
+        let validVariableSets = [[]];
+        for (const g in groups) {
+            const newSets = [];
+            for (const existingSet of validVariableSets) {
+                // Ação variável não atua (favorável = 0)
+                newSets.push([...existingSet]);
+                
+                // Ação variável atua (uma do grupo)
+                for (const v of groups[g]) {
+                    newSets.push([...existingSet, v]);
+                }
+            }
+            validVariableSets = newSets;
         }
+
+        // 2. Permutations for Permanent Loads (ELU)
+        let permFactorSets = [[]];
+        permanentes.forEach(p => {
+            const newSets = [];
+            for (const existingSet of permFactorSets) {
+                newSets.push([...existingSet, { load: p, factor: LOAD_TYPES[p.type].gamma_g }]);
+                newSets.push([...existingSet, { load: p, factor: 1.0 }]);
+            }
+            permFactorSets = newSets;
+        });
+
+        // --- 1. ELU - Combinações Normais ---
+        permFactorSets.forEach(permSet => {
+            validVariableSets.forEach(varSet => {
+                if (varSet.length > 0) {
+                    varSet.forEach((q_principal, index) => {
+                        let formula = [];
+                        let formulaString = [];
+
+                        // Permanent loads
+                        permSet.forEach(pData => {
+                            formula.push(`${pData.factor} * ${pData.load.value}`);
+                            formulaString.push(`${pData.factor.toFixed(2)}*${pData.load.name}`);
+                        });
+
+                        // Principal variable
+                        const qp_type = LOAD_TYPES[q_principal.type];
+                        formula.push(`${qp_type.gamma_q} * ${q_principal.value}`);
+                        formulaString.push(`${qp_type.gamma_q.toFixed(2)}*${q_principal.name}`);
+
+                        // Secondary variables
+                        varSet.forEach((q_sec, sec_index) => {
+                            if (index === sec_index) return;
+                            const qs_type = LOAD_TYPES[q_sec.type];
+                            const factor = qp_type.gamma_q * qs_type.psi0;
+                            formula.push(`${factor} * ${q_sec.value}`);
+                            formulaString.push(`${factor.toFixed(2)}*${q_sec.name}`);
+                        });
+
+                        combinations.elu.push({
+                            title: `ELU (Principal: ${q_principal.name})`,
+                            formula: formulaString.join(' + '),
+                            result: eval(formula.join(' + ')) || 0
+                        });
+                    });
+                } else {
+                    let formula = [];
+                    let formulaString = [];
+                    permSet.forEach(pData => {
+                        formula.push(`${pData.factor} * ${pData.load.value}`);
+                        formulaString.push(`${pData.factor.toFixed(2)}*${pData.load.name}`);
+                    });
+                    if (formula.length > 0) {
+                        combinations.elu.push({
+                            title: 'ELU (Apenas Cargas Permanentes)',
+                            formula: formulaString.join(' + '),
+                            result: eval(formula.join(' + ')) || 0
+                        });
+                    }
+                }
+            });
+        });
 
         // --- 2. ELS - Combinações ---
-        // ELS - Quase-Permanente (one combination)
-        let els_qp_formula = permanentes.map(g => `1.0 * ${g.value}`);
-        let els_qp_formulaString = permanentes.map(g => `1.00*${g.name}`);
-        variaveis.forEach(q => {
-            els_qp_formula.push(`${LOAD_TYPES[q.type].psi2} * ${q.value}`);
-            els_qp_formulaString.push(`${LOAD_TYPES[q.type].psi2.toFixed(2)}*${q.name}`);
-        });
-        combinations.els_qp.push({
-            title: 'ELS - Quase-Permanente',
-            formula: els_qp_formulaString.join(' + '),
-            result: eval(els_qp_formula.join(' + ')) || 0
-        });
-
-        // ELS - Frequente & Rara (iterate through each variable load as principal)
-        if (variaveis.length > 0) {
-            variaveis.forEach((q_principal, index) => {
-                let els_freq_formula = permanentes.map(g => `1.0 * ${g.value}`);
-                let els_freq_formulaString = permanentes.map(g => `1.00*${g.name}`);
-                let els_rara_formula = [...els_freq_formula];
-                let els_rara_formulaString = [...els_freq_formulaString];
-
-                // Add principal variable load
-                els_freq_formula.push(`1.0 * ${q_principal.value}`);
-                els_freq_formulaString.push(`1.00*${q_principal.name}`);
-                els_rara_formula.push(`1.0 * ${q_principal.value}`);
-                els_rara_formulaString.push(`1.00*${q_principal.name}`);
-
-                // Add other variable loads
-                variaveis.forEach((q_sec, sec_index) => {
-                    if (index === sec_index) return;
-                    const qs_type = LOAD_TYPES[q_sec.type];
-                    els_freq_formula.push(`${qs_type.psi2} * ${q_sec.value}`);
-                    els_freq_formulaString.push(`${qs_type.psi2.toFixed(2)}*${q_sec.name}`);
-                    els_rara_formula.push(`${qs_type.psi1} * ${q_sec.value}`);
-                    els_rara_formulaString.push(`${qs_type.psi1.toFixed(2)}*${q_sec.name}`);
-                });
-
-                combinations.els_freq.push({
-                    title: `ELS - Frequente (Principal: ${q_principal.name})`,
-                    formula: els_freq_formulaString.join(' + '),
-                    result: eval(els_freq_formula.join(' + ')) || 0
-                });
-                combinations.els_rara.push({
-                    title: `ELS - Rara (Principal: ${q_principal.name})`,
-                    formula: els_rara_formulaString.join(' + '),
-                    result: eval(els_rara_formula.join(' + ')) || 0
-                });
+        validVariableSets.forEach(varSet => {
+            // ELS - Quase-Permanente
+            let els_qp_formula = permanentes.map(g => `1.0 * ${g.value}`);
+            let els_qp_formulaString = permanentes.map(g => `1.00*${g.name}`);
+            varSet.forEach(q => {
+                els_qp_formula.push(`${LOAD_TYPES[q.type].psi2} * ${q.value}`);
+                els_qp_formulaString.push(`${LOAD_TYPES[q.type].psi2.toFixed(2)}*${q.name}`);
             });
-        }
+            combinations.els_qp.push({
+                title: 'ELS - Quase-Permanente',
+                formula: els_qp_formulaString.join(' + '),
+                result: eval(els_qp_formula.join(' + ')) || 0
+            });
+
+            // ELS - Frequente & Rara
+            if (varSet.length > 0) {
+                varSet.forEach((q_principal, index) => {
+                    let els_freq_formula = permanentes.map(g => `1.0 * ${g.value}`);
+                    let els_freq_formulaString = permanentes.map(g => `1.00*${g.name}`);
+                    let els_rara_formula = [...els_freq_formula];
+                    let els_rara_formulaString = [...els_freq_formulaString];
+
+                    // Principal variable
+                    const qp_type = LOAD_TYPES[q_principal.type];
+                    els_freq_formula.push(`${qp_type.psi1} * ${q_principal.value}`);
+                    els_freq_formulaString.push(`${qp_type.psi1.toFixed(2)}*${q_principal.name}`);
+                    els_rara_formula.push(`1.0 * ${q_principal.value}`);
+                    els_rara_formulaString.push(`1.00*${q_principal.name}`);
+
+                    // Secondary variables
+                    varSet.forEach((q_sec, sec_index) => {
+                        if (index === sec_index) return;
+                        const qs_type = LOAD_TYPES[q_sec.type];
+                        els_freq_formula.push(`${qs_type.psi2} * ${q_sec.value}`);
+                        els_freq_formulaString.push(`${qs_type.psi2.toFixed(2)}*${q_sec.name}`);
+                        els_rara_formula.push(`${qs_type.psi1} * ${q_sec.value}`);
+                        els_rara_formulaString.push(`${qs_type.psi1.toFixed(2)}*${q_sec.name}`);
+                    });
+
+                    combinations.els_freq.push({
+                        title: `ELS - Frequente (Principal: ${q_principal.name})`,
+                        formula: els_freq_formulaString.join(' + '),
+                        result: eval(els_freq_formula.join(' + ')) || 0
+                    });
+                    combinations.els_rara.push({
+                        title: `ELS - Rara (Principal: ${q_principal.name})`,
+                        formula: els_rara_formulaString.join(' + '),
+                        result: eval(els_rara_formula.join(' + ')) || 0
+                    });
+                });
+            }
+        });
         return { combinations };
     }
     return { calculate };
@@ -157,11 +206,11 @@ initializeApp({
 });
 
 
-function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '' }) {
+function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', value: '', group: '' }) {
     const rowId = `row-${Date.now()}`;
     const row = document.createElement('div');
     row.id = rowId;
-    row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_auto] gap-3 items-center load-row';
+    row.className = 'grid grid-cols-1 md:grid-cols-[2fr_2fr_1fr_1fr_auto] gap-3 items-center load-row';
 
     const loadName = document.createElement('input');
     loadName.type = 'text';
@@ -183,6 +232,12 @@ function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', v
     loadValue.className = 'load-value w-full';
     loadValue.value = load.value;
 
+    const loadGroup = document.createElement('input');
+    loadGroup.type = 'text';
+    loadGroup.placeholder = 'Grupo Excludente';
+    loadGroup.className = 'load-group w-full';
+    loadGroup.value = load.group || '';
+
     const removeButton = document.createElement('button');
     removeButton.textContent = "Remover";
     removeButton.className = 'bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 text-sm';
@@ -191,6 +246,7 @@ function addLoadRow(container, load = { name: '', type: 'Uso Residencial (Q)', v
     row.appendChild(loadName);
     row.appendChild(loadType);
     row.appendChild(loadValue);
+    row.appendChild(loadGroup);
     row.appendChild(removeButton);
 
     container.appendChild(row);
@@ -201,7 +257,8 @@ function gatherNbrLoads() {
         return {
             name: row.querySelector('.load-name').value,
             type: row.querySelector('.load-type').value,
-            value: parseFloat(row.querySelector('.load-value').value) || 0
+            value: parseFloat(row.querySelector('.load-value').value) || 0,
+            group: row.querySelector('.load-group').value.trim()
         };
     }).filter(l => l.name && l.type);
 }

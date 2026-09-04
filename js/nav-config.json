@@ -47,24 +47,44 @@
           "textKey": "splice"
         },
         {
+          "key": "beam_column",
+          "href": "aisc/beam_column.html",
+          "textKey": "beam_column"
+        },
+        {
+          "key": "weld_group",
+          "href": "gui/weld_group.html",
+          "textKey": "weld_group"
+        },
+        {
           "key": "nds",
           "href": "nds/nds wood design.html",
           "textKey": "nds_wood"
         },
         {
           "key": "beam_selector",
-          "textKey": "beam_selector",
-          "href": "gui/beam selector.html"
+          "href": "gui/beam selector.html",
+          "textKey": "beam_selector"
         },
         {
           "key": "angle_support",
-          "textKey": "angle_support",
-          "href": "gui/angle_support.html"
+          "href": "gui/angle_support.html",
+          "textKey": "angle_support"
         },
         {
-          "key": "stm",
-          "textKey": "stm",
-          "href": "gui/STM_UI.html"
+          "key": "shed_matrix",
+          "href": "gui/shed_matrix.html",
+          "textKey": "shed_matrix"
+        },
+        {
+          "key": "shed_span",
+          "href": "gui/shed_span.html",
+          "textKey": "shed_span"
+        },
+        {
+          "key": "interactive_shear",
+          "href": "gui/interactive_shear.html",
+          "textKey": "interactive_shear"
         }
       ]
     },
@@ -73,6 +93,26 @@
       "href": "nbr/comb nbr 6118.html",
       "textKey": "nbr_brazil",
       "subNav": [
+        {
+          "key": "rs2-fem",
+          "href": "gui/rs2_fem.html",
+          "textKey": "rs2_fem"
+        },
+        {
+          "key": "retaining-wall",
+          "href": "gui/retaining_wall.html",
+          "textKey": "retaining_wall"
+        },
+        {
+          "key": "aoki-velloso",
+          "href": "gui/aoki_velloso.html",
+          "textKey": "aoki_velloso"
+        },
+        {
+          "key": "liquefaction",
+          "href": "gui/liquefaction.html",
+          "textKey": "liquefaction"
+        },
         {
           "key": "comb-nbr",
           "href": "nbr/comb nbr 6118.html",
@@ -89,6 +129,11 @@
           "textKey": "prestressed_beam"
         },
         {
+          "key": "nbr-aco",
+          "href": "nbr/nbr 8080 estruturas de aço.html",
+          "textKey": "nbr_steel"
+        },
+        {
           "key": "pcalc",
           "href": "nbr/PCALC.html",
           "textKey": "pcalc"
@@ -97,6 +142,11 @@
           "key": "mn-diagram",
           "href": "nbr/M-N.html",
           "textKey": "mn_diagram"
+        },
+        {
+          "key": "stm",
+          "href": "gui/STM_UI.html",
+          "textKey": "stm"
         }
       ]
     }

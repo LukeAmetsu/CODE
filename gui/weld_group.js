@@ -259,4 +259,78 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         renderTable();
     }, 100);
+
+    // =========================================================================
+    // WELD GROUP PROJECT SAVE / LOAD
+    // =========================================================================
+
+    window.saveProjectJSON = function() {
+        const inputs = {};
+        document.querySelectorAll('input, select').forEach(el => {
+            if (el.id && el.type !== 'file') inputs[el.id] = el.value;
+        });
+
+        const projectData = {
+            app: "WeldGroupElastic",
+            version: "1.0",
+            timestamp: new Date().toISOString(),
+            segments: segments,
+            inputs: inputs
+        };
+
+        const jsonStr = JSON.stringify(projectData, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `weld_group_project_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        if (typeof showUniversalToast === 'function') {
+            showUniversalToast('Weld Group Project saved! 💾');
+        }
+    };
+
+    window.loadProjectJSON = function(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.segments && Array.isArray(data.segments)) {
+                    segments = data.segments;
+                    renderTable();
+                }
+                const inps = data.inputs || data.loads;
+                if (inps) {
+                    for (const [k, v] of Object.entries(inps)) {
+                        const el = document.getElementById(k);
+                        if (el) el.value = v;
+                    }
+                }
+                drawCanvas();
+                const btn = document.getElementById('calculateBtn');
+                if (btn) btn.click();
+
+                if (typeof showUniversalToast === 'function') {
+                    showUniversalToast('Weld Group Project loaded! ✅');
+                }
+            } catch (err) {
+                console.error('Error loading Weld Group JSON:', err);
+                alert('Failed to load weld group project. Ensure file is valid JSON.');
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    window.exportProjectJSON = window.saveProjectJSON;
+    window.importProjectJSON = window.loadProjectJSON;
 });

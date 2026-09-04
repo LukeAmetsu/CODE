@@ -83,11 +83,12 @@ def calculate_concrete_beam(inputs):
     # Vc = 0.6 * fctd * bw * d
     Vc_kN = 0.6 * fctd_kN_cm2 * bw * d
     
-    # Vsw = (Asw / s) * 0.9 * d * fyd
-    # Note: Using fyd for stirrups (same steel strength assumed usually)
+    # Vsw = (Asw / s) * 0.9 * d * fywd
+    # Per NBR 6118:2014 item 17.4.2.2, fywd is capped at 435 MPa (43.5 kN/cm²)
+    fywd_kN_cm2 = min(fyd_kN_cm2, 43.5)
     s = i['s_estribo']
     if s > 0:
-        Vsw_kN = (Asw / s) * 0.9 * d * fyd_kN_cm2
+        Vsw_kN = (Asw / s) * 0.9 * d * fywd_kN_cm2
     else:
         Vsw_kN = 0
         

@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 import eel
 import sys
 import os
@@ -16,7 +17,8 @@ from backend.database import db
 # We'll set the root to '..' (CODE-2) so we can access 'aisc/' and 'js/' folders.
 # WARNING: This exposes the whole project folder to the local browser. Okay for local app.
 
-# HELPER: Finds files in both Dev mode and EXE mode
+# HELPER: Finds files in both Dev mod
+# e and EXE mode
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
@@ -28,11 +30,156 @@ print(f"Server loading DB from: {db_path}")
 try:
     db.load_database(db_path)
     print("Database loaded successfully.")
-except Exception as e:
+except Exception as e:  
     print(f"Error loading database: {e}")
 
 # --- Expose Functions ---
 
+
+
+@eel.expose
+def rs2_get_preset(preset_name="slope"):
+    try:
+        from backend.calculators.rs2_fea import get_preset_model
+        return {"status": "success", "preset": get_preset_model(preset_name)}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def rs2_generate_mesh(model_data):
+    try:
+        from backend.calculators.rs2_fea import generate_triangular_mesh, assign_materials_to_elements
+        nodes, elements = generate_triangular_mesh(
+            domain_poly=model_data.get('domain_poly'),
+            internal_boundaries=model_data.get('internal_boundaries', []),
+            excavation_poly=model_data.get('excavation_poly'),
+            target_elem_size=float(model_data.get('target_elem_size', 2.5)),
+            layer_polygons=model_data.get('layer_polygons', [])
+        )
+        elem_mat = assign_materials_to_elements(
+            nodes, elements, model_data.get('materials', []), model_data.get('layer_polygons', [])
+        )
+        return {
+            "status": "success",
+            "mesh": {
+                "num_nodes": len(nodes),
+                "num_elements": len(elements),
+                "nodes": nodes.tolist(),
+                "elements": elements.tolist(),
+                "elem_mat": elem_mat.tolist()
+            }
+        }
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def rs2_run_analysis(model_data):
+    try:
+        from backend.calculators.rs2_fea import full_analysis_pipeline
+        return full_analysis_pipeline(model_data, run_ssr=False)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def rs2_run_ssr(model_data):
+    try:
+        from backend.calculators.rs2_fea import full_analysis_pipeline
+        return full_analysis_pipeline(model_data, run_ssr=True)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def rs2_get_critical_sections(model_data):
+    try:
+        import importlib
+        import backend.calculators.rs2_fea as fea_mod
+        importlib.reload(fea_mod)
+        return fea_mod.calculate_slope_slip_surfaces(model_data)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_retaining_wall(inputs):
+    try:
+        import importlib
+        import backend.calculators.retaining_wall as rw_mod
+        importlib.reload(rw_mod)
+        return rw_mod.calculate_retaining_wall(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_aoki_reference_data():
+    try:
+        from backend.calculators.aoki_velloso import get_aoki_reference_data as py_get_aoki
+        return py_get_aoki()
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_aoki_velloso(inputs):
+    try:
+        from backend.calculators.aoki_velloso import calculate_aoki_velloso as py_calc_aoki
+        return py_calc_aoki(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_liquefaction_reference_data():
+    try:
+        from backend.calculators.liquefaction import get_liquefaction_reference_data as py_get_liq
+        return py_get_liq()
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_liquefaction_profile(inputs):
+    try:
+        from backend.calculators.liquefaction import calculate_liquefaction_profile as py_calc_liq_prof
+        return py_calc_liq_prof(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_liquefaction_layers(inputs):
+    try:
+        from backend.calculators.liquefaction import calculate_liquefaction_layers as py_calc_liq_lay
+        return py_calc_liq_lay(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_piled_raft(inputs):
+    try:
+        import importlib
+        import backend.calculators.piled_raft as pr_mod
+        importlib.reload(pr_mod)
+        return pr_mod.calculate_piled_raft(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_piled_beam(inputs):
+    try:
+        import importlib
+        import backend.calculators.piled_beam as pb_mod
+        importlib.reload(pb_mod)
+        return pb_mod.calculate_piled_beam(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
 
 
 @eel.expose
@@ -57,6 +204,24 @@ def find_lightest_beam(inputs):
         return py_find_lightest(inputs)
     except Exception as e:
         return {"error": str(e)}
+
+@eel.expose
+def generate_shed_matrix(inputs):
+    try:
+        from backend.calculators.shed_matrix import generate_matrix
+        return generate_matrix(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def export_shed_matrix_excel(inputs):
+    try:
+        from backend.calculators.shed_matrix import export_matrix_to_excel
+        return export_matrix_to_excel(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
 
 @eel.expose
 def calculate_base_plate(inputs):
@@ -123,6 +288,31 @@ def calculate_splice_all(inputs):
         print(f"Splice Calculation Error: {e}")
         traceback.print_exc()
         return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_beam_column(inputs):
+    """Orchestrates the full beam-column connection calculation."""
+    try:
+        from backend.calculators.beam_column import beam_column_calc
+        return beam_column_calc.run(inputs)
+    except Exception as e:
+        import traceback
+        print(f"Beam-Column Error: {e}")
+        traceback.print_exc()
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def run_beam_column_check(check_name, inputs):
+    try:
+        from backend.calculators.beam_column import beam_column_calc
+        method = getattr(beam_column_calc, check_name, None)
+        if method:
+            return method(inputs)
+        return {"error": f"Method {check_name} not found"}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
 
 @eel.expose
 def calculate_steel_all(inputs):
@@ -362,6 +552,26 @@ def run_scipy_optimization(target_safety=1.0):
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
 
+@eel.expose
+def compare_lowess_curves_batch(live_curve, other_curves_dict):
+    """Compares the Live Model LOWESS curve against other codes' curves."""
+    try:
+        from backend.calculators.interactive_shear import batch_compare_lowess
+        return batch_compare_lowess(live_curve, other_curves_dict)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_nbr_steel(inputs):
+    """Calculates steel member capacity per NBR 8800 with FLT and compression."""
+    try:
+        from backend.calculators.nbr_8800_steel import calculate_steel_structure
+        return calculate_steel_structure(inputs)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)
     # This exposes 'gui', 'aisc', 'js', etc.
@@ -374,7 +584,20 @@ if __name__ == '__main__':
         project_root = sys._MEIPASS
         
     print(f"Eel serving from: {project_root}")
-    eel.init(project_root)
+    # Safely initialize Eel without crashing on un-downloaded OneDrive files or unreadable system files
+    import builtins
+    import io
+    _orig_open = builtins.open
+    def _safe_open(*args, **kwargs):
+        try:
+            return _orig_open(*args, **kwargs)
+        except (OSError, IOError, PermissionError):
+            return io.StringIO("")
+    builtins.open = _safe_open
+    try:
+        eel.init(project_root)
+    finally:
+        builtins.open = _orig_open
     
     print("Starting Eel App...")
     # Start the app opening the index.html located in gui/

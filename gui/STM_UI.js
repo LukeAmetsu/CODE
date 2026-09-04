@@ -411,3 +411,76 @@ function init3D() {
         stmEngine.resize();
     });
 }
+
+// =========================================================================
+// STM PROJECT SAVE / LOAD
+// =========================================================================
+
+function saveProjectJSON() {
+    const data = {
+        app: "STM_Strut_and_Tie",
+        version: "1.0",
+        timestamp: new Date().toISOString(),
+        stmData: gatherSTMInputs()
+    };
+
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `stm_model_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    if (typeof showUniversalToast === 'function') {
+        showUniversalToast('STM Model saved successfully! 💾');
+    }
+}
+
+function loadProjectJSON(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            const stm = parsed.stmData || parsed;
+
+            if (stm.geometry) {
+                if (document.getElementById('geom-x')) document.getElementById('geom-x').value = stm.geometry.L;
+                if (document.getElementById('geom-y')) document.getElementById('geom-y').value = stm.geometry.H;
+                if (document.getElementById('geom-z')) document.getElementById('geom-z').value = stm.geometry.B;
+            }
+
+            if (stm.nodes && Array.isArray(stm.nodes)) {
+                renderNodeTable(stm.nodes);
+            }
+            if (stm.members && Array.isArray(stm.members)) {
+                renderMemberTable(stm.members);
+            }
+
+            const current = gatherSTMInputs();
+            update3D(current, []);
+
+            if (typeof showUniversalToast === 'function') {
+                showUniversalToast('STM Model loaded successfully! ✅');
+            }
+        } catch (err) {
+            console.error('Error loading STM JSON:', err);
+            alert('Failed to load STM project file. Ensure it is valid JSON.');
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+window.saveProjectJSON = saveProjectJSON;
+window.loadProjectJSON = loadProjectJSON;
+window.exportProjectJSON = saveProjectJSON;
+window.importProjectJSON = loadProjectJSON;

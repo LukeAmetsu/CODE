@@ -74,7 +74,8 @@ class SpliceCalculator:
         is_edge = inputs.get('is_edge_bolt', False)
         deformation_considered = inputs.get('deformation_considered', True)
         
-        hole_dia = db + 1/16.0 # Standard hole assumption
+        # Standard hole assumption (AISC Table J3.3: db + 1/16" for db <= 7/8", db + 1/8" for db >= 1")
+        hole_dia = (db + 1/8.0) if db >= 1.0 else (db + 1/16.0)
         
         tearout_coeff = 1.2 if deformation_considered else 1.5
         bearing_coeff = 2.4 if deformation_considered else 3.0
@@ -409,20 +410,21 @@ class SpliceCalculator:
     def check_bolt_slip(self, inputs):
         """AISC J3.8 Slip Critical"""
         db = float(inputs.get('db', 0))
-        fsc = inputs.get('faying_surface_class', 'Class A')
+        fsc = inputs.get('faying_surface_class', 'A')
+        grade = inputs.get('grade', 'A325')
         num_fillers = int(inputs.get('num_fillers', 0))
         num_planes = int(inputs.get('num_slip_planes', 1))
         
-        # Basic lookup (simplified)
         # Tb from Table J3.1 (kips)
-        tb_map = {0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 64} # Partial
-        # Need a better lookup or function. JS uses AISC_SPEC.getTb(db)
-        # I'll implement a simple one here or assume passed in. 
-        # For now, simplistic approximation or strict lookup? 
-        # Creating a small helper map.
-        tb = tb_map.get(db, 0) # This risks being wrong for other sizes.
+        is_group_b = ('A490' in grade or 'F2280' in grade)
+        if is_group_b:
+            tb_map = {0.5: 15, 0.625: 24, 0.75: 35, 0.875: 49, 1.0: 64, 1.125: 80, 1.25: 102, 1.375: 121, 1.5: 148}
+        else:
+            tb_map = {0.5: 12, 0.625: 19, 0.75: 28, 0.875: 39, 1.0: 51, 1.125: 64, 1.25: 81, 1.375: 104, 1.5: 121}
+            
+        tb = tb_map.get(db, 0)
         
-        mu = 0.30 if fsc == 'Class A' else 0.50 # Simplified
+        mu = 0.30 if fsc == 'Class A' or fsc == 'A' else 0.50
         du = 1.13
         hf = 1.0
         if num_fillers > 1: hf = 0.85
@@ -431,7 +433,7 @@ class SpliceCalculator:
         factors = get_design_factors(inputs, 1.0, 1.5)
         return {
             'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'],
-            'mu': mu, 'du': du, 'hf': hf, 'tb': tb, 'num_planes': num_planes, 'num_fillers': num_fillers, 'fsc': fsc, 'db': db
+            'mu': mu, 'du': du, 'hf': hf, 'tb': tb, 'num_planes': num_planes, 'num_fillers': num_fillers, 'fsc': fsc, 'db': db, 'grade': grade
         }
         
     def check_bolt_tension(self, inputs):
@@ -813,6 +815,35 @@ class SpliceCalculator:
         cap_shear = checks['Flange Bolt Shear']['check']['Rn'] * checks['Flange Bolt Shear']['check']['phi'] if inputs.get('design_method') == 'LRFD' else checks['Flange Bolt Shear']['check']['Rn'] / checks['Flange Bolt Shear']['check']['omega']
         checks['Flange Bolt Shear']['pass'] = cap_shear >= checks['Flange Bolt Shear']['demand'] - 1e-9
 
+        # Add Slip check if Slip-Critical
+        if inputs.get('connection_type') == 'Slip-Critical':
+             bolt_slip_check = self.check_bolt_slip({
+                  'grade': inputs.get('bolt_grade_fp'),
+                  'db': d_fp,
+                  'faying_surface_class': inputs.get('faying_surface_class', 'B'),
+                  'num_fillers': 0,
+                  'num_slip_planes': num_shear_planes,
+                  'jurisdiction': inputs.get('jurisdiction'), 
+                  'global_fos': inputs.get('global_fos')
+             })
+             
+             checks['Flange Bolt Slip'] = {
+                  'demand': demands['total_flange_demand_tension'],
+                  'check': {
+                      'Rn': bolt_slip_check['Rn'] * num_bolts_side,
+                      'phi': bolt_slip_check['phi'],
+                      'omega': bolt_slip_check['omega'],
+                      'mu': bolt_slip_check['mu'],
+                      'du': bolt_slip_check['du'],
+                      'hf': bolt_slip_check['hf'],
+                      'tb': bolt_slip_check['tb'],
+                      'num_planes': bolt_slip_check['num_planes'],
+                  },
+                  'details': {'Rn_single': bolt_slip_check['Rn'], 'num_bolts': num_bolts_side}
+             }
+             cap_slip = checks['Flange Bolt Slip']['check']['Rn'] * checks['Flange Bolt Slip']['check']['phi'] if inputs.get('design_method') == 'LRFD' else checks['Flange Bolt Slip']['check']['Rn'] / checks['Flange Bolt Slip']['check']['omega']
+             checks['Flange Bolt Slip']['pass'] = cap_slip >= checks['Flange Bolt Slip']['demand'] - 1e-9
+
         
         # 2. Outer Plate Checks
         outer_checks = self.perform_plate_checks("Outer Plate", inputs, {
@@ -902,6 +933,32 @@ class SpliceCalculator:
                  'C': C_coeff
              }
         }
+
+        # Add Slip check if Slip-Critical
+        if inputs.get('connection_type') == 'Slip-Critical':
+             bolt_slip_check = self.check_bolt_slip({
+                  'grade': inputs.get('bolt_grade_wp'),
+                  'db': d_wp,
+                  'faying_surface_class': inputs.get('faying_surface_class', 'B'),
+                  'num_fillers': 0,
+                  'num_slip_planes': num_web_planes,
+                  'jurisdiction': inputs.get('jurisdiction'), 
+                  'global_fos': inputs.get('global_fos')
+             })
+             
+             checks['Web Bolt Group Slip'] = {
+                  'demand': resultant_demand,
+                  'check': {'Rn': bolt_slip_check['Rn'], 'phi': bolt_slip_check['phi'], 'omega': bolt_slip_check['omega']},
+                  'details': {
+                       'V_load': v_load, 'Hw': h_load, 
+                       'max_R': resultant_demand, 
+                       'Rn_single': bolt_slip_check['Rn'], 
+                       'eccentricity': eccentricity,
+                       'theta_deg': theta_deg,
+                       'e_eff': e_eff,
+                       'C': C_coeff
+                  }
+             }
         
         # 2. Web Plate Shear Checks (Yield/Rupture)
         h_wp = float(inputs.get('H_wp', 0))

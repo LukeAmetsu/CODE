@@ -209,6 +209,60 @@
               </div>
             </div>
 
+            <!-- Support Configuration -->
+            <div class="space-y-4">
+              <h3 class="font-semibold text-blue-600 dark:text-blue-400 border-b pb-1">
+                Support Configuration
+              </h3>
+              <div>
+                <label class="block text-sm font-medium mb-1">Support Detail</label>
+                <select id="support_type" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                  <option value="NONE" selected>None (Beam Only)</option>
+                  <option value="HSS_BRACE">HSS6x6x3/8 Leg w/ 2L3x3x1/4 Knee Brace</option>
+                  <option value="PIPE_NO_BRACE">3.5in Pipe Leg (No Brace)</option>
+                </select>
+              </div>
+              
+              <div id="support_inputs" class="hidden space-y-3 pt-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Column Unbraced Length (ft)</label>
+                    <div class="flex gap-2">
+                      <input type="text" id="column_lb" value="12" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 font-bold" />
+                      <span class="flex items-center text-xs text-gray-500">ft</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Leg Setup</label>
+                    <select id="num_legs" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 font-bold">
+                      <option value="1" selected>Single (1)</option>
+                      <option value="2">Double (2)</option>
+                      <option value="3">Triple (3)</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div id="brace_inputs" class="hidden border-t border-gray-100 dark:border-gray-700 pt-2 mt-2">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Brace Horiz Dist (a)</label>
+                      <div class="flex gap-1">
+                        <input type="text" id="brace_a" value="4" class="w-full p-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" />
+                        <span class="flex items-center text-[10px] text-gray-500">ft</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Brace Angle (&theta;)</label>
+                      <div class="flex gap-1">
+                        <input type="text" id="brace_theta" value="45" class="w-full p-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" />
+                        <span class="flex items-center text-[10px] text-gray-500">&deg;</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
               <!-- Option B Removed -->
           </div>
 

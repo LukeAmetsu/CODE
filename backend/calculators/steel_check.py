@@ -80,10 +80,16 @@ class SteelChecker:
         if lb <= lp:
             mn = mp
         elif lb <= lr:
-            mn = cb * (mp - (mp - 0.7*fy*sx) * ((lb - lp)/(lr - lp)))
+            if lr == lp:
+                mn = mp
+            else:
+                mn = cb * (mp - (mp - 0.7*fy*sx) * ((lb - lp)/(lr - lp)))
             mn = min(mn, mp)
         else:
-            fcr = (cb * math.pi**2 * E) / ((lb / rts)**2) * math.sqrt(1 + 0.078 * term1 * ((lb / rts)**2))
+            if rts == 0:
+                fcr = 0
+            else:
+                fcr = (cb * math.pi**2 * E) / ((lb / rts)**2) * math.sqrt(1 + 0.078 * term1 * ((lb / rts)**2))
             mn = fcr * sx
             mn = min(mn, mp)
             
@@ -117,7 +123,10 @@ class SteelChecker:
         kl_r_y = (k * lb) / ry if ry > 0 else 999
         lc_r = max(kl_r_x, kl_r_y)
         
-        fe = (math.pi**2 * E) / (lc_r**2)
+        if lc_r == 0:
+            fe = 1e9
+        else:
+            fe = (math.pi**2 * E) / (lc_r**2)
         
         if lc_r <= 4.71 * math.sqrt(E / fy):
             fcr = (0.658 ** (fy / fe)) * fy

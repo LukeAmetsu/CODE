@@ -78,6 +78,32 @@
                         </button>
                         <p class="text-xs text-[var(--color-text-secondary)] mt-2 text-center">Auto-Minimize CoV while targeting the Safety Margin.</p>
                     </div>
+
+                    <div class="mt-6 border-t border-[var(--color-border-primary)] pt-4">
+                        <label class="block text-sm font-bold mb-2">Live Model Toggle</label>
+                        <div class="flex flex-col gap-2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded p-4 text-[var(--color-text-primary)] text-sm shadow-inner">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="LIVE_MODEL" checked class="form-checkbox text-purple-600 h-4 w-4 design-code-checkbox"> <span class="font-bold text-purple-500">Live Empirical Equation (V_calc)</span></label>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex-grow flex flex-col">
+                        <label class="block text-sm font-bold mb-2">Design Codes to Compare</label>
+                        <div class="flex flex-col gap-2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded p-4 text-[var(--color-text-primary)] text-sm flex-grow shadow-inner overflow-y-auto">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="R_6118" class="form-checkbox h-4 w-4 design-code-checkbox"> <span>NBR 6118</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="R_EC_2004" class="form-checkbox h-4 w-4 design-code-checkbox"> <span>Eurocode 2 (2004)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="R_EC_2023" class="form-checkbox h-4 w-4 design-code-checkbox"> <span>Eurocode 2 (2023)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="R_ACI318_14" class="form-checkbox h-4 w-4 design-code-checkbox"> <span>ACI 318-14</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="R_ACI318_19" class="form-checkbox h-4 w-4 design-code-checkbox"> <span>ACI 318-19</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer mt-2 pt-2 border-t border-gray-700 text-gray-400 font-bold"><span class="uppercase tracking-wider text-[10px]">On-The-Fly Analytical (Safety = 1.0)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_MC2010_L1" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-indigo-400">Fib MC 2010 (Level I Analytical)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_MC2010_L2" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-indigo-400">Fib MC 2010 (Level II Analytical)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_EC2_2004" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-teal-400">Eurocode 2 (2004 Analytical)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_EC2_2023" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-emerald-400">Eurocode 2 (2023 Analytical)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_ACI_14" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-rose-400">ACI 318-14 (Analytical)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_ACI_19" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-rose-400">ACI 318-19 (Analytical)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" value="A_NBR6118" class="form-checkbox h-4 w-4 design-code-checkbox"> <span class="text-sky-400">NBR 6118 (Analytical)</span></label>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Stats & Chart -->
@@ -92,36 +118,17 @@
                             <p id="statCov" class="text-4xl font-bold mt-2 text-green-500">-.---</p>
                         </div>
                     </div>
-                    <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg p-4 h-[500px]">
-                        <canvas id="shearChart"></canvas>
-                    </div>
 
                     <!-- Live Equation Display -->
                     <div class="bg-[var(--color-bg-secondary)] border border-blue-500/30 rounded-lg p-6 shadow-sm flex flex-col items-center justify-center">
                         <h3 class="text-sm font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">Live Empirical Formulation</h3>
                         <div id="mathEquation" class="text-2xl text-[var(--color-text-primary)] w-full overflow-x-auto min-h-[60px] flex items-center justify-center"></div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Unified Database Explorer -->
-            <div id="explorerContainer" class="hidden mt-4 flex flex-col gap-6">
-                <h2 class="text-2xl font-bold mb-4 border-b-2 border-[var(--color-border-primary)] pb-2">Universal Code Explorer & Residual Analysis</h2>
-                
-                <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg p-6 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                    <div>
-                        <label class="block text-sm font-bold mb-2">Design Code (Y-Axis)</label>
-                        <select id="codeSelect" class="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded p-2 text-[var(--color-text-primary)]">
-                            <option value="LIVE_MODEL" class="font-bold text-purple-500">Live Empirical Equation (Sliders)</option>
-                            <option value="R_6118">NBR 6118</option>
-                            <option value="R_EC_2004">Eurocode 2 (2004)</option>
-                            <option value="R_EC_2023">Eurocode 2 (2023)</option>
-                            <option value="R_ACI318_14">ACI 318-14</option>
-                            <option value="R_ACI318_19">ACI 318-19</option>
-                            <option value="R_MC2010">Fib Model Code 2010</option>
-                        </select>
-                    </div>
-
+                    
+                    <div class="mt-4 border-t border-[var(--color-border-primary)] pt-6">
+                        <h2 class="text-2xl font-bold mb-4 border-b border-[var(--color-border-primary)] pb-2">Universal Code Explorer & Residual Analysis</h2>
+                        
+                        <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg p-6 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     <div>
                         <label class="block text-sm font-bold mb-2">Variable (X-Axis)</label>
                         <select id="varSelect" class="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded p-2 text-[var(--color-text-primary)]">
@@ -129,17 +136,24 @@
                             <option value="pw (%)">Reinforcement Ratio (ρ_w)</option>
                             <option value="fck (MPa)">Compressive Strength (f_ck)</option>
                             <option value="a:M/V (mm)">Shear Span (a)</option>
-                            <option value="bw (mm)">Web Width (b_w)</option>
+                            <option value="bw (mm)">Web Width (bw)</option>
+                            <option value="d_dg">Aggregate Size (d_dg)</option>
                         </select>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-bold mb-2">Data Subset</label>
-                        <select id="subsetSelect" class="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded p-2 text-[var(--color-text-primary)]">
+                        <select id="subsetSelect" class="bg-gray-800 text-white rounded p-1 border border-gray-600 focus:outline-none focus:border-blue-500">
                             <option value="ALL DATA">All Data</option>
                             <option value="B>2D">Span/Depth Ratio > 2.0</option>
                             <option value="B>5D">Span/Depth Ratio > 5.0</option>
                             <option value="B>600mm">Deep Members (d > 600mm)</option>
+                            <option value="d>400">Effective Depth (d > 400 mm)</option>
+                            <option value="fck>50">High Strength (fck > 50 MPa)</option>
+                            <option value="rho<1">Low Reinforcement (ρ < 1%)</option>
+                            <option value="a_d>2.5">Slender Beams (a/d > 2.5)</option>
+                            <option value="bw>300">Wide Beams (bw > 300 mm)</option>
+                            <option value="d_dg>32">Large Aggregate (d_dg > 32 mm)</option>
                         </select>
                     </div>
                     
@@ -156,12 +170,22 @@
                     <div class="px-4 py-2 bg-yellow-500/10 text-yellow-500 font-bold rounded">10th Pct: <span class="bg-orange-400 w-3 h-3 inline-block ml-1 rounded"></span></div>
                 </div>
 
-                <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg p-4 shadow-sm h-[600px] relative">
+                <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-lg p-4 shadow-sm h-[600px] relative w-full">
                     <canvas id="databaseChart"></canvas>
+                    
+                    <!-- Similarity Metrics Panel -->
+                    <div id="similarityPanel" class="absolute bottom-12 right-6 bg-gray-900 bg-opacity-90 border border-gray-600 rounded p-3 text-xs text-white hidden z-10 w-[300px] shadow-lg pointer-events-none transition-opacity duration-300">
+                        <h4 class="font-bold text-gray-300 mb-2 border-b border-gray-700 pb-1 flex justify-between">
+                            <span>Similarity to Live Model</span>
+                            <span id="simWait" class="text-blue-400 hidden animate-pulse">Calculating...</span>
+                        </h4>
+                        <div id="similarityContent" class="space-y-2"></div>
+                    </div>
                 </div>
             </div>
-
-        </main>
+        </div>
+    </div>
+</main>
         
         <div id="footer-placeholder"></div>
     </div>

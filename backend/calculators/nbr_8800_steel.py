@@ -96,11 +96,49 @@ def calculate_steel_structure(inputs):
     res['chi'] = chi
     
     
-    # --- 3. Resistência à Flexão (M_Rd) ---
-    # Simplified: Mrd = Zx * fy / gamma_a1
-    # Ignores LTB (Lateral Torsional Buckling / FLT) as per JS comments
-    Mrd_Nmm = (i['Zx'] * i['fy']) / gamma_a1
+    # --- 3. Resistência à Flexão com Verificação de FLT (NBR 8800:2008 Item 5.4.2) ---
+    Cb = max(1.0, float(i.get('Cb', 1.0)))
+    Mpl_Nmm = i['Zx'] * i['fy']
+    
+    # Comprimento limite de plastificação Lp
+    Lp_mm = 1.76 * i['ry'] * math.sqrt(i['E'] / i['fy'])
+    
+    # Estimativa de propriedades para Lr e Mcr (NBR 8800 Anexo G)
+    h_w = max(1.0, i['d'] - 2.0 * i['tf'])
+    Ix_approx = (1.0 / 12.0) * i['tw'] * (h_w ** 3) + 2.0 * ((1.0 / 12.0) * i['bf'] * (i['tf'] ** 3) + i['bf'] * i['tf'] * (((i['d'] - i['tf']) / 2.0) ** 2))
+    Wx_approx = Ix_approx / (i['d'] / 2.0) if i['d'] > 0 else i['Zx'] * 0.9
+    Mr_Nmm = 0.7 * i['fy'] * Wx_approx
+    
+    # Raio de giração efetivo r_ts e parâmetro J
+    r_ts_denom = 12.0 * (1.0 + (1.0 / 6.0) * (h_w * i['tw']) / (i['bf'] * i['tf'])) if (i['bf'] * i['tf']) > 0 else 12.0
+    r_ts = i['bf'] / math.sqrt(max(1.0, r_ts_denom))
+    J_approx = (2.0 * i['bf'] * (i['tf'] ** 3) + h_w * (i['tw'] ** 3)) / 3.0
+    h0 = max(1.0, i['d'] - i['tf'])
+    
+    # Lr (Comprimento limite de escoamento elástico)
+    term_bracket = (J_approx / (Wx_approx * h0)) if (Wx_approx * h0) > 0 else 0.0
+    inner_root = math.sqrt(term_bracket ** 2 + 6.76 * ((0.7 * i['fy'] / i['E']) ** 2))
+    Lr_mm = 1.95 * r_ts * (i['E'] / (0.7 * i['fy'])) * math.sqrt(max(0.0, term_bracket + inner_root)) if (0.7 * i['fy']) > 0 else 999999.0
+    
+    if Lb_mm <= Lp_mm:
+        Mn_Nmm = Mpl_Nmm
+        regime_flt = 'Contido (Sem FLT)'
+    elif Lb_mm <= Lr_mm:
+        Mn_Nmm = Cb * (Mpl_Nmm - (Mpl_Nmm - Mr_Nmm) * ((Lb_mm - Lp_mm) / (Lr_mm - Lp_mm)))
+        Mn_Nmm = min(Mpl_Nmm, max(0.0, Mn_Nmm))
+        regime_flt = 'Inelástico (FLT Inelástica)'
+    else:
+        slenderness = Lb_mm / r_ts if r_ts > 0 else 999.0
+        Mcr_Nmm = (Cb * (math.pi ** 2) * i['E'] / (slenderness ** 2)) * math.sqrt(1.0 + 0.078 * (J_approx / (Wx_approx * h0)) * (slenderness ** 2))
+        Mn_Nmm = min(Mpl_Nmm, max(0.0, Mcr_Nmm))
+        regime_flt = 'Elástico (FLT Elástica)'
+        
+    Mrd_Nmm = Mn_Nmm / gamma_a1
     res['Mrd'] = Mrd_Nmm      # N.mm
+    res['Mpl'] = Mpl_Nmm      # N.mm
+    res['Lp'] = Lp_mm         # mm
+    res['Lr'] = Lr_mm         # mm
+    res['regime_flt'] = regime_flt
     
     
     # --- 4. Verificação da Interação ---

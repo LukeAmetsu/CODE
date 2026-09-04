@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beam-to-Column Connection Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/earcut@2.2.4/dist/earcut.min.js"></script>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <script>
+      (function () {
+        if (localStorage.getItem("theme") === "dark" || (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css" />
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script type="text/javascript" src="../eel.js"></script>
+    <script src="database.js" defer></script>
+    <script src="beam_column.js" defer></script>
+
+    <style>
+      .tab-btn.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      .dark .tab-btn.active {
+        background-color: #2563eb;
+        border-color: #2563eb;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+    </style>
+  </head>
+
+  <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300 flex flex-col overflow-hidden">
+    <div class="flex-grow flex flex-col h-full">
+      <div id="header-placeholder" class="flex-shrink-0" style="min-height: 64px"></div>
+
+      <main class="flex flex-col lg:flex-row flex-grow overflow-hidden">
+        <!-- Left Panel: Inputs -->
+        <div class="w-full lg:w-[410px] flex flex-col bg-white dark:bg-gray-800 border-r dark:border-gray-700 shadow-lg z-10 flex-shrink-0">
+          <div class="flex overflow-x-auto border-b dark:border-gray-700 p-2 gap-1 bg-gray-50 dark:bg-gray-900 flex-shrink-0 custom-scrollbar">
+            <button class="tab-btn active px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-general">General</button>
+            <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-members">Members</button>
+            <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-loads">Loads</button>
+            <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-shear">Shear Conn.</button>
+            <button class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap" data-target="tab-moment">Moment Conn.</button>
+          </div>
+
+          <div class="flex-grow overflow-y-auto p-4 custom-scrollbar" id="connection-form">
+            <!-- General Tab -->
+            <div id="tab-general" class="tab-content space-y-4">
+              <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">General Parameters</h2>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Design Method</label>
+                  <select id="design_method" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                    <option value="LRFD" selected>LRFD</option>
+                    <option value="ASD">ASD</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Jurisdiction Code</label>
+                  <select id="jurisdiction" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                    <option value="AISC360-22" selected>AISC 360-22</option>
+                    <option value="AISC360-16">AISC 360-16</option>
+                    <option value="AISC360-10">AISC 360-10</option>
+                  </select>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Primary Member (Main Support)</label>
+                  <select id="primary_member_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                    <option value="Column" selected>Column (Vertical, framing into flange)</option>
+                    <option value="Beam">Beam (Horizontal, framing into web)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Members Tab -->
+            <div id="tab-members" class="tab-content hidden space-y-4">
+              <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">Column</h2>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Select Column Shape (W-Shape)</label>
+                  <select id="column_shape_select" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Column Material</label>
+                  <select id="column_material" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
+                </div>
+              </div>
+
+              <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1 mt-6">Beam</h2>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Select Beam Shape (W-Shape)</label>
+                  <select id="beam_shape_select" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Beam Material</label>
+                  <select id="beam_material" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loads Tab -->
+            <div id="tab-loads" class="tab-content hidden space-y-4">
+              <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">Applied Loads</h2>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Shear Vu (k)</label>
+                  <input type="number" id="load_v" value="50" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment Mu (k-ft)</label>
+                  <input type="number" id="load_m" value="100" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Shear Connection Tab -->
+            <div id="tab-shear" class="tab-content hidden space-y-4">
+              <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">Shear Connection</h2>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate Type</label>
+                  <select id="sp_plate_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                    <option value="Single" selected>Single Plate (Shear Tab)</option>
+                    <option value="Double">Double Plate / Angle</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate Material</label>
+                  <select id="sp_material" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
+                </div>
+                
+                <div class="col-span-2 grid grid-cols-3 gap-4 mt-2">
+                  <div>
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Thickness (in) - Each</label>
+                    <input type="number" id="sp_thickness" value="0.375" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Width (in)</label>
+                    <input type="number" id="sp_width" value="5" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Length (Height) (in)</label>
+                    <input type="number" id="sp_length" value="12" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4 mt-4">
+                <!-- Column Side -->
+                <div class="border dark:border-gray-700 p-2 rounded bg-gray-50 dark:bg-gray-800">
+                  <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 border-b dark:border-gray-700 pb-1 mb-2">Column Connection</h3>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Type</label>
+                  <select id="sp_col_conn_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white mb-2">
+                    <option value="Welded" selected>Welded</option>
+                    <option value="Bolted">Bolted</option>
+                  </select>
+                  
+                  <div id="sp_col_weld_inputs">
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Weld Size (1/16 in)</label>
+                    <input type="number" id="sp_col_weld_size" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                  </div>
+                  <div id="sp_col_bolt_inputs" class="hidden space-y-2">
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Rows</label>
+                    <input type="number" id="sp_col_bolt_rows" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (in)</label>
+                    <input type="number" id="sp_col_bolt_spacing" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                  </div>
+                </div>
+
+                <!-- Beam Side -->
+                <div class="border dark:border-gray-700 p-2 rounded bg-gray-50 dark:bg-gray-800">
+                  <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 border-b dark:border-gray-700 pb-1 mb-2">Beam Connection</h3>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Type</label>
+                  <select id="sp_beam_conn_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white mb-2">
+                    <option value="Bolted" selected>Bolted</option>
+                    <option value="Welded">Welded</option>
+                  </select>
+                  
+                  <div id="sp_beam_bolt_inputs" class="space-y-2">
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Rows</label>
+                    <input type="number" id="sp_beam_bolt_rows" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (in)</label>
+                    <input type="number" id="sp_beam_bolt_spacing" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                  </div>
+                  <div id="sp_beam_weld_inputs" class="hidden">
+                    <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Weld Size (1/16 in)</label>
+                    <input type="number" id="sp_beam_weld_size" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- General Bolt Properties -->
+              <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 border-b dark:border-gray-700">Bolt Properties</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Diameter (in)</label>
+                  <select id="sp_bolt_dia" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                    <option value="0.75" selected>3/4"</option>
+                    <option value="0.875">7/8"</option>
+                    <option value="1.0">1"</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Grade</label>
+                  <select id="sp_bolt_grade" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                    <option value="A325">A325 (Group A)</option>
+                    <option value="A490">A490 (Group B)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Moment Connection Tab -->
+            <div id="tab-moment" class="tab-content hidden space-y-4">
+              <div class="flex items-center justify-between border-b dark:border-gray-700 pb-1 mb-2">
+                <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Flange Plates (Moment)</h2>
+                <label class="inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="include_moment" class="sr-only peer" checked>
+                  <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <span class="ms-2 text-xs font-medium text-gray-900 dark:text-gray-300">Include</span>
+                </label>
+              </div>
+
+              <div id="moment_inputs_container" class="space-y-4">
+                
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Moment Connection Type</label>
+                  <select id="fp_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-white">
+                    <option value="Plate" selected>Flange Plate (Welded to Column)</option>
+                    <option value="Angle">Flange Angle (Bolted to both)</option>
+                  </select>
+                </div>
+
+                <!-- PLATE INPUTS -->
+                <div id="moment_plate_inputs" class="space-y-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate Thickness (in)</label>
+                      <input type="number" id="fp_thickness" value="0.75" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Plate Width (in)</label>
+                      <input type="number" id="fp_width" value="8" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                  </div>
+
+                  <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mt-2 border-b dark:border-gray-700">Weld to Column</h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Weld Type</label>
+                      <select id="fp_weld_type" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+                        <option value="CJP" selected>CJP (Full Pen)</option>
+                        <option value="Fillet">Fillet Weld</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Weld Size (1/16 in)</label>
+                      <input type="number" id="fp_weld_size" value="6" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ANGLE INPUTS -->
+                <div id="moment_angle_inputs" class="hidden space-y-4">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Thickness (in)</label>
+                      <input type="number" id="fa_thickness" value="0.5" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Angle Length (in)</label>
+                      <input type="number" id="fa_length" value="8" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Column Leg (in)</label>
+                      <input type="number" id="fa_leg_col" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Beam Leg (in)</label>
+                      <input type="number" id="fa_leg_beam" value="4" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white" />
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="border dark:border-gray-700 p-2 rounded bg-gray-50 dark:bg-gray-800">
+                      <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 border-b dark:border-gray-700 pb-1 mb-2">Column Leg Bolts</h3>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Rows</label>
+                      <input type="number" id="fa_col_bolt_rows" value="2" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white mb-2" />
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (in)</label>
+                      <input type="number" id="fa_col_bolt_spacing" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                    </div>
+                    <div class="border dark:border-gray-700 p-2 rounded bg-gray-50 dark:bg-gray-800">
+                      <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 border-b dark:border-gray-700 pb-1 mb-2">Beam Leg Bolts</h3>
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Rows</label>
+                      <input type="number" id="fa_beam_bolt_rows" value="2" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white mb-2" />
+                      <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Spacing (in)</label>
+                      <input type="number" id="fa_beam_bolt_spacing" value="3" class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm border bg-white dark:bg-gray-700 dark:text-white" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400 mt-2">Material</label>
+                  <select id="fp_material" class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></select>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Action Buttons -->
+          <div class="border-t dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900 flex-shrink-0 flex gap-2">
+            <button id="calculate-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded transition-colors text-sm shadow-sm flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Calculate Connection
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Panel: Viewport and Reports -->
+        <div class="flex-grow flex flex-col bg-gray-100 dark:bg-gray-900 overflow-hidden relative">
+          <!-- View Toggle -->
+          <div class="absolute top-4 left-4 z-10 bg-white dark:bg-gray-800 rounded shadow-md flex overflow-hidden border dark:border-gray-700">
+            <button class="view-btn active px-4 py-2 text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" data-view="3d">3D View</button>
+            <button class="view-btn px-4 py-2 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400" data-view="report">Report</button>
+          </div>
+
+          <!-- Viewports -->
+          <div class="flex-grow relative">
+            <div id="view-3d" class="absolute inset-0">
+              <canvas id="renderCanvas" class="w-full h-full outline-none"></canvas>
+            </div>
+            
+            <div id="view-report" class="absolute inset-0 bg-white dark:bg-gray-800 overflow-y-auto hidden custom-scrollbar p-6">
+              <div id="report-content" class="max-w-4xl mx-auto p-8 bg-white text-black shadow print:shadow-none print:p-0 font-serif text-sm">
+                <!-- Report populated by JS -->
+                <div class="text-center text-gray-500 italic">Click Calculate to generate report.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof injectHeader === "function") {
+          injectHeader({
+            activePage: "beam_column",
+            pageTitle: "beam_column",
+            headerPlaceholderId: "header-placeholder",
+            pathPrefix: "../",
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

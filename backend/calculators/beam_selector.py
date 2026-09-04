@@ -1,5 +1,6 @@
 import math
 from ..database import db
+from .steel_check import steel_checker
 
 def find_lightest_beam(inputs):
     """
@@ -174,6 +175,46 @@ def find_lightest_beam(inputs):
         print(f"DEBUG: CANTILEVER MODE. L_cant={cant_ft}, L_back={span_ft}, w_user={w_load}")
 
     restricted_pool = inputs.get('restricted_pool')
+
+    # --- Pre-calculate Support Capacities ---
+    support_type = inputs.get('support_type', 'NONE')
+    num_legs = int(inputs.get('num_legs', 1))
+    col_lb = float(inputs.get('column_lb_ft', 12.0))
+    brace_a = float(inputs.get('brace_a', 4.0))
+    brace_theta = float(inputs.get('brace_theta', 45.0))
+    
+    leg_capacity = 0.0
+    brace_capacity = 0.0
+    leg_name = ""
+    brace_name = ""
+    
+    if support_type == 'HSS_BRACE':
+        leg_name = "HSS6X6X3/8"
+        brace_name = "2L3X3X1/4"
+        
+        # Leg Capacity
+        leg_props = db.get_shape_details(leg_name)
+        if leg_props:
+            leg_res = steel_checker.check_compression(leg_props, {'design_method': method, 'Fy': 50, 'Lb_input': col_lb, 'K': 1.0})
+            leg_capacity = leg_res.get('phiPn_or_Pn_omega', 0) * num_legs
+            
+        # Brace Capacity
+        brace_props = db.get_shape_details(brace_name)
+        if brace_props:
+            # For brace, unbraced length is sqrt(a^2 + (a*tan(theta))^2) approximately. 
+            # Or just use the diagonal length: a / cos(theta)
+            theta_rad = math.radians(brace_theta)
+            brace_len_ft = brace_a / math.cos(theta_rad) if math.cos(theta_rad) != 0 else brace_a * 1.414
+            brace_res = steel_checker.check_compression(brace_props, {'design_method': method, 'Fy': 36, 'Lb_input': brace_len_ft, 'K': 1.0})
+            brace_capacity = brace_res.get('phiPn_or_Pn_omega', 0) * num_legs
+            
+    elif support_type == 'PIPE_NO_BRACE':
+        leg_name = "PIPE3-1/2STD"
+        leg_props = db.get_shape_details(leg_name)
+        if leg_props:
+            leg_res = steel_checker.check_compression(leg_props, {'design_method': method, 'Fy': 35, 'Lb_input': col_lb, 'K': 1.0})
+            leg_capacity = leg_res.get('phiPn_or_Pn_omega', 0) * num_legs
+
     
     for name, props in shapes.items():
         # Metric check filter (some DBs have metric)
@@ -249,10 +290,8 @@ def find_lightest_beam(inputs):
             max_reaction = max(abs(R_fulcrum), abs(R_back))
             
         else:
-            # Simple Span: Add SW Moment if M_req was calculated from Load
-            # If M_req was "Direct Input", we assume it includes SW or SW is negligible?
-            # Standard practice: Add SW moment.
-            # M_sw = w_sw * L^2 / 8
+            # Simple Span / Continuous Envelope: Add SW Moment
+            # Note: For continuous spans, the envelope peak negative moment is safely approximated as wL^2 / 8
             if inputs.get('w_load') is not None: # Meaning we are using Load-based
                  w_beam = weight / 1000.0
                  m_sw = (w_beam * span_ft**2) / 8.0
@@ -339,11 +378,33 @@ def find_lightest_beam(inputs):
             
         ratio = current_m_req / capacity if capacity > 0 else 999
         
+        # --- Support Loads Calculations ---
+        leg_load = 0.0
+        brace_load = 0.0
+        leg_ratio = 0.0
+        brace_ratio = 0.0
+        
+        if support_type != 'NONE':
+            w_total = w_load + (weight / 1000.0) # klf
+            if support_type == 'HSS_BRACE':
+                # Shear at the interior support of a continuous beam is higher than a simple span.
+                # We use 0.625 to ensure the brace isn't undersized for the interior reaction.
+                r_v = 0.625 * w_total * span_ft 
+
+                theta_rad = math.radians(brace_theta)
+                brace_load = r_v / math.sin(theta_rad) if math.sin(theta_rad) != 0 else r_v
+                brace_ratio = brace_load / brace_capacity if brace_capacity > 0 else 999
+                
+            # Leg Load (Calculated for the interior column taking the brunt of the spans)
+            leg_load = 1.25 * w_total * span_ft / 2.0 
+            leg_ratio = leg_load / leg_capacity if leg_capacity > 0 else 999
+        
         result_obj = {
             "name": name,
             "weight": weight,
             "depth": d,
             "capacity": capacity,
+            "demand": current_m_req,
             "ratio": ratio,
             "Mp": mp_avail,
             "Mr": mr_avail,
@@ -353,7 +414,16 @@ def find_lightest_beam(inputs):
             "mode": mode,
             "pass": capacity >= current_m_req,
             "fos_ot": fos_ot,
-            "rxn_kips": max_reaction
+            "rxn_kips": max_reaction,
+            "support_type": support_type,
+            "leg_name": leg_name,
+            "leg_load": leg_load,
+            "leg_capacity": leg_capacity,
+            "leg_ratio": leg_ratio,
+            "brace_name": brace_name,
+            "brace_load": brace_load,
+            "brace_capacity": brace_capacity,
+            "brace_ratio": brace_ratio
         }
         
         # Capture Desired Shape (ignore depth limit)
@@ -385,6 +455,14 @@ def find_lightest_beam(inputs):
         # Note: 'ratio' calculated above is m_req / capacity
         if ratio > max_ratio:
             is_valid = False
+            
+        # Support Capacity Check
+        if leg_ratio > max_ratio:
+            is_valid = False
+            result_obj['mode'] = "Leg Cap Exceeded"
+        if brace_ratio > max_ratio:
+            is_valid = False
+            result_obj['mode'] = "Brace Cap Exceeded"
             
         # 3. Deflection Check (Optional)
         check_deflection = inputs.get('check_deflection', False)

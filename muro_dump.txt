@@ -1,0 +1,33 @@
+=== SHEET: Memoria_Muro_Arrimo (max_row=34, max_col=15) ===
+A2: INPUTS | E2: CÁLCULOS | I2: Coordenadas Muro X (m) | J2: Coordenadas Muro Y (m) | L2: Solo Passivo X | M2: Solo Passivo Y
+A3: Altura da Haste (H_haste) | B3: =5.43-B4 => 4.7299999999999995 | C3: m | E3: Altura Total (H_tot) | F3: =B3+B4 => 5.43 | G3: m | I3: =0 => 0 | J3: =0 => 0 | L3: =-1 => -1 | M3: =B9 => 1 | O3: Sim
+A4: Espessura da Sapata (e_sapata) | B4: 0.7 | C4: m | E4: Largura Base (B) | F4: =B6+B7+B8 => 6.75 | G4: m | I4: =F4 => 6.75 | J4: =0 => 0 | L4: =B7 => 1 | M4: =B9 => 1 | O4: Não
+A5: Largura Topo Haste (b_topo) | B5: 0.7 | C5: m | E5: Área sapara (A_sapata) | F5: =F4*B4 => 4.725 | G5: m² | I5: =F4 => 6.75 | J5: =B4 => 0.7
+A6: Largura Base Haste (b_base) | B6: 1.5 | C6: m | E6: CG_sapata | F6: =F4/2 => 3.375 | G6: m | I6: =B7+B6 => 2.5 | J6: =B4 => 0.7 | L6: Solo Ativo X | M6: Solo Ativo Y
+A7: Comprimento Puntera (L_punt) | B7: 1 | C7: m | E7: Área haste | F7: =(B6+B5)*B3/2 => 5.203 | G7: m² | I7: =B7+B6 => 2.5 | J7: =F3 => 5.43 | L7: =I6 => 2.5 | M7: =J7 => 5.43
+A8: Comprimento Calcanhar (L_calc) | B8: 4.25 | C8: m | E8: CG_haste | F8: =(B5*B3*(B6+B7-B5/2)+(B6-B5)*B3/2*(B7+2/3*(B6-B5)))/(F7) => 1.9257575757575756 | G8: m | I8: =B7+(B6-B5) => 1.8 | J8: =F3 => 5.43 | L8: =I4 => 6.75 | M8: =M7 => 5.43
+A9: Altura do Solo Passivo (h_p) | B9: 1 | C9: m | E9: CG_total | F9: =(F6*F5+F7*F8)/(F5+F7) => 2.615490699704539 | G9: m | I9: =B7 => 1 | J9: =B4 => 0.7
+A10: Peso Esp. Solo (gamma) | B10: 20 | C10: kN/m³ | E10: Coef. Empuxo Ativo (Ka) | F10: =TAN(RADIANS(45-B11/2))^2 => 0.3333333333333333 | G10: - | I10: =0 => 0 | J10: =B4 => 0.7
+A11: Ângulo Atrito (phi) | B11: 30 | C11: graus | E11: Coef. Empuxo Passivo (Kp) | F11: =TAN(RADIANS(45+B11/2))^2 => 2.9999999999999982 | G11: - | I11: =0 => 0 | J11: =0 => 0
+A12: Sobrecarga (q) | B12: 58 | C12: kPa | E12: Empuxo Ativo (P_ah) | F12: =0.5*B10*F3^2*F10 + B12*F3*F10 => 203.26299999999998 | G12: kN/m
+A13: Atrito Base (mu) | B13: 0.3 | C13: - | E13: Empuxo Passivo (P_p) | F13: =0.5*B10*B9^2*F11 => 29.999999999999982 | G13: kN/m
+A14: Tensão Adm. Solo (q_adm) | B14: 200 | C14: kPa | E14: Peso Concreto (W_conc) | F14: =(F5+F7)*25 => 248.20000000000002 | G14: kN/m
+A15: Tipo de Solo da Base | B15: Silte | C15: - | E15: Peso Solo Calcanhar (W_solo) | F15: =B8*B3*B10 => 402.04999999999995 | G15: kN/m
+A16: N_SPT da Base | B16: 15 | C16: golpes | E16: Peso da sobrecarga | F16: =+ B8*B12 => 246.5 | G16: kN/m
+A17: Resistência Concreto (fck) | B17: 25 | C17: MPa | E17: Carga Vert. Total (N) | F17: =F14+F15+B9*B10*B7+F16 => 916.75 | G17: kN/m
+A18: Considerar empuxo passivo? | B18: Sim | E18: Mód. Reação Solo (k_s) | F18: =IF(B15="Areia",2500,IF(B15="Silte",2000,1500))*B16 => 30000 | G18: kN/m³
+E19: Mód. Elasticidade (E_cs) | F19: =MIN(1, 0.8+0.2*(B17/80))*5600*SQRT(B17)*1000 => 24150000 | G19: kPa
+E20: Volume de concreto (V_conc) | F20: =((B5+B6)/2*B3 + F4*B4) => 9.928 | G20: m³
+A22: VERIFICAÇÕES GEOTÉCNICAS | E22: DESLOCAMENTO DO TOPO
+A23: Momento desentabilizante (M_o) | B23: =(0.5*B10*F3^2*F10)*(F3/3) + (B12*F3*F10)*(F3/2) => 462.9129299999999 | C23: kN.m/m | E23: Inércia da sapata (I_sapata) | F23: =F4^3/12*0.5 => 12.814453125 | G23: m4
+A24: Momento Resist. Total (M_r_tot) | B24: =IF(B18="Sim",F14*F9+F13*1/3*B9+F15*(F4-B8/2)+F16*(F4-B8/2),F14*F9+F15*(F4-B8/2)+F16*(F4-B8/2)) => 3658.7085416666664 | C24: kN.m/m | E24: Rigidez Rotacional (K_θ) | F24: =F23*F18 => 384433.59375 | G24: kN.m/rad
+A25: FS Tombamento | B25: =B24/B23 => 7.903664608518641 | C25: =IF(B25>=2,"OK","ALERTA") => OK | E25: Giro da Base (θ) | F25: =B23/F24 => 0.001204142763603109 | G25: rad
+A26: Esforços deslizantes  | B26: =F12 => 203.26299999999998 | C26: kN/m | E26: Desloc. por Rotação (d_rot) | F26: =F25*F3*100 => 0.653849520636488 | G26: cm
+A27: Esforços resistentes | B27: =IF(B18="Não",F17*B13,F17*B13+F13) => 305.025 | C27: kN/m | E27: Mola Horizontal (k_h) | F27: =0.5*F18 => 15000 | G27: kN/m³
+A28: FS Deslizamento | B28: =B27/B26 => 1.5006420253563117 | C28: =IF(B28>=1.5,"OK","ALERTA") => OK | E28: Rigidez de Translação (K_h) | F28: =F27*F4 => 101250 | G28: kN/m
+A29: Excentricidade (e) | B29: =(F4/2) - ((B24-B23)/F17) => -0.11100557585674009 | C29: m | E29: Desloc. por Translação (d_trans) | F29: =F12/F28*100 => 0.20075358024691353 | G29: cm
+A30: Tensão Máx (q_max) | B30: =(F17/F4)*(1 + (6*ABS(B29)/F4)) => 149.21588301783262 | C30: kPa | E30: Inércia Haste (I_haste) | F30: =0.5 * (1 * (((B5+B6)/2)^3) / 12) => 0.05545833333333335 | G30: m4
+A31: Tensão Mín (q_min) | B31: =(F17/F4)*(1 - (6*ABS(B29)/F4)) => 122.41374661179701 | C31: kPa | E31: Desloc. Flexão (d_flex) | F31: =((F10*B10*B3)*(B3^4)/(30*F19*F30) + (F10*B12)*(B3^4)/(8*F19*F30))*100 => 0.12960205066224972 | G31: cm
+A32: FS Tensão | B32: =B14/MAX(B30:B31) => 1.3403398884560984 | C32: =IF(B32>=1.1,"OK","ALERTA") => OK | E32: DESLOCAMENTO TOTAL | F32: =F29+F31+F26 => 0.9842051515456514 | G32: cm
+E33: Limite  (H/300) | F33: =(F3*100)/300 => 1.81 | G33: =IF(F32<=F33,"OK","ALERTA") => OK
+A34: Esforços solicitantes

@@ -64,6 +64,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Main Run Button (Removed)
 
+    // Support Type Toggle
+    const supportType = document.getElementById('support_type');
+    const supportInputs = document.getElementById('support_inputs');
+    const braceInputs = document.getElementById('brace_inputs');
+    supportType?.addEventListener('change', (e) => {
+        if (e.target.value === 'NONE') {
+            supportInputs.classList.add('hidden');
+        } else {
+            supportInputs.classList.remove('hidden');
+            if (e.target.value === 'HSS_BRACE') {
+                braceInputs.classList.remove('hidden');
+            } else {
+                braceInputs.classList.add('hidden');
+            }
+        }
+    });
+
     // Batch Controls
     if (document.getElementById('batch-run-selector-btn')) {
         document.getElementById('batch-run-selector-btn').addEventListener('click', findLightestBeam);
@@ -298,6 +315,12 @@ async function findLightestBeam() {
         }
     }
 
+    const supportTypeVal = document.getElementById('support_type') ? document.getElementById('support_type').value : 'NONE';
+    const numLegs = parseInt(document.getElementById('num_legs')?.value || "1");
+    const columnLb = safeMathEval(document.getElementById('column_lb')?.value) || 12;
+    const braceA = safeMathEval(document.getElementById('brace_a')?.value) || 4;
+    const braceTheta = safeMathEval(document.getElementById('brace_theta')?.value) || 45;
+
     const inputs = {
         shape_type: shapeType,
         design_method: method,
@@ -309,6 +332,12 @@ async function findLightestBeam() {
         span_ft: 0,
         w_load: 0,
         cantilever_ft: 0,
+
+        support_type: supportTypeVal,
+        num_legs: numLegs,
+        column_lb_ft: columnLb,
+        brace_a: braceA,
+        brace_theta: braceTheta,
 
         nominal_depth: nominalDepth,
         desired_shape: desiredShape,
@@ -406,7 +435,7 @@ function renderResults(data, demand) {
         }
         desiredStats.innerHTML += fosHtml;
 
-        desiredRatio.innerHTML = `<span class="${desired.pass ? 'text-green-600' : 'text-red-600'}">${desired.capacity.toFixed(1)}</span> / <span class="text-gray-500">${demand.toFixed(1)}</span> k-ft <span class="text-xs ml-2 border px-1 rounded ${desired.ratio > 1.0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${(desired.ratio * 100).toFixed(1)}%</span>`;
+        desiredRatio.innerHTML = `<span class="${desired.pass ? 'text-green-600' : 'text-red-600'}">${desired.capacity.toFixed(1)}</span> / <span class="text-gray-500">${desired.demand ? desired.demand.toFixed(1) : demand.toFixed(1)}</span> k-ft <span class="text-xs ml-2 border px-1 rounded ${desired.ratio > 1.0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${(desired.ratio * 100).toFixed(1)}%</span>`;
 
         if (desired.pass) {
             desiredStatus.textContent = "PASS";
@@ -428,7 +457,19 @@ function renderResults(data, demand) {
         if (winner.fos_ot && winner.fos_ot < 999) {
              winnerStats.innerHTML += ` • <span title="Overturning Factor of Safety">OT FOS: ${winner.fos_ot.toFixed(2)}</span>`;
         }
-        winnerRatio.innerHTML = `<span class="text-green-600">${winner.capacity.toFixed(1)}</span> / <span class="text-gray-500">${demand.toFixed(1)}</span> k-ft <span class="text-xs ml-2 border px-1 rounded ${winner.ratio > 0.9 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${(winner.ratio * 100).toFixed(1)}%</span>`;
+        
+        // Append Support details
+        if (winner.support_type && winner.support_type !== 'NONE') {
+            const legColor = winner.leg_ratio > 1.0 ? 'text-red-600 font-bold' : 'text-green-600';
+            winnerStats.innerHTML += `<br><span class="text-xs text-gray-500 mt-1 block"><b>Leg (${winner.leg_name}):</b> <span class="${legColor}">${winner.leg_load.toFixed(1)} / ${winner.leg_capacity.toFixed(1)} kips (${(winner.leg_ratio*100).toFixed(1)}%)</span></span>`;
+            
+            if (winner.support_type === 'HSS_BRACE') {
+                const braceColor = winner.brace_ratio > 1.0 ? 'text-red-600 font-bold' : 'text-green-600';
+                winnerStats.innerHTML += `<span class="text-xs text-gray-500 block"><b>Brace (${winner.brace_name}):</b> <span class="${braceColor}">${winner.brace_load.toFixed(1)} / ${winner.brace_capacity.toFixed(1)} kips (${(winner.brace_ratio*100).toFixed(1)}%)</span></span>`;
+            }
+        }
+        
+        winnerRatio.innerHTML = `<span class="text-green-600">${winner.capacity.toFixed(1)}</span> / <span class="text-gray-500">${winner.demand ? winner.demand.toFixed(1) : demand.toFixed(1)}</span> k-ft <span class="text-xs ml-2 border px-1 rounded ${winner.ratio > 0.9 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">${(winner.ratio * 100).toFixed(1)}%</span>`;
     } else {
         // No candidates found (but desired might have failed)
         winnerName.textContent = "No Valid Shape Found";
@@ -547,6 +588,11 @@ function exportBatchToExcel() {
         let mode = "-";
         let reaction = "-";
         
+        let leg_name = "-";
+        let leg_ratio = "-";
+        let brace_name = "-";
+        let brace_ratio = "-";
+        
         if (resultRow.winner) {
             winnerName = resultRow.winner.name;
             weight = resultRow.winner.weight;
@@ -554,6 +600,15 @@ function exportBatchToExcel() {
             capacity = resultRow.winner.capacity.toFixed(2);
             mode = resultRow.winner.mode;
             reaction = resultRow.winner.rxn_kips !== undefined ? resultRow.winner.rxn_kips.toFixed(2) : "-";
+            
+            if (resultRow.winner.support_type && resultRow.winner.support_type !== 'NONE') {
+                leg_name = resultRow.winner.leg_name || "-";
+                leg_ratio = resultRow.winner.leg_ratio !== undefined ? (resultRow.winner.leg_ratio * 100).toFixed(1) + "%" : "-";
+                if (resultRow.winner.support_type === 'HSS_BRACE') {
+                    brace_name = resultRow.winner.brace_name || "-";
+                    brace_ratio = resultRow.winner.brace_ratio !== undefined ? (resultRow.winner.brace_ratio * 100).toFixed(1) + "%" : "-";
+                }
+            }
         }
 
         return {
@@ -569,7 +624,11 @@ function exportBatchToExcel() {
             "Capacity (k-ft)": capacity,
             "Max Reaction (kips)": reaction,
             "Ratio (D/C)": ratio,
-            "Governing Mode": mode
+            "Governing Mode": mode,
+            "Leg Section": leg_name,
+            "Leg Ratio": leg_ratio,
+            "Brace Section": brace_name,
+            "Brace Ratio": brace_ratio
         };
     });
 
@@ -619,6 +678,12 @@ async function viewBatchDetails(index) {
     const desiredShape = document.getElementById('desired_section').value;
     const maxRatioPct = safeMathEval(document.getElementById('max_ratio').value) || 100;
 
+    const supportTypeVal = document.getElementById('support_type') ? document.getElementById('support_type').value : 'NONE';
+    const numLegs = parseInt(document.getElementById('num_legs')?.value || "1");
+    const columnLb = safeMathEval(document.getElementById('column_lb')?.value) || 12;
+    const braceA = safeMathEval(document.getElementById('brace_a')?.value) || 4;
+    const braceTheta = safeMathEval(document.getElementById('brace_theta')?.value) || 45;
+
     const singleInputs = {
         shape_type: document.getElementById('shape_type').value, // Use current UI selection or from data? 
         // Technically batch data should store shape type if we support mixed batches. 
@@ -630,6 +695,13 @@ async function viewBatchDetails(index) {
         mu_req: m_req,           // Pass explicit calculated moment
         span_ft: data.span,
         w_load: w_val,           // Pass calculated linear load
+        
+        support_type: supportTypeVal,
+        num_legs: numLegs,
+        column_lb_ft: columnLb,
+        brace_a: braceA,
+        brace_theta: braceTheta,
+
         nominal_depth: nominalDepth,
         desired_shape: desiredShape,
         check_deflection: checkDeflection,
