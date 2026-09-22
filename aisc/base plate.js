@@ -264,27 +264,27 @@ function draw3dBasePlateDiagram(currentInputs) {
 
     // --- Materials ---
     const plateMaterial = new BABYLON.PBRMaterial("plateMat", bjsScene);
-    plateMaterial.albedoColor = new BABYLON.Color3.FromHexString("#ff8800"); // Standardized: Orange
+    plateMaterial.albedoColor = BABYLON.Color3.FromHexString("#ff8800"); // Standardized: Orange
     plateMaterial.metallic = 0.6;
     plateMaterial.roughness = 0.4;
 
     const columnMaterial = bjsScene.getMaterialByName("colMat") || new BABYLON.PBRMaterial("colMat", bjsScene);
-    columnMaterial.albedoColor = new BABYLON.Color3.FromHexString("#003cff"); // Standardized: Blue
+    columnMaterial.albedoColor = BABYLON.Color3.FromHexString("#003cff"); // Standardized: Blue
     columnMaterial.metallic = 0.6;
     columnMaterial.roughness = 0.45;
 
     const boltMaterial = bjsScene.getMaterialByName("boltMat") || new BABYLON.PBRMaterial("boltMat", bjsScene);
-    boltMaterial.albedoColor = new BABYLON.Color3.FromHexString("#B0BEC5"); // Standardized: Light Gray
+    boltMaterial.albedoColor = BABYLON.Color3.FromHexString("#B0BEC5"); // Standardized: Light Gray
     boltMaterial.metallic = 0.6;
     boltMaterial.roughness = 0.35;
 
     const concreteMaterial = bjsScene.getMaterialByName("concreteMat") || new BABYLON.PBRMaterial("concreteMat", bjsScene);
-    concreteMaterial.albedoColor = new BABYLON.Color3.FromHexString(isDarkMode ? "#3b475c" : "#A9A9A9");
+    concreteMaterial.albedoColor = BABYLON.Color3.FromHexString(isDarkMode ? "#3b475c" : "#A9A9A9");
     concreteMaterial.metallic = 0.1;
     concreteMaterial.roughness = 0.9;
 
     const weldMaterial = bjsScene.getMaterialByName("weldMat") || new BABYLON.PBRMaterial("weldMat", bjsScene);
-    weldMaterial.albedoColor = new BABYLON.Color3.FromHexString("#DAA520");
+    weldMaterial.albedoColor = BABYLON.Color3.FromHexString("#DAA520");
     weldMaterial.metallic = 0.5;
     weldMaterial.roughness = 0.7;
 
@@ -315,7 +315,7 @@ function draw3dBasePlateDiagram(currentInputs) {
     const createDimensionLine = (name, value, start, end, offset) => {
         if (!value || value <= 0) return;
         const lineMat = new BABYLON.StandardMaterial(`${name}_mat`, bjsScene);
-        lineMat.emissiveColor = isDarkMode ? new BABYLON.Color3.White() : new BABYLON.Color3.Black();
+        lineMat.emissiveColor = isDarkMode ? BABYLON.Color3.White() : BABYLON.Color3.Black();
         lineMat.disableLighting = true;
 
         const mainLinePoints = [start.add(offset), end.add(offset)];
@@ -516,7 +516,7 @@ function draw3dBasePlateDiagram(currentInputs) {
 }
 
 var basePlateInputIds = [ 
-    'design_method', 'jurisdiction', 'design_code', 'unit_system', 'global_fos', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
+    'design_standard', 'design_method', 'jurisdiction', 'design_code', 'unit_system', 'global_fos', 'base_plate_material', 'base_plate_Fy', 'base_plate_Fu',
     'concrete_fc', 'pedestal_N', 'pedestal_B', 'anchor_bolt_Fut', 'anchor_bolt_Fnv', 'weld_electrode', 'weld_Fexx',
     'support_material', 'wood_support_N', 'wood_support_B', 'wood_fc_perp', 'wood_specific_gravity',
     'base_plate_length_N', 'base_plate_width_B', 'provided_plate_thickness_tp', 'column_depth_d', 'column_web_tw', 'column_flange_tf', 'num_bolts_N', 'num_bolts_B', 'concrete_edge_dist_ca1', 'concrete_edge_dist_ca2',
@@ -2206,6 +2206,19 @@ initializeApp({
         // 2. SECOND: Now that data is ready, populate dropdowns and set up UI
         populateMaterialDropdowns();
         populateBoltGradeDropdowns();
+
+        const standardSelect = document.getElementById('design_standard');
+        const designCodeInput = document.getElementById('design_code');
+        if (standardSelect && designCodeInput) {
+            standardSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val.includes('NBR') || val.includes('8800')) {
+                    designCodeInput.value = 'ABNT NBR 8800:2008 / NBR 6118:2023';
+                } else {
+                    designCodeInput.value = 'AISC 360-16 / ACI 318-19';
+                }
+            });
+        }
 
         // --- This logic is unique to base plate.js and should stay ---
         // --- Populate Weld Electrode Dropdown ---

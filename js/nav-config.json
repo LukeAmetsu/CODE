@@ -7,10 +7,146 @@
       "subNav": []
     },
     {
-      "key": "us",
-      "href": "asce/wind.html",
-      "textKey": "us_codes",
+      "key": "geotech",
+      "href": "gui/rs2_fem.html",
+      "textKey": "geotech_foundations",
       "subNav": [
+        {
+          "key": "rs2-fem",
+          "href": "gui/rs2_fem.html",
+          "textKey": "rs2_fem"
+        },
+        {
+          "key": "retaining-wall",
+          "href": "gui/retaining_wall.html",
+          "textKey": "retaining_wall"
+        },
+        {
+          "key": "aoki-velloso",
+          "href": "gui/aoki_velloso.html",
+          "textKey": "aoki_velloso"
+        },
+        {
+          "key": "shallow-foundation",
+          "href": "gui/shallow_foundation.html",
+          "textKey": "shallow_foundation"
+        },
+        {
+          "key": "piled-raft",
+          "href": "gui/piled_raft.html",
+          "textKey": "piled_raft"
+        },
+        {
+          "key": "piled-beam",
+          "href": "gui/piled_beam.html",
+          "textKey": "piled_beam"
+        },
+        {
+          "key": "liquefaction",
+          "href": "gui/liquefaction.html",
+          "textKey": "liquefaction"
+        }
+      ]
+    },
+    {
+      "key": "concrete",
+      "href": "gui/continuous_beam.html",
+      "textKey": "concrete_structures",
+      "subNav": [
+        {
+          "key": "continuous-beam",
+          "href": "gui/continuous_beam.html",
+          "textKey": "continuous_beam"
+        },
+        {
+          "key": "viga-concreto",
+          "href": "nbr/nbr 6118 concreto.html",
+          "textKey": "concrete_beam"
+        },
+        {
+          "key": "viga-protendida",
+          "href": "nbr/viga_protendida.html",
+          "textKey": "prestressed_beam"
+        },
+        {
+          "key": "pcalc",
+          "href": "nbr/PCALC.html",
+          "textKey": "pcalc"
+        },
+        {
+          "key": "stm",
+          "href": "gui/STM_UI.html",
+          "textKey": "stm"
+        },
+        {
+          "key": "interactive_shear",
+          "href": "gui/interactive_shear.html",
+          "textKey": "interactive_shear"
+        }
+      ]
+    },
+    {
+      "key": "steel",
+      "href": "gui/steel_connections.html",
+      "textKey": "steel_structures",
+      "subNav": [
+        {
+          "key": "steel-connections",
+          "href": "gui/steel_connections.html",
+          "textKey": "steel_connections"
+        },
+        {
+          "key": "steel-structures",
+          "href": "gui/steel_structures.html",
+          "textKey": "steel_structures"
+        },
+        {
+          "key": "base-plate",
+          "href": "gui/steel_connections.html?typology=base_plate",
+          "textKey": "base_plate"
+        },
+        {
+          "key": "splice",
+          "href": "gui/steel_connections.html?typology=splice",
+          "textKey": "splice"
+        },
+        {
+          "key": "weld_group",
+          "href": "gui/weld_group.html",
+          "textKey": "weld_group"
+        },
+        {
+          "key": "beam_selector",
+          "href": "gui/beam selector.html",
+          "textKey": "beam_selector"
+        },
+        {
+          "key": "angle_support",
+          "href": "gui/angle_support.html",
+          "textKey": "angle_support"
+        }
+      ]
+    },
+    {
+      "key": "analysis_loads",
+      "href": "gui/frame_2d.html",
+      "textKey": "analysis_loads",
+      "subNav": [
+        {
+          "key": "frame-2d",
+          "href": "gui/frame_2d.html",
+          "textKey": "frame_2d"
+        },
+        {
+          "key": "comb-nbr",
+          "href": "nbr/comb nbr 6118.html",
+          "textKey": "combinations"
+        },
+        {
+          "key": "comb-mietc",
+          "href": "nbr/comb_bases_mietc.html",
+          "textKey": "comb_bases_mietc"
+        },
         {
           "key": "wind",
           "href": "asce/wind.html",
@@ -32,46 +168,6 @@
           "textKey": "combinations"
         },
         {
-          "key": "steel-check",
-          "href": "aisc/steel check.html",
-          "textKey": "steel_check"
-        },
-        {
-          "key": "base-plate",
-          "href": "aisc/base plate.html",
-          "textKey": "base_plate"
-        },
-        {
-          "key": "splice",
-          "href": "aisc/splice.html",
-          "textKey": "splice"
-        },
-        {
-          "key": "beam_column",
-          "href": "aisc/beam_column.html",
-          "textKey": "beam_column"
-        },
-        {
-          "key": "weld_group",
-          "href": "gui/weld_group.html",
-          "textKey": "weld_group"
-        },
-        {
-          "key": "nds",
-          "href": "nds/nds wood design.html",
-          "textKey": "nds_wood"
-        },
-        {
-          "key": "beam_selector",
-          "href": "gui/beam selector.html",
-          "textKey": "beam_selector"
-        },
-        {
-          "key": "angle_support",
-          "href": "gui/angle_support.html",
-          "textKey": "angle_support"
-        },
-        {
           "key": "shed_matrix",
           "href": "gui/shed_matrix.html",
           "textKey": "shed_matrix"
@@ -80,73 +176,18 @@
           "key": "shed_span",
           "href": "gui/shed_span.html",
           "textKey": "shed_span"
-        },
-        {
-          "key": "interactive_shear",
-          "href": "gui/interactive_shear.html",
-          "textKey": "interactive_shear"
         }
       ]
     },
     {
-      "key": "nbr",
-      "href": "nbr/comb nbr 6118.html",
-      "textKey": "nbr_brazil",
+      "key": "timber",
+      "href": "nds/nds wood design.html",
+      "textKey": "timber_structures",
       "subNav": [
         {
-          "key": "rs2-fem",
-          "href": "gui/rs2_fem.html",
-          "textKey": "rs2_fem"
-        },
-        {
-          "key": "retaining-wall",
-          "href": "gui/retaining_wall.html",
-          "textKey": "retaining_wall"
-        },
-        {
-          "key": "aoki-velloso",
-          "href": "gui/aoki_velloso.html",
-          "textKey": "aoki_velloso"
-        },
-        {
-          "key": "liquefaction",
-          "href": "gui/liquefaction.html",
-          "textKey": "liquefaction"
-        },
-        {
-          "key": "comb-nbr",
-          "href": "nbr/comb nbr 6118.html",
-          "textKey": "combinations"
-        },
-        {
-          "key": "viga-concreto",
-          "href": "nbr/nbr 6118 concreto.html",
-          "textKey": "concrete_beam"
-        },
-        {
-          "key": "viga-protendida",
-          "href": "nbr/viga_protendida.html",
-          "textKey": "prestressed_beam"
-        },
-        {
-          "key": "nbr-aco",
-          "href": "nbr/nbr 8080 estruturas de aço.html",
-          "textKey": "nbr_steel"
-        },
-        {
-          "key": "pcalc",
-          "href": "nbr/PCALC.html",
-          "textKey": "pcalc"
-        },
-        {
-          "key": "mn-diagram",
-          "href": "nbr/M-N.html",
-          "textKey": "mn_diagram"
-        },
-        {
-          "key": "stm",
-          "href": "gui/STM_UI.html",
-          "textKey": "stm"
+          "key": "nds",
+          "href": "nds/nds wood design.html",
+          "textKey": "nds_wood"
         }
       ]
     }

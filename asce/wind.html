@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASCE Wind Load Calculator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -26,10 +26,38 @@
     <script src="../js/template.js" defer></script>
 </head>
 
-<body>
+<body class="min-h-screen flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
+
+                <!-- Executive Header Section -->
+        <div class="px-5 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 rounded-xl shadow-xs">
+            <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                        ASCE 7-16 & ASCE 7-22
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                        MWFRS & C&C Wind Pressures
+                    </span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>💨</span> Cargas de Vento (Wind Loads)
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="document.getElementById('save-inputs-btn')?.click()" class="eng-btn-save">
+                    <span>💾</span> Salvar
+                </button>
+                <button type="button" onclick="document.getElementById('load-inputs-btn')?.click()" class="eng-btn-open">
+                    <span>📂</span> Abrir
+                </button>
+                <button type="button" onclick="document.getElementById('run-calculation-btn')?.click()" class="eng-btn-primary">
+                    <span>⚡</span> Calcular Vento
+                </button>
+            </div>
+        </div>
 
         <main id="calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -38,21 +66,21 @@
                         <h2>General Parameters</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="asce_standard" class="block text-sm font-medium mb-1">ASCE Standard</label>
+                                <label for="asce_standard" class="eng-label">ASCE Standard</label>
                                 <select id="asce_standard">
                                     <option value="ASCE 7-16" selected>ASCE 7-16</option>
                                     <option value="ASCE 7-22">ASCE 7-22</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="unit_system" class="block text-sm font-medium mb-1">Unit System</label>
+                                <label for="unit_system" class="eng-label">Unit System</label>
                                 <select id="unit_system">
                                     <option value="imperial" selected>Imperial (mph, ft)</option>
                                     <option value="metric">Metric (m/s, m)</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="risk_category" class="block text-sm font-medium mb-1">Risk Category</label>
+                                <label for="risk_category" class="eng-label">Risk Category</label>
                                 <select id="risk_category">
                                     <option value="I">I</option>
                                     <option value="II" selected>II</option>
@@ -61,14 +89,14 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="design_method" class="block text-sm font-medium mb-1">Design Method</label>
+                                <label for="design_method" class="eng-label">Design Method</label>
                                 <select id="design_method">
                                     <option value="ASD" selected>ASD</option>
                                     <option value="LRFD">LRFD</option>
                                 </select>
                             </div>
                             <div id="mwfrs-method-container">
-                                <label for="mwfrs_method" class="block text-sm font-medium mb-1">MWFRS Method</label>
+                                <label for="mwfrs_method" class="eng-label">MWFRS Method</label>
                                 <select id="mwfrs_method">
                                     <option value="Directional">Directional Procedure (Ch. 27)</option>
                                     <option value="Envelope" selected>Envelope Procedure (Ch. 28)</option>
@@ -80,12 +108,12 @@
                         <h2>Building Properties</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="basic_wind_speed" class="block text-sm font-medium mb-1">Basic Wind Speed
+                                <label for="basic_wind_speed" class="eng-label">Basic Wind Speed
                                     (V)</label>
                                 <input type="number" id="basic_wind_speed" value="115" min="70" max="200">
                             </div>
                             <div>
-                                <label for="exposure_category" class="block text-sm font-medium mb-1">Exposure
+                                <label for="exposure_category" class="eng-label">Exposure
                                     Category</label>
                                 <select id="exposure_category" aria-label="Exposure Category for wind loading">
                                     <option value="B">B</option>
@@ -94,22 +122,22 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="mean_roof_height" class="block text-sm font-medium mb-1">Mean Roof Height
+                                <label for="mean_roof_height" class="eng-label">Mean Roof Height
                                     (h)</label>
                                 <input type="number" id="mean_roof_height" value="50" min="1">
                             </div>
                             <div>
-                                <label for="building_length_L" class="block text-sm font-medium mb-1">Building Length
+                                <label for="building_length_L" class="eng-label">Building Length
                                     (L)</label>
                                 <input type="number" id="building_length_L" value="100" min="1">
                             </div>
                             <div>
-                                <label for="building_width_B" class="block text-sm font-medium mb-1">Building Width
+                                <label for="building_width_B" class="eng-label">Building Width
                                     (B)</label>
                                 <input type="number" id="building_width_B" value="60" min="1">
                             </div>
                             <div>
-                                <label for="enclosure_classification" class="block text-sm font-medium mb-1">Enclosure
+                                <label for="enclosure_classification" class="eng-label">Enclosure
                                     Class.</label>
                                 <select id="enclosure_classification" data-ui-toggle-controller
                                     data-ui-toggle-target="#open-building-options"
@@ -132,7 +160,7 @@
                                 class="col-span-2 hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
                                 <p class="text-sm font-medium -mb-2">Rooftop Structure Details</p>
                                 <div>
-                                    <label for="rooftop_structure_type" class="block text-sm">Rooftop Structure
+                                    <label for="rooftop_structure_type" class="eng-label">Rooftop Structure
                                         Type</label>
                                     <select id="rooftop_structure_type" data-ui-toggle-controller>
                                         <option value="Solid Equipment">Solid Equipment</option>
@@ -143,17 +171,17 @@
                                     data-ui-toggle-target-for="rooftop_structure_type"
                                     data-ui-toggle-condition-value="Solid Equipment">
                                     <div>
-                                        <label for="rooftop_equipment_height_hr" class="block text-sm">Equipment Height
+                                        <label for="rooftop_equipment_height_hr" class="eng-label">Equipment Height
                                             (h<sub>r</sub>)</label>
                                         <input type="number" id="rooftop_equipment_height_hr" value="10">
                                     </div>
                                     <div>
-                                        <label for="rooftop_equipment_width_Br" class="block text-sm">Equipment Width
+                                        <label for="rooftop_equipment_width_Br" class="eng-label">Equipment Width
                                             (B<sub>r</sub>, normal to wind)</label>
                                         <input type="number" id="rooftop_equipment_width_Br" value="20">
                                     </div>
                                     <div>
-                                        <label for="rooftop_equipment_length_Lr" class="block text-sm">Equipment Length
+                                        <label for="rooftop_equipment_length_Lr" class="eng-label">Equipment Length
                                             (L<sub>r</sub>, parallel to wind)</label>
                                         <input type="number" id="rooftop_equipment_length_Lr" value="15">
                                     </div>
@@ -162,13 +190,13 @@
                                     data-ui-toggle-target-for="rooftop_structure_type"
                                     data-ui-toggle-condition-value="Open-Frame Scaffold">
                                     <div>
-                                        <label for="rooftop_solidity_ratio" class="block text-sm">Solidity Ratio
+                                        <label for="rooftop_solidity_ratio" class="eng-label">Solidity Ratio
                                             (ε)</label>
                                         <input type="number" id="rooftop_solidity_ratio" value="0.5" min="0.01"
                                             max="0.99" step="0.01">
                                     </div>
                                     <div>
-                                        <label for="rooftop_location_x" class="block text-sm">Distance from Windward
+                                        <label for="rooftop_location_x" class="eng-label">Distance from Windward
                                             Edge (x)</label>
                                         <input type="number" id="rooftop_location_x" value="10">
                                     </div>
@@ -182,14 +210,14 @@
                         <h2>Jurisdiction & Site</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="jurisdiction" class="block text-sm font-medium mb-1">Jurisdiction</label>
+                                <label for="jurisdiction" class="eng-label">Jurisdiction</label>
                                 <select id="jurisdiction">
                                     <option value="ASCE 7" selected>ASCE 7</option>
                                     <option value="NYCBC 2022">NYCBC 2022</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="ground_elevation" class="block text-sm font-medium mb-1">Ground
+                                <label for="ground_elevation" class="eng-label">Ground
                                     Elevation</label>
                                 <input type="number" id="ground_elevation" value="100">
                             </div>
@@ -199,7 +227,7 @@
                         <h2>Roof Properties</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="roof_type" class="block text-sm font-medium mb-1">Roof Type</label>
+                                <label for="roof_type" class="eng-label">Roof Type</label>
                                 <select id="roof_type">
                                     <option value="flat">Flat</option>
                                     <option value="gable" selected>Gable</option>
@@ -209,7 +237,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="roof_slope_deg" class="block text-sm font-medium mb-1">Roof Slope
+                                <label for="roof_slope_deg" class="eng-label">Roof Slope
                                     (degrees)</label>
                                 <input type="number" id="roof_slope_deg" value="30" min="0" max="90">
                             </div>
@@ -224,7 +252,7 @@
                         <div id="parapet-inputs"
                             class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
                             <div>
-                                <label for="parapet_height_hp" class="block text-sm font-medium mb-1">Parapet Height
+                                <label for="parapet_height_hp" class="eng-label">Parapet Height
                                     (h<sub>p</sub>)</label>
                                 <input type="number" id="parapet_height_hp" value="3">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height of the parapet above the
@@ -241,7 +269,7 @@
                         <div id="overhang-inputs"
                             class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4 col-span-2">
                             <div>
-                                <label for="overhang_length" class="block text-sm font-medium mb-1">Overhang Horizontal
+                                <label for="overhang_length" class="eng-label">Overhang Horizontal
                                     Projection</label>
                                 <input type="number" id="overhang_length" value="3">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Length of the roof overhang.
@@ -258,7 +286,7 @@
                         <div id="rooftop-protection-inputs"
                             class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4 col-span-2">
                             <div>
-                                <label for="rooftop_protection_type" class="block text-sm font-medium mb-1">Protection Type</label>
+                                <label for="rooftop_protection_type" class="eng-label">Protection Type</label>
                                 <select id="rooftop_protection_type">
                                     <option value="Pavers">Pavers/Overlays (Net Uplift)</option>
                                     <option value="Ballast">Ballast (Simplified)</option>
@@ -269,7 +297,7 @@
                             </div>
                         </div>
                         <div id="open-building-options" class="mt-4 space-y-4 hidden">
-                            <label for="wind_obstruction" class="block text-sm font-medium mb-1">Wind Flow Obstruction
+                            <label for="wind_obstruction" class="eng-label">Wind Flow Obstruction
                                 (for Open Buildings)</label>
                             <select id="wind_obstruction">
                                 <option value="unobstructed" selected>Unobstructed (Clear Wind Flow)</option>
@@ -281,7 +309,7 @@
                         <h2>Components & Cladding (C&C)</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="effective_wind_area" class="block text-sm font-medium mb-1">Effective Wind
+                                <label for="effective_wind_area" class="eng-label">Effective Wind
                                     Area (A, ft² or m²)</label>
                                 <input type="number" id="effective_wind_area" value="10">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Area of the component being
@@ -294,7 +322,7 @@
                         <div class="space-y-4">
                             <div data-ui-toggle-controller data-ui-toggle-target="#flexible-building-inputs"
                                 data-ui-toggle-condition-value="Flexible" data-ui-toggle-type="visibility">
-                                <label for="building_flexibility" class="block text-sm font-medium mb-1">Building
+                                <label for="building_flexibility" class="eng-label">Building
                                     Flexibility</label>
                                 <select id="building_flexibility">
                                     <option value="Rigid" selected>Rigid (G=0.85)</option>
@@ -304,7 +332,7 @@
                             <div id="flexible-building-inputs"
                                 class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
                                 <div>
-                                    <label for="fundamental_period" class="block text-sm font-medium mb-1">Fundamental
+                                    <label for="fundamental_period" class="eng-label">Fundamental
                                         Period (T1, sec)</label>
                                     <input type="number" id="fundamental_period" value="1.0" min="0.1" max="10">
                                 </div>
@@ -317,7 +345,7 @@
                         <h2>Factors & Coefficients</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="structure_type" class="block text-sm font-medium mb-1">Structure
+                                <label for="structure_type" class="eng-label">Structure
                                     Type</label>
                                 <select id="structure_type" data-ui-toggle-controller>
                                     <option>Buildings (MWFRS, C&C)</option>
@@ -338,7 +366,7 @@
                                 data-ui-toggle-target-for="structure_type"
                                 data-ui-toggle-condition-value="Open Signs/Frames">
                                 <div>
-                                    <label for="solidity_ratio" class="block text-sm font-medium mb-1">Solidity Ratio
+                                    <label for="solidity_ratio" class="eng-label">Solidity Ratio
                                         (ε)</label>
                                     <input type="number" id="solidity_ratio" value="0.5" min="0.01" max="0.99"
                                         step="0.01">
@@ -346,7 +374,7 @@
                                         gross area (A<sub>s</sub>/A<sub>g</sub>).</p>
                                 </div>
                                 <div>
-                                    <label for="member_shape" class="block text-sm font-medium mb-1">Member
+                                    <label for="member_shape" class="eng-label">Member
                                         Shape</label>
                                     <select id="member_shape" data-ui-toggle-controller
                                         data-ui-toggle-target="#round-member-options"
@@ -356,7 +384,7 @@
                                     </select>
                                 </div>
                                 <div id="round-member-options" class="hidden">
-                                    <label for="member_diameter" class="block text-sm font-medium mb-1">Typical Member
+                                    <label for="member_diameter" class="eng-label">Typical Member
                                         Diameter (b)</label>
                                     <input type="number" id="member_diameter" value="0.5">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Diameter in feet or meters,
@@ -368,17 +396,17 @@
                                 data-ui-toggle-target-for="structure_type"
                                 data-ui-toggle-condition-value="Solid Freestanding Signs/Walls">
                                 <div>
-                                    <label for="sign_width_B" class="block text-sm font-medium mb-1">Sign Width
+                                    <label for="sign_width_B" class="eng-label">Sign Width
                                         (B)</label>
                                     <input type="number" id="sign_width_B" value="20">
                                 </div>
                                 <div>
-                                    <label for="sign_height_s" class="block text-sm font-medium mb-1">Sign Height
+                                    <label for="sign_height_s" class="eng-label">Sign Height
                                         (s)</label>
                                     <input type="number" id="sign_height_s" value="10">
                                 </div>
                                 <div>
-                                    <label for="clearance_z" class="block text-sm font-medium mb-1">Clearance from
+                                    <label for="clearance_z" class="eng-label">Clearance from
                                         Ground (z)</label>
                                     <input type="number" id="clearance_z" value="10">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height from ground to
@@ -390,18 +418,18 @@
                                 data-ui-toggle-target-for="structure_type"
                                 data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal),Chimneys, Tanks (Octagonal),Chimneys, Tanks (Round)">
                                 <div>
-                                    <label for="chimney_height" class="block text-sm font-medium mb-1">Structure Height
+                                    <label for="chimney_height" class="eng-label">Structure Height
                                         (h)</label>
                                     <input type="number" id="chimney_height" value="80">
                                 </div>
                                 <div>
-                                    <label for="chimney_diameter" class="block text-sm font-medium mb-1">Width/Diameter
+                                    <label for="chimney_diameter" class="eng-label">Width/Diameter
                                         (D)</label>
                                     <input type="number" id="chimney_diameter" value="10">
                                 </div>
                                 <div id="chimney-corner-radius-option" data-ui-toggle-target-for="structure_type"
                                     data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal)">
-                                    <label for="corner_radius_r" class="block text-sm font-medium mb-1">Corner Radius
+                                    <label for="corner_radius_r" class="eng-label">Corner Radius
                                         (r)</label>
                                     <input type="number" id="corner_radius_r" value="0">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Set to 0 for sharp corners.
@@ -413,14 +441,14 @@
                                 data-ui-toggle-target-for="structure_type"
                                 data-ui-toggle-condition-value="Arched Roofs">
                                 <div>
-                                    <label for="arched_roof_rise" class="block text-sm font-medium mb-1">Roof Rise
+                                    <label for="arched_roof_rise" class="eng-label">Roof Rise
                                         (r)</label>
                                     <input type="number" id="arched_roof_rise" value="15">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Vertical distance from
                                         spring line to roof crown.</p>
                                 </div>
                                 <div>
-                                    <label for="arched_roof_spring_point" class="block text-sm font-medium mb-1">Roof
+                                    <label for="arched_roof_spring_point" class="eng-label">Roof
                                         Spring Point</label>
                                     <select id="arched_roof_spring_point">
                                         <option value="On Walls" selected>On Walls</option>
@@ -433,23 +461,23 @@
                                 data-ui-toggle-target-for="structure_type"
                                 data-ui-toggle-condition-value="Trussed Towers (Triangular, Square, Rectangular),Trussed Towers (All Other Cross Sections)">
                                 <div>
-                                    <label for="tower_height" class="block text-sm font-medium mb-1">Tower Height
+                                    <label for="tower_height" class="eng-label">Tower Height
                                         (h)</label>
                                     <input type="number" id="tower_height" value="100">
                                 </div>
                                 <div>
-                                    <label for="tower_width" class="block text-sm font-medium mb-1">Tower Face Width
+                                    <label for="tower_width" class="eng-label">Tower Face Width
                                         (w)</label>
                                     <input type="number" id="tower_width" value="10">
                                 </div>
                                 <div>
-                                    <label for="tower_solidity_ratio" class="block text-sm font-medium mb-1">Solidity
+                                    <label for="tower_solidity_ratio" class="eng-label">Solidity
                                         Ratio (ε)</label>
                                     <input type="number" id="tower_solidity_ratio" value="0.3" min="0.01" max="0.99"
                                         step="0.01">
                                 </div>
                                 <div>
-                                    <label for="tower_member_shape" class="block text-sm font-medium mb-1">Member
+                                    <label for="tower_member_shape" class="eng-label">Member
                                         Shape</label>
                                     <select id="tower_member_shape">
                                         <option value="flat" selected>Flat-Sided Members</option>
@@ -458,17 +486,17 @@
                                 </div>
                             </div>
                             <div>
-                                <label for="topographic_factor_Kzt" class="block text-sm font-medium mb-1">Topo. Factor
+                                <label for="topographic_factor_Kzt" class="eng-label">Topo. Factor
                                     (Kzt)</label>
                                 <input type="number" id="topographic_factor_Kzt" value="1">
                             </div>
                             <div>
-                                <label for="gust_effect_factor_g" class="block text-sm font-medium mb-1">Gust Effect
+                                <label for="gust_effect_factor_g" class="eng-label">Gust Effect
                                     Factor (G)</label>
                                 <input type="number" id="gust_effect_factor_g" value="0.85">
                             </div>
                             <div>
-                                <label for="temporary_construction" class="block text-sm font-medium mb-1">Temporary
+                                <label for="temporary_construction" class="eng-label">Temporary
                                     Construction?</label>
                                 <select id="temporary_construction">
                                     <option value="No" selected>No</option>
@@ -477,7 +505,7 @@
                             </div>
                             <div>
                                 <label for="calculate_height_varying_pressure"
-                                    class="block text-sm font-medium mb-1">Calc. Height-Varying Pressure?</label>
+                                    class="eng-label">Calc. Height-Varying Pressure?</label>
                                 <select id="calculate_height_varying_pressure">
                                     <option value="Yes" selected>Yes (for tall buildings)</option>
                                     <option value="No">No</option>
@@ -530,13 +558,13 @@
             </div>
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
                 <button id="load-inputs-btn"
-                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
+                    class="eng-btn-open">Load Inputs</button>
                 <button id="save-inputs-btn"
-                    class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all">Save
+                    class="eng-btn-save">Save
                     Inputs</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
                 <button id="run-calculation-btn"
-                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run
+                    class="eng-btn-primary">Run
                     Wind Load Calculation</button>
                 <input type="file" id="wind-file-input" class="hidden" accept=".txt">
             </div>

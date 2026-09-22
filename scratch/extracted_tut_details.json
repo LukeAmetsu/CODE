@@ -1,0 +1,464 @@
+{
+  "Tutorial_01_Quick_Start.pdf": {
+    "mats": [
+      "unit \nweight used in the analysis.",
+      "cohesion = 12 MPa,",
+      "Material 1) tab selected, you",
+      "Material 1 properties for you.",
+      "Material 2, Material 3, Material 4 etc.",
+      "Cohesion (peak) = 12"
+    ],
+    "stages": [],
+    "total_pages": 19
+  },
+  "Tutorial_02_Materials_and_Staging.pdf": {
+    "mats": [
+      "unit weight used in the analysis.",
+      "unit weight of a material must be",
+      "Unit Weight = 0.023"
+    ],
+    "stages": [
+      "Stage 1 tab is selected (at the bottom left of the view).",
+      "Stage 1 – material",
+      "Stage 2 tab.",
+      "Stage 3 tab.",
+      "Stage 4 tab.",
+      "Stage 1, and verify that the excavation",
+      "Stage 2 tab.",
+      "Stage 2 – excavation of",
+      "Stage 3 – excavation of",
+      "Stage 4 – backfill of entire"
+    ],
+    "total_pages": 25
+  },
+  "Tutorial_03_Support.pdf": {
+    "mats": [],
+    "stages": [
+      "Stage 1 and 70% in Stage 2.",
+      "Stage 2,",
+      "Stage 1.",
+      "Stage 1 (before",
+      "Stage 2 can",
+      "Stage 1 and Split Factor = 0.7 for Stage 2.",
+      "Stage 2, and we",
+      "Stage 2:",
+      "Stage 2 tab is selected (at the bottom left of the",
+      "Stage 2."
+    ],
+    "total_pages": 30
+  },
+  "Tutorial_04_Surface_Excavation.pdf": {
+    "mats": [
+      "Unit Weight of Overburden indicates that our material is a soil,",
+      "Unit Weight of the material is the same as the Unit Weight of",
+      "Unit Weight = 0.02",
+      "Cohesion (peak) = 0.01"
+    ],
+    "stages": [
+      "Stage 1 and Stage 2, and",
+      "Stage 3. Select OK in both dialogs.",
+      "Stage 3 tab. Since we only applied the load in",
+      "Stage 3, it is only visible in Stage 3. For display purposes, the size of the",
+      "Stage 1 tab again.",
+      "Stage 1, and the trench in Stage 2, as",
+      "Stage 1 tab is selected (at the bottom left of the",
+      "Stage 2 tab.",
+      "Stage 1 – only the tunnel should be excavated.",
+      "Stage 2 – both the trench and tunnel should be excavated."
+    ],
+    "total_pages": 22
+  },
+  "Tutorial_05_Joint.pdf": {
+    "mats": [
+      "Cohesion (peak) = 10.5",
+      "Material 1",
+      "Cohesion = 0",
+      "Friction Angle = 20",
+      "friction \nangle of 20 degrees.",
+      "Friction Angle for Slip",
+      "friction angle on joint slip."
+    ],
+    "stages": [],
+    "total_pages": 12
+  },
+  "Tutorial_06_Axisymmetric.pdf": {
+    "mats": [
+      "Material 1",
+      "Cohesion (peak) = 10.5"
+    ],
+    "stages": [],
+    "total_pages": 24
+  },
+  "Tutorial_07_Finite_Element_Groundwater_Seepage.pdf": {
+    "mats": [
+      "unit weight of water entered in the Project Settings dialog."
+    ],
+    "stages": [],
+    "total_pages": 19
+  },
+  "Tutorial_08_Shear_Strength_Reduction.pdf": {
+    "mats": [
+      "Unit Weight. For Elastic Properties,",
+      "Cohesion to 5 kPa. Set the peak and residual Friction"
+    ],
+    "stages": [
+      "Stage 1 are not",
+      "Stage 1 tab now exists along with the SRF tabs at the bottom of the",
+      "Stage 1 by selecting the Stage 1 tab.",
+      "Stage 1 and SRF: 1 are slightly different even though",
+      "Stage 1), under the"
+    ],
+    "total_pages": 12
+  },
+  "Tutorial_09_Importing_Slide_Files_+_SSR.pdf": {
+    "mats": [
+      "cohesion and friction angle equal to the adhesion and friction angle",
+      "friction angle equal to the",
+      "friction angle defined for the Slide geotextile. Interface",
+      "unit weight defined for the material in Slide.",
+      "unit weight, when reading a Slide file,",
+      "unit weight is taken."
+    ],
+    "stages": [
+      "Stage 1 tab) followed by the"
+    ],
+    "total_pages": 14
+  },
+  "Tutorial_10_SSR_Search_Area.pdf": {
+    "mats": [],
+    "stages": [],
+    "total_pages": 7
+  },
+  "Tutorial_11_Geogrid_Embankment_(no_slip).pdf": {
+    "mats": [
+      "Material 1) is selected.  Type Sand Fill for the",
+      "Unit \nWeight. For Elastic Properties, enter 50000 kPa for the Young’s Modulus",
+      "Cohesion, residual strength, and residual cohesion to zero kPa. This is",
+      "Friction Angle to 37°. Leave the dilation angle at 0° (no",
+      "Material 2).  Change the name to Soft Clay. Enter the material",
+      "Material 1 (Sand Fill).  Change the bottom layer to Soft"
+    ],
+    "stages": [],
+    "total_pages": 13
+  },
+  "Tutorial_12_Geogrid_Embankment_(with_slip).pdf": {
+    "mats": [
+      "friction angle to 30 degrees.  Leave all other parameters"
+    ],
+    "stages": [
+      "Stage 1 tab at the bottom of the window. Right click",
+      "Stage 2 tab.  Add the sand fill embankment by right",
+      "Stage 2 of the simulation. In Tutorial 11, we modelled the geogrid  as a",
+      "Stage 2 of the simulation.",
+      "Stage 1 and Stage 2 are not available to look at. Only the data",
+      "Stage 1 and Stage 2 tabs now exist along with the SRF tabs at the bottom",
+      "Stage 1 by selecting the Stage",
+      "Stage 1 tab, plot contours of maximum stress by",
+      "Stage 2 tab, and you can see larger stresses under the sand",
+      "Stage 2 results.  If you wish to look at"
+    ],
+    "total_pages": 13
+  },
+  "Tutorial_13_Cofferdam_Seepage.pdf": {
+    "mats": [
+      "Material 1.  In this tutorial we don’t",
+      "Material 1 to Soil. Now click",
+      "Material 2 tab. Change the name of Material 2 to Sheet Pile. Click",
+      "material \n1).  In our model, the top left and top right sections will represent ponded"
+    ],
+    "stages": [
+      "stage 2 (excavation).  Select Add Material",
+      "Stage 1 (Dam).  Select Assign Properties from the Properties menu.",
+      "Stage 1 should now look like this.",
+      "Stage 2 (Excavate) tab at the bottom of the Phase2",
+      "Stage 2 (Excavate)",
+      "Stage 1 (Dam). For all stages we wish to",
+      "Stage 1.",
+      "Stage2 (Excavate) tab at the bottom of the window. Set",
+      "Stage \n1. You may also remove the zero pressure BC for the boundary where the",
+      "Stage 1 (although this is not necessary)."
+    ],
+    "total_pages": 15
+  },
+  "Tutorial_14_Geotextile_Reinforced_Ramp.pdf": {
+    "mats": [
+      "Material 1 to Foundation Soil. For Initial Element Loading choose Field",
+      "Unit Weight to 20 kN/m3 and Poisson’s",
+      "Material 2 tab. Change the name of Material 2 to Fill.",
+      "Unit Weight to 27 kN/m3 and set the Young’s",
+      "friction angle to 35 degrees and the peak and residual cohesion to 0 kPa",
+      "Material 3. Change the Name to Concrete and",
+      "material 1).  We now need to build up the road material",
+      "Friction \nAngle to 32 degrees as shown."
+    ],
+    "stages": [
+      "Stage 1 tab at the bottom of the Phase2",
+      "Stage 1.",
+      "Stage 2 tab. Select Fill from the Assign Materials dialog",
+      "Stage 2.",
+      "Stage 3 tab. Select Concrete from the Assign Material dialog",
+      "Stage 3.",
+      "Stage 3 or Stage 4. Select Increase",
+      "Stage 2 tab. From the Support menu select Add Liner.",
+      "Stage 4",
+      "Stage 4,"
+    ],
+    "total_pages": 22
+  },
+  "Tutorial_15_Composite_Liner.pdf": {
+    "mats": [],
+    "stages": [
+      "Stage 1 tab. Select the Assign Properties button on the",
+      "Stage 2 we will excavate the middle section of the tunnel. Click the",
+      "Stage 2 tab. Click anywhere within the middle tunnel section. (Note that",
+      "Stage 3 we will excavate the lower section of the tunnel. Click the",
+      "Stage 3 tab. Click anywhere within the lower tunnel section.",
+      "Stage 2, the second concrete layer will be",
+      "Stage 3. To accomplish this, go to the drop down menu in the",
+      "Stage 1 and then stage the",
+      "Stage 1. Click the Add Liner toolbar",
+      "Stage 1 – we will deal with the staging later. Hit Enter to"
+    ],
+    "total_pages": 21
+  },
+  "Tutorial_16_Retaining_Wall.pdf": {
+    "mats": [
+      "friction angle to 27 degrees as shown."
+    ],
+    "stages": [
+      "Stage 1 of the model – just the foundation soil. Click through the",
+      "stage 2 and another layer of fill in stage 4. In this tutorial",
+      "Stage 2. Go to the Boundaries menu and choose",
+      "Stage 2 so ensure that the",
+      "Stage 1 indicating that it is not installed. It is a dark orange",
+      "Stage 3 there will be ponded water to the left of the wall. To draw the",
+      "Stage 3. To do this, select Define",
+      "Stage 1 change the Piezo # to",
+      "Stage 2 should now read none as well. Click on Add Stage. Next to",
+      "Stage 3 change the Piezo # to 1. The dialog should look like this."
+    ],
+    "total_pages": 11
+  },
+  "Tutorial_17_Trench_with_Piles_and_Struts.pdf": {
+    "mats": [
+      "Material 1 and Material",
+      "Material 1, turn on the",
+      "Material 2 is affected by the piezo lines in the same way as Material 1.",
+      "Material 2 tab and repeat the above steps to stage"
+    ],
+    "stages": [
+      "Stage 1 of the model showing the soil layers prior to excavation.",
+      "Stage 5.",
+      "Stage 1 – Initial Conditions",
+      "Stage 1 we only need to add a piezometric line to delineate the water",
+      "Stage 1 should now look like this:",
+      "Stage 2 – Install pile support",
+      "Stage 2 tab. In Stage 2 we will add a pile to the right side of",
+      "Stage 2.",
+      "Stage 3 – Excavate soil and lower piezometric line",
+      "Stage 3 tab. In this stage we will excavate the first part of"
+    ],
+    "total_pages": 16
+  },
+  "Tutorial_18_3D_Tunnel_Simulation_using_Core_Replacement.pdf": {
+    "mats": [
+      "Material 1, change the Failure Criterion to Generalized Hoek-Brown",
+      "Material 1 to E=6143.",
+      "Material 2 tab and change the name to E=3000. Change the"
+    ],
+    "stages": [
+      "Stage 2 tab, E=3000, is selected (at the bottom left of",
+      "Stage 3, E=1000, by clicking the stage tab at the bottom of",
+      "Stage 4, E=250.",
+      "Stage 5, E=100.",
+      "Stage 6, E=50.",
+      "Stage 7, E=25.",
+      "Stage 8, E=10.",
+      "Stage 9, Excavated.",
+      "stage 1 – the in-situ condition stage. Turn on the minimum",
+      "Stage 1. Notice that there is no variation of stress and that the"
+    ],
+    "total_pages": 27
+  },
+  "Tutorial_19_Joint-Liner_Interaction.pdf": {
+    "mats": [
+      "Material 1,",
+      "Unit Weight and Poisson’s Ratio at",
+      "friction angle to 20 degrees. Leave all other values as default.  Note"
+    ],
+    "stages": [
+      "Stage 2",
+      "Stage 1.",
+      "Stage 2 tab. You will now see low stresses around the tunnel",
+      "Stage 2. To add the composite liner,",
+      "Stage 2. Select Add Liner from the Support menu. In the Add",
+      "Stage 2.",
+      "Stage 1 will be the same as before. Select the",
+      "Stage 2 tab. You will now see a ring of high stress around the tunnel but",
+      "Stage 2. Turn off the deformed boundaries display. Right"
+    ],
+    "total_pages": 20
+  },
+  "Tutorial_20_Liner_with_Sliding_Gap.pdf": {
+    "mats": [
+      "Material 1,"
+    ],
+    "stages": [
+      "Stage 1. From the Properties menu select Assign Properties. From",
+      "Stage \n1. Go to Loading → Distributed Loads → Add Uniform Load.",
+      "stage 20, there should be no load displayed",
+      "Stage 5 (i.e. 60% applied",
+      "Stage 5 and from the Support menu select Add",
+      "Stage 5 and click OK. Select the entire tunnel with a selection window.",
+      "Stage 5",
+      "Stage 1. Since we specified the initial",
+      "Stage 1.",
+      "Stage 10 are shown below."
+    ],
+    "total_pages": 26
+  },
+  "Tutorial_21_Levee_with_Toe_Drain.pdf": {
+    "mats": [
+      "Material 1. In this tutorial we don’t care",
+      "Material 1 to Levee. Now click on the",
+      "Material 2 tab. Change the name of Material 2 to Soil. Similarly, change",
+      "Material 3 to Drain. Click OK to close the dialog.",
+      "material \n1). To assign the correct material properties to the different parts of the"
+    ],
+    "stages": [],
+    "total_pages": 12
+  },
+  "Tutorial_22_SSR_Polygonal_Search_Area.pdf": {
+    "mats": [
+      "Material 1. Make sure the Initial Element Loading",
+      "Unit Weight. For Elastic",
+      "Cohesion to 5,",
+      "Friction Angle to 30. Leave the dilation angle"
+    ],
+    "stages": [],
+    "total_pages": 8
+  },
+  "Tutorial_23_Anchored_Sheet_Pile_Wall.pdf": {
+    "mats": [
+      "Material 1 to Sand.",
+      "Material 2, change the name to Clay and enter the"
+    ],
+    "stages": [
+      "Stage 2, so first click on the Stage 2 tab at",
+      "Stage 1. Add the finite element mesh by selecting Mesh",
+      "Stage 3 tab. Choose Excavate from the",
+      "Stage 4 we will install another tieback and excavate further. Click on",
+      "Stage 4 and then click inside the next area to be excavated as",
+      "Stage 2 so click on the tab to show",
+      "Stage 2. In our model, the sheet pile wall is sandwiched between two",
+      "Stage 3 simultaneous with the",
+      "Stage 3. Go to the Support menu and",
+      "Stage 4 to add the next tieback. Select Add Bolt again from the"
+    ],
+    "total_pages": 21
+  },
+  "Tutorial_24_Tunnel_Lining_Design.pdf": {
+    "mats": [
+      "Material 1, change the Failure Criterion to Generalized Hoek-Brown",
+      "Material 1) tab selected, you",
+      "Material 1 properties for you."
+    ],
+    "stages": [
+      "Stage 1 tab",
+      "stage 1. The",
+      "stage 2 and",
+      "Stage 1. Notice that there is no variation of stress and that the",
+      "Stage 1 will look like this:",
+      "stage 10 are used since there is zero internal pressure in",
+      "stage 10. Look in the lower left corner of the",
+      "Stage \n1. When asked to enter a vertex, type in the value 0,4 for the",
+      "stage 5, the wall displacement in the",
+      "stage 1 to Initial Stage. Change the"
+    ],
+    "total_pages": 32
+  },
+  "Tutorial_26_Drawdown_Analysis_for_Slope.pdf": {
+    "mats": [
+      "Unit Weight is 9.81 kN/m3 as shown:"
+    ],
+    "stages": [
+      "Stage 1. Go to Boundaries → Add",
+      "Stage 2. Go to Boundaries → Add Piezometric Line. Enter",
+      "Stage 1. You will see that Stage 1 is the same",
+      "Stage 2; the active water table is piezo 2, and piezo 1 is inactive. We",
+      "Stage 1, choose Piezo #1 and for Stage 2,",
+      "Stage 1 and piezo 2 is active in Stage 2.",
+      "Stage 1, the y-coordinate of the water table is 40 m. So",
+      "Stage 2, the water table is at 35 m,",
+      "Stage 2 to 35 m as shown:",
+      "Stage 1 should look like"
+    ],
+    "total_pages": 17
+  },
+  "Tutorial_27_Drawdown_Analysis_for_Tunnel.pdf": {
+    "mats": [
+      "Material 1 to Thames",
+      "Material 2, change the name to London clay and"
+    ],
+    "stages": [
+      "Stage 2 tab near the bottom left of the window. Choose",
+      "Stage 2. Go to Loading → Distributed Loads",
+      "Stage 2, set the Stage Factor to 0.16. For Stage 3, we",
+      "Stage 2 should now look like this:",
+      "Stage 3. Go to Support → Add Liner. Ensure ‘Liner",
+      "Stage 1. Zoom out to see the entire model using the mouse",
+      "Stage 2. Zoom in on the tunnel. From the Set",
+      "Stage 3 to ensure that the zero pressure boundary",
+      "Stage 1.",
+      "Stage 2."
+    ],
+    "total_pages": 22
+  },
+  "Tutorial_28_Coal_Mine_Stope.pdf": {
+    "mats": [],
+    "stages": [
+      "Stage 1 tab is selected (at the bottom left of the view).",
+      "Stage 2 tab.",
+      "Stage 1 – material",
+      "Stage 2 – excavation of",
+      "Stage 3 tab.",
+      "Stage 1, and verify that the excavation staging and",
+      "Stage 3.",
+      "Stage 3 – excavation of",
+      "Stage \n1. You may want to zoom in on the excavations (use the middle mouse",
+      "Stage 2 and 3 tabs and observe the changes in stress"
+    ],
+    "total_pages": 18
+  },
+  "Tutorial_29_Application_of_Joint_Networks.pdf": {
+    "mats": [],
+    "stages": [],
+    "total_pages": 17
+  },
+  "Tutorial_30_Slope_Angle_Optimization.pdf": {
+    "mats": [],
+    "stages": [],
+    "total_pages": 13
+  },
+  "Tutorial_31_Probabilistic_Analysis.pdf": {
+    "mats": [
+      "cohesion c, modulus E and maximum",
+      "Young's Modulus will be added to the random variable"
+    ],
+    "stages": [],
+    "total_pages": 16
+  },
+  "Tutorial_32_Probabilistic_Slope_Stability_Analysis.pdf": {
+    "mats": [
+      "cohesion",
+      "friction angle of the slope material. Random variables are defined",
+      "Friction Angle (Mean = 30, Standard Deviation = 3)",
+      "Cohesion (Mean = 5, Standard Deviation = 1)",
+      "cohesion and friction",
+      "Cohesion Friction Angle",
+      "friction \nangle and cohesion for three of the four materials)."
+    ],
+    "stages": [],
+    "total_pages": 12
+  }
+}

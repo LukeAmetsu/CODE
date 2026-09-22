@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Single Angle Support (Masonry Anchors)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
@@ -23,9 +23,9 @@
   </head>
 
   <body
-    class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200"
+    class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200 min-h-screen flex flex-col"
   >
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
       <div id="header-placeholder" style="min-height: 110px"></div>
 
       <main id="angle-support-main">
@@ -63,7 +63,7 @@
               <!-- Single Load Inputs Removed -->
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="beam_depth_in"
                   >Beam Depth (in)</label
                 >
@@ -71,7 +71,7 @@
                   type="text"
                   id="beam_depth"
                   value="12"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 />
               </div>
               <!-- Area Load Input Removed -->
@@ -89,13 +89,13 @@
 
               <div class="mb-2">
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="design_method_fos"
                   >Design Method (FOS)</label
                 >
                 <select
                   id="angle_method"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <option value="ASD">ASD (FOS = 1.67)</option>
                   <option value="OSHA">OSHA (FOS = 4.0)</option>
@@ -104,13 +104,13 @@
 
               <div class="mb-2">
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="configuration"
                   >Configuration</label
                 >
                 <select
                   id="angle_config"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <option value="single">Single (L)</option>
                   <option value="double">Double (2L)</option>
@@ -120,13 +120,13 @@
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label
-                    class="block text-sm font-medium mb-1"
+                    class="eng-label"
                     data-i18n="leg_size_in"
                     >Leg Size (in)</label
                   >
                   <select
                     id="angle_leg"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    class="eng-input"
                   >
                     <option value="2">2</option>
                     <option value="2.5">2.5</option>
@@ -140,13 +140,13 @@
                 </div>
                 <div>
                   <label
-                    class="block text-sm font-medium mb-1"
+                    class="eng-label"
                     data-i18n="thickness_in"
                     >Thickness (in)</label
                   >
                   <select
                     id="angle_thick"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    class="eng-input"
                   >
                     <option value="0.125">1/8"</option>
                     <option value="0.1875">3/16"</option>
@@ -163,7 +163,7 @@
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label
-                    class="block text-sm font-medium mb-1"
+                    class="eng-label"
                     data-i18n="moment_arm_e"
                     >Moment Arm (e)</label
                   >
@@ -171,12 +171,12 @@
                     type="text"
                     id="moment_arm"
                     placeholder="Auto (Leg/2)"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    class="eng-input"
                   />
                 </div>
                 <div>
                   <label
-                    class="block text-sm font-medium mb-1"
+                    class="eng-label"
                     data-i18n="fy_ksi"
                     >Fy (ksi)</label
                   >
@@ -184,7 +184,7 @@
                     type="text"
                     id="angle_fy"
                     value="36"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    class="eng-input"
                   />
                 </div>
               </div>
@@ -207,7 +207,7 @@
               </h3>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="number_of_bolts"
                   >Number of Bolts</label
                 >
@@ -215,7 +215,7 @@
                   type="text"
                   id="num_bolts"
                   value="2"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 />
               </div>
 
@@ -235,7 +235,7 @@
               </div>
               <div id="gage-container" class="hidden">
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="gage_vert_spacing_in"
                   >Gage (Vertical Spacing in)</label
                 >
@@ -243,19 +243,19 @@
                   type="text"
                   id="gage"
                   value="2.5"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 />
               </div>
 
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="bolt_diameter"
                   >Bolt Diameter</label
                 >
                 <select
                   id="bolt_diameter"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <option value="0.375">3/8"</option>
                   <option value="0.5" selected>1/2"</option>
@@ -265,26 +265,26 @@
               </div>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="embedment_depth_hnom"
                   >Embedment Depth (h<sub>nom</sub>)</label
                 >
                 <select
                   id="embedment"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <!-- Populated by JS -->
                 </select>
               </div>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="substrate"
                   >Substrate</label
                 >
                 <select
                   id="substrate"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                   disabled
                 >
                   <option value="masonry_grout" selected>

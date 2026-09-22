@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aoki-Velloso - Capacidade de Carga e Rigidez de Estacas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Fundações Profundas - Aoki-Velloso & Décourt-Quaresma (+ Bloco Blévot)</title>
+    <script src="../js/tailwind.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -44,79 +44,181 @@
     </script>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
         <main class="mt-6">
             <!-- Header Section -->
-            <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div class="flex items-center gap-3">
                         <span class="text-3xl">🏗️</span>
-                        <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
-                            Método Aoki-Velloso (1975)
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">
+                            Fundações Profundas: Aoki-Velloso & Décourt-Quaresma
                         </h1>
-                        <span class="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                            Fundações Profundas
+                        <span class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs">
+                            NBR 6122 & NBR 6118
                         </span>
                     </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Cálculo completo de capacidade de carga (atrito lateral e ponta), molas estáticas verticais/horizontais, rigidezes dinâmicas e amortecimento crítico de estacas isoladas e grupos.
+                    <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Dimensionamento e comparativo de estacas pelos métodos Aoki-Velloso (1975) e Décourt-Quaresma (1978/1996), curvas de capacidade lado a lado, rigidezes dinâmicas e dimensionamento estrutural de blocos de coroamento (Blévot & Frémy, 1967).
                     </p>
                 </div>
 
                 <!-- Reference Preset Action -->
-                <div class="flex flex-wrap items-center gap-3 shrink-0">
-                    <button type="button" onclick="loadReferencePreset()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3.5 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-2" title="Carregar perfil e estaca de referência">
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button type="button" onclick="loadReferencePreset()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors text-xs flex items-center gap-1.5" title="Carregar perfil e estaca de referência">
                         <span>📋</span> Carregar Ref. Planilha
+                    </button>
+                    <button type="button" onclick="resetDefaults()" class="px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5" title="Limpar memória da sessão e restaurar padrão inicial">
+                        <span>↺</span> Restaurar Padrão
                     </button>
                 </div>
             </div>
 
-            <!-- Top KPI Dashboard Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                <!-- R_adm Unit -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">R_adm (Estaca)</div>
-                    <div id="kpi-radm-tf" class="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">-- tf</div>
-                    <div id="kpi-radm-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN</div>
+            <!-- Session Memory Banner -->
+            <div id="session-restore-banner" class="hidden mb-6 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-teal-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center justify-between text-blue-900 dark:text-blue-200 text-xs font-semibold shadow-xs">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">💾</span>
+                    <span id="session-banner-text">Dados anteriores da sua sessão foram restaurados automaticamente.</span>
                 </div>
+                <button type="button" onclick="document.getElementById('session-restore-banner').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold px-1">✕</button>
+            </div>
 
-                <!-- R_adm Group -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">R_adm (Grupo)</div>
-                    <div id="kpi-radm-group-tf" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">-- tf</div>
-                    <div id="kpi-group-info" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">15 estacas</div>
+            <!-- TAB NAVIGATION BAR -->
+            <div class="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-3">
+                <button id="tab-btn-comparison" type="button" onclick="switchMainTab('comparison')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all border border-blue-600 bg-blue-600 text-white flex items-center gap-1.5 shadow-sm">
+                    <span>📊</span> Comparativo Geral (Aoki vs Décourt)
+                </button>
+                <button id="tab-btn-aoki" type="button" onclick="switchMainTab('aoki')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5">
+                    <span>🏗️</span> Aoki-Velloso (1975)
+                </button>
+                <button id="tab-btn-decourt" type="button" onclick="switchMainTab('decourt')" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5">
+                    <span>📐</span> Décourt-Quaresma (1978/1996)
+                </button>
+            </div>
+
+            <!-- VIEW 1: COMPARATIVE KPI DASHBOARD -->
+            <div id="view-tab-comparison" class="tab-content">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+                    <!-- 1. Aoki-Velloso Radm -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-emerald-500"></div>
+                        <div class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Aoki-Velloso (1975)</div>
+                        <div id="kpi-comp-aoki-tf" class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">-- tf</div>
+                        <div id="kpi-comp-aoki-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN (FS=2.0)</div>
+                        <div id="kpi-comp-aoki-sub" class="text-[10px] text-gray-400 mt-1">Rl: -- tf | Rp: -- tf</div>
+                    </div>
+
+                    <!-- 2. Décourt-Quaresma Radm -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-blue-500"></div>
+                        <div class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Décourt-Quaresma (1996)</div>
+                        <div id="kpi-comp-decourt-tf" class="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">-- tf</div>
+                        <div id="kpi-comp-decourt-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN (FS=2.0)</div>
+                        <div id="kpi-comp-decourt-sub" class="text-[10px] text-gray-400 mt-1">α: -- | β: --</div>
+                    </div>
+
+                    <!-- 3. Média dos Métodos -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-indigo-500"></div>
+                        <div class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Média de Projeto</div>
+                        <div id="kpi-comp-mean-tf" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">-- tf</div>
+                        <div id="kpi-comp-mean-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN</div>
+                        <div class="text-[10px] text-gray-400 mt-1">Média aritmética direta</div>
+                    </div>
+
+                    <!-- 4. Critério Conservador -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-amber-300 dark:border-amber-700/60 bg-amber-50/20 dark:bg-amber-950/20 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-amber-500"></div>
+                        <div class="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Conservador (Mín.)</div>
+                        <div id="kpi-comp-conserv-tf" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">-- tf</div>
+                        <div id="kpi-comp-conserv-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN</div>
+                        <div id="kpi-comp-conserv-method" class="text-[10px] font-semibold text-amber-700 dark:text-amber-300 mt-1">Gov.: -- (Δ --%)</div>
+                    </div>
+
+                    <!-- 5. Rigidez Estática Kz -->
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-2 h-full bg-purple-500"></div>
+                        <div class="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Rigidez Kz Estática</div>
+                        <div id="kpi-comp-kz-tf-m" class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">-- tf/m</div>
+                        <div id="kpi-comp-kz-kn-mm" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN/mm</div>
+                        <div id="kpi-comp-kz-sub" class="text-[10px] text-gray-400 mt-1">Mola axial isolada</div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Shaft Friction Rl -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atrito Lateral (Rl)</div>
-                    <div id="kpi-rl-tf" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">-- tf</div>
-                    <div id="kpi-rl-pct" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- % do total</div>
+            <!-- VIEW 2: AOKI-VELLOSO DETAILED KPIS -->
+            <div id="view-tab-aoki" class="tab-content hidden">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">R_adm (Estaca)</div>
+                        <div id="kpi-radm-tf" class="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">-- tf</div>
+                        <div id="kpi-radm-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">R_adm (Grupo)</div>
+                        <div id="kpi-radm-group-tf" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">-- tf</div>
+                        <div id="kpi-group-info" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">15 estacas</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atrito Lateral (Rl)</div>
+                        <div id="kpi-rl-tf" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">-- tf</div>
+                        <div id="kpi-rl-pct" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- % do total</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ponta (Rp)</div>
+                        <div id="kpi-rp-tf" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">-- tf</div>
+                        <div id="kpi-rp-pct" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- % do total</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rigidez Kz Estática</div>
+                        <div id="kpi-kz-tf-m" class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">-- tf/m</div>
+                        <div id="kpi-kz-kn-mm" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN/mm</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amortecimento Dgz</div>
+                        <div id="kpi-dgz" class="text-2xl font-extrabold text-pink-600 dark:text-pink-400 mt-1">-- %</div>
+                        <div id="kpi-dgxy" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Dgxy: -- %</div>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Tip Resistance Rp -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ponta (Rp)</div>
-                    <div id="kpi-rp-tf" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">-- tf</div>
-                    <div id="kpi-rp-pct" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- % do total</div>
-                </div>
-
-                <!-- Static Vertical Stiffness -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rigidez Kz Estática</div>
-                    <div id="kpi-kz-tf-m" class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">-- tf/m</div>
-                    <div id="kpi-kz-kn-mm" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN/mm</div>
-                </div>
-
-                <!-- Damping Ratio Dgz -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amortecimento Dgz</div>
-                    <div id="kpi-dgz" class="text-2xl font-extrabold text-pink-600 dark:text-pink-400 mt-1">-- %</div>
-                    <div id="kpi-dgxy" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Dgxy: -- %</div>
+            <!-- VIEW 3: DÉCOURT-QUARESMA DETAILED KPIS -->
+            <div id="view-tab-decourt" class="tab-content hidden">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">R_adm Global (FS=2)</div>
+                        <div id="kpi-decourt-radm-tf" class="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">-- tf</div>
+                        <div id="kpi-decourt-radm-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">-- kN</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">R_adm Parcial (NBR)</div>
+                        <div id="kpi-decourt-radm-parc-tf" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">-- tf</div>
+                        <div id="kpi-decourt-radm-parc-kn" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Fsp=4.0 / Fsl=1.3</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Atrito β·Rl</div>
+                        <div id="kpi-decourt-rl-tf" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">-- tf</div>
+                        <div id="kpi-decourt-rl-sub" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">ql = 10(NL/3 + 1)</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ponta α·Rp</div>
+                        <div id="kpi-decourt-rp-tf" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">-- tf</div>
+                        <div id="kpi-decourt-rp-sub" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">qp = C · Np</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">C Ponta (kPa)</div>
+                        <div id="kpi-decourt-c-val" class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">-- kPa</div>
+                        <div id="kpi-decourt-np-val" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Np (3 pts): --</div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fatores α e β (1996)</div>
+                        <div id="kpi-decourt-factors" class="text-xl font-extrabold text-cyan-600 dark:text-cyan-400 mt-1">α=-- | β=--</div>
+                        <div id="kpi-decourt-p-type" class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">--</div>
+                    </div>
                 </div>
             </div>
 
@@ -137,8 +239,43 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Card 1: Radier Estaqueado -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Card 1: Bloco de Coroamento -->
+                    <div class="bg-slate-800/80 backdrop-blur rounded-xl p-5 border border-teal-500/30 shadow-lg flex flex-col justify-between relative overflow-hidden group hover:border-teal-400 transition-all">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl group-hover:bg-teal-500/20 transition-all pointer-events-none"></div>
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="font-bold text-base text-teal-300 flex items-center gap-2">
+                                    <span>🧱</span> Bloco de Coroamento
+                                </span>
+                                <span class="text-[10px] font-mono bg-teal-950/80 text-teal-300 px-2 py-0.5 rounded border border-teal-800">NBR 6118 / Blévot</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3 mb-4 text-xs font-mono">
+                                <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
+                                    <span class="text-[10px] text-slate-400 font-sans block">Mola Vertical (Kz):</span>
+                                    <span id="spring-cap-kz" class="text-base font-bold text-teal-400 block mt-0.5">-- kN/m</span>
+                                    <span id="spring-cap-kz-sub" class="text-[10px] text-slate-400 block">-- tf/m</span>
+                                </div>
+                                <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
+                                    <span class="text-[10px] text-slate-400 font-sans block">Capacidade Adm. (Radm):</span>
+                                    <span id="spring-cap-radm" class="text-base font-bold text-emerald-400 block mt-0.5">-- kN</span>
+                                    <span id="spring-cap-radm-sub" class="text-[10px] text-slate-400 block">-- tf/estaca</span>
+                                </div>
+                                <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700 col-span-2">
+                                    <span class="text-[10px] text-slate-400 font-sans block">Capacidade do Grupo:</span>
+                                    <span id="spring-cap-group" class="text-base font-bold text-cyan-400 block mt-0.5">-- kN</span>
+                                    <span class="text-[10px] text-slate-400 block">Dimensionamento de bielas e tirantes</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="exportSpringsToPileCap()" class="w-full py-2.5 px-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold rounded-lg shadow-md hover:shadow-teal-500/25 flex items-center justify-center gap-2 text-xs transition-all cursor-pointer">
+                            <span>🚀</span> Aplicar no Bloco de Coroamento
+                        </button>
+                    </div>
+
+                    <!-- Card 2: Radier Estaqueado -->
                     <div class="bg-slate-800/80 backdrop-blur rounded-xl p-5 border border-cyan-500/30 shadow-lg flex flex-col justify-between relative overflow-hidden group hover:border-cyan-400 transition-all">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all pointer-events-none"></div>
                         <div>
@@ -161,60 +298,60 @@
                                     <span id="spring-raft-radm-sub" class="text-[10px] text-slate-400 block">-- tf/estaca</span>
                                 </div>
                                 <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
-                                    <span class="text-[10px] text-slate-400 font-sans block">Atrito Negativo (Qneg):</span>
+                                    <span class="text-[10px] text-slate-400 font-sans block">Atrito Negativo:</span>
                                     <span id="spring-raft-qneg" class="text-base font-bold text-amber-400 block mt-0.5">-- kN</span>
-                                    <span class="text-[10px] text-slate-400 block">Camada mole (≤8.5m)</span>
+                                    <span class="text-[10px] text-slate-400 block">Camada mole</span>
                                 </div>
                                 <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
-                                    <span class="text-[10px] text-slate-400 font-sans block">Reação da Laje (ks):</span>
+                                    <span class="text-[10px] text-slate-400 font-sans block">Reação Laje (ks):</span>
                                     <span id="spring-raft-ks" class="text-base font-bold text-purple-400 block mt-0.5">-- kN/m³</span>
-                                    <span class="text-[10px] text-slate-400 block">Contato solo-radier</span>
+                                    <span class="text-[10px] text-slate-400 block">Contato radier</span>
                                 </div>
                             </div>
                         </div>
 
                         <button type="button" onclick="exportSpringsToPiledRaft()" class="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-lg shadow-md hover:shadow-cyan-500/25 flex items-center justify-center gap-2 text-xs transition-all cursor-pointer">
-                            <span>🚀</span> Aplicar Molas no Radier Estaqueado
+                            <span>🚀</span> Aplicar no Radier Estaqueado
                         </button>
                     </div>
 
-                    <!-- Card 2: Viga de Coroamento sob Trem-Tipo -->
+                    <!-- Card 3: Viga de Coroamento sob Trem-Tipo -->
                     <div class="bg-slate-800/80 backdrop-blur rounded-xl p-5 border border-indigo-500/30 shadow-lg flex flex-col justify-between relative overflow-hidden group hover:border-indigo-400 transition-all">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all pointer-events-none"></div>
                         <div>
                             <div class="flex items-center justify-between mb-3">
                                 <span class="font-bold text-base text-indigo-300 flex items-center gap-2">
-                                    <span>🚂</span> Viga Estaqueada sob Trem-Tipo
+                                    <span>🚂</span> Viga Estaqueada
                                 </span>
-                                <span class="text-[10px] font-mono bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800">Pórtico 148,42 tf</span>
+                                <span class="text-[10px] font-mono bg-indigo-950/80 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800">Trem-Tipo / Pórtico</span>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3 mb-4 text-xs font-mono">
                                 <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
                                     <span class="text-[10px] text-slate-400 font-sans block">Mola Vertical (Kz):</span>
                                     <span id="spring-beam-kz" class="text-base font-bold text-indigo-400 block mt-0.5">-- kN/m</span>
-                                    <span id="spring-beam-kz-sub" class="text-[10px] text-slate-400 block">Apoio axial da viga</span>
+                                    <span id="spring-beam-kz-sub" class="text-[10px] text-slate-400 block">Apoio axial</span>
                                 </div>
                                 <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
                                     <span class="text-[10px] text-slate-400 font-sans block">Mola Horizontal (Kx):</span>
                                     <span id="spring-beam-kx" class="text-base font-bold text-amber-400 block mt-0.5">-- kN/m</span>
-                                    <span id="spring-beam-kx-sub" class="text-[10px] text-slate-400 block">Engastada (frenagem)</span>
+                                    <span id="spring-beam-kx-sub" class="text-[10px] text-slate-400 block">Frenagem</span>
                                 </div>
                                 <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
-                                    <span class="text-[10px] text-slate-400 font-sans block">Compressão Adm. (Radm):</span>
+                                    <span class="text-[10px] text-slate-400 font-sans block">Compressão Adm.:</span>
                                     <span id="spring-beam-radm" class="text-base font-bold text-emerald-400 block mt-0.5">-- kN</span>
-                                    <span class="text-[10px] text-slate-400 block">Limite NBR 6122</span>
+                                    <span class="text-[10px] text-slate-400 block">NBR 6122</span>
                                 </div>
                                 <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-700">
                                     <span class="text-[10px] text-slate-400 font-sans block">Tração Adm. (Tadm):</span>
                                     <span id="spring-beam-tadm" class="text-base font-bold text-rose-400 block mt-0.5">-- kN</span>
-                                    <span class="text-[10px] text-slate-400 block">Arrancamento sob frenagem</span>
+                                    <span class="text-[10px] text-slate-400 block">Arrancamento</span>
                                 </div>
                             </div>
                         </div>
 
                         <button type="button" onclick="exportSpringsToPiledBeam()" class="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-lg shadow-md hover:shadow-indigo-500/25 flex items-center justify-center gap-2 text-xs transition-all cursor-pointer">
-                            <span>🚀</span> Aplicar Molas na Viga de Coroamento
+                            <span>🚀</span> Aplicar na Viga de Coroamento
                         </button>
                     </div>
                 </div>
@@ -234,8 +371,8 @@
                         <div class="space-y-4 text-sm">
                             <!-- Tipo de Estaca -->
                             <div>
-                                <label class="block font-medium mb-1">Tipo de Estaca</label>
-                                <select id="pile_type" onchange="updatePileFactors(); triggerCalculation();" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-medium">
+                                <label class="eng-label">Tipo de Estaca</label>
+                                <select id="pile_type" onchange="updatePileFactors(); triggerCalculation();" class="eng-input font-medium">
                                     <option value="PRÉ-MOLDADA DE CONCRETO CRAVA A PERCUSSÃO" selected>Pré-moldada Concreto Cravada a Percussão</option>
                                     <option value="FRANKI DE FUSTE APILOADO">Franki de Fuste Apiloado</option>
                                     <option value="FRANKI DE FUSTE VIBRADO">Franki de Fuste Vibrado</option>
@@ -246,64 +383,76 @@
                                     <option value="STRAUSS">Strauss</option>
                                     <option value="HÉLICE CONTÍNUA">Hélice Contínua</option>
                                 </select>
-                                <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    <span>Fator Ponta F1: <strong id="val-f1" class="text-blue-600 dark:text-blue-400 font-bold">2.5</strong></span>
-                                    <span>Fator Fuste F2: <strong id="val-f2" class="text-blue-600 dark:text-blue-400 font-bold">3.5</strong></span>
+                                <div class="grid grid-cols-2 gap-2 mt-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-xs">
+                                    <div class="border-r border-gray-200 dark:border-gray-600 pr-2">
+                                        <span class="text-[10px] font-bold text-gray-400 block uppercase">Aoki-Velloso (1975)</span>
+                                        <div class="flex justify-between mt-0.5">
+                                            <span>F1 (Ponta): <strong id="val-f1" class="text-blue-600 dark:text-blue-400 font-bold">2.5</strong></span>
+                                            <span>F2 (Fuste): <strong id="val-f2" class="text-blue-600 dark:text-blue-400 font-bold">3.5</strong></span>
+                                        </div>
+                                    </div>
+                                    <div class="pl-2">
+                                        <span class="text-[10px] font-bold text-gray-400 block uppercase">Décourt (1996)</span>
+                                        <div class="flex justify-between mt-0.5">
+                                            <span>α (Ponta): <strong id="val-alpha" class="text-indigo-600 dark:text-indigo-400 font-bold">1.0</strong></span>
+                                            <span>β (Fuste): <strong id="val-beta" class="text-indigo-600 dark:text-indigo-400 font-bold">1.0</strong></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Geometria -->
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block font-medium mb-1">Geometria</label>
-                                    <select id="geometry" onchange="toggleGeometryInputs(); triggerCalculation();" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Geometria</label>
+                                    <select id="geometry" onchange="toggleGeometryInputs(); triggerCalculation();" class="eng-input">
                                         <option value="Circular" selected>Circular</option>
                                         <option value="Quadrada">Quadrada / Retangular</option>
                                     </select>
                                 </div>
                                 <div id="diam-container">
-                                    <label class="block font-medium mb-1">Diâmetro d (m)</label>
-                                    <input type="number" id="diameter" value="1.0" step="0.05" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Diâmetro d (m)</label>
+                                    <input type="number" id="diameter" value="1.0" step="0.05" min="0.2" class="eng-input">
                                 </div>
                             </div>
 
                             <!-- Retangular Dims -->
                             <div id="rect-container" class="grid grid-cols-2 gap-3 hidden">
                                 <div>
-                                    <label class="block font-medium mb-1">Largura b (m)</label>
-                                    <input type="number" id="width_b" value="1.0" step="0.05" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Largura b (m)</label>
+                                    <input type="number" id="width_b" value="1.0" step="0.05" min="0.2" class="eng-input">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Altura h (m)</label>
-                                    <input type="number" id="height_h" value="1.0" step="0.05" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Altura h (m)</label>
+                                    <input type="number" id="height_h" value="1.0" step="0.05" min="0.2" class="eng-input">
                                 </div>
                             </div>
 
                             <!-- Comprimento e Recalque -->
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block font-medium mb-1">Profundidade L (m)</label>
-                                    <input type="number" id="depth_pile" value="16.0" step="0.5" min="1.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Profundidade L (m)</label>
+                                    <input type="number" id="depth_pile" value="16.0" step="0.5" min="1.0" class="eng-input">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Recalque Adm. (mm)</label>
-                                    <input type="number" id="allowable_settlement_mm" value="5.0" step="0.5" min="1.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Recalque Adm. (mm)</label>
+                                    <input type="number" id="allowable_settlement_mm" value="5.0" step="0.5" min="1.0" class="eng-input">
                                 </div>
                             </div>
 
                             <!-- Solo & Grupo -->
                             <div class="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label class="block font-medium mb-1">γ Solo (tf/m³)</label>
-                                    <input type="number" id="soil_gamma" value="1.8" step="0.1" min="1.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">γ Solo (tf/m³)</label>
+                                    <input type="number" id="soil_gamma" value="1.8" step="0.1" min="1.0" class="eng-input">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Nº Estacas</label>
-                                    <input type="number" id="num_piles" value="15" step="1" min="1" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Nº Estacas</label>
+                                    <input type="number" id="num_piles" value="15" step="1" min="1" class="eng-input">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Massa (ton)</label>
-                                    <input type="number" id="structure_mass_ton" value="1690.4" step="10" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Massa (ton)</label>
+                                    <input type="number" id="structure_mass_ton" value="1690.4" step="10" min="0" class="eng-input">
                                 </div>
                             </div>
                         </div>
@@ -345,13 +494,20 @@
 
                 <!-- Right Column: Charts & Stratigraphy (8 cols) -->
                 <div class="lg:col-span-8 space-y-6">
-                    <!-- Visual Charts Section (Tabbed or 2-column) -->
+                    <!-- Visual Charts Grid (2x2) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                         <!-- Chart 1: N_SPT vs Depth -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
-                            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                <span>📊</span> Perfil N_SPT vs Profundidade
-                            </h3>
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>📊</span> Perfil N_SPT vs Profundidade
+                                </h3>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="copyChartToClipboard(chartNsptInstance)" title="Copiar PNG transparente" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">📋</button>
+                                    <button type="button" onclick="downloadChartPNG(chartNsptInstance,'nspt_profile.png',true)" title="PNG transparente (Word)" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">⬇ PNG</button>
+                                </div>
+                            </div>
                             <div class="h-64">
                                 <canvas id="chartNspt"></canvas>
                             </div>
@@ -359,14 +515,124 @@
 
                         <!-- Chart 2: Cumulative Resistance Curve -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
-                            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                <span>📈</span> Curva de Carga Acumulada (tf)
-                            </h3>
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>📈</span> Capacidade: Aoki-Velloso vs Décourt (tf)
+                                </h3>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="copyChartToClipboard(chartCapacityInstance)" title="Copiar PNG transparente" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">📋</button>
+                                    <button type="button" onclick="downloadChartPNG(chartCapacityInstance,'capacidade_estaca.png',true)" title="PNG transparente (Word)" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">⬇ PNG</button>
+                                </div>
+                            </div>
                             <div class="h-64">
                                 <canvas id="chartCapacity"></canvas>
                             </div>
                         </div>
+
+                        <!-- Chart 3: Molas Dinâmicas e Estáticas por Metro -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>🔩</span> Molas por Metro — Kz_dyn / Kh_dyn / Kz_estático (kN/m/m)
+                                </h3>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="copyChartToClipboard(chartSpringsInstance)" title="Copiar PNG transparente" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">📋</button>
+                                    <button type="button" onclick="downloadChartPNG(chartSpringsInstance,'molas_por_metro.png',true)" title="PNG transparente (Word)" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">⬇ PNG</button>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="chartSprings"></canvas>
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Eixo Y invertido — profundidade crescente para baixo. Escala kN/m por metro de comprimento de estaca (uso direto em SAP2000/ETABS).</p>
+                        </div>
+
+                        <!-- Chart 4: Empuxo Ativo e Passivo -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>🧱</span> Empuxo Ativo / Passivo — Rankine &amp; Coulomb (kPa)
+                                </h3>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="copyChartToClipboard(chartEarthPressureInstance)" title="Copiar PNG transparente" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">📋</button>
+                                    <button type="button" onclick="downloadChartPNG(chartEarthPressureInstance,'empuxo_solo.png',true)" title="PNG transparente (Word)" class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 transition-colors">⬇ PNG</button>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="chartEarthPressure"></canvas>
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Parâmetros inferidos automaticamente do perfil SPT. Ajuste H do muro abaixo.</p>
+                        </div>
                     </div>
+
+                    <!-- Painel de Empuxo de Solo (Parâmetros + KPIs) -->
+                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 rounded-xl shadow-md p-5 border border-amber-200 dark:border-amber-800">
+                        <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2 mb-4">
+                            <span>🧱</span> Empuxo de Solo — Muro de Arrimo (Rankine &amp; Coulomb)
+                            <span class="text-xs font-normal text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full ml-1">Parâmetros inferidos do SPT</span>
+                        </h3>
+                        <!-- Parâmetros inferidos + override -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div>
+                                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Altura do Muro H (m)</label>
+                                <input type="number" id="ep-input-H" step="0.5" min="1" max="30" value="5.0"
+                                    onchange="triggerCalculation()"
+                                    class="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm font-semibold focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-600 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Atrito muro-solo δ (°)</label>
+                                <input type="number" id="ep-input-delta" step="1" min="0" max="40" value="0"
+                                    onchange="triggerCalculation()"
+                                    class="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">φ manual (° — deixe 0 para inferir)</label>
+                                <input type="number" id="ep-input-phi" step="0.5" min="0" max="45" value="0"
+                                    onchange="triggerCalculation()"
+                                    placeholder="auto"
+                                    class="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">c manual (kPa — 0 para inferir)</label>
+                                <input type="number" id="ep-input-c" step="1" min="0" value="0"
+                                    onchange="triggerCalculation()"
+                                    class="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+                            </div>
+                        </div>
+                        <!-- KPIs de Empuxo -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <!-- Parâmetros inferidos -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">φ estimado</p>
+                                <p id="ep-phi" class="text-base font-bold text-amber-700 dark:text-amber-300">--</p>
+                                <p class="text-xs text-gray-400">γ: <span id="ep-gamma">--</span> | c: <span id="ep-c">--</span></p>
+                                <p class="text-xs text-gray-400">H = <span id="ep-H">--</span></p>
+                            </div>
+                            <!-- Ka e Kp -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-amber-200 dark:border-amber-700">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Coeficientes</p>
+                                <div class="grid grid-cols-2 gap-x-2 text-xs mt-1">
+                                    <span class="text-gray-500">Ka Rank:</span><span id="ep-ka-rank" class="font-bold text-red-600 dark:text-red-400">--</span>
+                                    <span class="text-gray-500">Kp Rank:</span><span id="ep-kp-rank" class="font-bold text-blue-600 dark:text-blue-400">--</span>
+                                    <span class="text-gray-500">Ka Coul:</span><span id="ep-ka-coul" class="font-bold text-orange-600 dark:text-orange-400">--</span>
+                                    <span class="text-gray-500">Kp Coul:</span><span id="ep-kp-coul" class="font-bold text-cyan-600 dark:text-cyan-400">--</span>
+                                </div>
+                            </div>
+                            <!-- Resultantes Rankine -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-200 dark:border-red-800">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Resultantes Rankine</p>
+                                <p class="text-xs mt-1"><span class="text-gray-500">Ea =</span> <span id="ep-ea-rank" class="font-bold text-red-600 dark:text-red-400">--</span></p>
+                                <p class="text-xs"><span class="text-gray-500">Ep =</span> <span id="ep-ep-rank" class="font-bold text-blue-600 dark:text-blue-400">--</span></p>
+                                <p class="text-xs text-gray-400 mt-1">Ponto: <span id="ep-ya">--</span></p>
+                            </div>
+                            <!-- Resultantes Coulomb -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Resultantes Coulomb</p>
+                                <p class="text-xs mt-1"><span class="text-gray-500">Ea =</span> <span id="ep-ea-coul" class="font-bold text-orange-600 dark:text-orange-400">--</span></p>
+                                <p class="text-xs"><span class="text-gray-500">Ep =</span> <span id="ep-ep-coul" class="font-bold text-cyan-600 dark:text-cyan-400">--</span></p>
+                            </div>
+                        </div>
+                    </div>
+
 
                     <!-- Dynamic Stratigraphy Table -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
@@ -376,7 +642,7 @@
                                     <span>📑</span> Perfil Estratigráfico e Resultados Camada a Camada
                                 </h3>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    Adicione, remova ou modifique as camadas de solo e os índices de penetração N_SPT.
+                                    Comparativo cota a cota entre os métodos Aoki-Velloso e Décourt-Quaresma com parâmetros elásticos.
                                 </p>
                             </div>
                             <div class="flex items-center gap-2">
@@ -397,12 +663,13 @@
                                         <th class="py-2.5 px-3">Prof. (m)</th>
                                         <th class="py-2.5 px-3">Tipo de Solo</th>
                                         <th class="py-2.5 px-3">N_SPT</th>
-                                        <th class="py-2.5 px-3">rl (kg/m²)</th>
-                                        <th class="py-2.5 px-3">rp (kg/m²)</th>
+                                        <th class="py-2.5 px-3">rl Aoki (kg/m²)</th>
+                                        <th class="py-2.5 px-3">rp Aoki (kg/m²)</th>
+                                        <th class="py-2.5 px-3">C Décourt (kPa)</th>
+                                        <th class="py-2.5 px-3">ql Décourt (kPa)</th>
+                                        <th class="py-2.5 px-3 text-emerald-600 dark:text-emerald-400 font-bold">Radm Aoki (tf)</th>
+                                        <th class="py-2.5 px-3 text-blue-600 dark:text-blue-400 font-bold">Radm Décourt (tf)</th>
                                         <th class="py-2.5 px-3">Kz Estático (tf/m)</th>
-                                        <th class="py-2.5 px-3">Kh Mín (tf/m)</th>
-                                        <th class="py-2.5 px-3">G (tf/m²)</th>
-                                        <th class="py-2.5 px-3">Vs (m/s)</th>
                                         <th class="py-2.5 px-3 text-center">Ações</th>
                                     </tr>
                                 </thead>

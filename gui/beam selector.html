@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AISC Beam Selector (Table 3-10)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
@@ -24,9 +24,9 @@
   </head>
 
   <body
-    class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200"
+    class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200 min-h-screen flex flex-col"
   >
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
       <div id="header-placeholder" style="min-height: 110px"></div>
 
       <main id="beam-selector-main">
@@ -58,25 +58,25 @@
               </h3>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="shape_type"
                   >Shape Type</label
                 >
                 <select
                   id="shape_type"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <option value="W" selected>W - Wide Flange</option>
                   <option value="S">S - American Standard Beam</option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1" data-i18n="method"
+                <label class="eng-label" data-i18n="method"
                   >Method</label
                 >
                 <select
                   id="design_method"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <option value="LRFD" selected>LRFD (&phi; = 0.9)</option>
                   <option value="ASD">ASD (&Omega; = 1.67)</option>
@@ -85,7 +85,7 @@
               </div>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="steel_yield_fy"
                   >Steel Yield (F<sub>y</sub>)</label
                 >
@@ -94,7 +94,7 @@
                     type="text"
                     id="Fy"
                     value="50"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                    class="eng-input"
                   />
                   <span class="flex items-center text-sm text-gray-500"
                     >ksi</span
@@ -104,13 +104,13 @@
 
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="desired_section_opt"
                   >Desired Section (Optional)</label
                 >
                 <select
                   id="desired_section"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 >
                   <option value="" data-i18n="check_specific_beam">
                     -- Check Specific Beam --
@@ -128,7 +128,7 @@
               </h3>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="unbraced_length_lb"
                   >Unbraced Length (L<sub>b</sub>)</label
                 >
@@ -137,7 +137,7 @@
                     type="text"
                     id="Lb"
                     value="5"
-                    class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 font-bold text-blue-700 dark:text-blue-300"
+                    class="eng-select text-blue-700 dark:text-blue-300"
                   />
                   <span class="flex items-center text-sm text-gray-500"
                     >ft</span
@@ -152,7 +152,7 @@
               </div>
               <div>
                 <label
-                  class="block text-sm font-medium mb-1"
+                  class="eng-label"
                   data-i18n="moment_gradient_cb"
                   >Moment Gradient (C<sub>b</sub>)</label
                 >
@@ -160,7 +160,7 @@
                   type="text"
                   id="Cb"
                   value="1.14"
-                  class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  class="eng-input"
                 />
                 <p class="text-xs text-gray-400 mt-1" data-i18n="cb_desc">
                   1.0 = Conservative. 1.14 = Simple Span Uniform Load.
@@ -176,9 +176,9 @@
                   </label>
                   
                   <div id="cantilever_inputs" class="hidden mt-2 bg-orange-50 dark:bg-orange-900/20 p-2 rounded border border-orange-200 dark:border-orange-800">
-                    <label class="block text-xs font-semibold text-orange-800 dark:text-orange-300 mb-1">Cantilever Length (ft)</label>
+                    <label class="eng-label text-orange-800 dark:text-orange-300">Cantilever Length (ft)</label>
                     <div class="flex gap-2">
-                        <input type="text" id="cantilever_ft" value="5" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 font-bold">
+                        <input type="text" id="cantilever_ft" value="5" class="eng-select">
                         <span class="flex items-center text-xs text-gray-500">ft</span>
                     </div>
                     <p class="text-[10px] text-orange-600 dark:text-orange-400 mt-1 leading-tight">
@@ -200,7 +200,7 @@
                   </label>
                   
                   <div id="inventory_inputs" class="hidden mt-2">
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Available Options (Shape | Lb)</label>
+                    <label class="eng-label">Available Options (Shape | Lb)</label>
                     <textarea id="inventory_data" rows="4" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-blue-500 font-mono text-xs" placeholder="W8X13&#9;4.3&#10;W8X15&#9;5.2"></textarea>
                     <p class="text-[10px] text-gray-500 mt-1 leading-tight">
                         <strong>Note:</strong> Paste table data here. Overrides shape pool and Lb for each listed beam.
@@ -215,8 +215,8 @@
                 Support Configuration
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1">Support Detail</label>
-                <select id="support_type" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                <label class="eng-label">Support Detail</label>
+                <select id="support_type" class="eng-input">
                   <option value="NONE" selected>None (Beam Only)</option>
                   <option value="HSS_BRACE">HSS6x6x3/8 Leg w/ 2L3x3x1/4 Knee Brace</option>
                   <option value="PIPE_NO_BRACE">3.5in Pipe Leg (No Brace)</option>
@@ -226,15 +226,15 @@
               <div id="support_inputs" class="hidden space-y-3 pt-2">
                 <div class="grid grid-cols-2 gap-2">
                   <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Column Unbraced Length (ft)</label>
+                    <label class="eng-label">Column Unbraced Length (ft)</label>
                     <div class="flex gap-2">
-                      <input type="text" id="column_lb" value="12" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 font-bold" />
+                      <input type="text" id="column_lb" value="12" class="eng-select" />
                       <span class="flex items-center text-xs text-gray-500">ft</span>
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Leg Setup</label>
-                    <select id="num_legs" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 font-bold">
+                    <label class="eng-label">Leg Setup</label>
+                    <select id="num_legs" class="eng-select">
                       <option value="1" selected>Single (1)</option>
                       <option value="2">Double (2)</option>
                       <option value="3">Triple (3)</option>
@@ -245,14 +245,14 @@
                 <div id="brace_inputs" class="hidden border-t border-gray-100 dark:border-gray-700 pt-2 mt-2">
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Brace Horiz Dist (a)</label>
+                      <label class="eng-label">Brace Horiz Dist (a)</label>
                       <div class="flex gap-1">
                         <input type="text" id="brace_a" value="4" class="w-full p-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" />
                         <span class="flex items-center text-[10px] text-gray-500">ft</span>
                       </div>
                     </div>
                     <div>
-                      <label class="block text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Brace Angle (&theta;)</label>
+                      <label class="eng-label">Brace Angle (&theta;)</label>
                       <div class="flex gap-1">
                         <input type="text" id="brace_theta" value="45" class="w-full p-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" />
                         <span class="flex items-center text-[10px] text-gray-500">&deg;</span>
@@ -285,7 +285,7 @@
                     value="100"
                     min="1"
                     max="100"
-                    class="w-16 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-center font-bold text-blue-600 dark:text-blue-400"
+                    class="eng-input text-center text-blue-600 dark:text-blue-400"
                   />
                   <span class="absolute right-1 top-2 text-xs text-gray-500"
                     >%</span

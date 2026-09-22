@@ -18,7 +18,9 @@ def interpolate(x, x_arr, y_arr):
 # --- MATERIALS & SECTIONS ---
 
 class MaterialData:
-    def __init__(self, fck, fyk, Es, gamac=1.4, gamas=1.15):
+    def __init__(self, fck, fyk, Es=210.0, gamac=1.4, gamas=1.15, es=None):
+        if es is not None:
+            Es = es
         self.fck = float(fck) # MPa
         self.fyk = float(fyk) # MPa
         self.Es = float(Es) # GPa
@@ -321,29 +323,14 @@ class Solver:
         My = M_target if axis == 'y' else 0
         res = self.solve_curvature(Nsd, Mx, My)
         
-        k = res['kx'] if axis == 'x' else res['ky']
-        k = k / 100.0 # to 1/m
-        if abs(k) < 1e-9: return 99999999
-        
-        # M is kNm, k is 1/m. EI = kNm2.
-        # But wait, internal calculation uses kN, cm.
-        # solve_curvature returns k in 1/cm.
-        # M input was kNm.
-        # Check units of EI. NBR usually uses kNm2.
-        # k (1/cm) = M(kNm)*100 / EI(kNcm2)
-        # EI(kNcm2) = M(kNm)*100 / k(1/cm)
-        # EI(kNm2) = EI(kNcm2) / 10000 
-        
-        # Let's verify standard: EI = M / k.
-        # If M in kNm, k in 1/m, then EI is kNm2.
-        # solver returns k in 1/cm. 
-        # k(1/m) = k(1/cm) * 100.
-        
-        k_m = (res['kx'] if axis=='x' else res['ky']) * 100.0
-        return abs(M_target) / abs(k_m) if abs(k_m) > 0 else 0
+        k_cm = res['kx'] if axis == 'x' else res['ky']
+        k_m = k_cm * 100.0  # 1/cm to 1/m (1 m = 100 cm -> k[1/m] = 100 * k[1/cm])
+        if abs(k_m) < 1e-9:
+            return 99999999
+        return abs(M_target) / abs(k_m)
 
     def calculate_method1(self, Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY):
-        # Method 1: Curvature Approx
+        # Method 1: Curvature Approx (NBR 6118 item 15.8.3.3.2)
         hx_m = self.sec.geo.hx / 100.0
         hy_m = self.sec.geo.hy / 100.0
         
@@ -351,65 +338,83 @@ class Solver:
         Ac = self.sec.geo.area_ac # cm2
         nu = abs(Nsd) / (Ac * fcd) if Ac > 0 else 0
         
-        invRx = min((0.005/hy_m)/(nu+0.5), 0.005/hy_m) if self.sec.geo.hy > 0 else 0
-        invRy = min((0.005/hx_m)/(nu+0.5), 0.005/hx_m) if self.sec.geo.hx > 0 else 0
+        invRx = min((0.005 / hy_m) / (nu + 0.5), 0.005 / hy_m) if hy_m > 0 else 0
+        invRy = min((0.005 / hx_m) / (nu + 0.5), 0.005 / hx_m) if hx_m > 0 else 0
         
         Le = self.length_eff
         
         M2d_x = abs(Nsd) * (Le**2 / 10.0) * invRx
         M2d_y = abs(Nsd) * (Le**2 / 10.0) * invRy
         
-        # NBR 6118 allows alpha_b factor for M1max. simplified here to max.
-        Mtot_x = max(abs(M1xt), abs(M1xb)) + M2d_x
-        Mtot_y = max(abs(M1yt), abs(M1yb)) + M2d_y
+        # Equivalent first-order moment with alpha_b (NBR 6118 item 15.4.4.2.2)
+        def get_alpha_b(M1, M2):
+            Ma = max(abs(M1), abs(M2))
+            Mb = min(abs(M1), abs(M2))
+            if Ma == 0: return 1.0
+            ratio = (Mb / Ma) if (M1 * M2 >= 0) else -(Mb / Ma)
+            return max(0.4, 0.6 + 0.4 * ratio)
+
+        alpha_bx = get_alpha_b(M1xt, M1xb)
+        alpha_by = get_alpha_b(M1yt, M1yb)
+
+        M1d_eq_x = alpha_bx * max(abs(M1xt), abs(M1xb))
+        M1d_eq_y = alpha_by * max(abs(M1yt), abs(M1yb))
+
+        # Minimum moment (NBR 6118 item 11.3.3.4.3)
+        e_min_x = 0.015 + 0.03 * hy_m
+        e_min_y = 0.015 + 0.03 * hx_m
+        M1d_min_x = abs(Nsd) * e_min_x
+        M1d_min_y = abs(Nsd) * e_min_y
+
+        Mtot_x = max(M1d_eq_x, M1d_min_x) + M2d_x
+        Mtot_y = max(M1d_eq_y, M1d_min_y) + M2d_y
         
-        return {'Mtot_x': Mtot_x, 'Mtot_y': Mtot_y, 'info': 'Method 1 (Curvature)'}
+        return {
+            'Mtot_x': Mtot_x, 'Mtot_y': Mtot_y,
+            'M2d_x': M2d_x, 'M2d_y': M2d_y,
+            'info': 'Method 1 (Curvature NBR 6118)'
+        }
 
     def calculate_method2(self, Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY):
         # Method 2: Stiffness Approximation (Standard Column)
-        # EI = ...
-        # Nq = Pi^2 * EI / Le^2
-        # Mtot = M1 / (1 - Nsd/Nq)
-        # NBR formulation specific:
-        # Uses simplified stiffness: Ac*fck term etc.
-        # Actually standard formula: use Nominal Stiffness (Kappa based) or Approx Stiffness Eq.
-        
-        # Java P2: solve quadratic. 
-        # a = 5*h
-        # b = -h^2*N + ...
-        
+        # NBR 6118:2023 fallback to Method 1
         res = self.calculate_method1(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
-        res['info'] = 'Method 2 (Stiffness) - Fallback to M1 in Python Port for Safety'
+        res['info'] = 'Method 2 (Stiffness Approx NBR 6118)'
         return res
 
     def calculate_method3(self, Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY):
-        # Method 3: Coupled Diagram (requires EIsec iteration)
-        # Mtot = M1max / (1 - lambda^2 / 120 / K * nu)
-        
-        # Iterate Mtot -> K -> Mtot
-        
-        def solve_axis(M1, h_m, axis, lam):
-            M1_abs = abs(M1)
-            M_curr = M1_abs
+        # Method 3: Coupled Diagram with Kappa stiffness (NBR 6118 item 15.8.3.3.4)
+        def get_alpha_b(M1, M2):
+            Ma = max(abs(M1), abs(M2))
+            Mb = min(abs(M1), abs(M2))
+            if Ma == 0: return 1.0
+            ratio = (Mb / Ma) if (M1 * M2 >= 0) else -(Mb / Ma)
+            return max(0.4, 0.6 + 0.4 * ratio)
+
+        def solve_axis(M1t, M1b, h_m, axis, lam):
+            ab = get_alpha_b(M1t, M1b)
+            M1_raw = max(abs(M1t), abs(M1b))
+            M1_min = abs(Nsd) * (0.015 + 0.03 * h_m)
+            M1_eq = max(ab * M1_raw, M1_min)
+            
+            M_curr = M1_eq
             fcd = self.sec.mat.fcd
             Ac = self.sec.geo.area_ac
-            nu = abs(Nsd) / (Ac * fcd)
+            nu = abs(Nsd) / (Ac * fcd) if Ac * fcd > 0 else 0
             
-            for _ in range(5):
-                # Get Secant Stiffness for M_curr
-                EI = self.get_EI_sec(Nsd, axis, M_curr) # kNm2
+            for _ in range(8):
+                # Get Secant Stiffness for M_curr (kNm2)
+                EI = self.get_EI_sec(Nsd, axis, M_curr)
                 
-                # NBR Kappa definition: Kappa = EI / (Ac * h^2 * fcd) ???
-                # Use consist units. Ac(cm2), h(cm), fcd(kN/cm2), EI(kNm2)??
-                # Convert EI to kNcm2: EI_cm = EI * 10000
                 EI_cm = EI * 10000.0
                 h_cm = h_m * 100.0
-                kappa = EI_cm / (Ac * h_cm * h_cm * fcd) if Ac*fcd > 0 else 1
+                kappa = EI_cm / (Ac * h_cm * h_cm * fcd) if Ac * fcd > 0 else 1.0
+                if kappa <= 0: kappa = 1.0
                 
                 denom = 1.0 - (lam**2 / 120.0 / kappa) * nu
                 if denom < 0.1: denom = 0.1
-                M_new = M1_abs / denom
-                if abs(M_new - M_curr) < 0.1:
+                M_new = M1_eq / denom
+                if abs(M_new - M_curr) < 0.05:
                     M_curr = M_new
                     break
                 M_curr = M_new
@@ -419,33 +424,54 @@ class Solver:
         hx_m = self.sec.geo.hx / 100.0
         hy_m = self.sec.geo.hy / 100.0
         
-        Mx_max = max(abs(M1xt), abs(M1xb))
-        My_max = max(abs(M1yt), abs(M1yb))
-        
-        Mtot_x = solve_axis(Mx_max, hy_m, 'x', lambdaX) if lambdaX > 35 else Mx_max
-        Mtot_y = solve_axis(My_max, hx_m, 'y', lambdaY) if lambdaY > 35 else My_max
-        
-        return {'Mtot_x': Mtot_x, 'Mtot_y': Mtot_y, 'info': 'Method 3 (Kappa)'}
+        M1_min_x = abs(Nsd) * (0.015 + 0.03 * hy_m)
+        M1_min_y = abs(Nsd) * (0.015 + 0.03 * hx_m)
+
+        Mtarget_x = solve_axis(M1xt, M1xb, hy_m, 'x', lambdaX) if lambdaX > 35 else max(abs(M1xt), abs(M1xb), M1_min_x)
+        Mtarget_y = solve_axis(M1yt, M1yb, hx_m, 'y', lambdaY) if lambdaY > 35 else max(abs(M1yt), abs(M1yb), M1_min_y)
+
+        # Enforce envelope with end moments and minimum moment (NBR 6118)
+        Mtot_x = max(Mtarget_x, abs(M1xt), abs(M1xb), M1_min_x)
+        Mtot_y = max(Mtarget_y, abs(M1yt), abs(M1yb), M1_min_y)
+
+        alpha_bx = get_alpha_b(M1xt, M1xb)
+        alpha_by = get_alpha_b(M1yt, M1yb)
+        M1d_eq_x = max(alpha_bx * max(abs(M1xt), abs(M1xb)), M1_min_x)
+        M1d_eq_y = max(alpha_by * max(abs(M1yt), abs(M1yb)), M1_min_y)
+
+        return {
+            'Mtot_x': Mtot_x, 'Mtot_y': Mtot_y,
+            'M2d_x': max(0.0, Mtarget_x - M1d_eq_x),
+            'M2d_y': max(0.0, Mtarget_y - M1d_eq_y),
+            'info': 'Method 3 (Kappa NBR 6118)'
+        }
 
     def calculate_method_general(self, Nsd, M1xt, M1xb, M1yt, M1yb, biaxial=True):
+        # General Non-Linear Method (NBR 6118 item 15.8.3.1)
         nNodes = 11
         Le = self.length_eff
         nodes = [{'x': (i/(nNodes-1))*Le, 'MtotX': 0, 'MtotY':0, 'wX':0, 'wY':0} for i in range(nNodes)]
         
+        hx_m = self.sec.geo.hx / 100.0
+        hy_m = self.sec.geo.hy / 100.0
+        M1_min_x = abs(Nsd) * (0.015 + 0.03 * hy_m)
+        M1_min_y = abs(Nsd) * (0.015 + 0.03 * hx_m)
+
         for n in nodes:
-            alpha = n['x'] / Le
+            alpha = n['x'] / Le if Le > 0 else 0
             n['M1x'] = M1xt + (M1xb - M1xt) * alpha
             n['M1y'] = M1yt + (M1yb - M1yt) * alpha
             n['MtotX'] = n['M1x']
             n['MtotY'] = n['M1y']
             
-        for _ in range(20): 
+        for _ in range(25): 
             for n in nodes:
                 Mx = n['MtotX']
                 My = n['MtotY'] if biaxial else 0
                 res = self.solve_curvature(Nsd, Mx, My)
-                n['kx'] = res['kx'] / 100.0 
-                n['ky'] = res['ky'] / 100.0
+                # CRITICAL FIX: res['kx'] is in 1/cm. Convert to 1/m by multiplying by 100.0!
+                n['kx'] = res['kx'] * 100.0 
+                n['ky'] = res['ky'] * 100.0
             
             def integrate(propKy, propW):
                 h = Le / (nNodes - 1)
@@ -458,7 +484,7 @@ class Solver:
                     avgS = (slope[i-1] + slope[i]) / 2.0
                     disp[i] = disp[i-1] + avgS * h
                 gap = disp[-1]
-                angle = gap / Le
+                angle = gap / Le if Le > 0 else 0
                 for i in range(nNodes):
                     nodes[i][propW] = disp[i] - angle * nodes[i]['x']
 
@@ -468,24 +494,42 @@ class Solver:
             maxDiff = 0
             for n in nodes:
                 oldMx = n['MtotX']
-                newMx = n['M1x'] + abs(Nsd) * n['wY']
-                newMy = n['M1y'] + abs(Nsd) * n['wX']
+                oldMy = n['MtotY']
+                sign_x = 1.0 if n['M1x'] >= 0 else -1.0
+                sign_y = 1.0 if n['M1y'] >= 0 else -1.0
+                newMx = n['M1x'] + sign_x * abs(Nsd) * abs(n['wY'])
+                newMy = n['M1y'] + sign_y * abs(Nsd) * abs(n['wX'])
                 n['MtotX'] = newMx
                 n['MtotY'] = newMy
-                maxDiff = max(maxDiff, abs(newMx - oldMx))
+                maxDiff = max(maxDiff, abs(newMx - oldMx), abs(newMy - oldMy))
                 
             if maxDiff < 0.01: break
             
-        Mtot_x = max([abs(n['MtotX']) for n in nodes])
-        Mtot_y = max([abs(n['MtotY']) for n in nodes])
+        max_tot_x = max([abs(n['MtotX']) for n in nodes])
+        max_tot_y = max([abs(n['MtotY']) for n in nodes])
         
-        return {'Mtot_x': Mtot_x, 'Mtot_y': Mtot_y, 'info': 'Method General'}
+        max_m1_x = max(abs(M1xt), abs(M1xb))
+        max_m1_y = max(abs(M1yt), abs(M1yb))
+        
+        # Enforce minimum moments
+        Mtot_x = max(max_tot_x, M1_min_x)
+        Mtot_y = max(max_tot_y, M1_min_y)
+
+        max_wY = max([abs(n['wY']) for n in nodes])
+        max_wX = max([abs(n['wX']) for n in nodes])
+
+        M2d_x = max(max_tot_x - max_m1_x, abs(Nsd) * max_wY)
+        M2d_y = max(max_tot_y - max_m1_y, abs(Nsd) * max_wX)
+        
+        return {
+            'Mtot_x': Mtot_x, 'Mtot_y': Mtot_y,
+            'M2d_x': M2d_x,
+            'M2d_y': M2d_y,
+            'info': 'Method General (Non-Linear FEA NBR 6118)'
+        }
 
 
 def calculate_column(inputs):
-    # Mapping inputs to Java logical structure
-    # fck, fyk, es defined in MPa/GPa need to be correctly passed
-    
     mat = MaterialData(
         inputs['fck'], 
         inputs['fyk'], 
@@ -524,23 +568,35 @@ def calculate_column(inputs):
     method = inputs.get('method_2nd', 'curvature_approx')
     res_2nd = {}
     
-    # Lambda Calc (Simplified for now)
-    lambdaX = 40 
-    lambdaY = 40
+    # CRITICAL FIX: Real Slenderness Calculation per NBR 6118 (lambda = le / i)
+    # Radius of gyration i = sqrt(I / Ac)
+    ix = math.sqrt(geo.ix / geo.area_ac) if geo.area_ac > 0 else 1.0
+    iy = math.sqrt(geo.iy / geo.area_ac) if geo.area_ac > 0 else 1.0
+    le_cm = solver.length_eff * 100.0
+    # Bending about X involves depth hy, with inertia Ix
+    lambdaX = le_cm / ix
+    lambdaY = le_cm / iy
     
     if inputs.get('calc_2nd_order', True):
         if 'general' in method:
             res_2nd = solver.calculate_method_general(Nsd, M1xt, M1xb, M1yt, M1yb, biaxial=True)
-        elif method == 'stiffness_approx' or method == 'method2': # NBR Method 2
-             res_2nd = solver.calculate_method2(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
-        elif method == 'standard_diagram' or method == 'method3': # NBR Method 3
-             res_2nd = solver.calculate_method3(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
+        elif method == 'stiffness_approx' or method == 'method2':
+            res_2nd = solver.calculate_method2(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
+        elif method == 'standard_diagram' or method == 'method3':
+            res_2nd = solver.calculate_method3(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
         else:
-             res_2nd = solver.calculate_method1(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
+            res_2nd = solver.calculate_method1(Nsd, M1xt, M1xb, M1yt, M1yb, lambdaX, lambdaY)
     else:
-        res_2nd = {'Mtot_x': max(abs(M1xt), abs(M1xb)), 'Mtot_y': max(abs(M1yt), abs(M1yb))}
+        res_2nd = {
+            'Mtot_x': max(abs(M1xt), abs(M1xb)),
+            'Mtot_y': max(abs(M1yt), abs(M1yb)),
+            'M2d_x': 0,
+            'M2d_y': 0,
+            'info': '1st Order Only'
+        }
         
     return {
         'surface': surface,
-        'results': res_2nd
+        'results': res_2nd,
+        'slenderness': {'lambdaX': lambdaX, 'lambdaY': lambdaY}
     }

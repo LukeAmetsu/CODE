@@ -13,6 +13,7 @@ class I18nManager {
         this.currentLang = 'en';
         this.supportedLangs = ['en', 'pt', 'es'];
         this.elementsToTranslate = [];
+        this.initPromise = null;
         I18nManager.instance = this;
     }
 
@@ -21,13 +22,21 @@ class I18nManager {
      * translation files, and setting up the initial page translation.
      */
     async initialize() {
-        this.elementsToTranslate = document.querySelectorAll('[data-i18n]');
-        const userLang = localStorage.getItem('language') || navigator.language.split('-')[0];
-        this.currentLang = this.supportedLangs.includes(userLang) ? userLang : 'en';
-        document.documentElement.lang = this.currentLang;
+        if (!this.initPromise) {
+            this.initPromise = (async () => {
+                this.elementsToTranslate = document.querySelectorAll('[data-i18n]');
+                const userLang = localStorage.getItem('language') || navigator.language.split('-')[0];
+                this.currentLang = this.supportedLangs.includes(userLang) ? userLang : 'en';
+                document.documentElement.lang = this.currentLang;
 
-        await this._loadAllTranslations();
-        this.translatePage();
+                await this._loadAllTranslations();
+                this.translatePage();
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: this.currentLang } }));
+                }
+            })();
+        }
+        return this.initPromise;
     }
 
     /**
@@ -72,30 +81,66 @@ class I18nManager {
         localStorage.setItem('language', lang);
         document.documentElement.lang = lang;
         this.translatePage();
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: this.currentLang } }));
+        }
     }
 
     /**
      * Translates all elements on the page with a `data-i18n` attribute.
      */
     translatePage() {
+        if (!this.translations || Object.keys(this.translations).length === 0) {
+            return;
+        }
         // Re-query the DOM each time to catch dynamically added elements.
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
-            element.textContent = this.get(key);
+            const val = this.get(key);
+            if (val && val !== key) {
+                if (element.tagName === 'INPUT' && (element.type === 'button' || element.type === 'submit')) {
+                    element.value = val;
+                } else {
+                    element.textContent = val;
+                }
+            }
         });
+
+        document.querySelectorAll('[data-i18n-title]').forEach(element => {
+            const key = element.getAttribute('data-i18n-title');
+            const val = this.get(key);
+            if (val && val !== key) {
+                element.setAttribute('title', val);
+            }
+        });
+
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+            const key = element.getAttribute('data-i18n-placeholder');
+            const val = this.get(key);
+            if (val && val !== key) {
+                element.setAttribute('placeholder', val);
+            }
+        });
+
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('pageTranslated', { detail: { lang: this.currentLang } }));
+        }
     }
 
     /**
      * Gets a translation for a given key.
      * @param {string} key - The i18n key.
-     * @returns {string} The translated string, or a formatted key if not found.
+     * @param {string} [fallback] - Fallback text if key not found or not yet loaded.
+     * @returns {string} The translated string, or fallback/formatted key if not found.
      */
-    get(key) {
+    get(key, fallback = null) {
+        if (!this.translations || Object.keys(this.translations).length === 0) {
+            return fallback !== null ? fallback : key;
+        }
         const translation = this.translations[this.currentLang]?.[key];
         if (translation === undefined) {
-            console.warn(`Translation key not found for lang '${this.currentLang}': ${key}`);
-            // Fallback to English if available, otherwise return the formatted key
-            return this.translations['en']?.[key] || key;
+            // Fallback to English if available, otherwise return fallback or formatted key
+            return this.translations['en']?.[key] || (fallback !== null ? fallback : key);
         }
         return translation;
     }
@@ -103,8 +148,8 @@ class I18nManager {
     /**
      * Alias for get() to maintain compatibility with template.js
      */
-    t(key) {
-        return this.get(key);
+    t(key, fallback = null) {
+        return this.get(key, fallback);
     }
 
     /**
@@ -116,11 +161,18 @@ class I18nManager {
 }
 
 // --- Global Instance and Initialization ---
-// --- Global Instance and Initialization ---
 window.i18n = new I18nManager();
-// The initialization is now handled by `initializeApp` in shared-utils.js
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            window.i18n.initialize().catch(e => console.warn('i18n init error:', e));
+        });
+    } else {
+        window.i18n.initialize().catch(e => console.warn('i18n init error:', e));
+    }
+}
 
 // Expose a global `getTranslation` function for convenience in other scripts
-function getTranslation(key) {
-    return window.i18n.get(key);
+function getTranslation(key, fallback = null) {
+    return window.i18n ? window.i18n.get(key, fallback) : (fallback !== null ? fallback : key);
 }

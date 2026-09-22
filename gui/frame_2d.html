@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pórtico Plano 2D ("Ftool Web") - Análise Estrutural</title>
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="frame_2d.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'frame-2d',
+                    pageTitle: 'frame_2d',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-6">
+            <!-- Header Section -->
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                        <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7M4 18h4"></path>
+                        </svg>
+                        Pórtico Plano 2D ("Ftool Web")
+                    </h1>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Análise estrutural matricial 2D com nós arbitrários, barras rotuladas, molas elásticas, diagramas contínuos de N, V, M (convenção brasileira de tração) e deformada.
+                    </p>
+                </div>
+
+                <!-- Presets -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="loadFramePreset('portal')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        🏛️ Pórtico com Vento
+                    </button>
+                    <button type="button" onclick="loadFramePreset('retaining_wall')" class="bg-amber-700 hover:bg-amber-800 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        🧱 Muro com Empuxo de Solo
+                    </button>
+                    <button type="button" onclick="loadFramePreset('continuous_beam')" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        📏 Viga Contínua
+                    </button>
+                    <button type="button" onclick="loadFramePreset('gerber')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        🔗 Pórtico Gerber
+                    </button>
+                    <button type="button" onclick="loadFramePreset('truss')" class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        📐 Treliça Plana
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Workspace: Side-by-Side (Inputs on Left, Canvas/Results on Right) -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+                <!-- LEFT COLUMN: Inputs & Typical Loads Wizard (5 cols on xl) -->
+                <div class="xl:col-span-5 flex flex-col gap-5">
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <div class="flex flex-wrap items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-2 gap-2">
+                            <div class="flex flex-wrap gap-3">
+                                <button type="button" id="tab-nodes" onclick="switchDataTab('nodes')" class="font-bold text-xs text-indigo-600 border-b-2 border-indigo-600 pb-2 flex items-center gap-1">
+                                    📍 Nós (<span id="count-nodes">0</span>)
+                                </button>
+                                <button type="button" id="tab-members" onclick="switchDataTab('members')" class="font-semibold text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 pb-2 flex items-center gap-1">
+                                    📏 Barras (<span id="count-members">0</span>)
+                                </button>
+                                <button type="button" id="tab-loads" onclick="switchDataTab('loads')" class="font-semibold text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 pb-2 flex items-center gap-1">
+                                    ⬇️ Cargas (<span id="count-loads">0</span>)
+                                </button>
+                                <button type="button" id="tab-typical" onclick="switchDataTab('typical')" class="font-semibold text-xs text-amber-600 hover:text-amber-700 pb-2 flex items-center gap-1">
+                                    🚜 Cargas Típicas (Solo/Água)
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-1" id="tab-actions-container">
+                                <button type="button" id="btn-add-line" onclick="addRowCurrentTab()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-[11px] font-semibold py-1 px-2.5 rounded-md text-gray-700 dark:text-gray-200">
+                                    + Adicionar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 1. Nodes Table -->
+                        <div id="panel-nodes" class="overflow-x-auto max-h-[580px]">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase sticky top-0">
+                                    <tr>
+                                        <th class="p-2">Nó</th>
+                                        <th class="p-2">X (m)</th>
+                                        <th class="p-2">Y (m)</th>
+                                        <th class="p-2">Apoio</th>
+                                        <th class="p-2">Kx</th>
+                                        <th class="p-2">Ky</th>
+                                        <th class="p-2">Krot</th>
+                                        <th class="p-2 text-center">✕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-nodes" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Generated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 2. Members Table -->
+                        <div id="panel-members" class="hidden overflow-x-auto max-h-[580px]">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase sticky top-0">
+                                    <tr>
+                                        <th class="p-2">Barra</th>
+                                        <th class="p-2">i</th>
+                                        <th class="p-2">j</th>
+                                        <th class="p-2">E (GPa)</th>
+                                        <th class="p-2">A (cm²)</th>
+                                        <th class="p-2">I (cm⁴)</th>
+                                        <th class="p-2 text-center">Rót. i</th>
+                                        <th class="p-2 text-center">Rót. j</th>
+                                        <th class="p-2 text-center">✕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-members" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Generated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 3. Loads Table -->
+                        <div id="panel-loads" class="hidden overflow-x-auto max-h-[580px]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-500">Cargas nodais e distribuídas ativas</span>
+                                <div class="flex gap-1.5">
+                                    <button type="button" onclick="addNodeLoadRow()" class="bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 hover:bg-blue-100 text-[11px] font-semibold py-0.5 px-2 rounded">
+                                        + Carga Nodal
+                                    </button>
+                                    <button type="button" onclick="addMemberLoadRow()" class="bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-100 text-[11px] font-semibold py-0.5 px-2 rounded">
+                                        + Carga Barra
+                                    </button>
+                                </div>
+                            </div>
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase sticky top-0">
+                                    <tr>
+                                        <th class="p-2">Tipo</th>
+                                        <th class="p-2">Alvo</th>
+                                        <th class="p-2">X / qx (kN ou kN/m)</th>
+                                        <th class="p-2">Y / qy (kN ou kN/m)</th>
+                                        <th class="p-2">Mz / Obs</th>
+                                        <th class="p-2 text-center">✕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-loads" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Generated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 4. Typical Loads Assistant (Empuxo de Solo, Água, Vento) -->
+                        <div id="panel-typical" class="hidden space-y-4">
+                            <div class="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg p-3">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-base">🚜</span>
+                                    <span class="font-bold text-xs text-amber-900 dark:text-amber-300">Assistente de Cargas Lineares Típicas</span>
+                                </div>
+                                <p class="text-[11px] text-amber-800 dark:text-amber-400">
+                                    Aplique empuxo lateral de solo (triangular/trapezoidal), pressão hidrostática ou vento com 1 clique diretamente nas barras do pórtico.
+                                </p>
+                            </div>
+
+                            <!-- Selector of Typical Load Type -->
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" id="btn-typ-soil" onclick="switchTypicalSubtype('soil')" class="py-1.5 px-2 text-xs font-bold rounded-lg border border-amber-500 bg-amber-500 text-white flex items-center justify-center gap-1 shadow-xs">
+                                    🧱 Empuxo Solo
+                                </button>
+                                <button type="button" id="btn-typ-hydro" onclick="switchTypicalSubtype('hydro')" class="py-1.5 px-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 flex items-center justify-center gap-1 shadow-xs">
+                                    💧 Hidrostático
+                                </button>
+                                <button type="button" id="btn-typ-trapezoid" onclick="switchTypicalSubtype('trapezoid')" class="py-1.5 px-2 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 flex items-center justify-center gap-1 shadow-xs">
+                                    📐 Trapezoidal
+                                </button>
+                            </div>
+
+                            <!-- SUB-FORM 1: Empuxo de Solo -->
+                            <div id="subform-soil" class="space-y-3 bg-gray-50 dark:bg-gray-750 p-3.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Barra Alvo (Pilar/Muro):</label>
+                                        <select id="soil-member-id" onchange="onSoilMemberChange()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                            <!-- populated dynamically -->
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Sentido do Empuxo:</label>
+                                        <select id="soil-direction" onchange="updateSoilPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                            <option value="right">➡️ Empurrando p/ Direita (+X)</option>
+                                            <option value="left">⬅️ Empurrando p/ Esquerda (-X)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Altura H (m):</label>
+                                        <input type="number" id="soil-h" step="0.1" value="4.0" oninput="updateSoilPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Peso γ (kN/m³):</label>
+                                        <input type="number" id="soil-gamma" step="0.5" value="18.0" oninput="updateSoilPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Coef. Empuxo K:</label>
+                                        <input type="number" id="soil-k" step="0.01" value="0.33" oninput="updateSoilPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Sobrecarga no Topo q_sc (kN/m²):</label>
+                                    <input type="number" id="soil-qsc" step="1.0" value="0.0" oninput="updateSoilPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                </div>
+
+                                <!-- Realtime Computed Preview Box -->
+                                <div class="bg-indigo-50/70 dark:bg-indigo-950/40 p-2.5 rounded border border-indigo-200 dark:border-indigo-800 text-[11px] space-y-1">
+                                    <div class="font-bold text-indigo-900 dark:text-indigo-300">Prévia do Carregamento Calculado:</div>
+                                    <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                                        <span>Carga no Topo (q_topo):</span>
+                                        <strong id="soil-prev-qtop" class="text-indigo-700 dark:text-indigo-300">0.0 kN/m</strong>
+                                    </div>
+                                    <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                                        <span>Carga na Base (q_base):</span>
+                                        <strong id="soil-prev-qbase" class="text-indigo-700 dark:text-indigo-300">23.8 kN/m</strong>
+                                    </div>
+                                    <div class="flex justify-between text-gray-700 dark:text-gray-300 border-t border-indigo-200/60 dark:border-indigo-800/60 pt-1">
+                                        <span>Empuxo Resultante Total (E):</span>
+                                        <strong id="soil-prev-etot" class="text-emerald-600 dark:text-emerald-400">47.5 kN</strong>
+                                    </div>
+                                </div>
+
+                                <button type="button" onclick="applySoilPressureToModel()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow-sm">
+                                    ➕ Aplicar Empuxo de Solo no Modelo
+                                </button>
+                            </div>
+
+                            <!-- SUB-FORM 2: Pressão Hidrostática -->
+                            <div id="subform-hydro" class="hidden space-y-3 bg-gray-50 dark:bg-gray-750 p-3.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Barra Alvo:</label>
+                                        <select id="hydro-member-id" onchange="onHydroMemberChange()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                            <!-- populated dynamically -->
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Sentido:</label>
+                                        <select id="hydro-direction" onchange="updateHydroPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                            <option value="right">➡️ Empurrando p/ Direita (+X)</option>
+                                            <option value="left">⬅️ Empurrando p/ Esquerda (-X)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Lâmina d'Água H (m):</label>
+                                        <input type="number" id="hydro-h" step="0.1" value="3.0" oninput="updateHydroPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">γ_água (kN/m³):</label>
+                                        <input type="number" id="hydro-gamma" step="0.1" value="10.0" oninput="updateHydroPreview()" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50/70 dark:bg-blue-950/40 p-2.5 rounded border border-blue-200 dark:border-blue-800 text-[11px] space-y-1">
+                                    <div class="flex justify-between text-gray-700 dark:text-gray-300">
+                                        <span>Pressão na Base (q_base):</span>
+                                        <strong id="hydro-prev-qbase" class="text-blue-700 dark:text-blue-300">30.0 kN/m</strong>
+                                    </div>
+                                    <div class="flex justify-between text-gray-700 dark:text-gray-300 border-t border-blue-200/60 dark:border-blue-800/60 pt-1">
+                                        <span>Resultante Hidrostática:</span>
+                                        <strong id="hydro-prev-etot" class="text-emerald-600 dark:text-emerald-400">45.0 kN</strong>
+                                    </div>
+                                </div>
+
+                                <button type="button" onclick="applyHydroPressureToModel()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow-sm">
+                                    💧 Aplicar Carga Hidrostática
+                                </button>
+                            </div>
+
+                            <!-- SUB-FORM 3: Trapezoidal Geral -->
+                            <div id="subform-trapezoid" class="hidden space-y-3 bg-gray-50 dark:bg-gray-750 p-3.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-300 mb-1">Barra Alvo:</label>
+                                    <select id="trap-member-id" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                        <!-- populated dynamically -->
+                                    </select>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Carga no Nó Inicial qi (kN/m):</label>
+                                        <input type="number" id="trap-qi" step="5" value="-10.0" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-medium text-gray-500 mb-0.5">Carga no Nó Final qj (kN/m):</label>
+                                        <input type="number" id="trap-qj" step="5" value="-25.0" class="w-full text-xs rounded border p-1.5 bg-white dark:bg-gray-700">
+                                    </div>
+                                </div>
+
+                                <p class="text-[11px] text-gray-500">
+                                    * Valores negativos atuam para baixo (gravidade) em vigas ou para a esquerda em pilares.
+                                </p>
+
+                                <button type="button" onclick="applyTrapezoidalLoadToModel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 shadow-sm">
+                                    📐 Aplicar Carga Trapezoidal
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: Canvas Viewer & Results Badges (7 cols on xl) -->
+                <div class="xl:col-span-7 flex flex-col gap-4 sticky top-4">
+
+                    <!-- 2D Canvas Viewer with Diagram Mode Switcher -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-3 border-b border-gray-200 dark:border-gray-700 pb-3">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300 mr-1">Modo:</span>
+                                <div class="inline-flex rounded-md shadow-xs flex-wrap" role="group">
+                                    <button type="button" id="btn-mode-model" onclick="setDisplayMode('model')" class="px-2.5 py-1 text-xs font-semibold rounded-l-lg border border-gray-300 dark:border-gray-600 bg-indigo-600 text-white">
+                                        📐 Modelo
+                                    </button>
+                                    <button type="button" id="btn-mode-moment" onclick="setDisplayMode('moment')" class="px-2.5 py-1 text-xs font-semibold border-t border-b border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100">
+                                        🔄 Momento (M)
+                                    </button>
+                                    <button type="button" id="btn-mode-shear" onclick="setDisplayMode('shear')" class="px-2.5 py-1 text-xs font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100">
+                                        ✂️ Cortante (V)
+                                    </button>
+                                    <button type="button" id="btn-mode-axial" onclick="setDisplayMode('axial')" class="px-2.5 py-1 text-xs font-semibold border-t border-b border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100">
+                                        ↔️ Normal (N)
+                                    </button>
+                                    <button type="button" id="btn-mode-deflected" onclick="setDisplayMode('deflected')" class="px-2.5 py-1 text-xs font-semibold rounded-r-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100">
+                                        🌊 Deformada
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Canvas Controls (Zoom / Reset / Solve) -->
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                    Escala:
+                                    <input type="range" id="diagram-scale" min="0.2" max="3.0" step="0.1" value="1.0" oninput="redrawCanvas()" class="w-16">
+                                </label>
+                                <button type="button" onclick="resetCanvasView()" class="px-2 py-1 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    🔍 Vista
+                                </button>
+                                <button type="button" onclick="solveModel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3.5 rounded-lg text-xs transition-colors flex items-center gap-1 shadow-sm">
+                                    ⚡ Resolver
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Canvas -->
+                        <div class="relative w-full h-[500px] bg-slate-900 rounded-lg overflow-hidden border border-gray-700">
+                            <canvas id="frame-canvas" width="1000" height="500" class="eng-cad-canvas w-full h-full cursor-crosshair"></canvas>
+                            
+                            <!-- HUD Overlay -->
+                            <div class="absolute bottom-2.5 left-2.5 bg-black/70 backdrop-blur-xs text-white text-[11px] px-2.5 py-1 rounded-md pointer-events-none font-mono" id="canvas-hud">
+                                Pan: Arraste com o mouse | Zoom: Roda do mouse
+                            </div>
+
+                            <!-- Hover Inspection Box -->
+                            <div id="canvas-tooltip" class="hidden absolute bg-gray-900/90 text-white text-xs px-3 py-2 rounded shadow-lg border border-gray-600 pointer-events-none font-mono z-20">
+                                Tooltip
+                            </div>
+                        </div>
+
+                        <!-- Analysis Summary Badges -->
+                        <div class="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center">
+                            <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Deslocamento Máx.</div>
+                                <div id="res-frame-dmax" class="text-sm font-extrabold text-blue-600 dark:text-blue-400 my-0.5">-</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Momento Máx.</div>
+                                <div id="res-frame-mmax" class="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 my-0.5">-</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Cortante Máx.</div>
+                                <div id="res-frame-vmax" class="text-sm font-extrabold text-amber-600 dark:text-amber-400 my-0.5">-</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Normal Máx.</div>
+                                <div id="res-frame-nmax" class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 my-0.5">-</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-750 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <div class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Status do Modelo</div>
+                                <div id="res-frame-status" class="text-sm font-bold text-emerald-600 my-0.5">Pronto</div>
+                            </div>
+                        </div>
+
+                        <!-- Reactions Summary Strip -->
+                        <div id="reactions-summary-container" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs hidden">
+                            <div class="font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
+                                <span>⚓ Reações de Apoio nos Nós:</span>
+                                <span class="text-[11px] font-normal text-gray-500">Conferência de Equilíbrio</span>
+                            </div>
+                            <div id="reactions-badges" class="flex flex-wrap gap-2">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+
+        <div id="footer-placeholder"></div>
+    </div>
+
+</body>
+
+</html>

@@ -7,7 +7,7 @@
     <title>Verificador de Viga Protendida (NBR 6118)</title>
 
     <!-- Dependências Externas -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -15,16 +15,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Configuração de Tema -->
+    <!-- Configuração de Tema Imediata -->
     <script>
         (function () {
-            const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            document.documentElement.classList.toggle('dark', isDark);
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
         })();
     </script>
 
     <!-- Arquivos Base do Projeto -->
     <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
@@ -34,181 +39,310 @@
     <script src="viga_protendida.js" defer></script>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
-        <main id="concrete-beam-form">
-            <h1 class="text-2xl font-bold mb-6 text-center">Verificador de Viga Protendida (Multi-Cabo / NBR 6118)</h1>
+        <main id="concrete-beam-form" class="mt-4">
+            <!-- Executive Header -->
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800">
+                            NBR 6118:2023 Concreto Protendido
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+                            Pós-Tensionada c/ Aderência
+                        </span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                            CAD 2D Interativo
+                        </span>
+                    </div>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span>⚡</span>
+                        Viga Protendida NBR 6118
+                    </h1>
+                    <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Dimensionamento e verificação de vigas protendidas biapoiadas com multi-cabos parabólicos/retos, avaliação de perdas imediatas e diferidas no tempo (fluência, retração e relaxação) e verificação nos estados limites ELS e ELU.
+                    </p>
+                </div>
 
+                <!-- Action Buttons: Save & Load -->
+                <div class="flex items-center gap-2 self-start md:self-auto">
+                    <button type="button" id="load-inputs-btn"
+                        class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 transition-all flex items-center gap-1.5 shadow-sm">
+                        <span>📂</span> Carregar Projeto
+                    </button>
+                    <button type="button" id="save-inputs-btn"
+                        class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-600/20">
+                        <span>💾</span> Salvar Projeto
+                    </button>
+                    <input type="file" id="file-input" class="hidden" accept=".txt,.json">
+                </div>
+            </div>
+
+            <!-- Predefinições Rápidas de Seção / Quick Presets Bar -->
+            <div class="mb-6 bg-white dark:bg-gray-800 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <span class="text-base">📐</span> Predefinições Rápidas de Viga:
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="loadPrestressedPreset('viga_i_ponte')"
+                        class="preset-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-all flex items-center gap-1.5">
+                        <span>🌉</span> Viga I (Pontes / OAEs - 20m)
+                    </button>
+                    <button type="button" onclick="loadPrestressedPreset('viga_t_edificio')"
+                        class="preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 transition-all flex items-center gap-1.5">
+                        <span>🏢</span> Viga T (Edifícios / Lajes - 16m)
+                    </button>
+                    <button type="button" onclick="loadPrestressedPreset('viga_caixao')"
+                        class="preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 transition-all flex items-center gap-1.5">
+                        <span>📦</span> Viga Caixão (Passarelas - 24m)
+                    </button>
+                    <button type="button" onclick="loadPrestressedPreset('viga_retangular')"
+                        class="preset-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 transition-all flex items-center gap-1.5">
+                        <span>▮</span> Viga Retangular (12m)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Workspace 3-Column Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                <!-- Coluna 1: Parâmetros Gerais e Materiais -->
+                <!-- Coluna 1: Parâmetros de Materiais e Perdas -->
                 <div class="space-y-6">
-                    <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
-                        <h2 class="font-bold mb-3 border-b pb-1">Parâmetros Gerais</h2>
-                        <div class="grid grid-cols-2 gap-4">
+                    <!-- Card 1: Materiais Concreto & Aço -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <h2 class="font-bold text-sm text-purple-600 dark:text-purple-400 mb-3 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span>🧱</span> Materiais (NBR 6118)
+                        </h2>
+                        <div class="grid grid-cols-2 gap-3.5 text-xs">
                             <div>
-                                <label class="block text-xs font-medium mb-1">Norma</label>
-                                <input type="text" id="design_code" value="NBR 6118"
-                                    class="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm" readonly>
+                                <label class="eng-label">Norma de Projeto</label>
+                                <input type="text" id="design_code" value="NBR 6118:2023"
+                                    class="eng-input font-mono" readonly>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Sistema</label>
+                                <label class="eng-label">Sistema</label>
                                 <select id="unit_system"
-                                    class="w-full p-2 bg-white dark:bg-gray-700 border rounded text-sm">
-                                    <option value="metric">Métrico</option>
+                                    class="eng-input">
+                                    <option value="metric">Métrico (kN, m, MPa)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Concreto f<sub>ck</sub> (MPa)</label>
-                                <input type="number" id="fck" value="35"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Concreto f<sub>ck</sub> (MPa)</label>
+                                <select id="fck" class="eng-select">
+                                    <option value="30">C30 (fck = 30 MPa)</option>
+                                    <option value="35" selected>C35 (fck = 35 MPa)</option>
+                                    <option value="40">C40 (fck = 40 MPa)</option>
+                                    <option value="45">C45 (fck = 45 MPa)</option>
+                                    <option value="50">C50 (fck = 50 MPa)</option>
+                                    <option value="60">C60 (fck = 60 MPa)</option>
+                                </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Aço f<sub>ptk</sub> (MPa)</label>
-                                <input type="number" id="fptk" value="1900"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Aço Protensão f<sub>ptk</sub></label>
+                                <select id="fptk" class="eng-select">
+                                    <option value="1900" selected>CP-190 RB (1900 MPa)</option>
+                                    <option value="2100">CP-210 RB (2100 MPa)</option>
+                                    <option value="1750">CP-175 RN (1750 MPa)</option>
+                                </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Aço E<sub>p</sub> (MPa)</label>
-                                <input type="number" id="Ep" value="200000"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Mód. Aço E<sub>p</sub> (MPa)</label>
+                                <input type="number" id="Ep" value="200000" step="5000"
+                                    class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Área Cordoalha (cm²)</label>
-                                <input type="number" id="Ap" value="1.40"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Área Cordoalha A<sub>p</sub> (cm²)</label>
+                                <select id="Ap" class="eng-select font-mono">
+                                    <option value="1.40" selected>1,40 cm² (Ø 15,2 mm)</option>
+                                    <option value="0.987">0,987 cm² (Ø 12,7 mm)</option>
+                                    <option value="1.65">1,65 cm² (Ø 16,0 mm)</option>
+                                </select>
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
-                        <h2 class="font-bold mb-3 border-b pb-1">Perdas (Parâmetros)</h2>
-                        <div class="grid grid-cols-2 gap-4">
+                    <!-- Card 2: Parâmetros de Perdas de Protensão -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <h2 class="font-bold text-sm text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span>⏳</span> Perdas de Protensão (NBR 6118)
+                        </h2>
+                        <div class="grid grid-cols-2 gap-3.5 text-xs">
                             <div>
-                                <label class="block text-xs font-medium mb-1">Atrito (μ)</label>
-                                <input type="number" id="mu" value="0.2"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label" title="Coeficiente de atrito cabo-bainha">Atrito μ (rad⁻¹)</label>
+                                <input type="number" id="mu" value="0.20" step="0.02" min="0.10" max="0.35"
+                                    class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Ondulação (k)</label>
-                                <input type="number" id="k" value="0.002"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label" title="Coeficiente de perda por ondulação parasita">Ondulação k (m⁻¹)</label>
+                                <input type="number" id="k" value="0.0020" step="0.0005"
+                                    class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Acomodação (mm)</label>
-                                <input type="number" id="anchorage_slip" value="6"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Acomodação Ancoragem (mm)</label>
+                                <input type="number" id="anchorage_slip" value="6.0" step="0.5" min="2" max="12"
+                                    class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Umidade (%)</label>
-                                <input type="number" id="humidity" value="70"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Umidade Relativa U (%)</label>
+                                <input type="number" id="humidity" value="70" step="5" min="30" max="95"
+                                    class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Tipo Cimento (s)</label>
+                                <label class="eng-label">Cimento (s NBR 6118)</label>
                                 <select id="cement_s_factor"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
-                                    <option value="0.25">Normal (CPI/II)</option>
-                                    <option value="0.20">Rápido (CPV)</option>
+                                    class="eng-input">
+                                    <option value="0.25" selected>CP-I / CP-II (s=0,25)</option>
+                                    <option value="0.20">CP-V ARI (s=0,20 - Rápido)</option>
+                                    <option value="0.38">CP-III / CP-IV (s=0,38 - Lento)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Perímetro (m)</label>
-                                <input type="number" id="exposed_perimeter" value="2.0"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Perímetro Exposto (m)</label>
+                                <input type="number" id="exposed_perimeter" value="2.8" step="0.2" min="0.5"
+                                    class="eng-input font-mono">
                             </div>
-                            <!-- Inputs ocultos para compatibilidade com lógica antiga se necessário -->
                             <input type="hidden" id="cement_alpha_factor" value="1">
                             <input type="hidden" id="Kperdas" value="0.85">
                         </div>
                     </div>
                 </div>
 
-                <!-- Coluna 2: Geometria e Cabos -->
+                <!-- Coluna 2: Geometria e Configuração de Cabos -->
                 <div class="space-y-6">
-                    <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
-                        <h2 class="font-bold mb-3 border-b pb-1">Geometria da Viga</h2>
-                        <div class="grid grid-cols-2 gap-4 mb-4">
+                    <!-- Card 3: Geometria da Viga -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <h2 class="font-bold text-sm text-blue-600 dark:text-blue-400 mb-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span class="flex items-center gap-2"><span>📐</span> Geometria da Viga</span>
+                            <span id="beam-height-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">h = 100 cm</span>
+                        </h2>
+                        <div class="grid grid-cols-2 gap-3.5 mb-3 text-xs">
                             <div>
-                                <label class="block text-xs font-medium mb-1">Comprimento (m)</label>
-                                <input type="number" id="beam_length" value="20"
-                                    class="w-full p-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600">
+                                <label class="eng-label">Comprimento Vão L (m)</label>
+                                <input type="number" id="beam_length" value="20" step="1" min="4" max="60"
+                                    class="w-full p-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium mb-1">Altura Aprox (cm)</label>
-                                <input type="number" id="beam_height" readonly
-                                    class="w-full p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm">
+                                <label class="eng-label">Altura da Seção (cm)</label>
+                                <input type="number" id="beam_height" value="100" readonly
+                                    class="w-full p-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-xs font-mono text-gray-500">
                             </div>
                         </div>
-                        <label class="block text-xs font-medium mb-1">Coordenadas Seção (cm)</label>
-                        <textarea id="beam_coords" rows="4"
-                            class="w-full p-2 border rounded text-sm font-mono dark:bg-gray-700 dark:border-gray-600">0,100
-50,100
-50,85
-20,85
-20,15
-50,15
-50,0
-0,0</textarea>
+                        <div>
+                            <div class="flex items-center justify-between mb-1 text-xs">
+                                <label class="eng-label">Vértices da Seção (X, Y em cm)</label>
+                                <span class="text-[10px] text-gray-400">Polígono fechado no sentido horário</span>
+                            </div>
+                            <textarea id="beam_coords" rows="5"
+                                class="w-full p-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono leading-relaxed resize-y">0, 100
+50, 100
+50, 85
+34, 85
+34, 15
+47.5, 15
+47.5, 0
+2.5, 0
+2.5, 15
+16, 15
+16, 85
+0, 85</textarea>
+                        </div>
                     </div>
 
-                    <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
-                        <div class="flex justify-between items-center mb-3 border-b pb-1">
-                            <h2 class="font-bold">Grupos de Cabos</h2>
-                            <button id="add-cable-group-btn"
-                                class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">+
-                                Grupo</button>
+                    <!-- Card 4: Grupos de Cabos de Protensão -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="flex justify-between items-center mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h2 class="font-bold text-sm text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                                <span>🧵</span> Traçado dos Cabos
+                            </h2>
+                            <button type="button" id="add-cable-group-btn"
+                                class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 rounded-lg transition-all flex items-center gap-1 shadow-sm shadow-indigo-600/20">
+                                <span>+</span> Novo Cabo
+                            </button>
                         </div>
-                        <div id="cables-list-container" class="max-h-[500px] overflow-y-auto pr-1">
-                            <!-- JS irá injetar os cartões de cabos aqui -->
+                        <div id="cables-list-container" class="max-h-[380px] overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                            <!-- Injetado dinamicamente via JS com cards modernos -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Coluna 3: Cargas e Gráficos -->
+                <!-- Coluna 3: Cargas & Visualizador da Seção Transversal -->
                 <div class="space-y-6">
-                    <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow">
-                        <h2 class="font-bold mb-3 border-b pb-1">Cargas (kN/m)</h2>
-                        <div class="space-y-2">
-                            <div><label class="text-xs">Peso Próprio</label><input type="number" id="load_pp" value="15"
-                                    class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
-                            <div><label class="text-xs">Permanente</label><input type="number" id="load_perm" value="10"
-                                    class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
-                            <div><label class="text-xs">Variável</label><input type="number" id="load_var" value="15"
-                                    class="w-full p-1 border rounded text-sm dark:bg-gray-700"></div>
+                    <!-- Card 5: Cargas de Serviço -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                        <h2 class="font-bold text-sm text-rose-600 dark:text-rose-400 mb-3 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span>⚖️</span> Ações & Cargas de Serviço (kN/m)
+                        </h2>
+                        <div class="grid grid-cols-3 gap-3 text-xs">
+                            <div>
+                                <label class="eng-label">g<sub>pp</sub> (Próprio)</label>
+                                <input type="number" id="load_pp" value="7.5" step="0.5"
+                                    class="eng-select font-mono">
+                            </div>
+                            <div>
+                                <label class="eng-label">g<sub>perm</sub> (Adicional)</label>
+                                <input type="number" id="load_perm" value="12.0" step="0.5"
+                                    class="eng-select font-mono">
+                            </div>
+                            <div>
+                                <label class="eng-label">q<sub>var</sub> (Acidental)</label>
+                                <input type="number" id="load_var" value="16.0" step="0.5"
+                                    class="eng-select font-mono">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-section bg-white dark:bg-gray-800 p-4 rounded shadow h-[300px]">
-                        <h2 class="font-bold mb-1 text-xs text-center">Seção Transversal</h2>
-                        <div class="relative h-full pb-6">
-                            <canvas id="cross-section-canvas"></canvas>
+                    <!-- Card 6: Seção Transversal 2D CAD -->
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+                        <div class="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h2 class="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>📐</span> Seção Transversal (CAD 2D)
+                            </h2>
+                            <span class="text-[10px] text-gray-400 font-mono">Meio do Vão</span>
+                        </div>
+                        <div class="relative w-full aspect-square max-h-[290px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 shadow-inner flex items-center justify-center">
+                            <canvas id="cross-section-canvas" class="eng-cad-canvas w-full h-full block"></canvas>
+                        </div>
+                        <!-- Section Properties Pills -->
+                        <div id="section-props-pills" class="mt-3 grid grid-cols-3 gap-1.5 text-[10px] text-center">
+                            <!-- Populated via JS -->
                         </div>
                     </div>
+                </div>
+
+            </div>
+
+            <!-- Vista Longitudinal Panorâmica (Perfil dos Cabos 2D CAD) -->
+            <div class="mt-6 bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 border-b border-gray-100 dark:border-gray-700 pb-3">
+                    <div>
+                        <h2 class="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>🔍</span> Vista Longitudinal & Traçado dos Cabos de Protensão
+                        </h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Elevação estrutural com curvatura parabólica/reta, posições de ancoragem ativa/passiva, aparelhos de apoio e excentricidades nodais.
+                        </p>
+                    </div>
+                    <div id="longitudinal-cables-legend" class="flex flex-wrap items-center gap-2.5 text-xs font-semibold">
+                        <!-- Populated dynamically with cable colored badges -->
+                    </div>
+                </div>
+                <div class="relative w-full aspect-[21/8] min-h-[260px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800 shadow-inner">
+                    <canvas id="longitudinal-canvas" class="eng-cad-canvas w-full h-full block"></canvas>
                 </div>
             </div>
 
-            <!-- Vista Longitudinal -->
-            <div class="mt-6 bg-white dark:bg-gray-800 p-4 rounded shadow h-[350px]">
-                <h2 class="font-bold mb-2 text-center">Vista Longitudinal (Traçado dos Cabos)</h2>
-                <div class="relative h-full pb-6">
-                    <canvas id="longitudinal-canvas"></canvas>
-                </div>
-            </div>
-
+            <!-- Executive Calculation Action CTA -->
             <div class="mt-8 flex justify-center items-center gap-4 flex-wrap">
-                <button id="load-inputs-btn"
-                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Carregar</button>
-                <button id="save-inputs-btn"
-                    class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Salvar</button>
-                <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
-                <input type="file" id="file-input" class="hidden" accept=".txt,.json">
-                <button id="run-check-btn"
-                    class="bg-blue-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-blue-700 shadow-lg transform transition hover:scale-105">Calcular
-                    e Verificar</button>
+                <button type="button" id="run-check-btn"
+                    class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-extrabold py-3.5 px-12 rounded-2xl shadow-xl shadow-blue-500/25 hover:shadow-blue-500/40 transform transition hover:-translate-y-0.5 flex items-center gap-3 text-sm md:text-base">
+                    <span>⚡</span>
+                    <span>Calcular & Verificar Viga Protendida (NBR 6118)</span>
+                    <span>→</span>
+                </button>
             </div>
         </main>
 

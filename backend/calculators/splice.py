@@ -10,7 +10,26 @@ AISC_OMEGA = {
 }
 
 # --- Helper Functions ---
-def get_design_factors(inputs, aisc_phi, aisc_omega):
+def is_nbr_standard(inputs):
+    if not isinstance(inputs, dict):
+        return False
+    std = str(inputs.get('design_standard', inputs.get('standard', ''))).strip().upper()
+    code = str(inputs.get('design_code', '')).strip().upper()
+    return 'NBR' in std or '8800' in std or 'NBR' in code or '8800' in code
+
+def extract_standard_inputs(inputs):
+    if not isinstance(inputs, dict):
+        return {}
+    return {
+        'jurisdiction': inputs.get('jurisdiction'),
+        'global_fos': inputs.get('global_fos'),
+        'design_standard': inputs.get('design_standard', inputs.get('standard')),
+        'standard': inputs.get('standard', inputs.get('design_standard')),
+        'design_code': inputs.get('design_code'),
+        'design_method': inputs.get('design_method', 'ASD')
+    }
+
+def get_design_factors(inputs, aisc_phi, aisc_omega, limit_state=None):
     jurisdiction = inputs.get('jurisdiction')
     fos_val = inputs.get('global_fos')
     
@@ -24,6 +43,23 @@ def get_design_factors(inputs, aisc_phi, aisc_omega):
 
     if str(jurisdiction).strip().upper() == 'OSHA':
         return {'phi': 0.25, 'omega': 4.0}
+
+    if is_nbr_standard(inputs):
+        # ABNT NBR 8800:2008 Partial Safety Factors (Item 5.1.3, Tabela 1):
+        # γa0 = 1.10 (Yielding, gross section, flexure) -> phi = 1 / 1.10 ≈ 0.9091, omega = 1.10
+        # γa1 = 1.20 (Compression / Instability) -> phi = 1 / 1.20 ≈ 0.8333, omega = 1.20
+        # γa2 = 1.35 (Rupture, net section, bolts, bearing, block shear) -> phi = 1 / 1.35 ≈ 0.7407, omega = 1.35
+        if limit_state in ['yield', 'gross_yield', 'flex_yield', 'shear_yield', 'slip']:
+            return {'phi': 1.0 / 1.10, 'omega': 1.10, 'gamma': 1.10, 'standard': 'NBR 8800:2008'}
+        elif limit_state in ['compression', 'buckling']:
+            return {'phi': 1.0 / 1.20, 'omega': 1.20, 'gamma': 1.20, 'standard': 'NBR 8800:2008'}
+        elif limit_state in ['rupture', 'net_rupture', 'shear_rupture', 'bearing', 'block_shear', 'bolt_shear', 'bolt_tension', 'bolt_bearing']:
+            return {'phi': 1.0 / 1.35, 'omega': 1.35, 'gamma': 1.35, 'standard': 'NBR 8800:2008'}
+        else:
+            if abs(aisc_phi - 0.90) < 0.05 or abs(aisc_phi - 1.0) < 0.05:
+                return {'phi': 1.0 / 1.10, 'omega': 1.10, 'gamma': 1.10, 'standard': 'NBR 8800:2008'}
+            return {'phi': 1.0 / 1.35, 'omega': 1.35, 'gamma': 1.35, 'standard': 'NBR 8800:2008'}
+
     return {'phi': aisc_phi, 'omega': aisc_omega}
 
 class SpliceCalculator:
@@ -32,22 +68,27 @@ class SpliceCalculator:
 
     def check_bolt_shear(self, inputs):
         """
-        Calculates bolt shear capacity per AISC J3.6.
+        Calculates bolt shear capacity per AISC J3.6 or ABNT NBR 8800:2008 Item 6.3.3.1.
         """
         grade = inputs.get('grade', 'A325')
         db = float(inputs.get('db', 0))
         num_planes = int(inputs.get('num_planes', 1))
-        # threads_incl = inputs.get('threads_incl', True) # Assumed True (N) usually in simplistic calculators unless specified X
-        
-        # Determine Fnv (simplified map) - Logic from splice.js
-        # "A325": 54 (N), "A490": 68 (N)
-        fnv_map = {"A325": 54.0, "A490": 68.0, "F1852": 54.0, "F2280": 68.0}
-        fnv = fnv_map.get(grade, 54.0) # Default A325N
+        threads_excl = not inputs.get('threads_incl', True)
         
         ab = math.pi * (db**2) / 4.0
-        rn = fnv * ab * num_planes
         
-        factors = get_design_factors(inputs, AISC_PHI['shear'], AISC_OMEGA['shear'])
+        if is_nbr_standard(inputs):
+            # NBR 8800:2008 Item 6.3.3.1: Fv,Rd = 0.40 * fub * Ab / γa2 (or 0.50 if threads excluded), γa2 = 1.35
+            fub = 150.0 if ('A490' in str(grade) or '10.9' in str(grade) or 'F2280' in str(grade)) else 120.0
+            coeff = 0.50 if threads_excl else 0.40
+            fnv = coeff * fub
+            rn = fnv * ab * num_planes
+            factors = get_design_factors(inputs, AISC_PHI['shear'], AISC_OMEGA['shear'], limit_state='bolt_shear')
+        else:
+            fnv_map = {"A325": 54.0, "A490": 68.0, "F1852": 54.0, "F2280": 68.0}
+            fnv = fnv_map.get(grade, 54.0)
+            rn = fnv * ab * num_planes
+            factors = get_design_factors(inputs, AISC_PHI['shear'], AISC_OMEGA['shear'], limit_state='bolt_shear')
         
         return {
             'Rn': rn,
@@ -58,41 +99,40 @@ class SpliceCalculator:
             'num_planes': num_planes,
             'grade': grade,
             'db': db,
-            'threads_excl': not inputs.get('threads_incl', True)
+            'threads_excl': threads_excl
         }
 
     def check_bolt_bearing(self, inputs):
         """
-        Calculates bolt bearing capacity per AISC J3.10.
+        Calculates bolt bearing capacity per AISC J3.10 or ABNT NBR 8800:2008 Item 6.3.3.4.
         """
         db = float(inputs.get('db', 0))
         t_ply = float(inputs.get('t_ply', 0))
         fu_ply = float(inputs.get('Fu_ply', 0))
-        le = float(inputs.get('le', 0)) # Edge distance
+        le = float(inputs.get('le', 0))
 
-        s = float(inputs.get('s', 0))   # Spacing
+        s = float(inputs.get('s', 0))
         is_edge = inputs.get('is_edge_bolt', False)
         deformation_considered = inputs.get('deformation_considered', True)
         
-        # Standard hole assumption (AISC Table J3.3: db + 1/16" for db <= 7/8", db + 1/8" for db >= 1")
         hole_dia = (db + 1/8.0) if db >= 1.0 else (db + 1/16.0)
-        
-        tearout_coeff = 1.2 if deformation_considered else 1.5
-        bearing_coeff = 2.4 if deformation_considered else 3.0
         
         lc = (le - hole_dia/2.0) if is_edge else (s - hole_dia)
         if lc < 0: lc = 0
             
+        if is_nbr_standard(inputs):
+            # ABNT NBR 8800:2008 Item 6.3.3.4: Fb,Rd = min(1.2 * lc * t * fu, 2.4 * db * t * fu) / γa2 (γa2 = 1.35)
+            tearout_coeff = 1.2
+            bearing_coeff = 2.4
+        else:
+            tearout_coeff = 1.2 if deformation_considered else 1.5
+            bearing_coeff = 2.4 if deformation_considered else 3.0
+            
         rn_tearout = tearout_coeff * lc * t_ply * fu_ply
         rn_bearing = bearing_coeff * db * t_ply * fu_ply
-        
         rn = min(rn_tearout, rn_bearing)
-        if rn == 0:
-            pass
 
-
-
-        factors = get_design_factors(inputs, AISC_PHI['bearing'], AISC_OMEGA['bearing'])
+        factors = get_design_factors(inputs, AISC_PHI['bearing'], AISC_OMEGA['bearing'], limit_state='bearing')
         
         return {
             'Rn': rn,
@@ -115,13 +155,13 @@ class SpliceCalculator:
 
     def check_gross_section_yielding(self, inputs):
         """
-        AISC J4.2: Tensile Yielding of Gross Section.
+        AISC J4.2 / ABNT NBR 8800:2008 Item 5.2.2: Tensile Yielding of Gross Section.
         """
         ag = float(inputs.get('Ag', 0))
         fy = float(inputs.get('Fy', 0))
         
         rn = fy * ag
-        factors = get_design_factors(inputs, AISC_PHI['yield'], AISC_OMEGA['yield'])
+        factors = get_design_factors(inputs, AISC_PHI['yield'], AISC_OMEGA['yield'], limit_state='yield')
         
         return {
             'Rn': rn,
@@ -134,7 +174,7 @@ class SpliceCalculator:
 
     def check_net_section_rupture(self, inputs):
         """
-        AISC J4.1: Tensile Rupture of Net Section.
+        AISC J4.1 / ABNT NBR 8800:2008 Item 5.2.3: Tensile Rupture of Net Section.
         """
         bf = float(inputs.get('bf', 0))
         tf = float(inputs.get('tf', 0))
@@ -152,7 +192,7 @@ class SpliceCalculator:
         ae = an * u_factor
         
         rn = fu * ae
-        factors = get_design_factors(inputs, AISC_PHI['rupture'], AISC_OMEGA['rupture'])
+        factors = get_design_factors(inputs, AISC_PHI['rupture'], AISC_OMEGA['rupture'], limit_state='rupture')
         
         return {
             'Rn': rn,
@@ -172,7 +212,7 @@ class SpliceCalculator:
 
     def check_block_shear(self, inputs):
         """
-        AISC J4.3: Block Shear Strength.
+        AISC J4.3 / ABNT NBR 8800:2008 Item 6.5.6: Block Shear Strength.
         """
         avg = float(inputs.get('Agv', 0))
         anv = float(inputs.get('Anv', 0))
@@ -187,8 +227,18 @@ class SpliceCalculator:
         tension_rupture = ubs * fu * ant
         shear_yield = 0.6 * fy * avg
         
-        rn = min(shear_rupture + tension_rupture, shear_yield + tension_rupture)
-        factors = get_design_factors(inputs, AISC_PHI['block_shear'], AISC_OMEGA['block_shear'])
+        if is_nbr_standard(inputs):
+            # ABNT NBR 8800:2008 Item 6.5.6: Block Shear
+            # Rbs,Rd = (0.60 * Anv * fu + Cts * Ant * fu) / 1.35 <= (0.60 * Agv * fy / 1.10) + (Cts * Ant * fu / 1.35)
+            cts = ubs
+            term1 = (0.60 * anv * fu + cts * ant * fu) / 1.35
+            term2 = (0.60 * avg * fy / 1.10) + (cts * ant * fu / 1.35)
+            r_rd = min(term1, term2)
+            rn = r_rd * 1.35
+            factors = get_design_factors(inputs, AISC_PHI['block_shear'], AISC_OMEGA['block_shear'], limit_state='block_shear')
+        else:
+            rn = min(shear_rupture + tension_rupture, shear_yield + tension_rupture)
+            factors = get_design_factors(inputs, AISC_PHI['block_shear'], AISC_OMEGA['block_shear'], limit_state='block_shear')
         
         return {
             'Rn': rn,
@@ -355,7 +405,7 @@ class SpliceCalculator:
         unbraced_len = float(inputs.get('unbraced_length', 0))
         k = float(inputs.get('k', 0.65))
         
-        factors = get_design_factors(inputs, 0.90, 1.67)
+        factors = get_design_factors(inputs, 0.90, 1.67, limit_state='compression')
         
         r = t / math.sqrt(12.0)
         if r <= 0:
@@ -392,23 +442,23 @@ class SpliceCalculator:
         }
 
     def check_shear_yielding(self, inputs):
-        """AISC J4.2(a) Shear Yielding"""
+        """AISC J4.2(a) / ABNT NBR 8800:2008 Item 5.4.3 Shear Yielding"""
         agv = float(inputs.get('Agv', 0))
         fy = float(inputs.get('Fy', 0))
         rn = 0.6 * fy * agv
-        factors = get_design_factors(inputs, 1.00, 1.50)
+        factors = get_design_factors(inputs, 1.00, 1.50, limit_state='shear_yield')
         return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 'Agv': agv, 'Fy': fy}
 
     def check_shear_rupture(self, inputs):
-        """AISC J4.2(b) Shear Rupture"""
+        """AISC J4.2(b) / ABNT NBR 8800:2008 Item 5.4.3 Shear Rupture"""
         anv = float(inputs.get('Anv', 0))
         fu = float(inputs.get('Fu', 0))
         rn = 0.6 * fu * anv
-        factors = get_design_factors(inputs, 0.75, 2.00)
+        factors = get_design_factors(inputs, 0.75, 2.00, limit_state='shear_rupture')
         return {'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 'Anv': anv, 'Fu': fu}
         
     def check_bolt_slip(self, inputs):
-        """AISC J3.8 Slip Critical"""
+        """AISC J3.8 / ABNT NBR 8800:2008 Item 6.3.4 Slip Critical"""
         db = float(inputs.get('db', 0))
         fsc = inputs.get('faying_surface_class', 'A')
         grade = inputs.get('grade', 'A325')
@@ -416,7 +466,7 @@ class SpliceCalculator:
         num_planes = int(inputs.get('num_slip_planes', 1))
         
         # Tb from Table J3.1 (kips)
-        is_group_b = ('A490' in grade or 'F2280' in grade)
+        is_group_b = ('A490' in str(grade) or 'F2280' in str(grade) or '10.9' in str(grade))
         if is_group_b:
             tb_map = {0.5: 15, 0.625: 24, 0.75: 35, 0.875: 49, 1.0: 64, 1.125: 80, 1.25: 102, 1.375: 121, 1.5: 148}
         else:
@@ -430,28 +480,28 @@ class SpliceCalculator:
         if num_fillers > 1: hf = 0.85
         
         rn = mu * du * hf * tb * num_planes
-        factors = get_design_factors(inputs, 1.0, 1.5)
+        factors = get_design_factors(inputs, 1.0, 1.5, limit_state='slip')
         return {
             'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'],
             'mu': mu, 'du': du, 'hf': hf, 'tb': tb, 'num_planes': num_planes, 'num_fillers': num_fillers, 'fsc': fsc, 'db': db, 'grade': grade
         }
         
     def check_bolt_tension(self, inputs):
-        """AISC Table J3.2"""
+        """AISC Table J3.2 / ABNT NBR 8800:2008 Item 6.3.3.2"""
         grade = inputs.get('grade', 'A325')
         db = float(inputs.get('db', 0))
-        fnt_map = {"A325": 90.0, "A490": 113.0, "F1852": 90.0, "F2280": 113.0} # Fixed F2280
+        fnt_map = {"A325": 90.0, "A490": 113.0, "F1852": 90.0, "F2280": 113.0}
         fnt = fnt_map.get(grade, 90.0)
         ab = math.pi * (db**2) / 4.0
         rn = fnt * ab
-        factors = get_design_factors(inputs, 0.75, 2.00)
+        factors = get_design_factors(inputs, 0.75, 2.00, limit_state='bolt_tension')
         return {
             'Rn': rn, 'phi': factors['phi'], 'omega': factors['omega'], 
             'Fnt': fnt, 'Ab': ab, 'grade': grade, 'db': db
         }
         
     def check_beam_flexural_rupture(self, inputs):
-        """AISC F13.2"""
+        """AISC F13.2 / ABNT NBR 8800:2008 Item 5.4.2"""
         sx = float(inputs.get('Sx', 0))
         fy = float(inputs.get('Fy', 0))
         fu = float(inputs.get('Fu', 0))
@@ -462,7 +512,7 @@ class SpliceCalculator:
         
         afg = bf * tf
         afn = (bf - num_bolts * hole_dia) * tf
-        factors = get_design_factors(inputs, 0.75, 2.00)
+        factors = get_design_factors(inputs, 0.75, 2.00, limit_state='rupture')
         
         if afn <= 0:
              return {
@@ -556,11 +606,13 @@ class SpliceCalculator:
         })
         le_long = geo['le_long']
         
+        std_inputs = extract_standard_inputs(inputs)
+
         # 1. GSY
         ag = h_p * t_p
         checks[f"{plate_name} GSY"] = {
             'demand': demand,
-            'check': self.check_gross_section_yielding({'Ag': ag, 'Fy': fy, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
+            'check': self.check_gross_section_yielding({'Ag': ag, 'Fy': fy, **std_inputs})
         }
         
         
@@ -572,7 +624,7 @@ class SpliceCalculator:
             'check': self.check_bolt_bearing({
                 'db': d_bolt, 't_ply': t_p, 'Fu_ply': fu, 
                 'le': s_end, 's': s_col, 'is_edge_bolt': True, # Use S_end as edge dist
-                'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+                **std_inputs
             })
         }
 
@@ -582,7 +634,7 @@ class SpliceCalculator:
             'demand': demand_comp,
             'check': self.check_plate_compression({
                 'Ag': ag, 'Fy': fy, 't': t_p, 'unbraced_length': s_col,
-                'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+                **std_inputs
             })
         }
         
@@ -593,7 +645,7 @@ class SpliceCalculator:
             'check': self.check_net_section_rupture({
                 'bf': h_p, 'tf': t_p, 'Fu': fu, 'num_bolts_in_cs': bolts_in_cs,
                 'hole_dia_net_area': hole_net,
-                'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+                **std_inputs
             })
         }
         
@@ -610,7 +662,7 @@ class SpliceCalculator:
              'check': self.check_block_shear({
                  'Agv': agv, 'Anv': anv, 'Ant': ant, 'Fu': fu, 'Fy': fy,
                  'Anv_calc': anv_calc, 'Ant_calc': ant_calc,
-                 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+                 **std_inputs
              })
         }
         
@@ -618,12 +670,12 @@ class SpliceCalculator:
         bearing_edge = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_p, 'Fu_ply': fu, 'le': le_long, 's': s_col,
             'is_edge_bolt': True, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+            **std_inputs
         })
         bearing_int = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_p, 'Fu_ply': fu, 'le': le_long, 's': s_col,
             'is_edge_bolt': False, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+            **std_inputs
         })
         
         num_edge = 2 * nr
@@ -682,15 +734,16 @@ class SpliceCalculator:
         })
         le_long = geo['le_long']
         
+        std_inputs = extract_standard_inputs(inputs)
         bearing_edge = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_beam, 'Fu_ply': fu_beam, 'le': le_long, 's': s_col,
             'is_edge_bolt': True, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+            **std_inputs
         })
         bearing_int = self.check_bolt_bearing({
             'db': d_bolt, 't_ply': t_beam, 'Fu_ply': fu_beam, 'le': float('inf'), 's': s_col,
             'is_edge_bolt': False, 'hole_dia': hole_bearing,
-            'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+            **std_inputs
         })
         
         multiplier = 2 if part_name == 'Flange' else 1
@@ -784,10 +837,11 @@ class SpliceCalculator:
         }
         
         # 1. Bolt Shear
+        std_inputs = extract_standard_inputs(inputs)
         num_shear_planes = 2 if int(inputs.get('num_flange_plates', 0)) == 2 else 1
         bolt_check = self.check_bolt_shear({
             'grade': inputs.get('bolt_grade_fp'), 'db': d_fp, 
-            'num_planes': num_shear_planes, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+            'num_planes': num_shear_planes, **std_inputs
         })
         
         # Total bolts per side: Nc * (2 * Nr) because Nr is rows PER SIDE OF GAGE in JS logic usually?
@@ -823,8 +877,7 @@ class SpliceCalculator:
                   'faying_surface_class': inputs.get('faying_surface_class', 'B'),
                   'num_fillers': 0,
                   'num_slip_planes': num_shear_planes,
-                  'jurisdiction': inputs.get('jurisdiction'), 
-                  'global_fos': inputs.get('global_fos')
+                  **std_inputs
              })
              
              checks['Flange Bolt Slip'] = {
@@ -904,8 +957,9 @@ class SpliceCalculator:
             'Nc': nc_wp, 'Nr': nr_wp, 'S_pitch': s_col, 'S_gage': s_row, 'S_end': s_end
         })
         
+        std_inputs = extract_standard_inputs(inputs)
         num_web_planes = 2 # Usually 2 web plates
-        bolt_shear = self.check_bolt_shear({'grade': inputs.get('bolt_grade_wp'), 'db': d_wp, 'num_planes': num_web_planes, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
+        bolt_shear = self.check_bolt_shear({'grade': inputs.get('bolt_grade_wp'), 'db': d_wp, 'num_planes': num_web_planes, **std_inputs})
         
         resultant_demand = ecc_res['max_R']
         # Calculate details for Web Bolt breakdown
@@ -922,7 +976,7 @@ class SpliceCalculator:
         
         checks['Web Bolt Group Shear (ICR)'] = { # Labelled ICR in JS but using elastic here for parity with my implementation
              'demand': resultant_demand,
-             'check': {'Rn': bolt_shear['Rn'], 'phi': 0.75, 'omega': 2.00},
+             'check': {'Rn': bolt_shear['Rn'], 'phi': bolt_shear['phi'], 'omega': bolt_shear['omega']},
              'details': {
                  'V_load': v_load, 'Hw': h_load, 
                  'max_R': resultant_demand, 
@@ -942,8 +996,7 @@ class SpliceCalculator:
                   'faying_surface_class': inputs.get('faying_surface_class', 'B'),
                   'num_fillers': 0,
                   'num_slip_planes': num_web_planes,
-                  'jurisdiction': inputs.get('jurisdiction'), 
-                  'global_fos': inputs.get('global_fos')
+                  **std_inputs
              })
              
              checks['Web Bolt Group Slip'] = {
@@ -971,11 +1024,11 @@ class SpliceCalculator:
         
         checks['Web Plate Gross Shear Yield'] = {
             'demand': v_load,
-            'check': self.check_shear_yielding({'Agv': agv, 'Fy': float(inputs.get('web_plate_Fy', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
+            'check': self.check_shear_yielding({'Agv': agv, 'Fy': float(inputs.get('web_plate_Fy', 0)), **std_inputs})
         }
         checks['Web Plate Net Shear Rupture'] = {
             'demand': v_load,
-            'check': self.check_shear_rupture({'Anv': anv, 'Fu': float(inputs.get('web_plate_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')}),
+            'check': self.check_shear_rupture({'Anv': anv, 'Fu': float(inputs.get('web_plate_Fu', 0)), **std_inputs}),
             'details': {'hole_dia': hole_dia}
         }
         
@@ -1057,7 +1110,7 @@ class SpliceCalculator:
         fy_beam = float(inputs.get('member_Fy', 0))
         zx = float(inputs.get('member_Zx', 0))
         mn_yield = fy_beam * zx
-        flex_yield_factors = get_design_factors(inputs, 0.90, 1.67)
+        flex_yield_factors = get_design_factors(inputs, 0.90, 1.67, limit_state='flex_yield')
         checks['Beam Flexural Yielding'] = {
             'demand': m_load * 12, 
             'check': {'Rn': mn_yield, 'phi': flex_yield_factors['phi'], 'omega': flex_yield_factors['omega'], 'Fy': fy_beam, 'Zx': zx}
@@ -1070,6 +1123,7 @@ class SpliceCalculator:
         
         is_angle = str(inputs.get('member_shape_type', '')).upper() in ['L', 'ANGLE', 'L-SHAPE']
 
+        std_inputs = extract_standard_inputs(inputs)
         if is_angle:
             agv_web = d_beam * tw_beam
         else:
@@ -1078,7 +1132,7 @@ class SpliceCalculator:
         if inputs.get('is_hss'): agv_web *= 2.0
         checks['Beam Web Shear Yielding'] = {
             'demand': v_load,
-            'check': self.check_shear_yielding({'Agv': agv_web, 'Fy': fy_beam, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
+            'check': self.check_shear_yielding({'Agv': agv_web, 'Fy': fy_beam, **std_inputs})
         }
         
         # --- Beam Flexural Rupture ---
@@ -1088,7 +1142,7 @@ class SpliceCalculator:
             'check': self.check_beam_flexural_rupture({
                 'Sx': float(inputs.get('member_Sx', 0)), 'Fy': fy_beam, 'Fu': float(inputs.get('member_Fu', 0)),
                 'bf': float(inputs.get('member_bf', 0)), 'tf': tf_beam, 'num_bolts_in_flange_cs': num_bolts_flange,
-                'hole_dia_net_area': hole_net_fp, 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')
+                'hole_dia_net_area': hole_net_fp, **std_inputs
             })
         }
         
@@ -1102,23 +1156,16 @@ class SpliceCalculator:
         if inputs.get('is_hss'): anv_web *= 2.0
         checks['Beam Web Shear Rupture'] = {
              'demand': v_load,
-             'check': self.check_shear_rupture({'Anv': anv_web, 'Fu': float(inputs.get('member_Fu', 0)), 'jurisdiction': inputs.get('jurisdiction'), 'global_fos': inputs.get('global_fos')})
+             'check': self.check_shear_rupture({'Anv': anv_web, 'Fu': float(inputs.get('member_Fu', 0)), **std_inputs})
         }
         
         # --- Spliced Member Moment Capacity ---
-        # Logic: If Axial > 0, check Flange Net Section. Else, min(Yield, Rupture).
-        # We'll stick to min(Yield, Rupture) for M capacity as primary report item for now unless axial logic is critical.
-        # JS logic splits behavior.
         if axial_load != 0:
-             # Just returning moment capacity derived from rupture for now to avoid complexity porting if simpler works.
-             # Actually JS is doing CheckFlangeNetSection separately.
-             # Let's just output the Moment Capacity based on Yield/Rupture limits regardless of axial for checking.
              pass
         else:
              mn_rupture = checks['Beam Flexural Rupture']['check']['Rn']
-             # mn_yield already calculated
              mn_cap = min(mn_yield, mn_rupture)
-             moment_cap_factors = get_design_factors(inputs, 0.90, 1.67)
+             moment_cap_factors = get_design_factors(inputs, 0.90, 1.67, limit_state='flex_yield')
              checks['Spliced Member Moment Capacity'] = {
                  'demand': m_load * 12,
                  'check': {'Rn': mn_cap, 'phi': moment_cap_factors['phi'], 'omega': moment_cap_factors['omega']},
@@ -1205,9 +1252,6 @@ class SpliceCalculator:
                 case_input = base_inputs.copy()
                 case_input.update(case)
                 try:
-                    # Determine if we should optimize for this batch case?
-                    # Usually batch is verification. If optimization is ON, it might be slow.
-                    # But if the user requested it:
                     if case_input.get('optimize_bolts_check'):
                          res = self.run_optimization(case_input)
                     else:
@@ -1224,14 +1268,11 @@ class SpliceCalculator:
         inputs = raw_inputs.copy()
         
         # Parse inputs
-        # Parse inputs
         inputs['is_hss'] = (inputs.get('member_shape_type') == 'HSS Rectangular')
         inputs['L_fp'] = float(inputs.get('L_fp', 0)) / 2.0
         inputs['L_fp_inner'] = float(inputs.get('L_fp_inner', 0)) / 2.0
         inputs['L_wp'] = float(inputs.get('L_wp', 0)) / 2.0
 
-
-        
         m_load = float(inputs.get('M_load', 0))
         v_load = float(inputs.get('V_load', 0))
         axial_load = float(inputs.get('Axial_load', 0))
@@ -1239,6 +1280,7 @@ class SpliceCalculator:
         # --- Capacity Design Check ---
         if inputs.get('develop_capacity_check'):
             jurisdiction = str(inputs.get('jurisdiction', '')).strip().upper()
+            is_nbr = is_nbr_standard(inputs)
             
             zx = float(inputs.get('member_Zx', 0))
             if zx > 0:
@@ -1247,6 +1289,8 @@ class SpliceCalculator:
                 
                 if jurisdiction == 'OSHA':
                     m_load = (mn_kipin / 4.0) / 12.0
+                elif is_nbr:
+                    m_load = (mn_kipin / 1.10) / 12.0
                 else:
                     design_method = inputs.get('design_method', 'ASD')
                     phi_b = 0.90
@@ -1267,6 +1311,8 @@ class SpliceCalculator:
                  
                  if jurisdiction == 'OSHA':
                      v_load = vn_kips / 4.0
+                 elif is_nbr:
+                     v_load = vn_kips / 1.10
                  else:
                      phi_v = 1.00
                      omega_v = 1.50

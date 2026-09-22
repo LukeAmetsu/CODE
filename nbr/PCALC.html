@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="pt-BR" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="pcalc_title">PCalc - Concrete Column Checker (NBR 6118)</title>
+    <title data-i18n="pcalc_title">PCalc — Pilares & Seções de Concreto Armado (NBR • ACI • EC2)</title>
 
     <!-- External Dependencies -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Theme Script -->
     <script>
@@ -26,6 +26,7 @@
 
     <!-- Local Project Dependencies -->
     <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
@@ -58,7 +59,6 @@
             background: #475569;
         }
 
-        /* Hide number input arrows */
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button {
             -webkit-appearance: none;
@@ -67,406 +67,1044 @@
 
         .tab-btn.active {
             background-color: #3b82f6;
-            /* blue-500 */
             color: white;
             border-color: #3b82f6;
         }
 
         .dark .tab-btn.active {
             background-color: #2563eb;
-            /* blue-600 */
             border-color: #2563eb;
+        }
+
+        .rebar-tab-btn.active {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        .dark .rebar-tab-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
         }
     </style>
 </head>
 
-<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-300 flex flex-col overflow-hidden">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-['Inter',sans-serif]">
 
-    <div class="flex-grow flex flex-col h-full">
-        <!-- Header Placeholder -->
-        <div id="header-placeholder" class="flex-shrink-0" style="min-height: 64px;"></div>
+    <div class="container mx-auto p-2 sm:p-4 max-w-[98.5vw] flex-grow flex flex-col min-h-0">
+        <!-- Global Header Placeholder -->
+        <div id="header-placeholder" class="shrink-0" style="min-height: 104px;"></div>
 
-        <main id="pcalc-app" class="flex flex-col lg:flex-row flex-grow overflow-hidden">
-
-            <!-- Left Panel: Inputs ONLY -->
-            <div
-                class="w-full lg:w-[390px] flex flex-col bg-white dark:bg-gray-800 border-r dark:border-gray-700 shadow-lg z-10 flex-shrink-0">
-
-                <!-- Ribbon Tabs -->
-                <div
-                    class="flex overflow-x-auto border-b dark:border-gray-700 p-2 gap-1 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
-                    <button
-                        class="tab-btn active px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-                        data-target="tab-geometry">Geometry</button>
-                    <button
-                        class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-                        data-target="tab-materials">Materials</button>
-                    <button
-                        class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-                        data-target="tab-reinforcement">Rebar</button>
-                    <button
-                        class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-                        data-target="tab-loads">Loads</button>
-                    <button
-                        class="tab-btn px-3 py-2 text-xs font-semibold rounded-md border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-                        data-target="tab-criteria">Criteria</button>
-                </div>
-
-                <!-- Tab Contents (Scrollable part) -->
-                <div class="flex-grow overflow-y-auto p-4 custom-scrollbar">
-
-                    <!-- Geometry Tab -->
-                    <div id="tab-geometry" class="tab-content space-y-4">
-                        <h2
-                            class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Section Geometry</h2>
-                        <form id="geometry-form" class="grid grid-cols-2 gap-4">
-                            <div class="col-span-2">
-                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Section
-                                    Type</label>
-                                <select id="section-type"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <option value="Retangular">Rectangular</option>
-                                    <option value="Circular">Circular</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-2">
-                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Boundary
-                                    Condition</label>
-                                <select id="boundary-type"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                                    <option value="pinned">Pinned-Pinned (Biapoiado)</option>
-                                    <option value="cantilever">Cantilever (Balanço)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Width
-                                    (hx) [cm]</label>
-                                <input type="number" id="hx" value="30"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Height
-                                    (hy) [cm]</label>
-                                <input type="number" id="hy" value="50"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">Column
-                                    Length L (cm)</label>
-                                <input type="number" id="length" value="400"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div class="col-span-2 pt-2">
-                                <label
-                                    class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 border border-transparent hover:border-gray-200 dark:hover:border-gray-600 transition-colors">
-                                    <input type="checkbox" id="check-2nd-order" checked
-                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Calculate 2nd
-                                        Order Effects</span>
-                                </label>
-                            </div>
-                        </form>
-                        <div
-                            class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800">
-                            <p class="text-[10px] text-blue-600 dark:text-blue-400 leading-relaxed">
-                                <span class="font-bold">Note:</span> For circular sections, 'hx' acts as the diameter.
-                                'hy' is ignored.
-                            </p>
+        <!-- App Main Header & Quick Actions (RS2 Architecture) -->
+        <div class="mb-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="p-2 bg-indigo-600 text-white rounded-lg shadow-md font-bold text-lg leading-none">PCalc</span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white leading-tight">
+                                Pilares & Seções de Concreto Armado
+                            </h1>
+                            <span id="active-pcalc-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 uppercase border border-blue-200 dark:border-blue-800">
+                                PILAR
+                            </span>
                         </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Flexo-Compressão Biaxial Oblíqua | Diagrama de Interação N-Mx-My | Verificação Normativa NBR 6118 • ACI 318 • EC2
+                        </p>
                     </div>
-
-                    <!-- Materials Tab -->
-                    <div id="tab-materials" class="tab-content hidden space-y-4">
-                        <h2
-                            class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Material Properties</h2>
-                        <form id="materials-form" class="grid grid-cols-2 gap-4">
-                            <div class="col-span-2 sm:col-span-1">
-                                <label class="block text-xs font-medium mb-1 text-gray-500">Concrete fck (MPa)</label>
-                                <input type="number" id="fck" value="25"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div class="col-span-2 sm:col-span-1">
-                                <label class="block text-xs font-medium mb-1 text-gray-500">Steel fyk (MPa)</label>
-                                <input type="number" id="fyk" value="500"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-xs font-medium mb-1 text-gray-500">Elastic Modulus Es
-                                    (GPa)</label>
-                                <input type="number" id="es" value="210"
-                                    class="w-full rounded border-gray-300 dark:border-gray-600 p-2 text-sm border bg-gray-50 dark:bg-gray-700 dark:text-white">
-                            </div>
-
-                            <div class="col-span-2 pt-2">
-                                <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">Safety Factors (γ)
-                                </h3>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <div>
-                                        <label class="block text-[10px] font-medium text-gray-400 mb-1">Concrete
-                                            (γc)</label>
-                                        <input type="number" id="gamac" value="1.4" step="0.1"
-                                            class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm text-center bg-white dark:bg-gray-700 dark:text-white">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-medium text-gray-400 mb-1">Steel
-                                            (γs)</label>
-                                        <input type="number" id="gamas" value="1.15" step="0.05"
-                                            class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm text-center bg-white dark:bg-gray-700 dark:text-white">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-medium text-gray-400 mb-1">Load
-                                            (γf)</label>
-                                        <input type="number" id="gamaf" value="1.4" step="0.1"
-                                            class="w-full rounded border-gray-300 dark:border-gray-600 p-1 text-sm text-center bg-white dark:bg-gray-700 dark:text-white">
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Reinforcement Tab -->
-                    <div id="tab-reinforcement" class="tab-content hidden space-y-4">
-                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
-                            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                Reinforcement</h2>
-                            <div class="flex gap-2">
-                                <button type="button" id="add-bar-btn"
-                                    class="text-blue-600 hover:text-blue-800 text-xs font-semibold">+ Bar</button>
-                                <button type="button" id="generate-rect-btn"
-                                    class="text-green-600 hover:text-green-800 text-xs font-semibold">+ Pattern</button>
-                            </div>
-                        </div>
-
-                        <div
-                            class="overflow-y-auto table-container max-h-[300px] border rounded-md dark:border-gray-700">
-                            <table id="reinforcement-table"
-                                class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
-                                <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
-                                    <tr>
-                                        <th class="px-3 py-2 font-semibold">x (cm)</th>
-                                        <th class="px-3 py-2 font-semibold">y (cm)</th>
-                                        <th class="px-3 py-2 font-semibold">Ø (mm)</th>
-                                        <th class="px-3 py-2 w-8"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                                    <!-- Rows injected by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <p class="text-[10px] text-gray-400 text-center italic">Coordinates are relative to the
-                            bottom-left corner (0,0).</p>
-                    </div>
-
-                    <!-- Loads Tab -->
-                    <div id="tab-loads" class="tab-content hidden space-y-4">
-                        <div class="flex justify-between items-center border-b dark:border-gray-700 pb-1">
-                            <h2 class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                Design Loads (Sk)</h2>
-                            <div class="flex gap-2 items-center">
-                                <label for="upload-excel"
-                                    class="cursor-pointer py-1 px-2 text-[10px] font-semibold bg-green-50 text-green-700 rounded border border-green-200 hover:bg-green-100 transition-colors">
-                                    Import Excel
-                                </label>
-                                <input type="file" id="upload-excel" accept=".xlsx, .xls" class="hidden">
-                                <button type="button" id="add-load-btn"
-                                    class="text-blue-600 hover:text-blue-800 text-xs font-semibold">+ Case</button>
-                            </div>
-                        </div>
-
-                        <div
-                            class="overflow-y-auto table-container max-h-[300px] border rounded-md dark:border-gray-700">
-                            <table id="loads-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
-                                <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
-                                    <tr>
-                                        <th class="px-2 py-2 font-semibold w-16">N (kN)</th>
-                                        <th class="px-2 py-2 font-semibold">Mx Top</th>
-                                        <th class="px-2 py-2 font-semibold">Mx Bot</th>
-                                        <th class="px-2 py-2 font-semibold">My Top</th>
-                                        <th class="px-2 py-2 font-semibold">My Bot</th>
-                                        <th class="px-1 py-2 w-6"></th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                                    <!-- Rows injected by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <div
-                            class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-100 dark:border-yellow-800">
-                            <p class="text-[10px] text-yellow-700 dark:text-yellow-400">
-                                <span class="font-bold">Tip:</span> Paste data directly from Excel (Ctrl+V).<br>
-                                Format: N | Mx_top | Mx_bot | My_top | My_bot
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Criteria Tab -->
-                    <div id="tab-criteria" class="tab-content hidden space-y-4">
-                        <h2
-                            class="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b dark:border-gray-700 pb-1">
-                            Design Criteria</h2>
-
-                        <div id="criteria-container" class="space-y-4">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Action Footer -->
-                <div class="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
-                    <button id="calculate-btn"
-                        class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform active:scale-[0.98] flex items-center justify-center gap-2">
-                        <span>CALCULATE</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                    <div id="feedback-message" class="text-center text-xs min-h-[20px] mt-2 font-medium"></div>
                 </div>
             </div>
 
-            <!-- Right Panel: Results -->
-            <div class="flex-grow flex flex-col h-full overflow-hidden bg-gray-100 dark:bg-gray-900 relative">
-                <!-- Result Content -->
-                <div class="flex-grow overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar">
+            <!-- Top Action Toolbar -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- 1. Element Mode Selector -->
+                <div class="inline-flex rounded-lg p-0.5 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 shadow-xs">
+                    <button type="button" id="btn-mode-column" onclick="setPcalcMode('column')" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all bg-blue-600 text-white shadow-xs flex items-center gap-1.5 cursor-pointer">
+                        <span>🏛️</span> Pilar
+                    </button>
+                    <button type="button" id="btn-mode-section" onclick="setPcalcMode('section')" class="px-3 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
+                        <span>📐</span> Seção / Viga
+                    </button>
+                </div>
 
-                    <!-- Row 1: 3D Chart (5/8) + Section (3/8) -->
-                    <!-- Height reduced to 400px -->
-                    <div class="grid grid-cols-1 xl:grid-cols-8 gap-6 h-[400px] min-h-[400px]">
-                        <!-- 3D Chart (Envoltória) - 5/8 Width (cols 1-5) -->
-                        <div
-                            class="xl:col-span-5 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                            <div
-                                class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Interaction Surface</h3>
-                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">3D
-                                    View</span>
+                <!-- 2. Design Code Selector -->
+                <div class="inline-flex rounded-lg p-0.5 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 shadow-xs">
+                    <button type="button" id="btn-code-nbr" onclick="setPcalcStandard('nbr')" class="px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-emerald-600 text-white shadow-xs flex items-center gap-1 cursor-pointer">
+                        <span>🇧🇷</span> NBR
+                    </button>
+                    <button type="button" id="btn-code-aci" onclick="setPcalcStandard('aci')" class="px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer">
+                        <span>🇺🇸</span> ACI
+                    </button>
+                    <button type="button" id="btn-code-ec2" onclick="setPcalcStandard('ec2')" class="px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer">
+                        <span>🇪🇺</span> EC2
+                    </button>
+                    <button type="button" id="btn-code-all" onclick="setPcalcStandard('all')" class="px-2.5 py-1.5 rounded-md text-xs font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 transition-all flex items-center gap-1 cursor-pointer">
+                        <span>🌐</span> Todas
+                    </button>
+                </div>
+
+                <!-- Column Presets Selector (visible in Column mode) -->
+                <div id="column-preset-wrapper" class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 shadow-xs">
+                    <label for="col-preset-select" class="text-[11px] font-bold text-gray-500 dark:text-gray-300">🏛️ Seção Típica:</label>
+                    <select id="col-preset-select" onchange="loadColumnPreset(this.value)" class="bg-transparent text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="retangular_30x50">Pilar 30x50 cm (4φ16, N=-800)</option>
+                        <option value="borda_20x40">Pilar Borda 20x40 cm (6φ12.5, N=-500)</option>
+                        <option value="quadrado_30x30">Pilar Central 30x30 cm (8φ16, N=-900)</option>
+                        <option value="robusto_40x60">Pilar Garagem 40x60 cm (8φ20, N=-2000)</option>
+                        <option value="circular_d40">Pilar Circular Ø40 cm (6φ16, N=-600)</option>
+                        <option value="parede_20x100">Pilar-Parede 20x100 cm (10φ16, N=-1500)</option>
+                    </select>
+                </div>
+
+                <!-- Section Presets Selector (visible in Section mode) -->
+                <div id="section-preset-wrapper" class="hidden items-center gap-1 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 shadow-xs">
+                    <label for="sec-preset-select" class="text-[11px] font-bold text-gray-500 dark:text-gray-300">Preset:</label>
+                    <select id="sec-preset-select" onchange="pcalcSection.loadPreset(this.value)" class="bg-transparent text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer">
+                        <option value="convencional">Viga Convencional (20x50 cm, M=100)</option>
+                        <option value="baldrame">Viga Baldrame (25x60 cm, N=-250 Compr.)</option>
+                        <option value="tirante">Viga-Tirante (25x50 cm, N=+150 Tração)</option>
+                        <option value="transicao">Transição (35x90 cm, Carga Elevada)</option>
+                        <option value="dupla_armadura">Dupla Armadura (As e As' resistente)</option>
+                    </select>
+                </div>
+
+                <!-- Unit Selector kN / tf -->
+                <div id="unit-selector" class="inline-flex rounded-lg p-0.5 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 shadow-xs" title="Sistema de unidades: kN (SI) ou tf (toneladas-força)">
+                    <button type="button" id="btn-unit-kn" onclick="setUnits('kN')" class="px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-slate-600 text-white shadow-xs flex items-center gap-1 cursor-pointer">
+                        kN
+                    </button>
+                    <button type="button" id="btn-unit-tf" onclick="setUnits('tf')" class="px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer">
+                        tf
+                    </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <button type="button" id="pcalc-btn-calc" onclick="triggerPcalcCalculation()" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95">
+                    <span>⚡</span> Calcular
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Safety Factor & Criteria Banner (RS2 Style) -->
+        <div id="pcalc-standard-banner" class="mb-3 bg-slate-50 dark:bg-slate-800/80 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2 flex flex-wrap items-center justify-between text-xs text-gray-600 dark:text-gray-300 shrink-0">
+            <div class="flex items-center gap-2">
+                <span id="banner-code-title" class="font-bold text-emerald-700 dark:text-emerald-400">🇧🇷 ABNT NBR 6118:2023</span>
+                <span id="banner-code-desc" class="text-[11px] text-gray-500 dark:text-gray-400">• Pilar: &gamma;c=1.40, &gamma;s=1.15, &gamma;f=1.40 • Pilar-Padrão e Momento Mínimo</span>
+            </div>
+            <div id="banner-mode-indicator" class="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                Modo: Pilar (Flexo-Compressão Biaxial & 2ª Ordem)
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MAIN APP CONTENT AREA: TWO MODES (PILAR vs SEÇÃO / VIGA)                  -->
+        <!-- ========================================================================= -->
+        <main id="pcalc-main" class="flex-grow flex flex-col min-h-0 overflow-hidden">
+
+            <!-- ===================================================================== -->
+            <!-- 1. VIEW PILAR (COLUNA EM FLEXO-COMPRESSÃO OBLÍQUA & 2ª ORDEM)          -->
+            <!-- ===================================================================== -->
+            <div id="view-column" class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-grow min-h-0 overflow-hidden">
+                <!-- Left Panel: Column Controls Sidebar (4 cols - RS2 Standard) -->
+                <div class="lg:col-span-4 flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0">
+                    <!-- Ribbon Tabs RS2 Pill Style (Quick Scroll Jump Navigation) -->
+                    <div class="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700 p-2 gap-1.5 bg-gray-50 dark:bg-gray-850 shrink-0 no-scrollbar">
+                        <button class="tab-btn active px-2.5 py-1.5 text-xs font-bold rounded-lg border border-transparent bg-indigo-600 text-white transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer shadow-xs" data-target="tab-geometry">
+                            <span>📐</span> Geometria
+                        </button>
+                        <button class="tab-btn px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-lg border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer" data-target="tab-materials">
+                            <span>🧱</span> Materiais
+                        </button>
+                        <button class="tab-btn px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-lg border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer" data-target="tab-reinforcement">
+                            <span>🔩</span> Armadura
+                        </button>
+                        <button class="tab-btn px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-lg border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer" data-target="tab-loads">
+                            <span>⚖️</span> Cargas (Sk)
+                        </button>
+                        <button class="tab-btn px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-lg border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700 transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer" data-target="tab-criteria">
+                            <span>⚙️</span> Critérios
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Cards Container (All 5 Cards Visible - RS2 Architecture) -->
+                    <div id="col-sidebar-scroll" class="flex-grow overflow-y-auto p-3 space-y-3.5 custom-scrollbar">
+                        <!-- Geometry Tab (RS2 Card) -->
+                        <div id="tab-geometry" class="tab-card space-y-3 transition-all duration-300">
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>📐</span> Geometria & Vínculos do Pilar
+                                    </h2>
+                                    <span id="col-geo-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                        30 × 50 cm
+                                    </span>
+                                </div>
+
+                                <!-- RS2 Live Metric Strip -->
+                                <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Área Bruta (Ac):</span>
+                                        <span id="pcalc-col-ac-preview" class="font-mono font-bold text-gray-900 dark:text-gray-100">1500 cm²</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Inércia (Ix / Iy):</span>
+                                        <span id="pcalc-col-inertia-preview" class="font-mono font-semibold text-gray-800 dark:text-gray-200">312500 / 112500 cm⁴</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Esbeltez (&lambda;x / &lambda;y):</span>
+                                        <span id="pcalc-col-lambda-preview" class="font-semibold text-emerald-600 dark:text-emerald-400">&lambda;x=27.7 | &lambda;y=46.2</span>
+                                    </div>
+                                </div>
+
+                                <!-- Form Inputs -->
+                                <form id="geometry-form" class="space-y-3 pt-1">
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Tipo de Seção</label>
+                                            <select id="section-type" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs cursor-pointer">
+                                                <option value="Retangular">Retangular</option>
+                                                <option value="Circular">Circular</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Vínculo</label>
+                                            <select id="boundary-type" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs cursor-pointer">
+                                                <option value="pinned">Biapoiado (Pinned)</option>
+                                                <option value="cantilever">Balanço (Cantilever)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label id="lbl-hx" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Largura (hx)</label>
+                                            <div class="relative">
+                                                <input type="number" id="hx" value="30" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                                <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">cm</span>
+                                            </div>
+                                        </div>
+                                        <div id="hy-wrapper">
+                                            <label id="lbl-hy" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Altura (hy)</label>
+                                            <div class="relative">
+                                                <input type="number" id="hy" value="50" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                                <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">cm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Comprimento Livre L (cm)</label>
+                                        <div class="relative">
+                                            <input type="number" id="length" value="400" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                            <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">cm</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-1">
+                                        <label class="flex items-center gap-2.5 cursor-pointer p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:border-blue-400 transition-colors">
+                                            <input type="checkbox" id="check-2nd-order" checked class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">Considerar Efeitos Locais de 2ª Ordem</span>
+                                        </label>
+                                    </div>
+                                </form>
                             </div>
-                            <div id="chart3d" class="flex-grow relative w-full">
-                                <div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                                    Ready to calculate
+                        </div>
+
+                        <!-- Materials Tab (RS2 Card) -->
+                        <div id="tab-materials" class="tab-card space-y-3 transition-all duration-300">
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>🧱</span> Materiais & Coeficientes
+                                    </h2>
+                                    <span id="col-mat-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                        C25 • CA-50
+                                    </span>
+                                </div>
+
+                                <!-- RS2 Live Metric Strip -->
+                                <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Resistência Cálculo (fcd):</span>
+                                        <span id="pcalc-col-fcd-preview" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">17.86 MPa</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Escoamento Aço (fyd):</span>
+                                        <span id="pcalc-col-fyd-preview" class="font-mono font-bold text-blue-600 dark:text-blue-400">434.78 MPa</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Módulo Estimado Ecs:</span>
+                                        <span id="pcalc-col-ecs-preview" class="font-mono font-semibold text-gray-800 dark:text-gray-200">28.0 GPa</span>
+                                    </div>
+                                </div>
+
+                                <!-- Form Inputs -->
+                                <form id="materials-form" class="space-y-3 pt-1">
+                                    <div class="grid grid-cols-2 gap-2.5">
+                                        <div>
+                                            <label class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Concreto fck</label>
+                                            <div class="relative">
+                                                <input type="number" id="fck" value="25" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                                <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">MPa</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Aço fyk</label>
+                                            <div class="relative">
+                                                <input type="number" id="fyk" value="500" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                                <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">MPa</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Módulo Elasticidade Es</label>
+                                        <div class="relative">
+                                            <input type="number" id="es" value="210" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                            <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">GPa</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="border-t border-gray-100 dark:border-gray-700 pt-2.5">
+                                        <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                                            <span>🛡️</span> Coeficientes de Ponderação
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label class="block text-[10px] font-medium text-gray-400 mb-1 text-center">&gamma;c (Conc.)</label>
+                                                <input type="number" id="gamac" value="1.4" step="0.05" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-bold text-center text-gray-800 dark:text-gray-200">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-medium text-gray-400 mb-1 text-center">&gamma;s (Aço)</label>
+                                                <input type="number" id="gamas" value="1.15" step="0.05" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-bold text-center text-gray-800 dark:text-gray-200">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-medium text-gray-400 mb-1 text-center">&gamma;f (Cargas)</label>
+                                                <input type="number" id="gamaf" value="1.4" step="0.05" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-bold text-center text-gray-800 dark:text-gray-200">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Reinforcement Tab (RS2 Card) -->
+                        <div id="tab-reinforcement" class="tab-card space-y-3 transition-all duration-300">
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>🔩</span> Armadura Longitudinal
+                                    </h2>
+                                    <span id="col-rebar-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                        4 &Phi; 16
+                                    </span>
+                                </div>
+
+                                <!-- RS2 Live Metric Strip -->
+                                <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Área Total de Aço (As):</span>
+                                        <span id="pcalc-col-as-preview" class="font-mono font-bold text-blue-600 dark:text-blue-400">8.04 cm²</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Taxa Geométrica (&rho;):</span>
+                                        <span id="pcalc-col-rho-preview" class="font-semibold text-emerald-600 dark:text-emerald-400">0.54% (Min 0.40% • Max 4.0%)</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Armadura Mínima As,min:</span>
+                                        <span id="pcalc-col-asmin-preview" class="font-mono font-semibold text-gray-800 dark:text-gray-200">6.00 cm²</span>
+                                    </div>
+                                </div>
+
+                                <!-- Armadura Rápida (Quick Rebar Entry) -->
+                                <div class="bg-slate-50 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 space-y-2">
+                                    <div class="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1">⚡ Armadura Rápida</div>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-1">Nº Barras</label>
+                                            <input type="number" id="quick-n-bars" value="6" min="2" max="32" step="1" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-bold text-center text-gray-800 dark:text-gray-200">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-1">Diâmetro</label>
+                                            <select id="quick-diam" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-bold text-gray-800 dark:text-gray-200 cursor-pointer">
+                                                <option value="8">Φ8</option>
+                                                <option value="10">Φ10</option>
+                                                <option value="12.5">Φ12.5</option>
+                                                <option value="16" selected>Φ16</option>
+                                                <option value="20">Φ20</option>
+                                                <option value="25">Φ25</option>
+                                                <option value="32">Φ32</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-1">Cobrimento</label>
+                                            <div class="relative">
+                                                <input type="number" id="quick-cover" value="3" min="1.5" max="8" step="0.5" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-bold text-center text-gray-800 dark:text-gray-200">
+                                                <span class="absolute right-1 top-1.5 text-[9px] text-gray-400">cm</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" id="quick-rebar-btn" onclick="applyQuickRebar()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-1.5 rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer">
+                                        <span>🔩</span> Aplicar Armadura
+                                    </button>
+                                </div>
+
+                                <!-- Action buttons RS2 Style -->
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <button type="button" id="add-bar-btn" class="bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                                        <span>+</span> Nova Barra
+                                    </button>
+                                    <button type="button" id="generate-rect-btn" class="bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer" title="Gerar padrão automático conforme tipo de seção">
+                                        <span>⚙️</span> <span id="gen-pattern-label">Padrão Cantos</span>
+                                    </button>
+                                </div>
+
+                                <!-- Table -->
+                                <div class="overflow-y-auto table-container max-h-[220px] border rounded-lg border-gray-200 dark:border-gray-700">
+                                    <table id="reinforcement-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                        <thead class="bg-gray-50 dark:bg-gray-750 sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700">
+                                            <tr>
+                                                <th class="px-2.5 py-2 font-bold text-gray-500 dark:text-gray-400">x (cm)</th>
+                                                <th class="px-2.5 py-2 font-bold text-gray-500 dark:text-gray-400">y (cm)</th>
+                                                <th class="px-2.5 py-2 font-bold text-gray-500 dark:text-gray-400">&Phi; (mm)</th>
+                                                <th class="px-2 py-2 w-8"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 font-mono">
+                                            <!-- Injetado por JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="text-[10px] text-gray-400 text-center italic" id="rebar-coord-hint">Coordenadas relativas ao canto inferior esquerdo (0,0).</p>
+                            </div>
+                        </div>
+
+                        <!-- Loads Tab (RS2 Card) -->
+                        <div id="tab-loads" class="tab-card space-y-3 transition-all duration-300">
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>⚖️</span> Esforços Característicos (Sk)
+                                    </h2>
+                                    <span id="col-loads-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                        1 Caso
+                                    </span>
+                                </div>
+
+                                <!-- RS2 Live Metric Strip -->
+                                <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Normal Máxima NSd:</span>
+                                        <span id="pcalc-col-nsd-preview" class="font-mono font-bold text-gray-900 dark:text-gray-100">-1120 kN</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Momento Mín. 1ª Ordem:</span>
+                                        <span id="pcalc-col-mmin-preview" class="font-mono font-semibold text-purple-600 dark:text-purple-400">M1d,min = 33.6 kNm</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Excentricidade Acidental ea:</span>
+                                        <span id="pcalc-col-ea-preview" class="font-semibold text-gray-800 dark:text-gray-200">2.0 cm</span>
+                                    </div>
+                                </div>
+
+                                <!-- Action buttons RS2 Style -->
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <button type="button" id="add-load-btn" class="bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                                        <span>+</span> Novo Caso
+                                    </button>
+                                    <label for="upload-excel" class="bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer text-center">
+                                        <span>📊</span> Importar Excel
+                                    </label>
+                                    <input type="file" id="upload-excel" accept=".xlsx, .xls" class="hidden">
+                                </div>
+
+                                <!-- Table -->
+                                <div class="overflow-y-auto table-container max-h-[220px] border rounded-lg border-gray-200 dark:border-gray-700">
+                                    <table id="loads-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                        <thead class="bg-gray-50 dark:bg-gray-750 sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700">
+                                            <tr>
+                                                <th class="px-2 py-2 font-bold text-gray-500 dark:text-gray-400">N (kN)</th>
+                                                <th class="px-2 py-2 font-bold text-gray-500 dark:text-gray-400">Mx Top</th>
+                                                <th class="px-2 py-2 font-bold text-gray-500 dark:text-gray-400">Mx Bot</th>
+                                                <th class="px-2 py-2 font-bold text-gray-500 dark:text-gray-400">My Top</th>
+                                                <th class="px-2 py-2 font-bold text-gray-500 dark:text-gray-400">My Bot</th>
+                                                <th class="px-1 py-2 w-6"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800 font-mono">
+                                            <!-- Injetado por JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- Sign convention reference -->
+                                <div class="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] flex items-start gap-2">
+                                    <div id="sign-convention-badge" class="shrink-0 px-1.5 py-0.5 rounded font-bold text-[10px] bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">🔴 N &lt; 0 = Compressão</div>
+                                    <span class="text-gray-500 dark:text-gray-400">N positivo = Tração. Momentos em <span id="unit-label-m">kNm</span>. Cole do Excel: N | Mx_top | Mx_bot | My_top | My_bot.</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Cross Section Preview (3/8 Width) (cols 6-8) -->
-                        <div
-                            class="xl:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                            <div
-                                class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
-                                <h3
-                                    class="font-bold text-slate-700 dark:text-gray-300 text-xs uppercase tracking-wider">
-                                    Cross Section</h3>
-                                <span class="text-[10px] text-gray-400">Scroll to Zoom</span>
+                        <!-- Criteria Tab (RS2 Card) -->
+                        <div id="tab-criteria" class="tab-card space-y-3 transition-all duration-300">
+                            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                                    <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>⚙️</span> Critérios Normativos & 2ª Ordem
+                                    </h2>
+                                    <span id="col-crit-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                        NBR 6118
+                                    </span>
+                                </div>
+                                <div id="criteria-container" class="space-y-3">
+                                    <!-- Injetado por JS injectDynamicUI() -->
+                                </div>
                             </div>
-                            <div id="cross-section-container"
-                                class="relative w-full flex-grow bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
+                        </div>
+
+                        <!-- Panel 6: RS2 Geotechnical / PCalc Structural Tips -->
+                        <div id="tab-tips" class="bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900 p-3.5 text-xs text-blue-900 dark:text-blue-200 space-y-1.5 shadow-xs">
+                            <p class="font-bold flex items-center gap-1.5 text-xs text-blue-900 dark:text-blue-200">
+                                <span>💡</span> Recomendações Técnicas (PCalc • RS2):
+                            </p>
+                            <ul class="list-disc list-inside space-y-1 text-[11px] text-blue-800 dark:text-blue-300">
+                                <li><strong>Efeitos Locais de 2ª Ordem</strong>: Pilares com &lambda; > &lambda;₁ exigem método do pilar-padrão (curvatura ou rigidez nominal aproximada).</li>
+                                <li><strong>Envoltória 3D</strong>: A superfície de ruptura N-Mx-My é discretizada em malha tridimensional interativa renderizada via Plotly.</li>
+                                <li><strong>Importação Rápida</strong>: Cole linhas diretamente do Excel (Ctrl+V) na tabela de casos de carga para processamento em lote.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Action Footer RS2 Gradient Style -->
+                    <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 shrink-0">
+                        <button type="button" id="calculate-btn" onclick="performCalculation()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer active:scale-[0.99]">
+                            <span>⚡ CALCULAR PILAR</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                        <div id="feedback-message" class="text-center text-xs min-h-[16px] mt-1.5 font-medium"></div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Column Results (8 cols - RS2 Standard) -->
+                <div class="lg:col-span-8 flex flex-col min-h-0 overflow-y-auto space-y-4 pr-1">
+                    <!-- Row 1: 3D Surface (5/8) + Cross Section (3/8) -->
+                    <div class="grid grid-cols-1 xl:grid-cols-8 gap-4 min-h-[380px]">
+                        <!-- 3D Chart -->
+                        <div class="xl:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Superfície de Interação 3D (N-Mx-My)</h3>
+                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Envoltória 3D</span>
+                            </div>
+                            <div id="chart3d" class="flex-grow relative w-full">
+                                <div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                                    Pronto para calcular
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cross Section Preview -->
+                        <div class="xl:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-700 dark:text-gray-300 text-xs uppercase tracking-wider">Seção Transversal 2D</h3>
+                                <span class="text-[10px] text-gray-400">EngCAD Blueprint</span>
+                            </div>
+                            <div id="cross-section-container" class="relative w-full flex-grow bg-gray-100 dark:bg-gray-900 flex items-center justify-center overflow-hidden">
                                 <canvas id="sectionCanvas" class="block w-full h-full"></canvas>
                             </div>
                         </div>
                     </div>
 
                     <!-- Row 2: Elevation (1/2) + Results Table (1/2) -->
-                    <!-- Grid set to 2 cols for 50/50 split -->
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[500px] min-h-[500px]">
-                        <!-- Elevation View (1/2 Width) - REFACTORED TO SUPPORT 3 PLOTS -->
-                        <div
-                            class="xl:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                            <div
-                                class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Column Elevation (2nd Order
-                                    Effects)</h3>
-                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Normal |
-                                    Mx | My</span>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-[420px]">
+                        <!-- Column Elevation -->
+                        <div class="xl:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Elevação do Pilar (Efeitos de 2ª Ordem)</h3>
+                                <span class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Normal | Mx | My</span>
                             </div>
                             <div class="flex-grow relative w-full p-2 bg-white dark:bg-gray-900 grid grid-cols-3 gap-2">
-                                <!-- Placeholders for 3 plots - Corrected IDs to match JS logic easier -->
                                 <div id="elevation-plot-n" class="w-full h-full"></div>
                                 <div id="elevation-plot-mx" class="w-full h-full"></div>
                                 <div id="elevation-plot-my" class="w-full h-full"></div>
-                                <div id="elevation-placeholder"
-                                    class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10"
-                                    style="display:none;">
-                                    Select a load case to view elevation
+                                <div id="elevation-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10" style="display:none;">
+                                    Selecione um caso de carga para visualizar a elevação
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Results Table (1/2 Width) -->
-                        <div
-                            class="xl:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-                            <div
-                                class="px-4 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Detailed Results</h3>
-                                <button class="text-xs text-blue-600 hover:underline">Export CSV</button>
+                        <!-- Column Results Table -->
+                        <div class="xl:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm">Resultados dos Casos de Carga</h3>
+                                <span class="text-xs text-gray-400">Verificação &nu; &ge; 1.0</span>
                             </div>
                             <div class="flex-grow overflow-y-auto table-container p-0">
-                                <table id="results-table"
-                                    class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                <table id="results-table" class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
                                     <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10 shadow-sm">
                                         <tr>
-                                            <th class="px-4 py-3 font-semibold">Case</th>
+                                            <th class="px-4 py-3 font-semibold">Caso</th>
                                             <th class="px-4 py-3 font-semibold">Nsd</th>
-                                            <th class="px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">Mx,tot
-                                            </th>
-                                            <th class="px-4 py-3 font-semibold text-green-600 dark:text-green-400">
-                                                My,tot</th>
-                                            <th class="px-4 py-3 font-semibold text-center">Safety (ν)</th>
+                                            <th class="px-4 py-3 font-semibold text-blue-600 dark:text-blue-400">Mx,tot</th>
+                                            <th class="px-4 py-3 font-semibold text-green-600 dark:text-green-400">My,tot</th>
+                                            <th class="px-4 py-3 font-semibold text-center">Segurança (&nu;)</th>
                                             <th class="px-4 py-3 font-semibold">Status</th>
                                             <th class="px-4 py-3 font-semibold"></th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                        <!-- Results -->
+                                        <!-- Preenchido dinamicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================================================================== -->
+            <!-- 2. VIEW SEÇÃO / VIGA (FLEXÃO M-N, CORTANTE V & ENVOLTÓRIA M-N)         -->
+            <!-- ===================================================================== -->
+            <div id="view-section" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4 flex-grow min-h-0 overflow-hidden">
+                <!-- Left Panel: Section Controls Sidebar (4 cols - RS2 Standard) -->
+                <div class="lg:col-span-4 flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-0">
+                    <div class="flex-grow overflow-y-auto p-3 space-y-3.5 custom-scrollbar">
+                    
+                    <!-- Panel 1: Geometria & Materiais (RS2 Card) -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>📐</span> Geometria & Materiais da Seção
+                            </h2>
+                            <span id="sec-geo-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                20 × 50 cm • C30
+                            </span>
+                        </div>
+
+                        <!-- RS2 Live Metric Strip -->
+                        <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                            <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Área (Ac) • Altura útil (d):</span>
+                                <span id="sec-ac-preview" class="font-mono font-bold text-gray-900 dark:text-gray-100">Ac = 1000 cm² | d ≈ 45.0 cm</span>
+                            </div>
+                            <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Resistências (fcd • fyd):</span>
+                                <span id="sec-mat-preview" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">fcd=21.4 MPa | fyd=434.8 MPa</span>
+                            </div>
+                        </div>
+
+                        <!-- Form Inputs -->
+                        <div class="space-y-2.5 pt-1">
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label for="bw" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Largura (bw)</label>
+                                    <div class="relative">
+                                        <input type="number" id="bw" value="20" min="10" max="300" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                        <span class="absolute right-1.5 top-2 text-[10px] font-bold text-gray-400">cm</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="h" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Altura (h)</label>
+                                    <div class="relative">
+                                        <input type="number" id="h" value="50" min="15" max="400" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                        <span class="absolute right-1.5 top-2 text-[10px] font-bold text-gray-400">cm</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="c" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Cobrimento (c)</label>
+                                    <div class="relative">
+                                        <input type="number" id="c" value="3.0" min="1.5" max="8.0" step="0.5" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                        <span class="absolute right-1.5 top-2 text-[10px] font-bold text-gray-400">cm</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2.5">
+                                <div>
+                                    <label for="fck" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Concreto (fck)</label>
+                                    <div class="relative">
+                                        <input type="number" id="fck" value="30" min="15" max="90" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                        <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">MPa</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="fyk" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Aço (fyk)</label>
+                                    <div class="relative">
+                                        <input type="number" id="fyk" value="500" min="250" max="600" step="10" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                        <span class="absolute right-2 top-2 text-[10px] font-bold text-gray-400">MPa</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel 2: Esforços Solicitantes de Projeto (ELU) -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>⚖️</span> Esforços de Projeto (ELU)
+                            </h2>
+                            <span id="sec-loads-badge" class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                                MSd = 100 kNm
+                            </span>
+                        </div>
+
+                        <!-- RS2 Live Metric Strip -->
+                        <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                            <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Momento Adimensional (&mu;):</span>
+                                <span id="sec-mu-preview" class="font-mono font-bold text-blue-600 dark:text-blue-400">&mu; = 0.115 (Domínio 2/3)</span>
+                            </div>
+                            <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Normal Adimensional (&nu;):</span>
+                                <span id="sec-nu-preview" class="font-mono font-semibold text-gray-800 dark:text-gray-200">&nu; = 0.00 (Flexão Simples)</span>
+                            </div>
+                        </div>
+
+                        <!-- Form Inputs -->
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <div>
+                                <label for="Msd" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Momento (MSd)</label>
+                                <div class="relative">
+                                    <input type="number" id="Msd" value="100" min="0" max="10000" step="5" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-bold text-blue-600 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                    <span class="absolute right-1.5 top-2 text-[10px] font-bold text-gray-400">kNm</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="Nsd" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Normal (NSd)</label>
+                                <div class="relative">
+                                    <input type="number" id="Nsd" value="0" min="-10000" max="10000" step="10" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-bold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs" title="Negativo: Compressão (-), Positivo: Tração (+)">
+                                    <span class="absolute right-1.5 top-2 text-[10px] font-bold text-gray-400">kN</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="Vsd" class="text-[11px] font-bold text-gray-600 dark:text-gray-300 block mb-1">Cortante (VSd)</label>
+                                <div class="relative">
+                                    <input type="number" id="Vsd" value="60" min="0" max="5000" step="5" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-xs font-bold text-purple-600 dark:text-purple-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-xs">
+                                    <span class="absolute right-1.5 top-2 text-[10px] font-bold text-gray-400">kN</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 italic">Convenção N: N &lt; 0 Compressão (aumenta x e Vc) | N &gt; 0 Tração.</p>
+                    </div>
+
+                    <!-- Panel 3: Armadura da Seção & Detalhamento -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>🔩</span> Armaduras da Seção
+                            </h2>
+                            <div class="flex gap-1 bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg text-xs">
+                                <button type="button" id="tab-btn-beam" onclick="pcalcSection.switchRebarMode('beam')" class="rebar-tab-btn active px-2.5 py-1 rounded-md font-bold text-xs transition-all cursor-pointer">Camadas</button>
+                                <button type="button" id="tab-btn-bars" onclick="pcalcSection.switchRebarMode('bars')" class="rebar-tab-btn px-2.5 py-1 rounded-md font-semibold text-xs text-gray-600 dark:text-gray-300 transition-all cursor-pointer">Matriz</button>
+                            </div>
+                        </div>
+
+                        <!-- RS2 Live Metric Strip -->
+                        <div class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                            <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Armadura Adotada (As / As'):</span>
+                                <span id="sec-as-live-preview" class="font-mono font-bold text-blue-600 dark:text-blue-400">As = 8.04 cm² | As' = 1.57 cm²</span>
+                            </div>
+                            <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Cisalhamento (VRd2 / Asw/s):</span>
+                                <span id="sec-shear-live-preview" class="font-mono font-semibold text-purple-600 dark:text-purple-400">VRd2 = 368 kN | Asw/s = 6.70 cm²/m</span>
+                            </div>
+                        </div>
+
+                        <!-- Modo 1: Armadura por Camadas -->
+                        <div id="rebar-mode-beam" class="space-y-3 pt-1">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400">Armadura Inferior (As)</span>
+                                    <span id="as-preview" class="text-[10px] font-bold text-blue-600 dark:text-blue-400">As = 8.04 cm²</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label for="num_barras_bot" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">Nº Barras</label>
+                                        <input type="number" id="num_barras_bot" value="4" min="1" max="30" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200">
+                                    </div>
+                                    <div>
+                                        <label for="diam_barra_bot" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">Diâmetro</label>
+                                        <select id="diam_barra_bot" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                                            <option value="6.3">&Phi; 6.3 mm</option>
+                                            <option value="8.0">&Phi; 8.0 mm</option>
+                                            <option value="10.0">&Phi; 10.0 mm</option>
+                                            <option value="12.5">&Phi; 12.5 mm</option>
+                                            <option value="16.0" selected>&Phi; 16.0 mm</option>
+                                            <option value="20.0">&Phi; 20.0 mm</option>
+                                            <option value="25.0">&Phi; 25.0 mm</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 dark:border-gray-700 pt-2">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-[11px] font-bold text-amber-600 dark:text-amber-400">Armadura Superior (As')</span>
+                                    <span id="as-top-preview" class="text-[10px] font-bold text-amber-600 dark:text-amber-400">As' = 1.57 cm²</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label for="num_barras_top" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">Nº Barras</label>
+                                        <input type="number" id="num_barras_top" value="2" min="0" max="30" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200">
+                                    </div>
+                                    <div>
+                                        <label for="diam_barra_top" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">Diâmetro</label>
+                                        <select id="diam_barra_top" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                                            <option value="6.3">&Phi; 6.3 mm</option>
+                                            <option value="8.0">&Phi; 8.0 mm</option>
+                                            <option value="10.0" selected>&Phi; 10.0 mm</option>
+                                            <option value="12.5">&Phi; 12.5 mm</option>
+                                            <option value="16.0">&Phi; 16.0 mm</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-100 dark:border-gray-700 pt-2">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-[11px] font-bold text-purple-600 dark:text-purple-400">Armadura Transversal (Estribos)</span>
+                                    <span id="asw-preview" class="text-[10px] font-bold text-purple-600 dark:text-purple-400">Asw/s = 6.70 cm²/m</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label for="diam_estribo" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">&Phi; Estribo</label>
+                                        <select id="diam_estribo" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                                            <option value="5.0">&Phi; 5.0 mm</option>
+                                            <option value="6.3">&Phi; 6.3 mm</option>
+                                            <option value="8.0" selected>&Phi; 8.0 mm</option>
+                                            <option value="10.0">&Phi; 10.0 mm</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="pernas_estribo" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">Ramos</label>
+                                        <input type="number" id="pernas_estribo" value="2" min="2" max="6" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200">
+                                    </div>
+                                    <div>
+                                        <label for="s_estribo" class="text-[10px] font-medium text-gray-500 dark:text-gray-400 block mb-0.5">Espaç. (s)</label>
+                                        <div class="relative">
+                                            <input type="number" id="s_estribo" value="15" min="5" max="50" step="1" onchange="pcalcSection.calculate()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200">
+                                            <span class="absolute right-1 top-1.5 text-[9px] font-bold text-gray-400">cm</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modo 2: Matriz de Barras Pontuais -->
+                        <div id="rebar-mode-bars" class="hidden space-y-2.5 pt-1">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400">Coordenadas pontuais (x, y)</span>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="pcalcSection.generateRebarPattern()" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 cursor-pointer">+ Padrão</button>
+                                    <button type="button" onclick="pcalcSection.addRebarRow()" class="text-xs font-semibold text-blue-600 dark:text-blue-400 cursor-pointer">+ Barra</button>
+                                </div>
+                            </div>
+                            <div class="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <table class="w-full text-xs text-left text-gray-700 dark:text-gray-300">
+                                    <thead class="bg-gray-50 dark:bg-gray-750 sticky top-0 border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="px-2 py-1 font-bold">x (cm)</th>
+                                            <th class="px-2 py-1 font-bold">y (cm)</th>
+                                            <th class="px-2 py-1 font-bold">&Phi; (mm)</th>
+                                            <th class="px-2 py-1 text-center font-bold">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bars-table-body" class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                                        <!-- Injetado por JS -->
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
 
-                    <div id="footer-placeholder"></div>
+                    <!-- Panel 4: RS2 Engineering Tips for Beams/Sections -->
+                    <div class="bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900 p-3.5 text-xs text-blue-900 dark:text-blue-200 space-y-1.5 shadow-xs">
+                        <p class="font-bold flex items-center gap-1.5 text-xs text-blue-900 dark:text-blue-200">
+                            <span>💡</span> Recomendações Técnicas da Seção:
+                        </p>
+                        <ul class="list-disc list-inside space-y-1 text-[11px] text-blue-800 dark:text-blue-300">
+                            <li><strong>Ductilidade</strong>: Mantenha a profundidade relativa da linha neutra x/d &le; 0.45 para garantir escoamento do aço tracionado.</li>
+                            <li><strong>Esforço Cortante</strong>: Verifique o esmagamento das bielas de concreto (V<sub>Sd</sub> &le; V<sub>Rd2</sub>) antes do espaçamento de estribos.</li>
+                            <li><strong>Armadura Dupla</strong>: Adotada automaticamente quando o momento solicitante excede a capacidade limite do Domínio 3.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Section Action Footer RS2 Gradient Button -->
+                <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 shrink-0">
+                    <button type="button" onclick="pcalcSection.calculate()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-emerald-500/25 transition-all cursor-pointer active:scale-[0.99]">
+                        <span>⚡ CALCULAR SEÇÃO & ENVOLTÓRIA</span>
+                    </button>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <script src="PCALC.js"></script>
+            <!-- Right Panel: Section Results & Dual Canvases (8 cols - RS2 Standard) -->
+            <div class="lg:col-span-8 flex flex-col min-h-0 overflow-y-auto space-y-4 pr-1">
+                <!-- Status Banner -->
+                <div id="sec-status-banner" class="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span id="sec-status-icon" class="text-2xl">✅</span>
+                        <div>
+                            <h3 id="sec-status-title" class="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                                SEÇÃO CONFORME (SEGURANÇA ATENDIDA)
+                            </h3>
+                            <p id="sec-status-sub" class="text-xs text-emerald-700 dark:text-emerald-400">
+                                A seção atende a todas as verificações de cálculo aos estados limites últimos.
+                            </p>
+                        </div>
+                    </div>
+                    <span id="sec-status-badge" class="bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                        Util: 82.5%
+                    </span>
+                </div>
 
-    <!-- Tab Navigation Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tabs = document.querySelectorAll('.tab-btn');
-            const contents = document.querySelectorAll('.tab-content');
+                <!-- 4 KPI Cards Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-xs">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Flexão (M<sub>Sd</sub> / M<sub>Rd</sub>)</span>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span id="sec-kpi-flex-val" class="text-base font-bold text-gray-900 dark:text-white">82.5%</span>
+                            <span class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">OK</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 h-1 rounded-full mt-1.5 overflow-hidden">
+                            <div id="sec-kpi-flex-bar" class="bg-emerald-500 h-full rounded-full" style="width: 82.5%;"></div>
+                        </div>
+                        <span id="sec-kpi-flex-detail" class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 block">MRd = 121.2 kNm</span>
+                    </div>
 
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    // Remove active class from all tabs
-                    tabs.forEach(t => t.classList.remove('active'));
-                    // Add active class to click tab
-                    tab.classList.add('active');
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-xs">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Cisalhamento (V<sub>Sd</sub> / V<sub>Rd</sub>)</span>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span id="sec-kpi-shear-val" class="text-base font-bold text-gray-900 dark:text-white">52.3%</span>
+                            <span class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">OK</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 h-1 rounded-full mt-1.5 overflow-hidden">
+                            <div id="sec-kpi-shear-bar" class="bg-emerald-500 h-full rounded-full" style="width: 52.3%;"></div>
+                        </div>
+                        <span id="sec-kpi-shear-detail" class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 block">VRd = 114.7 kN</span>
+                    </div>
 
-                    // Hide all contents
-                    contents.forEach(c => c.classList.add('hidden'));
-                    // Show target content
-                    const target = document.getElementById(tab.dataset.target);
-                    if (target) target.classList.remove('hidden');
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-xs">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Biela de Concreto (V<sub>Rd2</sub>)</span>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span id="sec-kpi-biela-val" class="text-base font-bold text-gray-900 dark:text-white">16.3%</span>
+                            <span class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">OK</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 h-1 rounded-full mt-1.5 overflow-hidden">
+                            <div id="sec-kpi-biela-bar" class="bg-emerald-500 h-full rounded-full" style="width: 16.3%;"></div>
+                        </div>
+                        <span id="sec-kpi-biela-detail" class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 block">VRd2 = 368.0 kN</span>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-xs">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 block font-medium">Linha Neutra (x/d)</span>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span id="sec-kpi-domain-val" class="text-xs font-bold text-gray-900 dark:text-white">Domínio 3</span>
+                            <span id="sec-kpi-rho-val" class="text-[10px] font-semibold text-blue-600 dark:text-blue-400">&rho;=0.96%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 h-1 rounded-full mt-1.5 overflow-hidden">
+                            <div id="sec-kpi-xd-bar" class="bg-blue-500 h-full rounded-full" style="width: 25%;"></div>
+                        </div>
+                        <span id="sec-kpi-xd-detail" class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 block">x/d = 0.245 (&le; 0.45)</span>
+                    </div>
+                </div>
+
+                <!-- Dual Technical View: CAD Section (Left) + M-N Interaction Diagram (Right) -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <!-- 1. CAD Cross Section Canvas -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm flex flex-col">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">
+                            <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <span>🔍</span> Seção Transversal CAD 2D
+                            </h3>
+                            <span class="text-[10px] text-gray-400 font-mono">EngCAD Blueprint</span>
+                        </div>
+                        <div class="relative w-full flex-grow flex justify-center items-center bg-gray-50 dark:bg-gray-900/90 rounded-lg p-1 border border-gray-200/60 dark:border-gray-700/60" style="min-height: 290px;">
+                            <canvas id="pcalcBeamCanvas" width="460" height="290" class="max-w-full h-auto"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 2. M-N Interaction Curve Canvas -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm flex flex-col">
+                        <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-2">
+                            <h3 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                                <span>📈</span> Diagrama de Interação M-N
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <span class="inline-block w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
+                                <span class="text-[10px] text-gray-400">Envoltória</span>
+                                <span class="inline-block w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+                                <span class="text-[10px] text-gray-400">Ponto (M, N)</span>
+                            </div>
+                        </div>
+                        <div class="relative w-full flex-grow flex justify-center items-center bg-gray-50 dark:bg-gray-900/90 rounded-lg p-1 border border-gray-200/60 dark:border-gray-700/60" style="min-height: 290px;">
+                            <canvas id="pcalcMnCanvas" width="460" height="290" class="max-w-full h-auto"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Results Table -->
+                <div id="sec-results-container" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <!-- Preenchido por pcalcSection -->
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="pcalc_section.js"></script>
+<script src="PCALC.js"></script>
+
+<!-- App Integration and Initialization Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Tab navigation in column mode (RS2 Quick Scroll Anchor Jump)
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                tabs.forEach(t => {
+                    t.classList.remove('active', 'bg-indigo-600', 'text-white');
+                    t.classList.add('text-gray-600', 'dark:text-gray-300');
                 });
+                tab.classList.add('active', 'bg-indigo-600', 'text-white');
+                tab.classList.remove('text-gray-600', 'dark:text-gray-300');
+                const target = document.getElementById(tab.dataset.target);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const innerCard = target.querySelector('.rounded-xl') || target;
+                    innerCard.classList.add('ring-2', 'ring-indigo-500');
+                    setTimeout(() => innerCard.classList.remove('ring-2', 'ring-indigo-500'), 1500);
+                }
             });
         });
-    </script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize section module
+            if (typeof pcalcSection !== 'undefined' && typeof pcalcSection.init === 'function') {
+                pcalcSection.init();
+            }
+
+            // Read URL params for direct mode & standard launch
+            const urlParams = new URLSearchParams(window.location.search);
+            const modeParam = urlParams.get('mode');
+            const codeParam = urlParams.get('code') || urlParams.get('standard');
+
+            if (modeParam === 'section' || modeParam === 'beam') {
+                if (typeof setPcalcMode === 'function') setPcalcMode('section');
+            } else {
+                if (typeof setPcalcMode === 'function') setPcalcMode('column');
+            }
+
+            if (codeParam && typeof setPcalcStandard === 'function') {
+                setPcalcStandard(codeParam.toLowerCase());
+            }
+
+            // Header & Footer template injection
             if (typeof injectHeader === 'function') {
                 injectHeader({
-                    activePage: 'pcalc', // Verify key in nav-config.json
+                    activePage: 'pcalc',
                     pageTitle: 'pcalc_title',
                     headerPlaceholderId: 'header-placeholder',
                     pathPrefix: '../'

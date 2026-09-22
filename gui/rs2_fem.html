@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RS2 / Phase2 - Geotechnical 2D FEA Suite</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function () {
@@ -45,17 +45,62 @@
         .cad-crosshair {
             cursor: crosshair;
         }
-        .colorbar-gradient {
-            background: linear-gradient(to top, #3b82f6, #06b6d4, #10b981, #eab308, #ef4444);
+
+        /* Authentic Rocscience RS2 Colorbar Legend */
+        #colorbar-container {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: #ffffff;
+            border: 1.5px solid #000000;
+            padding: 8px 10px 10px 10px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.35);
+            z-index: 25;
+            font-family: 'Courier New', Courier, monospace;
+            color: #000000;
+            user-select: none;
+            cursor: grab;
+            width: fit-content;
         }
+
+        #colorbar-container:active {
+            cursor: grabbing;
+        }
+
+        #colorbar-container::before {
+            content: '';
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 14px;
+            background-color: #666666;
+            pointer-events: none;
+        }
+
+        #colorbar-container::after {
+            content: '';
+            position: absolute;
+            bottom: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 14px;
+            background-color: #666666;
+            pointer-events: none;
+        }
+
         /* Custom scrollbar for control panels */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
+
         ::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.05);
         }
+
         ::-webkit-scrollbar-thumb {
             background: rgba(100, 116, 139, 0.3);
             border-radius: 3px;
@@ -63,26 +108,30 @@
     </style>
 </head>
 
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-['Inter',sans-serif]">
+<body
+    class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-['Inter',sans-serif]">
 
-    <div class="container mx-auto p-3 md:p-6 max-w-[1600px] flex-grow flex flex-col">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <!-- Header placeholder -->
         <div id="header-placeholder" style="min-height: 90px;"></div>
 
         <!-- App Main Header & Quick Actions -->
-        <div class="mb-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div
+            class="mb-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <div>
                 <div class="flex items-center gap-3">
                     <span class="p-2 bg-indigo-600 text-white rounded-lg shadow-md font-bold text-lg">RS2</span>
                     <div>
                         <h1 class="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                             Geotechnical 2D Finite Element Suite
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            <span
+                                class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                                 Phase2 / RS2 Engine
                             </span>
                         </h1>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            Plane-Strain Continuum FEA | Elasto-Plastic Mohr-Coulomb | Shear Strength Reduction (SSR) | Groundwater Seepage
+                            Plane-Strain Continuum FEA | Elasto-Plastic Mohr-Coulomb | Shear Strength Reduction (SSR) |
+                            Groundwater Seepage
                         </p>
                     </div>
                 </div>
@@ -91,48 +140,122 @@
             <!-- Top Action Toolbar -->
             <div class="flex flex-wrap items-center gap-2">
                 <!-- Preset Selector -->
-                <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/60 p-1 rounded-lg border border-gray-200 dark:border-gray-600 text-xs">
+                <div
+                    class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/60 p-1 rounded-lg border border-gray-200 dark:border-gray-600 text-xs">
                     <span class="text-gray-500 dark:text-gray-400 font-medium pl-1">Geometria:</span>
-                    <select id="preset-selector" onchange="loadPresetModel(this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 font-semibold text-gray-800 dark:text-gray-200">
-                        <option value="embankment_multiphase" selected>Aterro 2 Fases c/ Envelopamento (Rocscience)</option>
-                        <option value="slope">Talude (SSR Benchmark)</option>
-                        <option value="excavation">Escavação Profunda</option>
-                        <option value="tunnel">Túnel Subterrâneo</option>
-                        <option value="footing">Sapata Corrida</option>
+                    <select id="preset-selector" onchange="loadPresetModel(this.value)"
+                        class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 font-semibold text-gray-800 dark:text-gray-200">
+                        <optgroup label="Obras de Contenção (MEF & Estabilidade Global)">
+                            <option value="cantilever_wall">Muro em Balanço (Concreto Armado + Reaterro)</option>
+                            <option value="gravity_wall">Muro de Gravidade (Concreto Ciclópico)</option>
+                            <option value="diaphragm_wall">Parede Diafragma c/ Tirante (Escavação Ancorada)</option>
+                            <option value="sheet_pile_wall">Cortina de Estacas-Prancha (Aço ArcelorMittal AZ)</option>
+                        </optgroup>
+                        <optgroup label="Taludes e Aterros (Geotecnia Clássica)">
+                            <option value="embankment_multiphase" selected>Aterro 2 Fases c/ Envelopamento (Rocscience)
+                            </option>
+                            <option value="slope">Talude (SSR Benchmark)</option>
+                            <option value="excavation">Escavação Profunda</option>
+                            <option value="tunnel">Túnel Subterrâneo</option>
+                            <option value="footing">Sapata Corrida</option>
+                        </optgroup>
                     </select>
                 </div>
 
-                <!-- Test Benchmarks Dropdown -->
-                <div class="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 p-1 rounded-lg border border-amber-200 dark:border-amber-800 text-xs shadow-xs">
+                <!-- Test Benchmarks Dropdown & Library Button -->
+                <div
+                    class="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 p-1 rounded-lg border border-amber-200 dark:border-amber-800 text-xs shadow-xs">
                     <span class="text-amber-700 dark:text-amber-300 font-semibold pl-1 flex items-center gap-1">
                         <span>🧪</span> Testes:
                     </span>
-                    <select id="benchmark-selector" onchange="loadBenchmarkFile(this.value)" class="bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                    <select id="benchmark-selector" onchange="loadBenchmarkFile(this.value)"
+                        class="bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 font-semibold text-gray-800 dark:text-gray-200 cursor-pointer max-w-[210px] md:max-w-[280px] truncate">
                         <option value="" disabled selected>Carregar teste pronto...</option>
-                        <option value="01_talude_estabilidade_ssr.json">1. Talude com NA & Sobrecarga (SSR FS=1.38)</option>
-                        <option value="02_escavacao_profunda_rebaixamento.json">2. Escavação Profunda & Nível Freático</option>
-                        <option value="03_tunel_cavidade_rochosa.json">3. Túnel Subterrâneo em Rocha (K0=0.8)</option>
-                        <option value="04_sapata_capacidade_de_carga.json">4. Sapata Corrida (Cisalhamento Plast.)</option>
-                        <option value="05_talude_com_camada_fraca.json">5. Talude com Camada Fraca (Ruptura FS=0.89)</option>
+                        <optgroup label="📘 Tutoriais Oficiais Phase2 (Rocscience RS2)">
+                            <option value="phase2_tut01_tunel_circular_kirsch.json">Phase2 Tut 01: Túnel em Arco (Teto em Abóbada & Parede Vertical)</option>
+                            <option value="phase2_tut02_escavacao_solo_estratificado.json">Phase2 Tut 02: Escavação em 3 Camadas</option>
+                            <option value="phase2_tut03_tunnel_support_bolts_shotcrete.json">Phase2 Tut 03: Túnel c/ Chumbadores & Liner</option>
+                            <option value="phase2_tut04_surface_excavation_trench.json">Phase2 Tut 04: Trincheira Próxima a Túnel</option>
+                            <option value="phase2_tut05_joint_opening.json">Phase2 Tut 05: Abertura e Cisalhamento em Junta</option>
+                            <option value="phase2_tut06_axisymmetric_shaft.json">Phase2 Tut 06: Poço Profundo (Axisimétrico 3D)</option>
+                            <option value="phase2_tut07_groundwater_seepage.json">Phase2 Tut 07: Percolação em Barragem (Darcy FEA)</option>
+                            <option value="phase2_tut08_shear_strength_reduction.json">Phase2 Tut 08: Talude Canônico SSR (c-phi)</option>
+                            <option value="phase2_tut09_slide_import_ssr.json">Phase2 Tut 09: Importação Slide2 / Bedrock SSR</option>
+                            <option value="phase2_tut10_ssr_search_area.json">Phase2 Tut 10: Região de Busca SSR (Search Area)</option>
+                            <option value="phase2_tut11_geogrid_embankment_no_slip.json">Phase2 Tut 11: Aterro Reforçado c/ Geogrelha</option>
+                            <option value="phase2_tut13_cofferdam_seepage.json">Phase2 Tut 13: Ensecadeira & Percolação (Piping)</option>
+                            <option value="phase2_tut16_retaining_wall.json">Phase2 Tut 16: Muro de Arrimo em Concreto Armado</option>
+                            <option value="phase2_tut17_trench_piles_struts.json">Phase2 Tut 17: Trincheira Urbana Escorada</option>
+                            <option value="phase2_tut18_3d_tunnel_core_replacement.json">Phase2 Tut 18: Túnel c/ Substituição de Núcleo 3D</option>
+                            <option value="phase2_tut21_levee_toe_drain.json">Phase2 Tut 21: Dique Fluvial c/ Dreno de Pé</option>
+                            <option value="phase2_tut23_anchored_sheet_pile_wall.json">Phase2 Tut 23: Cortina de Pranchas Ancorada</option>
+                            <option value="phase2_tut24_tunnel_lining_design.json">Phase2 Tut 24: Revestimento de Túnel (N-M)</option>
+                            <option value="phase2_tut26_drawdown_analysis_slope.json">Phase2 Tut 26: Rebaixamento Rápido em Talude</option>
+                            <option value="phase2_tut30_slope_angle_optimization.json">Phase2 Tut 30: Otimização de Ângulo de Talude</option>
+                            <option value="phase2_tut32_probabilistic_slope_stability.json">Phase2 Tut 32: Análise Probabilística (Rosenblueth)</option>
+                        </optgroup>
+                        <optgroup label="📗 Tutoriais & Benchmarks Adonis (Geocomp)">
+                            <option value="adonis_tut01_kirsch_abertura_biaxial.json">Adonis Tut 01: Cavidade sob
+                                Compressão Biaxial (K0=0.5)</option>
+                            <option value="adonis_tut02_sapata_capacidade_carga_prandtl.json">Adonis Tut 02: Sapata
+                                Corrida (Capacidade Prandtl)</option>
+                            <option value="adonis_tut03_talude_camada_fraca_ssr.json">Adonis Tut 03: Talude c/ Camada
+                                Fraca (Ruptura SSR FS&lt;1.0)</option>
+                            <option value="adonis_tut04_cortina_estacas_prancha.json">Adonis Tut 04: Cortina de
+                                Estacas-Prancha Ancoradas</option>
+                            <option value="adonis_tut05_tunel_ferradura_caverna.json">Adonis Tut 05: Caverna em
+                                Arco/Ferradura sob Alta Tensão</option>
+                        </optgroup>
                     </select>
+                    <button type="button" onclick="openBenchmarkLibraryModal()"
+                        class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 rounded text-xs shadow-xs transition-colors flex items-center gap-1"
+                        title="Abrir Biblioteca Completa de Tutoriais Phase2 & Adonis">
+                        <span>📚</span> <span class="hidden md:inline">Tutoriais</span>
+                    </button>
                 </div>
 
                 <!-- Analysis Buttons -->
-                <button type="button" onclick="triggerMeshGeneration()" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs flex items-center gap-1.5 transition-colors">
+                <button type="button" onclick="triggerMeshGeneration()"
+                    class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs flex items-center gap-1.5 transition-colors">
                     <span>🕸️</span> Generate Mesh
                 </button>
-                <button type="button" onclick="triggerAnalysis(false)" id="btn-run-fea" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm text-xs flex items-center gap-1.5 transition-all">
+                <button type="button" onclick="triggerAnalysis(false)" id="btn-run-fea"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm text-xs flex items-center gap-1.5 transition-all">
                     <span>▶</span> Run FEA Solve
                 </button>
-                <button type="button" onclick="triggerAnalysis(true)" id="btn-run-ssr" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm text-xs flex items-center gap-1.5 transition-all" title="Calculates Critical Factor of Safety (FS)">
+                <button type="button" onclick="triggerAnalysis(true)" id="btn-run-ssr"
+                    class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm text-xs flex items-center gap-1.5 transition-all"
+                    title="Calculates Critical Factor of Safety (FS)">
                     <span>⚡</span> Compute SSR (Safety Factor)
                 </button>
 
-                <!-- Canvas Image Export -->
+                <!-- Project Save / Load & Canvas Image Export -->
                 <div class="flex items-center gap-1 border-l border-gray-200 dark:border-gray-700 pl-2">
-                    <button type="button" onclick="exportCanvasImage()" class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold" title="Export High-Res PNG Image">
+                    <input type="file" id="rs2-local-file-input" accept=".json,.fez,.rsmodel" class="hidden"
+                        onchange="importProjectJSON(event)">
+                    <button type="button" onclick="document.getElementById('rs2-local-file-input').click()"
+                        class="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold"
+                        title="Carregar Projeto RS2 (.json)">
+                        <span>📂</span>
+                        <span class="hidden sm:inline">Carregar</span>
+                    </button>
+                    <button type="button" onclick="exportProjectJSON()"
+                        class="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold"
+                        title="Salvar Projeto RS2 (.json)">
+                        <span>💾</span>
+                        <span class="hidden sm:inline">Salvar</span>
+                    </button>
+                    <button type="button" onclick="exportCanvasImage()"
+                        class="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold"
+                        title="Exportar Imagem PNG com Fundo Transparente (Ideal para inserir no Word ou relatórios)">
                         <span>📷</span>
-                        <span class="hidden sm:inline">Export PNG</span>
+                        <span class="hidden sm:inline">Exportar PNG</span>
+                    </button>
+                    <button type="button" onclick="copyCanvasImageToClipboard()"
+                        class="p-2 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-lg border border-indigo-200 dark:border-indigo-800 text-xs flex items-center gap-1 font-semibold"
+                        title="Copiar Imagem com Fundo Transparente direto para a Área de Transferência (Cole direto no Word com Ctrl+V)">
+                        <span>📋</span>
+                        <span class="hidden sm:inline">Copiar (Word)</span>
                     </button>
                 </div>
             </div>
@@ -140,314 +263,361 @@
 
         <!-- Main Workspace Grid (Left Controls 4 Cols / Right CAD Viewport 8 Cols) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-grow">
-            
+
             <!-- Left Control Sidebar (4 cols) -->
             <div class="lg:col-span-4 space-y-4 max-h-[850px] overflow-y-auto pr-1">
 
-                <!-- Panel 0: Geometry & Stratigraphy Builder -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border-2 border-indigo-500/40 dark:border-indigo-600/50 shadow-sm p-4 space-y-3">
+                <!-- Panel 0: Geometry & Stratigraphy Summary Card -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border-2 border-indigo-500/40 dark:border-indigo-600/50 shadow-sm p-4 space-y-3">
                     <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
                         <h2 class="text-sm font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-2">
                             <span>📐</span> Geometria do Talude & Camadas
                         </h2>
-                        <span class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
-                            Editor 2D
+                        <span id="geo-summary-badge"
+                            class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                            5 Camadas
                         </span>
                     </div>
 
-                    <!-- Mode Toggle: Polygonal Layers vs Simple Parametric vs Free -->
-                    <div class="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5 text-xs font-semibold">
-                        <button type="button" id="geo-tab-regions" onclick="switchGeoMode('regions')" class="flex-1 py-1 px-1.5 rounded-md bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-xs text-center transition-all">
-                            🍰 Camadas Poligonais
+                    <!-- Compact preview info in sidebar -->
+                    <div
+                        class="bg-indigo-50/50 dark:bg-indigo-950/30 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Modo de
+                                Modelagem:</span>
+                            <span id="sidebar-geo-mode-label"
+                                class="font-bold text-indigo-600 dark:text-indigo-400">Camadas Poligonais</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Dimensões do
+                                Modelo:</span>
+                            <span id="sidebar-domain-dims"
+                                class="font-mono font-semibold text-gray-800 dark:text-gray-200">60m × 25m</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Cavidade / Túnel:</span>
+                            <span id="sidebar-tunnel-dims"
+                                class="font-semibold text-purple-600 dark:text-purple-400">Nenhum</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Inclinação do
+                                Talude:</span>
+                            <span id="sidebar-slope-ratio"
+                                class="font-semibold text-emerald-600 dark:text-emerald-400">1V : 1.33H (36.9°)</span>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button" onclick="openDefineGeometryModal()"
+                            class="col-span-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Abrir editor completo de geometria, camadas e coordenadas">
+                            <span>📐</span> Editar Geometria & Camadas (Popup)
                         </button>
-                        <button type="button" id="geo-tab-parametric" onclick="switchGeoMode('parametric')" class="flex-1 py-1 px-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-center transition-all">
-                            Talude Simples
+                        <button type="button" onclick="openAddRegionModal()"
+                            class="bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                            <span>+</span> Nova Camada
                         </button>
-                        <button type="button" id="geo-tab-free" onclick="switchGeoMode('free')" class="flex-1 py-1 px-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-center transition-all">
-                            Contorno Livre
+                        <button type="button" onclick="loadPresetModel('embankment_multiphase')"
+                            class="bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            title="Restaurar preset de referência">
+                            <span>↺</span> Preset Ref.
                         </button>
                     </div>
-
-                    <!-- Sub-view 1: Polygonal Material Layers (Primary Geotechnical Modeling) -->
-                    <div id="geo-view-regions" class="space-y-2 text-xs">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Polígonos de Cada Camada:</span>
-                            <div class="flex items-center gap-1.5">
-                                <button type="button" onclick="loadPresetModel('embankment_multiphase')" class="text-[10px] text-amber-600 dark:text-amber-400 hover:underline font-medium" title="Restaurar o modelo de 5 camadas da imagem">
-                                    ↺ Restaurar Ref.
-                                </button>
-                                <button type="button" onclick="openAddRegionModal()" class="text-[11px] bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-semibold px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100">
-                                    + Nova Camada
-                                </button>
-                            </div>
-                        </div>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                            Cada camada de solo é um polígono fechado [X, Y] encaixado no maciço. Clique em qualquer camada para ver/editar vértices ou colar do Excel.
-                        </p>
-                        <div id="material-regions-container" class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                            <!-- Populated dynamically by renderMaterialRegionsUI() -->
-                        </div>
-                    </div>
-
-                    <!-- Sub-view 2: Parametric Slope Inputs -->
-                    <div id="geo-view-parametric" class="space-y-3 text-xs hidden">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block font-medium text-gray-600 dark:text-gray-300 mb-0.5">Largura Total L (m)</label>
-                                <input type="number" id="slope_width_L" value="60" step="5" min="10" oninput="updateSlopeSlopeAngle()" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-semibold">
-                            </div>
-                            <div>
-                                <label class="block font-medium text-gray-600 dark:text-gray-300 mb-0.5">Cota da Base Y (m)</label>
-                                <input type="number" id="slope_base_Y" value="0" step="1" oninput="updateSlopeSlopeAngle()" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-semibold">
-                            </div>
-                            <div>
-                                <label class="block font-medium text-gray-600 dark:text-gray-300 mb-0.5">Altura Pé H_pé (m)</label>
-                                <input type="number" id="slope_toe_H" value="10" step="1" min="1" oninput="updateSlopeSlopeAngle()" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-semibold">
-                            </div>
-                            <div>
-                                <label class="block font-medium text-gray-600 dark:text-gray-300 mb-0.5">Altura Crista H_crista (m)</label>
-                                <input type="number" id="slope_crest_H" value="25" step="1" min="2" oninput="updateSlopeSlopeAngle()" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-semibold text-indigo-600 dark:text-indigo-400">
-                            </div>
-                            <div>
-                                <label class="block font-medium text-gray-600 dark:text-gray-300 mb-0.5">Posição X Pé (m)</label>
-                                <input type="number" id="slope_toe_X" value="15" step="1" min="0" oninput="updateSlopeSlopeAngle()" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
-                            </div>
-                            <div>
-                                <label class="block font-medium text-gray-600 dark:text-gray-300 mb-0.5">Posição X Crista (m)</label>
-                                <input type="number" id="slope_crest_X" value="35" step="1" min="1" oninput="updateSlopeSlopeAngle()" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
-                            </div>
-                        </div>
-                        <div class="bg-indigo-50 dark:bg-indigo-950/40 p-2 rounded text-[11px] text-indigo-800 dark:text-indigo-300 flex justify-between items-center">
-                            <span>Inclinação da Rampa:</span>
-                            <strong id="slope-angle-display" class="font-bold">1V : 1.33H (36.9°)</strong>
-                        </div>
-                    </div>
-
-                    <!-- Sub-view 3: Free Coordinate Polygon Table -->
-                    <div id="geo-view-free" class="space-y-2 text-xs hidden">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[11px] text-gray-500">Vértices do Contorno [X, Y]:</span>
-                            <button type="button" onclick="addPolyVertex()" class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
-                                + Ponto
-                            </button>
-                        </div>
-                        <div class="max-h-36 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
-                            <table class="w-full text-[11px]">
-                                <thead class="bg-gray-50 dark:bg-gray-700 text-gray-500">
-                                    <tr>
-                                        <th class="p-1">#</th>
-                                        <th class="p-1">X (m)</th>
-                                        <th class="p-1">Y (m)</th>
-                                        <th class="p-1 text-center">Excluir</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="poly-vertices-tbody" class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    <!-- Populated dynamically -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Horizontal Layer Slices (only for simple parametric mode) -->
-                    <div id="layers-stratigraphy-section" class="pt-2 border-t border-gray-100 dark:border-gray-700 hidden">
-                        <div class="flex items-center justify-between mb-1.5">
-                            <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                <span>🍰</span> Camadas Geológicas / Estratigrafia
-                            </h3>
-                            <button type="button" onclick="addNewLayerInterface()" class="text-[11px] bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800">
-                                + Adicionar Camada
-                            </button>
-                        </div>
-
-                        <div class="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded text-xs">
-                            <table class="w-full text-[11px] text-left">
-                                <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500">
-                                    <tr>
-                                        <th class="p-1">Camada</th>
-                                        <th class="p-1">Material Associado</th>
-                                        <th class="p-1">Cota Y (m)</th>
-                                        <th class="p-1 text-center">Ação</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="layers-tbody" class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Water Table Quick Controls -->
-                    <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                                <span>💧</span> Nível Freático no Talude (NA)
-                            </span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                                <span class="text-[10px] text-gray-400">NA no Pé Y (m)</span>
-                                <input type="number" id="wt_toe_Y" value="8" step="0.5" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1">
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-gray-400">NA na Crista Y (m)</span>
-                                <input type="number" id="wt_crest_Y" value="20" step="0.5" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Apply Geometry & Remesh Button -->
-                    <button type="button" onclick="applyCustomGeometryAndRemesh()" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
-                        <span>⚡</span> Aplicar Geometria & Atualizar Malha
-                    </button>
                 </div>
 
-                <!-- Panel 1: Material Properties Table -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-                    <div class="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
+                <!-- Panel 1: Material Properties & Soil Definition Card -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
                         <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <span>🧱</span> Material Properties & Stratigraphy
+                            <span>🧱</span> Materiais & Camadas de Solo
                         </h2>
-                        <button type="button" onclick="addNewMaterial()" class="text-xs bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold px-2 py-1 rounded hover:bg-blue-100 border border-blue-200 dark:border-blue-900">
-                            + Add Material
+                        <span id="materials-count-badge"
+                            class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">
+                            -- Solos
+                        </span>
+                    </div>
+
+                    <!-- Clean Quick Summary List of Materials in Sidebar -->
+                    <div id="materials-summary-list" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        <!-- Populated dynamically by renderMaterialsTable() -->
+                    </div>
+
+                    <!-- Action Buttons to Open Full Popup Editor or Quick Add -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button" onclick="openDefineMaterialsModal()"
+                            class="col-span-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Abrir janela completa de definição de propriedades de solos">
+                            <span>📋</span> Definir Propriedades de Solos (Popup)
+                        </button>
+                        <button type="button" onclick="addNewMaterial()"
+                            class="col-span-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                            <span>+</span> Novo Solo
                         </button>
                     </div>
+                </div>
 
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs text-left">
-                            <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400">
-                                <tr>
-                                    <th class="p-1.5">Color / Name</th>
-                                    <th class="p-1.5">Model</th>
-                                    <th class="p-1.5">γ (kN/m³)</th>
-                                    <th class="p-1.5">E (kPa)</th>
-                                    <th class="p-1.5">ν</th>
-                                    <th class="p-1.5">c (kPa)</th>
-                                    <th class="p-1.5">φ (°)</th>
-                                    <th class="p-1.5 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="materials-tbody" class="divide-y divide-gray-100 dark:divide-gray-700">
-                                <!-- Populated dynamically by JS -->
-                            </tbody>
-                        </table>
+                <!-- Panel 1B: Staged Construction & Sequences Card (Dedicated) -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>🏗️</span> Fases Construtivas & Sequência
+                        </h2>
+                        <span id="sidebar-stages-badge"
+                            class="text-[10px] bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 font-bold px-2 py-0.5 rounded">
+                            2 Fases
+                        </span>
+                    </div>
+
+                    <!-- Stages Quick Status in Sidebar -->
+                    <div
+                        class="bg-purple-50/50 dark:bg-purple-950/30 p-2.5 rounded-xl border border-purple-100 dark:border-purple-900/50 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Fase Atual no
+                                CAD:</span>
+                            <span id="sidebar-active-stage-label"
+                                class="font-bold text-purple-700 dark:text-purple-300">Fase 1 (Inicial)</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Total de
+                                Etapas:</span>
+                            <span id="sidebar-stages-count-label"
+                                class="font-semibold text-gray-800 dark:text-gray-200">2 Etapas</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Zerar
+                                Deslocamentos:</span>
+                            <span id="sidebar-stage-reset-label"
+                                class="font-semibold text-emerald-600 dark:text-emerald-400">Ativo na Fase 1</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button" onclick="openDefineStagesModal()"
+                            class="col-span-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Abrir gerenciador completo de fases construtivas">
+                            <span>🏗️</span> Gerenciador de Fases (Popup)
+                        </button>
+                        <button type="button" onclick="addNewStageQuick()"
+                            class="col-span-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                            <span>+</span> Nova Fase Construtiva
+                        </button>
                     </div>
                 </div>
 
-                <!-- Panel 2: Mesh & Model Boundary Settings -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-                    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
-                        <span>⚙️</span> Mesh & Numerical Solver Controls
-                    </h2>
-                    
-                    <div class="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                            <label class="block font-medium mb-1 text-gray-700 dark:text-gray-300">Target Element Size (m)</label>
-                            <input type="number" id="elem_size" value="2.5" step="0.2" min="0.8" max="10.0" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                <!-- Panel 2: Mesh & Numerical Solver Summary Card -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>⚙️</span> Malha & Solver Numérico
+                        </h2>
+                        <span id="sidebar-solver-badge"
+                            class="text-[10px] bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 font-bold px-2 py-0.5 rounded">
+                            CST • Mohr-Coulomb
+                        </span>
+                    </div>
+
+                    <!-- Quick Summary metrics -->
+                    <div
+                        class="bg-gray-50/70 dark:bg-gray-750/70 p-2.5 rounded-xl border border-gray-200/80 dark:border-gray-700 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Tamanho
+                                Elemento:</span>
+                            <span id="sidebar-mesh-size-label"
+                                class="font-mono font-semibold text-gray-800 dark:text-gray-200">2.5 m</span>
                         </div>
-                        <div>
-                            <label class="block font-medium mb-1 text-gray-700 dark:text-gray-300">Lateral In-Situ K₀</label>
-                            <input type="number" id="k0_ratio" value="0.55" step="0.05" min="0.2" max="2.5" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Tensão Lateral
+                                K₀:</span>
+                            <span id="sidebar-k0-label"
+                                class="font-mono font-semibold text-gray-800 dark:text-gray-200">0.55</span>
                         </div>
-                        <div>
-                            <label class="block font-medium mb-1 text-gray-700 dark:text-gray-300">Max Plastic Iterations</label>
-                            <input type="number" id="max_iters" value="25" step="5" min="10" max="60" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Modelo
+                                Constitutivo:</span>
+                            <span id="sidebar-model-label"
+                                class="font-semibold text-indigo-600 dark:text-indigo-400">Mohr-Coulomb</span>
                         </div>
-                        <div>
-                            <label class="block font-medium mb-1 text-gray-700 dark:text-gray-300">Constitutive Model</label>
-                            <select id="constitutive_model" class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-medium">
-                                <option value="mohr_coulomb">Mohr-Coulomb Plastic</option>
-                                <option value="elastic">Isotropic Linear Elastic</option>
-                            </select>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Tolerância /
+                                Iterações:</span>
+                            <span id="sidebar-tol-label" class="font-mono text-gray-800 dark:text-gray-200">0.001 / 100
+                                iters</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Redução SSR
+                                (FS):</span>
+                            <span id="sidebar-ssr-label" class="font-semibold text-emerald-600 dark:text-emerald-400">c
+                                e φ + Tração</span>
                         </div>
                     </div>
 
-                    <div class="mt-3 flex items-center gap-4 text-xs">
-                        <label class="flex items-center gap-2 cursor-pointer font-medium text-gray-700 dark:text-gray-300">
-                            <input type="checkbox" id="gravity_toggle" checked class="w-4 h-4 text-blue-600 rounded">
-                            <span>Gravity Turn-On (γ · H)</span>
-                        </label>
+                    <!-- Action button to open full popup -->
+                    <div class="pt-1">
+                        <button type="button" onclick="openDefineSolverModal()"
+                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Configurar parâmetros da malha, modelo constitutivo e solver">
+                            <span>⚙️</span> Configurar Malha & Solver (Popup)
+                        </button>
                     </div>
                 </div>
 
-                <!-- Panel 3: Groundwater & Surcharges -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
-                    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 border-b border-gray-100 dark:border-gray-700 pb-2 flex items-center gap-2">
-                        <span>🌊</span> Groundwater & Surface Loading
-                    </h2>
+                <!-- Panel 3A: Groundwater Table (Dedicated) -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>🌊</span> Nível Freático (Piezometria)
+                        </h2>
+                        <span id="sidebar-wt-badge"
+                            class="text-[10px] bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-300 font-bold px-2 py-0.5 rounded">
+                            Ativo
+                        </span>
+                    </div>
 
-                    <div class="space-y-3 text-xs">
-                        <div class="flex items-center justify-between">
-                            <label class="flex items-center gap-2 font-medium cursor-pointer text-gray-700 dark:text-gray-300">
-                                <input type="checkbox" id="water_table_toggle" checked onchange="toggleWaterTableVisibility()" class="w-4 h-4 text-blue-600 rounded">
-                                <span>Piezometric Water Table (Phreatic Line)</span>
-                            </label>
-                            <span class="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold">γ_w = 9.81 kN/m³</span>
+                    <div
+                        class="bg-cyan-50/50 dark:bg-cyan-950/30 p-2.5 rounded-xl border border-cyan-100 dark:border-cyan-900/50 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Estado:</span>
+                            <span id="sidebar-wt-status-label"
+                                class="font-semibold text-cyan-600 dark:text-cyan-400">Ativo (γw = 9.81 kN/m³)</span>
                         </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Perfil:</span>
+                            <span id="sidebar-wt-profile-label"
+                                class="font-mono text-[11px] text-blue-600 dark:text-blue-400">4 pontos definidos</span>
+                        </div>
+                    </div>
 
-                        <div id="water-table-coords" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/40 p-2 rounded">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-semibold text-gray-700 dark:text-gray-300">Water Table Coordinates [X, Y]:</span>
-                            </div>
-                            <div id="wt-points-summary" class="font-mono text-[11px] text-blue-600 dark:text-blue-400">
-                                (0, 8) → (15, 9) → (35, 18) → (60, 20)
-                            </div>
-                        </div>
+                    <div class="pt-1">
+                        <button type="button" onclick="openDefineWaterModal()"
+                            class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Configurar nível piezométrico e poropressões">
+                            <span>🌊</span> Definir Nível Freático (Popup)
+                        </button>
+                    </div>
+                </div>
 
-                        <!-- Dynamic Multi-Surcharge Management -->
-                        <div class="border-t border-gray-100 dark:border-gray-700 pt-2 space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1">
-                                    <span>🚜</span> Sobrecargas Superficiais (kN/m²)
-                                </span>
-                                <button type="button" onclick="addNewSurcharge()" class="text-[11px] bg-orange-50 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400 font-semibold px-2 py-0.5 rounded hover:bg-orange-100 border border-orange-200 dark:border-orange-800">
-                                    + Adicionar Carga
-                                </button>
-                            </div>
-                            <div class="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
-                                <table class="w-full text-[11px] text-left">
-                                    <thead class="bg-gray-50 dark:bg-gray-700/50 text-[10px] text-gray-500 font-medium">
-                                        <tr>
-                                            <th class="p-1 text-center">#</th>
-                                            <th class="p-1">Carga q (kN/m²)</th>
-                                            <th class="p-1">Início X1 (m)</th>
-                                            <th class="p-1">Fim X2 (m)</th>
-                                            <th class="p-1 text-center">✕</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="surcharges-tbody" class="divide-y divide-gray-100 dark:divide-gray-700">
-                                        <!-- Dynamically rendered by renderSurchargesTable() -->
-                                    </tbody>
-                                </table>
-                            </div>
+                <!-- Panel 3B: Surface Surcharges (Dedicated) -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>🚜</span> Sobrecargas de Superfície
+                        </h2>
+                        <span id="sidebar-surcharges-badge"
+                            class="text-[10px] bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-300 font-bold px-2 py-0.5 rounded">
+                            2 Cargas
+                        </span>
+                    </div>
+
+                    <div
+                        class="bg-orange-50/50 dark:bg-orange-950/30 p-2.5 rounded-xl border border-orange-100 dark:border-orange-900/50 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Cargas
+                                Cadastradas:</span>
+                            <span id="sidebar-surcharges-count-label"
+                                class="font-semibold text-orange-600 dark:text-orange-400">2 Aplicadas</span>
                         </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Tipo:</span>
+                            <span class="text-gray-600 dark:text-gray-400">Distribuída q (kN/m²)</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button" onclick="openDefineSurchargesModal()"
+                            class="col-span-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Configurar sobrecargas superficiais distribuídas">
+                            <span>🚜</span> Configurar Sobrecargas (Popup)
+                        </button>
+                        <button type="button" onclick="addNewSurcharge()"
+                            class="col-span-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                            <span>+</span> Nova Sobrecarga
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panel 3C: Sapatas & Fundações Estruturais (Footings) -->
+                <div
+                    class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>🏗️</span> Sapatas & Fundações
+                        </h2>
+                        <span id="sidebar-footings-badge"
+                            class="text-[10px] bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-300 font-bold px-2 py-0.5 rounded">
+                            0 Sapatas
+                        </span>
+                    </div>
+
+                    <div
+                        class="bg-sky-50/50 dark:bg-sky-950/30 p-2.5 rounded-xl border border-sky-100 dark:border-sky-900/50 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Blocos
+                                Rígidos:</span>
+                            <span id="sidebar-footings-count-label"
+                                class="font-semibold text-sky-600 dark:text-sky-400">0 Cadastradas</span>
+                        </div>
+                        <div class="flex justify-between items-center text-gray-700 dark:text-gray-300">
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">SSR Exclusão:</span>
+                            <span class="text-emerald-600 dark:text-emerald-400 font-bold">participate_ssr =
+                                false</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button" onclick="openDefineFootingsModal()"
+                            class="col-span-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                            title="Configurar sapatas e blocos de fundação com carga estrutural">
+                            <span>🏗️</span> Configurar Sapatas (Popup)
+                        </button>
+                        <button type="button" onclick="addNewFooting()"
+                            class="col-span-2 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg text-xs flex items-center justify-center gap-1 transition-all cursor-pointer">
+                            <span>+</span> Nova Sapata
+                        </button>
                     </div>
                 </div>
 
                 <!-- Panel 4: Quick Help & Benchmark Info -->
-                <div class="bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900 p-3 text-xs text-blue-900 dark:text-blue-200">
+                <div
+                    class="bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900 p-3 text-xs text-blue-900 dark:text-blue-200">
                     <p class="font-bold flex items-center gap-1 mb-1">
                         <span>💡</span> RS2 Geotechnical Tips:
                     </p>
                     <ul class="list-disc list-inside space-y-0.5 text-[11px] text-blue-800 dark:text-blue-300">
-                        <li><strong>SSR (Shear Strength Reduction)</strong>: Automatically tracks shear band localization to find the slip surface without pre-defining slices.</li>
-                        <li><strong>Deformed Mesh</strong>: Use the magnification slider on the CAD toolbar to amplify small mm-scale displacements.</li>
-                        <li><strong>Probe Inspector</strong>: Hover your mouse anywhere over the mesh to query displacements and stresses in real time.</li>
+                        <li><strong>SSR (Shear Strength Reduction)</strong>: Automatically tracks shear band
+                            localization to find the slip surface without pre-defining slices.</li>
+                        <li><strong>Deformed Mesh</strong>: Use the magnification slider on the CAD toolbar to amplify
+                            small mm-scale displacements.</li>
+                        <li><strong>Probe Inspector</strong>: Hover your mouse anywhere over the mesh to query
+                            displacements and stresses in real time.</li>
                     </ul>
                 </div>
             </div>
 
             <!-- Right CAD Viewport & Results Dashboard (8 cols) -->
-            <div class="lg:col-span-8 flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[600px]">
-                
+            <div
+                class="lg:col-span-8 flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[600px]">
+
                 <!-- CAD Viewport Toolbar -->
-                <div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-                    
+                <div
+                    class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 p-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+
                     <!-- View Mode Toggle: Geometry vs Results -->
-                    <div class="flex items-center gap-1 bg-gray-200/90 dark:bg-gray-700/90 p-1 rounded-lg text-xs font-semibold">
-                        <button type="button" id="btn-view-mode-geometry" onclick="setCADDisplayMode('geometry')" class="px-2.5 py-1 rounded-md bg-indigo-600 text-white font-bold shadow-xs transition-all flex items-center gap-1">
+                    <div
+                        class="flex items-center gap-1 bg-gray-200/90 dark:bg-gray-700/90 p-1 rounded-lg text-xs font-semibold">
+                        <button type="button" id="btn-view-mode-geometry" onclick="setCADDisplayMode('geometry')"
+                            class="px-2.5 py-1 rounded-md bg-indigo-600 text-white font-bold shadow-xs transition-all flex items-center gap-1">
                             <span>📐</span> Geometria & Solos
                         </button>
-                        <button type="button" id="btn-view-mode-results" onclick="setCADDisplayMode('results')" class="px-2.5 py-1 rounded-md text-gray-700 dark:text-gray-300 font-medium hover:bg-white/50 dark:hover:bg-gray-600 transition-all flex items-center gap-1">
+                        <button type="button" id="btn-view-mode-results" onclick="setCADDisplayMode('results')"
+                            class="px-2.5 py-1 rounded-md text-gray-700 dark:text-gray-300 font-medium hover:bg-white/50 dark:hover:bg-gray-600 transition-all flex items-center gap-1">
                             <span>📊</span> Resultados / Tensões
                         </button>
                     </div>
@@ -457,83 +627,156 @@
                         <span class="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">
                             <span>📊</span> Campo:
                         </span>
-                        <select id="contour-field-selector" onchange="updateContourDisplay()" class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 font-semibold text-blue-600 dark:text-blue-400">
-                            <option value="geometry" selected>📐 Geometria & Materiais (Solos Sólidos)</option>
-                            <option value="Utot">Deslocamento Total |U| (m)</option>
-                            <option value="Ux">Deslocamento Horizontal Ux (m)</option>
-                            <option value="Uy">Deslocamento Vertical Uy (m)</option>
-                            <option value="sig1">Tensão Principal Maior σ₁ (kPa)</option>
-                            <option value="sig3">Tensão Principal Menor σ₃ (kPa)</option>
-                            <option value="tau_max">Tensão Cisalhante Máx τ_max (kPa)</option>
-                            <option value="eps_p">Deformação Plástica ε_p</option>
-                            <option value="pore_pressure">Poropressão Neutra u (kPa)</option>
+                        <select id="contour-field-selector" onchange="updateContourDisplay()"
+                            class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 font-semibold text-blue-600 dark:text-blue-400">
+                            <option value="geometry">📐 Geometria & Materiais (Solos Sólidos)</option>
+                            <optgroup label="Deslocamentos Totais (Acumulados)">
+                                <option value="Utot" selected>Deslocamento Total Acumulado |U| (m)</option>
+                                <option value="Ux">Deslocamento Horizontal Acumulado Ux (m)</option>
+                                <option value="Uy">Deslocamento Vertical Acumulado Uy (m)</option>
+                            </optgroup>
+                            <optgroup label="Deslocamentos da Fase (Incrementais)">
+                                <option value="U_stage">Deslocamento da Fase |ΔU| (m)</option>
+                                <option value="Ux_stage">Deslocamento Horizontal da Fase ΔUx (m)</option>
+                                <option value="Uy_stage">Deslocamento Vertical da Fase ΔUy (m)</option>
+                            </optgroup>
+                            <optgroup label="Tensões e Deformações">
+                                <option value="sig1">Tensão Principal Maior σ₁ (kPa)</option>
+                                <option value="sig3">Tensão Principal Menor σ₃ (kPa)</option>
+                                <option value="tau_max">Tensão Cisalhante Máx τ_max (kPa)</option>
+                                <option value="gamma_max">Deformação Cisalhante Máx γ_max (Phase2)</option>
+                                <option value="eps_p">Deformação Plástica ε_p</option>
+                                <option value="pore_pressure">Poropressão Neutra u (kPa)</option>
+                                <option value="total_head">Carga Hidráulica Total H (m)</option>
+                            </optgroup>
                         </select>
                     </div>
 
                     <!-- Deformed Mesh Magnification Slider -->
                     <div class="flex items-center gap-2">
                         <span class="font-medium text-gray-600 dark:text-gray-400">Deform Scale:</span>
-                        <input type="range" id="deform-scale-slider" min="0" max="250" value="30" oninput="updateDeformationScale(this.value)" class="w-24 accent-blue-600">
-                        <span id="deform-scale-label" class="font-mono text-xs w-10 font-bold text-blue-600 dark:text-blue-400">30×</span>
+                        <input type="range" id="deform-scale-slider" min="0" max="250" value="30"
+                            oninput="updateDeformationScale(this.value)" class="w-24 accent-blue-600">
+                        <span id="deform-scale-label"
+                            class="font-mono text-xs w-10 font-bold text-blue-600 dark:text-blue-400">30×</span>
                     </div>
 
                     <!-- Critical Sections Toggle (Slide2 / LEM) -->
-                    <div class="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg border border-emerald-300 dark:border-emerald-700 text-xs font-semibold">
-                        <label class="flex items-center gap-1 cursor-pointer text-emerald-700 dark:text-emerald-300 font-bold" title="Exibir Seções Críticas de Ruptura (Slide2)">
-                            <input type="checkbox" id="toggle-critical-sections" checked onchange="toggleCriticalSections()" class="w-3.5 h-3.5 text-emerald-600 rounded">
+                    <div id="critical-sections-control-group"
+                        class="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg border border-emerald-300 dark:border-emerald-700 text-xs font-semibold">
+                        <label
+                            class="flex items-center gap-1 cursor-pointer text-emerald-700 dark:text-emerald-300 font-bold"
+                            title="Exibir Seções Críticas de Ruptura (Slide2)">
+                            <input type="checkbox" id="toggle-critical-sections" onchange="toggleCriticalSections()"
+                                class="w-3.5 h-3.5 text-emerald-600 rounded">
                             <span>🎯 Seções Críticas</span>
                         </label>
-                        <label class="flex items-center gap-1 cursor-pointer text-gray-600 dark:text-gray-300 text-[10px]" title="Exibir Família Rainbow de Superfícies de Ruptura">
-                            <input type="checkbox" id="toggle-rainbow-surfaces" checked onchange="redrawCanvas()" class="w-3 h-3 text-amber-600 rounded">
+                        <label
+                            class="flex items-center gap-1 cursor-pointer text-gray-600 dark:text-gray-300 text-[10px]"
+                            title="Exibir Família Rainbow de Superfícies de Ruptura">
+                            <input type="checkbox" id="toggle-rainbow-surfaces" onchange="redrawCanvas()"
+                                class="w-3 h-3 text-amber-600 rounded">
                             <span>Família</span>
                         </label>
-                        <label class="flex items-center gap-1 cursor-pointer text-gray-600 dark:text-gray-300 text-[10px]" title="Exibir Nuvem de Centros de Rotação (Grid Search)">
-                            <input type="checkbox" id="toggle-center-grid" checked onchange="redrawCanvas()" class="w-3 h-3 text-blue-600 rounded">
+                        <label
+                            class="flex items-center gap-1 cursor-pointer text-gray-600 dark:text-gray-300 text-[10px]"
+                            title="Exibir Nuvem de Centros de Rotação (Grid Search)">
+                            <input type="checkbox" id="toggle-center-grid" onchange="redrawCanvas()"
+                                class="w-3 h-3 text-blue-600 rounded">
                             <span>Centros</span>
                         </label>
                     </div>
 
                     <!-- Layer Display Toggles -->
                     <div class="flex items-center gap-3">
-                        <label class="flex items-center gap-1 cursor-pointer" title="Exibir Malha de Elementos Finitos (Wireframe)">
-                            <input type="checkbox" id="toggle-mesh" checked onchange="toggleMeshClicked()" class="w-3.5 h-3.5 text-blue-600 rounded">
+                        <label class="flex items-center gap-1 cursor-pointer"
+                            title="Exibir Malha de Elementos Finitos (Wireframe)">
+                            <input type="checkbox" id="toggle-mesh" checked onchange="toggleMeshClicked()"
+                                class="w-3.5 h-3.5 text-blue-600 rounded">
                             <span class="font-medium text-gray-700 dark:text-gray-200">Mesh</span>
                         </label>
-                        <label class="flex items-center gap-1 cursor-pointer" title="Exibir Elementos Plastificados (Cisalhamento/Tração)">
-                            <input type="checkbox" id="toggle-yield" checked onchange="toggleYieldClicked()" class="w-3.5 h-3.5 text-rose-600 rounded">
+                        <label class="flex items-center gap-1 cursor-pointer"
+                            title="Exibir Elementos Plastificados (Cisalhamento/Tração)">
+                            <input type="checkbox" id="toggle-yield" checked onchange="toggleYieldClicked()"
+                                class="w-3.5 h-3.5 text-rose-600 rounded">
                             <span class="text-rose-600 dark:text-rose-400 font-semibold">Yield</span>
                         </label>
-                        <label class="flex items-center gap-1 cursor-pointer" title="Exibir Tensores de Tensões Principais (Cruzes σ1 e σ3)">
-                            <input type="checkbox" id="toggle-crosses" onchange="toggleCrossesClicked()" class="w-3.5 h-3.5 text-indigo-600 rounded">
+                        <label class="flex items-center gap-1 cursor-pointer"
+                            title="Exibir Tensores de Tensões Principais (Cruzes σ1 e σ3)">
+                            <input type="checkbox" id="toggle-crosses" onchange="toggleCrossesClicked()"
+                                class="w-3.5 h-3.5 text-indigo-600 rounded">
                             <span class="font-semibold text-indigo-600 dark:text-indigo-400">Tensores</span>
                         </label>
-                        <button type="button" onclick="fitView()" class="px-2 py-1 bg-white dark:bg-gray-700 hover:bg-gray-100 rounded border border-gray-300 dark:border-gray-600 font-semibold text-gray-700 dark:text-gray-300" title="Reset Camera to Fit Model">
+                        <button type="button" onclick="fitView()"
+                            class="px-2 py-1 bg-white dark:bg-gray-700 hover:bg-gray-100 rounded border border-gray-300 dark:border-gray-600 font-semibold text-gray-700 dark:text-gray-300"
+                            title="Reset Camera to Fit Model">
                             Fit View
                         </button>
                     </div>
                 </div>
 
+                <!-- Stage Navigation Tabs Bar (Rocscience RS2 Staged Construction Toolbar) -->
+                <div id="stage-tabs-container"
+                    class="bg-indigo-50/70 dark:bg-slate-800/90 border-b border-indigo-100 dark:border-slate-700 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-2 overflow-x-auto py-0.5">
+                        <span
+                            class="font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1 shrink-0 text-[11px] uppercase tracking-wider">
+                            <span>🏗️</span> Fases:
+                        </span>
+                        <div id="stage-tabs-list" class="flex items-center gap-1.5 shrink-0">
+                            <!-- Populated dynamically by renderStageTabsUI() -->
+                        </div>
+                        <button type="button" onclick="openDefineStagesModal()"
+                            class="text-[11px] bg-white dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-slate-600 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded font-semibold border border-indigo-200 dark:border-slate-600 flex items-center gap-1 shrink-0 transition-all cursor-pointer shadow-xs"
+                            title="Configurar ou criar etapas construtivas">
+                            <span>⚙️</span> Fases...
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="stage-info-pill"
+                            class="text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-700/80 px-2 py-0.5 rounded border border-gray-200 dark:border-slate-600 truncate max-w-[340px]"
+                            title="Descrição da fase construtiva ativa">
+                            Fase 1: Fundação In-Situ
+                        </span>
+                        <span id="stage-disp-type-indicator"
+                            class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700">
+                            Acumulado
+                        </span>
+                    </div>
+                </div>
+
                 <!-- Canvas Viewport Area -->
-                <div class="relative flex-grow min-h-[500px] bg-slate-900 overflow-hidden flex items-center justify-center">
-                    
+                <div
+                    class="relative flex-grow min-h-[500px] bg-slate-900 overflow-hidden flex items-center justify-center">
+
                     <canvas id="fea-canvas" class="w-full h-full cad-crosshair block"></canvas>
 
                     <!-- Floating Slide2 Method Table Overlay (Top-Left) -->
-                    <div id="slide-fs-table-container" class="absolute top-3 left-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-gray-300 dark:border-slate-600 rounded shadow-2xl z-20 text-[11px] pointer-events-none">
+                    <div id="slide-fs-table-container"
+                        class="hidden absolute top-3 left-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-gray-300 dark:border-slate-600 rounded shadow-2xl z-20 text-[11px] pointer-events-auto overflow-hidden">
+                        <div class="px-2.5 py-1 bg-gray-100/90 dark:bg-slate-800/90 border-b border-gray-300 dark:border-slate-700 flex items-center justify-between gap-2">
+                            <span class="font-bold text-[10px] text-gray-700 dark:text-gray-300 uppercase tracking-wider">Equilíbrio Limite (LEM)</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-300 dark:border-emerald-800 flex items-center gap-1" title="Cunha com refinamento não linear automático integrado (<30ms, GeoStudio SLOPE/W GLE)"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>Otimizado</span>
+                        </div>
                         <table class="text-center border-collapse">
                             <thead>
-                                <tr class="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-300 dark:border-slate-600">
-                                    <th class="px-3 py-1 border-r border-gray-300 dark:border-slate-600">Method Name</th>
+                                <tr
+                                    class="bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-300 dark:border-slate-600">
+                                    <th class="px-3 py-1 border-r border-gray-300 dark:border-slate-600">Method Name
+                                    </th>
                                     <th class="px-3 py-1">Min FS</th>
                                 </tr>
                             </thead>
-                            <tbody id="slide-fs-tbody" class="divide-y divide-gray-200 dark:divide-slate-700 text-gray-800 dark:text-gray-200 font-mono text-[11px]">
+                            <tbody id="slide-fs-tbody"
+                                class="divide-y divide-gray-200 dark:divide-slate-700 text-gray-800 dark:text-gray-200 font-mono text-[11px]">
                                 <tr>
-                                    <td class="px-3 py-0.5 border-r border-gray-300 dark:border-slate-600 font-sans">Spencer</td>
+                                    <td class="px-3 py-0.5 border-r border-gray-300 dark:border-slate-600 font-sans">
+                                        Spencer</td>
                                     <td class="px-3 py-0.5 font-bold text-orange-600 dark:text-orange-400">1.56</td>
                                 </tr>
                                 <tr>
-                                    <td class="px-3 py-0.5 border-r border-gray-300 dark:border-slate-600 font-sans">GLE / Morgenstern-Price</td>
+                                    <td class="px-3 py-0.5 border-r border-gray-300 dark:border-slate-600 font-sans">GLE
+                                        / Morgenstern-Price</td>
                                     <td class="px-3 py-0.5 font-bold text-orange-600 dark:text-orange-400">1.56</td>
                                 </tr>
                             </tbody>
@@ -541,25 +784,32 @@
                     </div>
 
                     <!-- Floating Slide2 Materials Table Overlay (Bottom Center) -->
-                    <div id="slide-materials-table-container" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-gray-300 dark:border-slate-600 rounded shadow-2xl z-20 text-[11px] pointer-events-none max-w-[95%] overflow-x-auto">
+                    <div id="slide-materials-table-container"
+                        class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-gray-300 dark:border-slate-600 rounded shadow-2xl z-20 text-[11px] pointer-events-none max-w-[95%] overflow-x-auto">
                         <table class="text-center border-collapse whitespace-nowrap">
                             <thead>
-                                <tr class="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-300 dark:border-slate-600 text-[10px]">
-                                    <th class="px-3 py-1 border-r border-gray-300 dark:border-slate-600">Material Name</th>
+                                <tr
+                                    class="bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-300 dark:border-slate-600 text-[10px]">
+                                    <th class="px-3 py-1 border-r border-gray-300 dark:border-slate-600">Material Name
+                                    </th>
                                     <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Color</th>
-                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Unit Weight (kN/m3)</th>
-                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Cohesion (kPa)</th>
+                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Unit Weight
+                                        (kN/m3)</th>
+                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Cohesion (kPa)
+                                    </th>
                                     <th class="px-2 py-1">Phi (°)</th>
                                 </tr>
                             </thead>
-                            <tbody id="slide-materials-tbody" class="divide-y divide-gray-200 dark:divide-slate-700 text-gray-800 dark:text-gray-200 font-mono text-[10px]">
+                            <tbody id="slide-materials-tbody"
+                                class="divide-y divide-gray-200 dark:divide-slate-700 text-gray-800 dark:text-gray-200 font-mono text-[10px]">
                                 <!-- Populated dynamically by updateSlideMaterialsTable() -->
                             </tbody>
                         </table>
                     </div>
 
                     <!-- Realtime Floating Probe HUD -->
-                    <div id="probe-hud" class="absolute top-3 right-4 bg-slate-800/90 backdrop-blur border border-slate-700 rounded-lg p-2 text-[11px] text-slate-200 font-mono pointer-events-none shadow-lg z-10 flex flex-col gap-0.5">
+                    <div id="probe-hud"
+                        class="absolute top-3 right-4 bg-slate-800/90 backdrop-blur border border-slate-700 rounded-lg p-2 text-[11px] text-slate-200 font-mono pointer-events-none shadow-lg z-10 flex flex-col gap-0.5">
                         <div class="flex items-center justify-between gap-4">
                             <span class="text-slate-400 font-sans">Cursor:</span>
                             <span id="hud-coords" class="font-bold text-amber-400">X: 0.00 m, Y: 0.00 m</span>
@@ -579,8 +829,10 @@
                     </div>
 
                     <!-- Material Legend Overlay (Right side, identical to Slide/RS2) -->
-                    <div id="material-legend-container" class="absolute bottom-4 right-4 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg p-3 shadow-2xl z-10 flex flex-col text-[11px] pointer-events-none min-w-[200px]">
-                        <div class="font-bold text-slate-200 border-b border-slate-700 pb-1 mb-2 flex items-center justify-between">
+                    <div id="material-legend-container"
+                        class="absolute bottom-4 right-4 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-lg p-3 shadow-2xl z-10 flex flex-col text-[11px] pointer-events-none min-w-[200px]">
+                        <div
+                            class="font-bold text-slate-200 border-b border-slate-700 pb-1 mb-2 flex items-center justify-between">
                             <span class="flex items-center gap-1.5">
                                 <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
                                 Material Name
@@ -592,51 +844,156 @@
                         </div>
                     </div>
 
-                    <!-- Colorbar Legend (Right side overlay) -->
-                    <div id="colorbar-container" class="absolute bottom-4 right-4 bg-slate-800/90 backdrop-blur border border-slate-700 rounded-lg p-2.5 shadow-xl z-10 flex flex-col items-center pointer-events-none hidden">
-                        <span id="colorbar-title" class="text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Total Disp (m)</span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3.5 h-36 rounded colorbar-gradient shadow-inner border border-slate-600"></div>
-                            <div class="h-36 flex flex-col justify-between text-[10px] font-mono text-slate-300">
-                                <span id="cb-max">0.090</span>
-                                <span id="cb-mid-high">0.068</span>
-                                <span id="cb-mid">0.045</span>
-                                <span id="cb-mid-low">0.023</span>
-                                <span id="cb-min">0.000</span>
+                    <!-- RS2 Authentic Contour Legend (Draggable CAD Overlay) -->
+                    <div id="colorbar-container" class="hidden"
+                        title="Arraste para reposicionar a legenda. Duplo clique para restaurar posição.">
+                        <!-- Legend Title / Units (Monospace, multi-line) -->
+                        <div id="cb-header" style="cursor: grab; margin-bottom: 6px;">
+                            <div id="cb-title-l1"
+                                style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: bold; color: #000000; line-height: 1.25;">
+                                Total</div>
+                            <div id="cb-title-l2"
+                                style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: bold; color: #000000; line-height: 1.25;">
+                                Displacement</div>
+                            <div id="cb-title-unit"
+                                style="font-family: 'Courier New', Courier, monospace; font-size: 11px; font-weight: bold; color: #000000; line-height: 1.25;">
+                                m</div>
+                        </div>
+
+                        <!-- 20 Discrete Color Bands and 21 Seam Labels -->
+                        <div style="display: flex; align-items: stretch; position: relative;">
+                            <!-- 20 Color intervals with crisp borders -->
+                            <div id="colorbar-bands"
+                                style="width: 36px; height: 220px; box-sizing: content-box; border: 1px solid #000000; display: flex; flex-direction: column; overflow: hidden; background: #ffffff;">
+                                <!-- Populated dynamically by updateColorbar() -->
+                            </div>
+
+                            <!-- 21 Seam tick values (0.0000, 0.0040, ..., 0.0800) -->
+                            <div id="colorbar-ticks"
+                                style="position: relative; height: 220px; width: 72px; margin-left: 6px;">
+                                <!-- Populated dynamically by updateColorbar() -->
                             </div>
                         </div>
                     </div>
 
                     <!-- Solver Progress Spinner Overlay -->
-                    <div id="loading-overlay" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center text-white">
-                        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-                        <span id="loading-text" class="text-sm font-semibold tracking-wide">Solving 2D Finite Element Equations...</span>
-                        <span class="text-xs text-slate-400 mt-1">SciPy Sparse Stiffness Assembly & In-Situ Stress Integration</span>
+                    <div id="loading-overlay"
+                        class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center text-white">
+                        <div
+                            class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3">
+                        </div>
+                        <span id="loading-text" class="text-sm font-semibold tracking-wide">Solving 2D Finite Element
+                            Equations...</span>
+                        <span class="text-xs text-slate-400 mt-1">SciPy Sparse Stiffness Assembly & In-Situ Stress
+                            Integration</span>
                     </div>
                 </div>
 
                 <!-- Bottom Status & SSR Factor of Safety Banner -->
-                <div class="bg-gray-50 dark:bg-gray-750 border-t border-gray-200 dark:border-gray-700 p-3 flex flex-wrap items-center justify-between gap-4 text-xs">
-                    
+                <div
+                    class="bg-gray-50 dark:bg-gray-750 border-t border-gray-200 dark:border-gray-700 p-3 flex flex-wrap items-center justify-between gap-4 text-xs">
+
                     <!-- Factor of Safety / Status Pill -->
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-1.5">
-                            <span class="text-gray-500 dark:text-gray-400 font-semibold uppercase text-[10px]">Safety Factor (SRF):</span>
-                            <span id="fs-badge" class="px-2.5 py-1 rounded-md font-bold text-sm bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                            <span class="text-gray-500 dark:text-gray-400 font-semibold uppercase text-[10px]">Safety
+                                Factor (SRF):</span>
+                            <span id="fs-badge"
+                                class="px-2.5 py-1 rounded-md font-bold text-sm bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
                                 FS = 1.55 (Safe)
                             </span>
                         </div>
-                        <div id="convergence-badge" class="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300">
+                        <div id="convergence-badge"
+                            class="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300">
                             Converged in 1 iters
                         </div>
                     </div>
 
                     <!-- Numerical Metrics -->
                     <div class="flex items-center gap-4 text-gray-600 dark:text-gray-300 font-mono text-[11px]">
-                        <div>Nodes: <span id="stat-nodes" class="font-bold text-gray-900 dark:text-white">241</span></div>
-                        <div>Elements: <span id="stat-elements" class="font-bold text-gray-900 dark:text-white">418</span></div>
-                        <div>Max |U|: <span id="stat-max-u" class="font-bold text-blue-600 dark:text-blue-400">0.0897 m</span></div>
-                        <div>Yielded: <span id="stat-yield" class="font-bold text-rose-600 dark:text-rose-400">1.2%</span></div>
+                        <div>Nodes: <span id="stat-nodes" class="font-bold text-gray-900 dark:text-white">241</span>
+                        </div>
+                        <div>Elements: <span id="stat-elements"
+                                class="font-bold text-gray-900 dark:text-white">418</span></div>
+                        <div>Max |U|: <span id="stat-max-u" class="font-bold text-blue-600 dark:text-blue-400">0.0897
+                                m</span></div>
+                        <div>Yielded: <span id="stat-yield"
+                                class="font-bold text-rose-600 dark:text-rose-400">1.2%</span></div>
+                    </div>
+                </div>
+
+                <!-- Retaining Structure Performance & Global Stability Dashboard Card (Unified FEA & SSR) -->
+                <div id="retaining-structure-card"
+                    class="hidden p-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-t border-indigo-500/40 text-white">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-500/30 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="p-2 bg-indigo-600 rounded-lg text-lg shadow-sm">🧱</span>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 id="ret-card-title" class="font-bold text-sm tracking-wide text-indigo-100">
+                                        Desempenho da Obra de Contenção (MEF 2D)</h3>
+                                    <span id="ret-card-type-badge"
+                                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">Muro
+                                        em Balanço</span>
+                                </div>
+                                <p class="text-[11px] text-slate-300">Interação Solo-Estrutura com Rigidez Real (EI,
+                                    EA), Deformações, Esforços e Estabilidade Global</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="triggerAnalysis(true)"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer">
+                                <span>🎯</span> Calcular Estabilidade Global (SSR)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Key Engineering Indicators -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                        <!-- 1. Deslocamento Horizontal Máximo -->
+                        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                                <span>Deflexão Máx. (δ_x)</span>
+                                <span>↔️</span>
+                            </div>
+                            <div id="ret-stat-deflection" class="text-xl font-extrabold text-amber-400 font-mono mt-1">
+                                -- mm</div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">Topo / Fuste da Contenção</div>
+                        </div>
+
+                        <!-- 2. Recalque na Crista -->
+                        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                                <span>Recalque Crista (S_max)</span>
+                                <span>⬇️</span>
+                            </div>
+                            <div id="ret-stat-settlement" class="text-xl font-extrabold text-blue-400 font-mono mt-1">--
+                                mm</div>
+                            <div class="text-[10px] text-slate-400 mt-0.5">Assentamento no Tardoz</div>
+                        </div>
+
+                        <!-- 3. Momento Fletor Máximo -->
+                        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                                <span>Momento Fletor (M_max)</span>
+                                <span>📐</span>
+                            </div>
+                            <div id="ret-stat-moment" class="text-xl font-extrabold text-emerald-400 font-mono mt-1">--
+                                kN·m/m</div>
+                            <div id="ret-stat-anchor-info" class="text-[10px] text-slate-400 mt-0.5">Solicitação
+                                Estrutural</div>
+                        </div>
+
+                        <!-- 4. Fator de Segurança Global (SSR) -->
+                        <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700">
+                            <div class="text-[11px] text-slate-400 flex items-center justify-between">
+                                <span>Estabilidade Global (FS_global)</span>
+                                <span>🛡️</span>
+                            </div>
+                            <div id="ret-stat-fs" class="text-xl font-extrabold text-purple-400 font-mono mt-1">--</div>
+                            <div id="ret-stat-status" class="text-[10px] text-slate-400 mt-0.5">Shear Strength Reduction
+                                (MEF)</div>
+                        </div>
                     </div>
                 </div>
 
@@ -647,46 +1004,1228 @@
         <div id="footer-placeholder" class="mt-8" style="min-height: 80px;"></div>
     </div>
 
-    <!-- Modal: Edit / Paste Coordinates for Material Region -->
-    <div id="region-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full p-5 shadow-2xl border border-gray-200 dark:border-gray-700 space-y-4">
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
-                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span>📐</span> <span id="modal-region-title">Adicionar Região Poligonal</span>
-                </h3>
-                <button type="button" onclick="closeRegionModal()" class="text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+
+    <!-- Modal 1: Define Materials (Rocscience RS2 Style Master-Detail & Spreadsheet) -->
+    <div id="materials-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl w-[96vw] max-w-5xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🧱</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Definir Propriedades dos Solos & Materiais
+                            <span
+                                class="text-xs bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded">Define
+                                Materials</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Parâmetros constitutivos elasto-plásticos de Mohr-Coulomb, rigidez elástica e redução SSR
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- View switcher: Inspector vs Table -->
+                    <div class="flex rounded-lg bg-gray-200 dark:bg-gray-700 p-0.5 text-xs font-semibold">
+                        <button type="button" id="mat-tab-inspector" onclick="switchMaterialModalTab('inspector')"
+                            class="py-1 px-3 rounded-md bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-xs cursor-pointer">
+                            🔍 Inspetor por Solo
+                        </button>
+                        <button type="button" id="mat-tab-grid" onclick="switchMaterialModalTab('grid')"
+                            class="py-1 px-3 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                            📊 Tabela Completa
+                        </button>
+                    </div>
+                    <button type="button" onclick="closeDefineMaterialsModal()"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+                </div>
             </div>
 
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Material Geotécnico da Região</label>
-                    <select id="modal-region-material" class="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-200">
-                        <!-- Populated by JS -->
-                    </select>
+            <!-- Modal Content (Flex Grow, Scrollable) -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 sm:p-6 flex flex-col space-y-4">
+                <!-- View 1: Master-Detail Inspector -->
+                <div id="mat-view-inspector" class="flex-grow flex gap-6 overflow-hidden">
+                    <!-- Left: Material List (1/3) -->
+                    <div
+                        class="w-1/3 flex flex-col border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-gray-50/40 dark:bg-gray-900/30">
+                        <div
+                            class="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-100/70 dark:bg-gray-800/80 flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Solos Cadastrados</span>
+                            <span id="modal-mat-count" class="text-[10px] text-gray-500 font-mono">-- materiais</span>
+                        </div>
+                        <div id="modal-materials-list" class="flex-grow overflow-y-auto p-2 space-y-1">
+                            <!-- Populated dynamically by JS -->
+                        </div>
+                        <div
+                            class="p-2.5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex gap-2">
+                            <button type="button" onclick="addNewMaterialInModal()"
+                                class="flex-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-all shadow-xs">
+                                <span>+</span> Novo Solo
+                            </button>
+                            <button type="button" onclick="duplicateCurrentMaterialInModal()"
+                                class="text-xs bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 font-semibold py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer"
+                                title="Duplicar solo selecionado">
+                                <span>📋</span>
+                            </button>
+                            <button type="button" onclick="deleteCurrentMaterialInModal()"
+                                class="text-xs bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 font-semibold py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 cursor-pointer"
+                                title="Excluir solo selecionado">
+                                <span>🗑️</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Selected Material Detailed Editor (2/3) -->
+                    <div id="modal-mat-detail-panel" class="w-2/3 flex-grow overflow-y-auto pr-2 space-y-5">
+                        <!-- Populated dynamically by selectMaterialInModal(idx) -->
+                    </div>
                 </div>
 
-                <div>
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block font-medium text-gray-700 dark:text-gray-300">Coordenadas X, Y (Cole do Excel / CAD)</label>
-                        <span class="text-[10px] text-gray-400">Um par por linha: X, Y ou X [tab] Y</span>
+                <!-- View 2: Wide Grid / Spreadsheet Mode -->
+                <div id="mat-view-grid" class="flex-grow overflow-y-auto hidden">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-xs">
+                        <table class="w-full text-xs text-left">
+                            <thead
+                                class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-200 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                <tr>
+                                    <th class="p-2.5">Cor</th>
+                                    <th class="p-2.5">Nome do Solo</th>
+                                    <th class="p-2.5">Modelo Constitutivo</th>
+                                    <th class="p-2.5">γ (kN/m³)</th>
+                                    <th class="p-2.5">E (kPa)</th>
+                                    <th class="p-2.5">ν</th>
+                                    <th class="p-2.5">c (kPa)</th>
+                                    <th class="p-2.5">φ (°)</th>
+                                    <th class="p-2.5">σ_t (kPa)</th>
+                                    <th class="p-2.5 text-center">SSR</th>
+                                    <th class="p-2.5 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-materials-grid-tbody"
+                                class="divide-y divide-gray-100 dark:divide-gray-700">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
                     </div>
-                    <textarea id="modal-region-coords" rows="8" placeholder="195.0, 18.2&#10;236.0, 17.0&#10;225.0, 22.8&#10;195.0, 22.8" class="w-full p-2.5 font-mono text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                        💡 Dica: Você pode copiar células com coordenadas de uma planilha Excel ou tabela do AutoCAD/Slide e colar diretamente aqui!
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="px-6 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-755 flex items-center justify-between">
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                    💡 As alterações nas propriedades de resistência e rigidez são aplicadas instantaneamente aos
+                    cálculos.
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineMaterialsModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveMaterialsFromModal()"
+                        class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar & Aplicar Propriedades
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Define Stages (Rocscience RS2 Staged Construction Manager) -->
+    <div id="stages-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl w-[96vw] max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🏗️</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Gerenciador de Fases Construtivas
+                            <span
+                                class="text-xs bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded">Define
+                                Stages</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Configure etapas de construção, escavação, alívio de tensões e zeramento de recalques
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDefineStagesModal()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 space-y-4">
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100 dark:border-gray-700">
+                    <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed flex-1 min-w-0 pr-2">
+                        Defina a sequência de carregamento ou escavação. Ative a opção <strong>"Zerar
+                            Deslocamentos"</strong> na Fase 1 para que o assentamento geostático do maciço natural não
+                        seja contabilizado como deformação de obra.
+                    </p>
+                    <button type="button" onclick="addNewStageInModal()"
+                        class="text-xs bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer shrink-0">
+                        <span>+</span> Adicionar Fase
+                    </button>
+                </div>
+
+                <!-- Stages List Container -->
+                <div id="modal-stages-list-container" class="space-y-3">
+                    <!-- Populated dynamically by renderStagesModalList() -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="px-6 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 flex items-center justify-between">
+                <button type="button" onclick="autoGenerateStandardStages()"
+                    class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer">
+                    ⚡ Auto-gerar Fases com base nas Camadas
+                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineStagesModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveStagesFromModal()"
+                        class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar & Recalcular Fases
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal 3: Define Geometry & Layers (Rocscience RS2 Style) -->
+    <div id="geometry-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl w-[96vw] max-w-4xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">📐</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Definir Geometria & Camadas do Modelo
+                            <span
+                                class="text-xs bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded">Define
+                                Geometry</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Configure regiões poligonais de solo, talude paramétrico com interfaces ou fronteira livre
+                            CAD
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Mode Tabs Switcher -->
+                    <div class="flex rounded-lg bg-gray-200 dark:bg-gray-700 p-0.5 text-xs font-semibold">
+                        <button type="button" id="geo-tab-regions" onclick="switchGeoMode('regions')"
+                            class="py-1 px-3 rounded-md bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-xs cursor-pointer font-bold">
+                            📐 Camadas Poligonais
+                        </button>
+                        <button type="button" id="geo-tab-parametric" onclick="switchGeoMode('parametric')"
+                            class="py-1 px-3 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                            📏 Talude Paramétrico
+                        </button>
+                        <button type="button" id="geo-tab-free" onclick="switchGeoMode('free')"
+                            class="py-1 px-3 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                            ✏️ Fronteira Livre CAD
+                        </button>
+                        <button type="button" id="geo-tab-tunnel" onclick="switchGeoMode('tunnel')"
+                            class="py-1 px-3 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer">
+                            🚇 Túneis & Cavidades
+                        </button>
+                    </div>
+                    <button type="button" onclick="closeDefineGeometryModal()"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+                </div>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 sm:p-6 space-y-4">
+                <!-- Mode 1: Poligonal Layers / Regions (Default / Most powerful) -->
+                <div id="geo-view-regions" class="space-y-4">
+                    <div
+                        class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+                        <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed flex-1 min-w-0 pr-2">
+                            Defina o modelo através de polígonos fechados para cada camada ou obra de terra. Cada
+                            polígono possui um material associado e uma fase construtiva de instalação.
+                        </p>
+                        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                            <button type="button" onclick="openAddRegionModal()"
+                                class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-xs">
+                                <span>+</span> Adicionar Camada Poligonal
+                            </button>
+                            <button type="button" onclick="loadPresetModel('embankment_multiphase')"
+                                class="text-xs bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer">
+                                <span>↺</span> Preset Aterro
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="material-regions-container" class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                        <!-- Populated dynamically by renderMaterialRegionsUI() -->
+                    </div>
+                </div>
+
+                <!-- Mode 2: Parametric Slope Generator -->
+                <div id="geo-view-parametric" class="space-y-4 hidden">
+                    <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        Gere a geometria do talude automaticamente através de cotas e distâncias horizontais:
+                    </p>
+                    <div
+                        class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-gray-50 dark:bg-gray-750 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Largura do Domínio L
+                                (m)</label>
+                            <input type="number" id="slope_width_L" value="60" step="5"
+                                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Cota da Base Y
+                                (m)</label>
+                            <input type="number" id="slope_base_Y" value="0" step="1"
+                                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Cota do Pé Y_pé
+                                (m)</label>
+                            <input type="number" id="slope_toe_H" value="10" step="1"
+                                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Cota da Crista
+                                Y_crista (m)</label>
+                            <input type="number" id="slope_crest_H" value="25" step="1"
+                                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Distância do Pé X_pé
+                                (m)</label>
+                            <input type="number" id="slope_toe_X" value="15" step="1"
+                                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Distância da Crista
+                                X_crista (m)</label>
+                            <input type="number" id="slope_crest_X" value="35" step="1"
+                                class="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5">
+                        </div>
+                    </div>
+
+                    <!-- Stratigraphy Interfaces for Parametric Model -->
+                    <div id="layers-stratigraphy-section"
+                        class="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-gray-700 dark:text-gray-300">Interfaces Estratigráficas
+                                Horizontais:</span>
+                            <button type="button" onclick="addNewLayerInterface()"
+                                class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                                + Adicionar Interface
+                            </button>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-50 dark:bg-gray-750 text-[11px] text-gray-500 font-medium">
+                                    <tr>
+                                        <th class="p-2">Camada</th>
+                                        <th class="p-2">Material</th>
+                                        <th class="p-2">Cota Topo Y (m)</th>
+                                        <th class="p-2 text-center">✕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="layers-tbody"
+                                    class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 3: Free External Boundary Coordinates -->
+                <div id="geo-view-free" class="space-y-3 hidden">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs text-gray-600 dark:text-gray-300">
+                            Vértices do contorno externo global do maciço:
+                        </p>
+                        <button type="button" onclick="addPolyVertex()"
+                            class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                            + Adicionar Vértice
+                        </button>
+                    </div>
+                    <div
+                        class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-72 overflow-y-auto">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-gray-50 dark:bg-gray-750 text-[11px] text-gray-500 font-medium">
+                                <tr>
+                                    <th class="p-2 text-center">#</th>
+                                    <th class="p-2">Coordenada X (m)</th>
+                                    <th class="p-2">Coordenada Y (m)</th>
+                                    <th class="p-2 text-center">✕</th>
+                                </tr>
+                            </thead>
+                            <tbody id="poly-vertices-tbody"
+                                class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Mode 4: Underground Excavations / Tunnels (Phase2 Tut 01 & Cavities) -->
+                <div id="geo-view-tunnel" class="space-y-4 hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                <span>🚇</span> Geometria da Cavidade Escavada (Túnel Subterrâneo)
+                            </h4>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                Define o contorno fechado da escavação. Os elementos finitos nesta região sofrem alívio de tensões in-situ.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <button type="button" onclick="applyTunnelPreset('arch_phase2')"
+                                class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs cursor-pointer"
+                                title="Aplica a geometria canônica do Tutorial 01 do Phase2 (Teto em abóbada R=5m e paredes de 10m)">
+                                <span>🏛️</span> Túnel em Arco (Phase2 Tut 01)
+                            </button>
+                            <button type="button" onclick="applyTunnelPreset('circular_kirsch')"
+                                class="text-xs bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"
+                                title="Gera cavidade circular canônica de raio R=5m">
+                                <span>⭕</span> Túnel Circular
+                            </button>
+                            <button type="button" onclick="applyTunnelPreset('box')"
+                                class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"
+                                title="Gera galeria retangular">
+                                <span>🔲</span> Galeria Caixa
+                            </button>
+                            <button type="button" onclick="clearTunnelExcavation()"
+                                class="text-xs bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 font-semibold px-2 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer"
+                                title="Remove a escavação interna do maciço">
+                                <span>✕</span> Limpar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tunnel Details and Dimensions Card -->
+                    <div id="tunnel-details-card" class="bg-indigo-50/60 dark:bg-indigo-950/30 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">📐</span>
+                            <div>
+                                <span class="font-bold text-indigo-700 dark:text-indigo-300 block" id="tunnel-shape-title">Túnel em Arco / Abóbada (Phase2 Tut 01)</span>
+                                <span class="text-[11px] text-gray-600 dark:text-gray-400" id="tunnel-shape-desc">Piso: 10m (Y=0) | Paredes: 10m (Y=0 a 10) | Abóbada: R=5m (topo Y=15m)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 font-mono text-[11px]">
+                            <span class="bg-white dark:bg-gray-800 px-2.5 py-1 rounded border border-indigo-200 dark:border-indigo-800 font-semibold text-gray-800 dark:text-gray-200" id="tunnel-status-badge">23 Vértices</span>
+                        </div>
+                    </div>
+
+                    <!-- Coordinates Table -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-gray-700 dark:text-gray-300">Vértices do Contorno da Escavação (Polígono Fechado):</span>
+                            <button type="button" onclick="addExcavationVertex()" class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                                + Adicionar Vértice
+                            </button>
+                        </div>
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-72 overflow-y-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-50 dark:bg-gray-750 text-[11px] text-gray-500 font-medium">
+                                    <tr>
+                                        <th class="p-2 text-center">#</th>
+                                        <th class="p-2">Coordenada X (m)</th>
+                                        <th class="p-2">Coordenada Y (m)</th>
+                                        <th class="p-2">Trecho / Descrição</th>
+                                        <th class="p-2 text-center">✕</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="excavation-vertices-tbody" class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                                    <!-- Populated dynamically by renderExcavationUI() -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="px-6 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 flex items-center justify-between">
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                    💡 Modificações nas camadas geram atualização automática na malha e no CAD.
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineGeometryModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="applyCustomGeometryAndRemesh(); closeDefineGeometryModal();"
+                        class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar & Atualizar Geometria
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Define Solver & Mesh Parameters -->
+    <div id="solver-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">⚙️</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Parâmetros de Malha & Solver Numérico FEA
+                            <span
+                                class="text-xs bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 font-semibold px-2 py-0.5 rounded">Mesh
+                                & Solver</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Controle do tamanho dos elementos finitos (CST), condições in-situ K₀, modelo constitutivo e
+                            redução SSR
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDefineSolverModal()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-grow overflow-y-auto p-6 space-y-5">
+                <!-- Section 1: Discretização da Malha -->
+                <div
+                    class="bg-gray-50/70 dark:bg-gray-750/70 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                    <h4
+                        class="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                        <span>🕸️</span> Discretização da Malha de Elementos Finitos (CST)
+                    </h4>
+                    <div class="text-xs">
+                        <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Tamanho Alvo dos
+                            Elementos (m)</label>
+                        <input type="number" id="elem_size" value="2.5" step="0.2" min="0.8" max="10.0"
+                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                        <span class="text-[10px] text-gray-400 mt-1 block">Valores menores geram malhas mais densas
+                            e maior resolução.</span>
+                    </div>
+                </div>
+
+                <!-- Section: Campo de Tensões In-Situ (Field Stress) -->
+                <div
+                    class="bg-gray-50/70 dark:bg-gray-750/70 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4
+                            class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                            <span>🧭</span> Campo de Tensões In-Situ (Field Stress)
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Tipo de Campo:</label>
+                            <select id="field_stress_type" onchange="toggleFieldStressTypeUI()"
+                                class="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs py-1 px-2 font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500">
+                                <option value="gravity" selected>Gravitacional (γ·H & K₀)</option>
+                                <option value="constant">Constante (σ₁ / σ₃ / Ângulo - Túneis)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Gravity Stress Settings -->
+                    <div id="field_stress_gravity_panel" class="pt-1">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Razão de Tensões
+                                    Laterais In-Situ K₀</label>
+                                <input type="number" id="k0_ratio" value="0.55" step="0.05" min="0.2" max="2.5"
+                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400 mt-1 block">σ_h = K₀ · σ_v (Jaky: 1 - sin φ ≈
+                                    0.55)</span>
+                            </div>
+                            <div class="flex items-center pt-5">
+                                <label
+                                    class="flex items-center gap-2 cursor-pointer font-medium text-xs text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" id="gravity_toggle" checked class="w-4 h-4 text-blue-600 rounded">
+                                    <span>Gravity Turn-On (Peso Próprio Geostático γ · H)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Constant Field Stress Panel (Túneis / Maciço Rochoso) -->
+                    <div id="field_stress_constant_panel" class="hidden space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                            <div>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">σ₁ Principal Maior (kPa)</label>
+                                <input type="number" id="field_stress_s1" value="20000" step="1000" min="0"
+                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                <span class="text-[10px] text-gray-400 mt-0.5 block">Ex: 20 MPa = 20.000 kPa</span>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">σ₃ Principal Menor (kPa)</label>
+                                <input type="number" id="field_stress_s3" value="10000" step="1000" min="0"
+                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                <span class="text-[10px] text-gray-400 mt-0.5 block">Ex: 10 MPa = 10.000 kPa</span>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">σ_z Fora do Plano (kPa)</label>
+                                <input type="number" id="field_stress_sz" value="10000" step="1000" min="0"
+                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                <span class="text-[10px] text-gray-400 mt-0.5 block">Tensão Out-of-Plane</span>
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Ângulo de σ₁ (°)</label>
+                                <input type="number" id="field_stress_angle" value="30" step="5" min="-90" max="90"
+                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                <span class="text-[10px] text-gray-400 mt-0.5 block">Graus c/ horizontal (anti-horário)</span>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                            🧭 <strong>Campo de Tensões Constante (Phase2 Tut 01):</strong> Em maciços profundos ou ensaios biaxiais, o estado virgem é constante no domínio. Na abertura da cavidade, a descompressão das paredes alivia essas tensões iniciais, gerando as deformações de convergência do túnel.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Section 2: Solver Não-Linear & Critérios de Convergência -->
+                <div
+                    class="bg-gray-50/70 dark:bg-gray-750/70 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                    <h4
+                        class="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                        <span>⚡</span> Comportamento Constitutivo & Tolerância
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Modelo
+                                Constitutivo</label>
+                            <select id="constitutive_model"
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                                <option value="mohr_coulomb" selected>Mohr-Coulomb Plástico</option>
+                                <option value="elastic">Elástico Linear Isotrópico</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Máx. Iterações
+                                Plásticas</label>
+                            <input type="number" id="max_iters" value="100" step="10" min="10" max="500"
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Tolerância de
+                                Convergência</label>
+                            <select id="solver_tolerance"
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                                <option value="0.001" selected>0.001 (0.1% - Padrão RS2)</option>
+                                <option value="0.0005">0.0005 (0.05% - Alta Precisão)</option>
+                                <option value="0.0001">0.0001 (0.01% - Ultra Rigoroso)</option>
+                                <option value="0.005">0.005 (0.5% - Rápido)</option>
+                                <option value="0.01">0.01 (1.0% - Relaxado)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Redução de Resistência SSR (Fator de Segurança) -->
+                <div
+                    class="bg-gray-50/70 dark:bg-gray-750/70 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                    <h4
+                        class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                        <span>🛡️</span> Critérios Mohr-Coulomb no SSR (Shear Strength Reduction)
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Parâmetros de Solo a
+                                Reduzir</label>
+                            <select id="ssr_mode"
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                                <option value="c_and_phi" selected>Coesão e Atrito (c e φ)</option>
+                                <option value="c_only">Apenas Coesão (c) [φ=0 / Não-Drenado]</option>
+                                <option value="phi_only">Apenas Atrito (φ) [Solos Granulares Puros]</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col justify-center">
+                            <label
+                                class="flex items-center gap-2 cursor-pointer font-medium text-gray-700 dark:text-gray-300"
+                                title="Quando ativado, a resistência à tração (tension cut-off) também é reduzida proporcionalmente por SRF (padrão RS2 / ADONIS)">
+                                <input type="checkbox" id="ssr_reduce_tension" checked
+                                    class="w-4 h-4 text-emerald-600 rounded">
+                                <span>Reduzir Resistência à Tração σ_t com SRF</span>
+                            </label>
+                            <span class="text-[10px] text-gray-400 mt-1">σ_t,f = σ_t / SRF em cada iteração de busca do
+                                FS.</span>
+                        </div>
+                    </div>
+
+                    <!-- SSR Search Area (Phase2 equivalent) -->
+                    <div class="pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label
+                                class="flex items-center gap-2 cursor-pointer font-bold text-gray-800 dark:text-gray-200">
+                                <input type="checkbox" id="ssr_search_area_toggle"
+                                    onchange="toggleSSRSearchAreaInputs()" class="w-4 h-4 text-emerald-600 rounded">
+                                <span>🎯 Limitar Região de Busca do SSR (SSR Search Area - Phase2)</span>
+                            </label>
+                            <span
+                                class="text-[10px] bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-semibold px-2 py-0.5 rounded">Foco
+                                no Talude</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400">
+                            Apenas elementos contidos nesta janela geométrica sofrerão redução de c e φ. Sapatas ou
+                            solos distantes mantêm resistência integral, idêntico ao Phase2.
+                        </p>
+                        <div id="ssr-search-inputs-row"
+                            class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 opacity-50 pointer-events-none transition-opacity">
+                            <div>
+                                <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400">X Mínimo
+                                    (m)</label>
+                                <input type="number" id="ssr_search_xmin" value="180.0" step="1.0"
+                                    oninput="updateSSRSearchAreaFromInputs()"
+                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-mono text-xs text-gray-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400">X Máximo
+                                    (m)</label>
+                                <input type="number" id="ssr_search_xmax" value="260.0" step="1.0"
+                                    oninput="updateSSRSearchAreaFromInputs()"
+                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-mono text-xs text-gray-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400">Y Mínimo
+                                    (m)</label>
+                                <input type="number" id="ssr_search_ymin" value="0.0" step="1.0"
+                                    oninput="updateSSRSearchAreaFromInputs()"
+                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-mono text-xs text-gray-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400">Y Máximo
+                                    (m)</label>
+                                <input type="number" id="ssr_search_ymax" value="45.0" step="1.0"
+                                    oninput="updateSSRSearchAreaFromInputs()"
+                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 font-mono text-xs text-gray-900 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="px-6 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 flex items-center justify-between">
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                    💡 Altere os parâmetros e clique em salvar para sincronizar com o solver.
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineSolverModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveSolverModal()"
+                        class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar Parâmetros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5A: Define Groundwater & Water Table (Piezometry) -->
+    <div id="water-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl w-[96vw] max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🌊</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Nível Freático & Piezometria
+                            <span
+                                class="text-xs bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 font-semibold px-2 py-0.5 rounded">Water
+                                Table</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Superfície piezométrica, poropressões e tensões efetivas (σ' = σ - u)
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDefineWaterModal()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 space-y-4">
+                <!-- Water Table Activation & Unit Weight -->
+                <div
+                    class="bg-cyan-50/60 dark:bg-cyan-950/30 p-4 rounded-xl border border-cyan-200 dark:border-cyan-900/50 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <label
+                            class="flex items-center gap-2 font-bold cursor-pointer text-cyan-900 dark:text-cyan-200 text-xs">
+                            <input type="checkbox" id="water_table_toggle" checked
+                                onchange="toggleWaterTableVisibility()" class="w-4 h-4 text-cyan-600 rounded">
+                            <span>Ativar Linha Freática Piezométrica (Water Table)</span>
+                        </label>
+                        <div class="flex items-center gap-1.5 text-xs text-cyan-800 dark:text-cyan-300">
+                            <span class="font-medium">Peso Específico γ_w:</span>
+                            <input type="number" id="wt_gamma" value="9.81" step="0.1"
+                                class="w-16 p-1 rounded border border-cyan-300 dark:border-cyan-700 bg-white dark:bg-gray-800 text-xs font-mono font-bold text-center">
+                            <span class="font-mono text-[11px]">kN/m³</span>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-cyan-800/80 dark:text-cyan-300/80 leading-relaxed">
+                        💡 Quando ativa, o solver FEA calcula a poropressão $u = \gamma_w \cdot h_w$ em cada nó abaixo
+                        da linha freática e avalia o critério de ruptura de Mohr-Coulomb com as <strong>tensões
+                            efetivas</strong> $\sigma' = \sigma - u$.
+                    </p>
+                </div>
+
+                <!-- Points Coordinates Table -->
+                <div class="space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="font-bold text-xs text-gray-800 dark:text-gray-200">Pontos da Superfície Freática
+                            [X, Y]:</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="applyWaterTablePreset('toe_to_crest')"
+                                class="text-[11px] bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 border border-cyan-200 dark:border-cyan-800 px-2 py-1 rounded font-semibold cursor-pointer">
+                                ↺ Pé → Crista
+                            </button>
+                            <button type="button" onclick="applyWaterTablePreset('horizontal_toe')"
+                                class="text-[11px] bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 border border-cyan-200 dark:border-cyan-800 px-2 py-1 rounded font-semibold cursor-pointer">
+                                ↺ Horizontal
+                            </button>
+                            <button type="button" onclick="addWaterTablePoint()"
+                                class="text-xs bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-xs">
+                                <span>+</span> Adicionar Ponto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-x-auto max-h-56 overflow-y-auto bg-white dark:bg-gray-800">
+                        <table class="w-full text-xs text-left">
+                            <thead
+                                class="bg-gray-50 dark:bg-gray-750 text-[10px] text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+                                <tr>
+                                    <th class="p-2.5 text-center">#</th>
+                                    <th class="p-2.5">Coordenada X (m)</th>
+                                    <th class="p-2.5">Cota Y_freático (m)</th>
+                                    <th class="p-2.5 text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wt-tbody" class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                                <!-- Populated dynamically by renderWaterTablePoints() -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="wt-points-summary"
+                        class="font-mono text-[11px] text-cyan-700 dark:text-cyan-300 bg-cyan-50/50 dark:bg-cyan-950/30 p-2 rounded-lg border border-cyan-100 dark:border-cyan-900/50 truncate">
+                        (0, 8) → (15, 9) → (35, 18) → (60, 20)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 flex items-center justify-between">
+                <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                    💡 Atualizações refletem imediatamente no CAD e no solver.
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineWaterModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveWaterModal()"
+                        class="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold shadow-md hover:shadow-cyan-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar Nível Freático
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5B: Define Surface Surcharges (Loads) -->
+    <div id="surcharges-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl w-[96vw] max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🚜</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Sobrecargas de Superfície
+                            <span
+                                class="text-xs bg-orange-100 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 font-semibold px-2 py-0.5 rounded">Surface
+                                Surcharges</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Cargas verticais distribuídas q (kN/m²) em trechos da crista ou talude por fase construtiva
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDefineSurchargesModal()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-gray-600 dark:text-gray-300 flex-1 min-w-0 pr-2">
+                        Adicione sobrecargas distribuídas com intensidade q e trecho de aplicação [X1, X2], e selecione
+                        em quais fases atuam.
+                    </p>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" onclick="addTrafficSurchargePreset()"
+                            class="text-[11px] bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold px-2 py-1 rounded hover:bg-amber-100 cursor-pointer">
+                            + Tráfego (20 kN/m²)
+                        </button>
+                        <button type="button" onclick="addNewSurcharge()"
+                            class="text-xs bg-orange-600 hover:bg-orange-700 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-xs">
+                            <span>+</span> Nova Sobrecarga
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-x-auto max-h-72 overflow-y-auto bg-white dark:bg-gray-800 shadow-xs">
+                    <table class="w-full text-xs text-left">
+                        <thead
+                            class="bg-gray-50 dark:bg-gray-750 text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-wider font-semibold border-b border-gray-200 dark:border-gray-700">
+                            <tr>
+                                <th class="p-2.5 text-center">#</th>
+                                <th class="p-2.5">Carga q (kN/m²)</th>
+                                <th class="p-2.5">X1 Início (m)</th>
+                                <th class="p-2.5">X2 Fim (m)</th>
+                                <th class="p-2.5">Fases de Aplicação</th>
+                                <th class="p-2.5 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="surcharges-tbody" class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                            <!-- Populated dynamically by renderSurchargesTable() -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div
+                    class="bg-amber-50/60 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-900 dark:text-amber-200 space-y-1">
+                    <p class="font-bold">💡 Como as sobrecargas são calculadas no RS2:</p>
+                    <p>As sobrecargas são integradas ao longo da fronteira superior do talude e convertidas em forças
+                        nodais equivalentes no vetor de carregamento global F.</p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 flex items-center justify-between">
+                <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                    💡 As setas de sobrecarga são renderizadas no CAD sobre a crista.
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineSurchargesModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveSurchargesModal()"
+                        class="px-5 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold shadow-md hover:shadow-orange-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar Sobrecargas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5C: Define Structural Footings & Shallow Foundations (Phase2 Sapatas) -->
+    <div id="footings-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl w-[98vw] max-w-6xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div
+                class="flex flex-wrap items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🏗️</span>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Sapatas & Fundações Estruturais (Phase2 Footings)
+                            <span
+                                class="text-xs bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 font-semibold px-2 py-0.5 rounded">Structural
+                                Footings</span>
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Blocos rígidos de concreto com rigidez estimada por fck (NBR 6118), carga distribuída q (kPa), fase construtiva específica e participate_ssr = false
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDefineFootingsModal()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+            </div>
+
+            <!-- Modal Content (Scrollable) -->
+            <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-gray-600 dark:text-gray-300 flex-1 min-w-0 pr-2">
+                        Configure sapatas corridas ou isoladas com rigidez estrutural estimada por fck (NBR 6118) e adição em fase construtiva específica. O solver RS2/FEA automaticamente discretiza o bloco com malha conformal, acopla a interface com o solo e aplica a carga estrutural a partir da fase definida.
+                    </p>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" onclick="addBenchmarkFootingPreset()"
+                            class="text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-semibold px-2 py-1 rounded hover:bg-sky-100 cursor-pointer">
+                            + Sapata Phase2 (195-201 m, 160 kPa)
+                        </button>
+                        <button type="button" onclick="addNewFooting()"
+                            class="text-xs bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow-xs">
+                            <span>+</span> Nova Sapata
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-x-auto max-h-72 overflow-y-auto bg-white dark:bg-gray-800 shadow-xs">
+                    <table class="w-full text-xs text-left">
+                        <thead
+                            class="bg-gray-50 dark:bg-gray-750 text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-wider font-semibold border-b border-gray-200 dark:border-gray-700">
+                            <tr>
+                                <th class="p-2.5 text-center">#</th>
+                                <th class="p-2.5">Nome</th>
+                                <th class="p-2.5">X1 Início (m)</th>
+                                <th class="p-2.5">X2 Fim (m)</th>
+                                <th class="p-2.5">Y Topo (m)</th>
+                                <th class="p-2.5">Espessura h (m)</th>
+                                <th class="p-2.5" title="Resistência característica do concreto (NBR 6118)">fck (MPa)</th>
+                                <th class="p-2.5 text-center" title="Rigidez estimada NBR 6118: E = 5600√fck">Rigidez E</th>
+                                <th class="p-2.5">Carga q (kPa)</th>
+                                <th class="p-2.5" title="Fase construtiva em que a cava é escavada e o concreto da sapata é instalado">Fase Instalação</th>
+                                <th class="p-2.5" title="Fase construtiva em que a sobrecarga q passa a atuar sobre a sapata">Fase Carga (q)</th>
+                                <th class="p-2.5 text-center">Pads</th>
+                                <th class="p-2.5 text-center">Condição / Cava</th>
+                                <th class="p-2.5 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="footings-tbody" class="divide-y divide-gray-100 dark:divide-gray-700 font-mono">
+                            <!-- Populated dynamically by renderFootingsTable() -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div
+                    class="bg-sky-50/60 dark:bg-sky-950/30 p-3.5 rounded-xl border border-sky-200 dark:border-sky-900/50 text-[11px] text-sky-950 dark:text-sky-200 space-y-1.5">
+                    <p class="font-bold flex items-center gap-1.5">
+                        <span>💡</span> Como o Phase2 e o RS2 tratam sapatas na análise geotécnica:
+                    </p>
+                    <p>
+                        1. <strong>Rigidez Estrutural & Distribuição:</strong> O bloco de concreto armado da sapata é modelado com módulo de elasticidade elevado (E = 25 GPa, ν = 0.20), transmitindo a carga com rigidez estrutural uniforme sobre o solo de fundação.
+                    </p>
+                    <p>
+                        2. <strong>Escavação de Sobrecarga & Contenção Lateral:</strong> Quando a cota de topo da sapata está abaixo do nível do solo (Y_topo &lt; Y_solo), o software remove automaticamente o solo acima da sapata (cava de fundação) e aplica contenção lateral travando deslocamentos horizontais (Ux = 0, Uy livre) nas faces verticais da escavação.
+                    </p>
+                    <p>
+                        3. <strong>Participação no SSR:</strong> O concreto da sapata possui <code
+                            class="bg-white/80 dark:bg-gray-800 px-1 py-0.5 rounded font-mono text-[10px]">participate_ssr = false</code>,
+                        impedindo a degradação irreal da rigidez estrutural da fundação durante o cálculo do fator de
+                        segurança do maciço.
+                    </p>
+                    <p>
+                        2. <strong>Deslocamento Incremental de Ruptura:</strong> No estágio SSR, o Phase2 subtrai o
+                        recalque prévio acumulado da sapata (<span class="font-mono">Δu = u_SSR - u_ant</span>),
+                        destacando puramente o mecanismo cinemático de escorregamento do talude.
                     </p>
                 </div>
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <button type="button" onclick="closeRegionModal()" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    Cancelar
+            <!-- Modal Footer -->
+            <div
+                class="px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-750 flex items-center justify-between">
+                <span class="text-[11px] text-gray-500 dark:text-gray-400">
+                    💡 As sapatas são desenhadas em azul petróleo no CAD com suas respectivas pressões verticais.
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDefineFootingsModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveFootingsModal()"
+                        class="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md hover:shadow-sky-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar Sapatas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: Edit / Paste Coordinates for Material Region (Nested / Polygon Detail Modal) -->
+    <div id="region-modal"
+        class="fixed inset-0 bg-black/70 backdrop-blur-xs z-[70] flex items-center justify-center p-4 hidden">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-gray-700 space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+                <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>📐</span> <span id="modal-region-title">Adicionar Região Poligonal</span>
+                </h3>
+                <button type="button" onclick="closeRegionModal()"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">✕</button>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Material Geotécnico da
+                            Camada</label>
+                        <select id="modal-region-material"
+                            class="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label
+                            class="block font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center justify-between">
+                            <span>Fase de Instalação</span>
+                            <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">Staged
+                                Addition</span>
+                        </label>
+                        <select id="modal-region-stage"
+                            class="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block font-medium text-gray-700 dark:text-gray-300">Coordenadas X, Y dos
+                            Vértices</label>
+                        <span class="text-[10px] text-gray-400 font-mono">X, Y ou X [tab] Y</span>
+                    </div>
+                    <textarea id="modal-region-coords" rows="8"
+                        placeholder="195.0, 18.2&#10;236.0, 17.0&#10;225.0, 22.8&#10;195.0, 22.8"
+                        class="w-full p-2.5 font-mono text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        💡 <strong>Dica:</strong> Você pode copiar células com coordenadas de uma planilha Excel ou
+                        AutoCAD/Slide e colar diretamente aqui!
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+                <span class="text-[10px] text-gray-400">Polígono fechado automático</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeRegionModal()"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="saveRegionFromModal()"
+                        class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer flex items-center gap-1.5">
+                        <span>✓</span> Salvar Região & Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Biblioteca de Testes & Tutoriais Canônicos (Phase2 & Adonis) -->
+    <div id="benchmark-library-modal"
+        class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-5xl my-auto flex flex-col max-h-[92vh] overflow-hidden animate-fadeIn">
+
+            <!-- Modal Header -->
+            <div
+                class="p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/70 dark:bg-gray-800/80">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="p-2.5 bg-amber-500/15 dark:bg-amber-400/20 text-amber-600 dark:text-amber-400 rounded-xl text-xl">
+                        <span>📚</span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                            Biblioteca de Testes & Tutoriais (Phase2 & Adonis)
+                            <span
+                                class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                12 Casos Prontos
+                            </span>
+                        </h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Selecione um caso canônico dos manuais de referência do Rocscience Phase2 e Adonis Geocomp
+                            para carregar instantaneamente geometria, malha e resultados.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeBenchmarkLibraryModal()"
+                    class="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer text-base">
+                    ✕
                 </button>
-                <button type="button" onclick="saveRegionFromModal()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition-all">
-                    Salvar Região & Atualizar
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div
+                class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 flex flex-wrap items-center gap-1.5 text-xs">
+                <button type="button" onclick="filterBenchmarkCards('all')" id="tab-bench-all"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-bold bg-indigo-600 text-white shadow-xs">
+                    Todos (26)
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('phase2')" id="tab-bench-phase2"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    📘 Phase2 Tutorials (21)
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('adonis')" id="tab-bench-adonis"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    📗 Adonis Benchmarks (5)
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('tunnel')" id="tab-bench-tunnel"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    🚇 Túneis & Cavidades
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('slope')" id="tab-bench-slope"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    ⛰️ Taludes & SSR
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('retaining')" id="tab-bench-retaining"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    🧱 Cavas & Contenções
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('embankment')" id="tab-bench-embankment"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    🏗️ Aterros & Barragens
+                </button>
+                <button type="button" onclick="filterBenchmarkCards('footing')" id="tab-bench-footing"
+                    class="bench-filter-tab px-3 py-1.5 rounded-lg font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    📐 Fundações
+                </button>
+            </div>
+
+            <!-- Cards Grid Container -->
+            <div id="benchmark-cards-container"
+                class="p-5 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow bg-gray-50/50 dark:bg-gray-900/40">
+                <!-- Dynamically populated by JS -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div
+                class="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 text-xs">
+                <span class="text-gray-500 dark:text-gray-400">
+                    💡 Os casos de teste já incluem malhas triangulares de alta qualidade e resultados pré-calculados.
+                </span>
+                <button type="button" onclick="closeBenchmarkLibraryModal()"
+                    class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    Fechar
                 </button>
             </div>
         </div>
     </div>
 
 </body>
+
 </html>

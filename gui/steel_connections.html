@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conexões Viga-Pilar & Ligações Metálicas (NBR 8800 & AISC 360)</title>
+
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="../styles.min.css">
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="../aisc/database.js" defer></script>
+    <script src="steel_connections.js" defer></script>
+
+    <style>
+        .std-tab-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
+        }
+
+        .aisc-subtab.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .dark .aisc-subtab.active {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
+
+    <div class="container mx-auto p-4 md:p-6 max-w-7xl flex-grow flex flex-col">
+        <div id="header-placeholder" style="min-height: 90px;"></div>
+
+        <main class="mt-4 flex-grow flex flex-col">
+            <!-- Header Section -->
+            <div
+                class="mb-5 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span
+                            class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                            NBR 8800 / CBCA & AISC 360-22
+                        </span>
+                        <span
+                            class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                            2D Multi-Vista
+                        </span>
+                    </div>
+                    <h1
+                        class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                        <span class="text-3xl">🏗️</span>
+                        Conexão Viga-Pilar & Ligações Metálicas
+                    </h1>
+                    <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Módulo integrado para dimensionamento de ligações viga-coluna, nós de pórtico e bases de pilares
+                        para esforço cortante e momento fletor segundo a ABNT NBR 8800 (Manuais CBCA) e o AISC 360 (LRFD
+                        & ASD).
+                    </p>
+                </div>
+
+                <!-- NORMA / STANDARD SWITCHER BUTTONS -->
+                <div
+                    class="flex flex-wrap items-center bg-gray-200 dark:bg-gray-800 p-1.5 rounded-xl border border-gray-300 dark:border-gray-700 self-start md:self-auto gap-1">
+                    <button type="button" id="btn-switch-nbr" onclick="switchStandard('nbr')"
+                        class="std-tab-btn active flex items-center gap-2 px-3.5 py-2 rounded-lg font-bold text-xs md:text-sm transition-all">
+                        <span>🇧🇷</span>
+                        <span>ABNT NBR 8800 (CBCA)</span>
+                    </button>
+                    <button type="button" id="btn-switch-aisc-lrfd" onclick="switchStandard('aisc_lrfd')"
+                        class="std-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold text-xs md:text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all">
+                        <span>🇺🇸</span>
+                        <span>AISC 360-22 (LRFD)</span>
+                    </button>
+                    <button type="button" id="btn-switch-aisc-asd" onclick="switchStandard('aisc_asd')"
+                        class="std-tab-btn flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold text-xs md:text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all">
+                        <span>🇺🇸</span>
+                        <span>AISC 360-22 (ASD)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RS2-STYLE ACTION & PRESETS TOP TOOLBAR -->
+            <div class="mb-5 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <span class="p-2 bg-indigo-600 text-white rounded-lg shadow-md font-black text-sm">STEEL</span>
+                    <div>
+                        <h2 class="text-sm md:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Dimensionamento Executivo de Ligações
+                            <span id="header-norm-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                ABNT NBR 8800:2008
+                            </span>
+                        </h2>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                            Estados Limites Últimos (ELU) • Verificações Geométricas e Resistências de Cálculo
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Preset Selector (RS2 Style) -->
+                    <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-700/60 p-1 rounded-lg border border-gray-200 dark:border-gray-600 text-xs">
+                        <span class="text-gray-500 dark:text-gray-400 font-medium pl-1">Preset:</span>
+                        <select id="preset-selector" onchange="loadConnectionPreset(this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                            <optgroup label="🏛️ Placa de Base de Pilar (Base Plate)">
+                                <option value="bp_w250_light" selected>1. W250x73 - Pilar Comercial (N=350 kN, M=0)</option>
+                                <option value="bp_w310_medium">2. W310x107 - Galpão Industrial (N=600 kN, M=85 kNm, V=70 kN)</option>
+                                <option value="bp_w360_heavy">3. W360x134 - Base Engastada Pórtico (N=850 kN, M=220 kNm, V=120 kN)</option>
+                                <option value="bp_hp310_high">4. HP310x125 - Edifício Multi-Andar (N=2200 kN, M=40 kNm)</option>
+                            </optgroup>
+                            <optgroup label="🔗 Emenda de Perfis Viga/Pilar (Splice)">
+                                <option value="sp_w360_floor">5. W360x44 - Viga de Piso (M=180 kNm, V=45 kN)</option>
+                                <option value="sp_w410_roof">6. W410x60 - Viga Principal Cobertura (M=320 kNm, V=140 kN)</option>
+                                <option value="sp_w310_column">7. W310x79 - Emenda de Pilar (N=950 kN, M=110 kNm, V=50 kN)</option>
+                                <option value="sp_w530_heavy">8. W530x85 - Viga Grande Vão (M=580 kNm, V=220 kN)</option>
+                            </optgroup>
+                            <optgroup label="🔩 Ligações de Cisalhamento Viga-Pilar">
+                                <option value="fep_w360">9. Chapa Topo Flexível W360 (V=150 kN)</option>
+                                <option value="da_w410">10. Dupla Cantoneira 2L W410 (V=180 kN)</option>
+                                <option value="st_w310">11. Chapa Simples Shear Tab W310 (V=120 kN)</option>
+                                <option value="eep_w460">12. Chapa Estendida de Momento 4E (M=120 kNm)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Test Benchmarks Dropdown (RS2 Style) -->
+                    <div class="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 p-1 rounded-lg border border-amber-200 dark:border-amber-800 text-xs shadow-xs">
+                        <span class="text-amber-700 dark:text-amber-300 font-semibold pl-1 flex items-center gap-1">
+                            <span>🧪</span> Testes:
+                        </span>
+                        <select id="benchmark-selector" onchange="loadBenchmarkConnection(this.value)" class="bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 font-semibold text-gray-800 dark:text-gray-200 cursor-pointer">
+                            <option value="" disabled selected>Carregar teste pronto...</option>
+                            <option value="bench_cbca_bp1">1. Exemplo CBCA Manual 3 - Placa Base Articulada (N=400 kN)</option>
+                            <option value="bench_aisc_dg1_ex41">2. AISC DG1 Ex. 4.1 - Base Plate c/ Momento Médio</option>
+                            <option value="bench_aisc_dg1_ex43">3. AISC DG1 Ex. 4.3 - Base Plate Grande Excentricidade (Tração)</option>
+                            <option value="bench_nbr_splice_w360">4. NBR 8800 Exemplo - Emenda Viga W360x44 (M=180 kNm, V=120 kN)</option>
+                            <option value="bench_aisc_splice_iia1">5. AISC Design Examples II.A-1 - Bolted Splice (LRFD)</option>
+                            <option value="bench_aisc_splice_iia2">6. AISC Design Examples II.A-2 - Bolted Splice (ASD)</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons: Run Calc, Save, Load, Export PNG -->
+                    <button type="button" onclick="triggerConnectionCalculation()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2 rounded-lg shadow-sm text-xs flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>⚡</span> Calcular Conexão
+                    </button>
+
+                    <div class="flex items-center gap-1 border-l border-gray-200 dark:border-gray-700 pl-2">
+                        <input type="file" id="conn-local-file-input" accept=".json" class="hidden" onchange="importConnectionJSON(event)">
+                        <button type="button" onclick="document.getElementById('conn-local-file-input').click()" class="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold cursor-pointer" title="Carregar Conexão (.json)">
+                            <span>📂</span>
+                            <span class="hidden sm:inline">Abrir</span>
+                        </button>
+                        <button type="button" onclick="exportConnectionJSON()" class="p-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold cursor-pointer" title="Salvar Conexão (.json)">
+                            <span>💾</span>
+                            <span class="hidden sm:inline">Salvar</span>
+                        </button>
+                        <button type="button" onclick="exportCanvasImage()" class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1 font-semibold cursor-pointer" title="Exportar Imagem PNG">
+                            <span>📷</span>
+                            <span class="hidden sm:inline">Export PNG</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- PAINEL UNIFICADO: CONEXÕES METÁLICAS                     -->
+            <!-- ======================================================== -->
+            <div id="panel-nbr" class="space-y-6">
+                <!-- Typology Tabs Navigation -->
+                <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
+                    <button type="button" id="tab-btn-bp" onclick="selectTypology('base_plate')"
+                        class="py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>🏛️</span> Placa de Base (Pilar)
+                    </button>
+                    <button type="button" id="tab-btn-sp" onclick="selectTypology('splice')"
+                        class="py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>🔗</span> Emenda de Perfis (Splice)
+                    </button>
+                    <button type="button" id="tab-btn-fep" onclick="selectTypology('flexible_end_plate')"
+                        class="py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>🔩</span> Chapa Topo Flexível
+                    </button>
+                    <button type="button" id="tab-btn-da" onclick="selectTypology('double_angle')"
+                        class="py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>📐</span> Dupla Cantoneira (2L)
+                    </button>
+                    <button type="button" id="tab-btn-st" onclick="selectTypology('shear_tab')"
+                        class="py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>📑</span> Chapa Simples (Shear Tab)
+                    </button>
+                    <button type="button" id="tab-btn-eep" onclick="selectTypology('extended_end_plate')"
+                        class="py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer">
+                        <span>🔄</span> Chapa Estendida (Momento)
+                    </button>
+                </div>
+
+                <!-- Workspace Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                    <!-- Left Inputs Form in Executive Cards (5 cols) -->
+                    <div class="lg:col-span-5 space-y-4 max-h-[860px] overflow-y-auto pr-1">
+                        <form id="steel-connection-form"
+                            onsubmit="event.preventDefault(); triggerConnectionCalculation();" class="space-y-4">
+                            
+                            <!-- Cards will be populated dynamically here in RS2 style -->
+                            <div id="conn-cards-container" class="space-y-4"></div>
+
+                        </form>
+                    </div>
+
+                    <!-- Right Results & 2D Canvas (7 cols) -->
+                    <div class="lg:col-span-7 space-y-5">
+
+                        <!-- 2D Canvas Drawing of Connection -->
+                        <div class="eng-card relative">
+                            <div class="eng-card-header">
+                                <span class="eng-card-title"><span>📐</span> <span id="conn-canvas-title">Detalhe Gráfico da Ligação (NBR 8800 / CBCA)</span></span>
+                                <span id="conn-status-badge"
+                                    class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                    ✓ Aprovado
+                                </span>
+                            </div>
+                            <canvas id="conn-canvas" width="640" height="360"
+                                class="eng-cad-canvas w-full"></canvas>
+                        </div>
+
+                        <!-- Utilization & Capacity Cards -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div class="kpi-card text-center">
+                                <div id="conn-kpi-demand-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Esforço Sd</div>
+                                <div id="conn-res-demand"
+                                    class="text-lg font-extrabold text-blue-600 dark:text-blue-400 my-0.5">-</div>
+                                <div id="conn-res-demand-unit" class="text-[10px] text-[var(--color-text-secondary)]">kN</div>
+                            </div>
+                            <div class="kpi-card text-center">
+                                <div id="conn-kpi-cap-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Capacidade Rd</div>
+                                <div id="conn-res-capacity"
+                                    class="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 my-0.5">-</div>
+                                <div id="conn-res-capacity-unit" class="text-[10px] text-[var(--color-text-secondary)]">kN</div>
+                            </div>
+                            <div class="kpi-card text-center">
+                                <div id="conn-kpi-ur-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Utilização</div>
+                                <div id="conn-res-ur"
+                                    class="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 my-0.5">-</div>
+                                <div id="conn-res-ur-sub" class="text-[10px] text-[var(--color-text-secondary)]">Sd / Rd</div>
+                            </div>
+                            <div class="kpi-card text-center">
+                                <div id="conn-kpi-status-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Parecer Normativo</div>
+                                <div id="conn-res-status"
+                                    class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 my-0.5">Aprovado</div>
+                                <div id="conn-res-status-sub" class="text-[10px] text-[var(--color-text-secondary)]">ELU Verificado</div>
+                            </div>
+                        </div>
+
+                        <!-- Limit States Verification Table -->
+                        <div class="eng-card">
+                            <div class="eng-card-header">
+                                <span class="eng-card-title"><span>📋</span> <span id="conn-table-title">Estados Limites (NBR 8800)</span></span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left">
+                                    <thead
+                                        class="bg-[var(--color-bg-quaternary)] text-[var(--color-text-secondary)] uppercase">
+                                        <tr>
+                                            <th class="p-2.5">Modo de Ruptura / Verificação</th>
+                                            <th id="th-capacity" class="p-2.5">Capacidade Rd</th>
+                                            <th id="th-demand" class="p-2.5">Solicitação Sd</th>
+                                            <th class="p-2.5">Utilização</th>
+                                            <th class="p-2.5 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-conn-checks" class="divide-y divide-[var(--color-border-primary)]">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Specifications Box -->
+                        <div
+                            class="eng-card bg-[var(--color-bg-secondary)] text-xs text-[var(--color-text-secondary)] space-y-1">
+                            <div class="font-bold text-xs text-[var(--color-text-primary)] mb-1" id="conn-spec-header-title">Especificações Construtivas Detalhadas (ABNT NBR 8800 / CBCA):</div>
+                            <div id="conn-spec-details">Carregando especificações...</div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+
+        </main>
+
+        <div id="footer-placeholder" class="mt-8"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'steel_connections',
+                    pageTitle: 'steel_connections',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Weld Group Calculator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.min.css">
     <script>
@@ -57,9 +57,31 @@
         }
     </style>
 </head>
-<body class="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200">
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+<body class="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] transition-colors duration-200 min-h-screen flex flex-col">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
+
+                <!-- Executive Header Section -->
+        <div class="px-5 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 rounded-xl shadow-xs">
+            <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                        AISC 360 & NBR 8800
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                        Método Elástico 3D
+                    </span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>🔥</span> Grupo de Soldas 3D (3D Weld Group)
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="document.getElementById('calculateBtn')?.click()" class="eng-btn-primary">
+                    <span>⚡</span> Calcular Soldas
+                </button>
+            </div>
+        </div>
 
         <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
@@ -141,8 +163,8 @@
                 
                 <div class="form-section">
                     <h2 class="text-xl font-bold border-b border-[var(--color-border-primary)] pb-2 mb-4">Visualization</h2>
-                    <div class="canvas-container shadow-inner">
-                        <canvas id="weldCanvas"></canvas>
+                    <div class="canvas-container shadow-inner relative">
+                        <canvas id="weldCanvas" class="eng-cad-canvas"></canvas>
                     </div>
                 </div>
 

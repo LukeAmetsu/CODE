@@ -1,0 +1,58 @@
+R001: C5:CÁLCULO DAS PRESSÕES DE CONTATO DE UMA SAPATA RETANGULAR ISOLADA RÍGIDA
+R002: C5:Projeto: | C19:Contrato:
+R003: C5:Local: | C11:Engenheiro(a): | C19:Data:
+R005: C2:GEOMETRIA DO PILAR OU PEDESTAL | C7:VERIFICAÇÃO GEOMÉTRICA DA SAPATA | C12:LOCALIZAÇÃO DA APLICAÇÃO DA RESULTANTE DE CARGA
+R006: C2:a (cm) | C4:40 | C7:Devido comportamento rígido | C12:ZONA DA RESULTANTE: 2
+R007: C2: b (cm) | C4:40 | C7:htotal (cm) ≥ | C9:26.666666666666668 | C10:OK
+R008: C2:hPED (cm) | C4:20 | C7:Devido ancoragem da arm. do pilar ou ped.
+R009: C2:Excentric. em relação ao CG da sapata | C7:Øpilar (mm) | C9:10
+R010: C2:ec x (cm) | C4:0 | C7:htotal (cm) ≥ | C9:30.850110082315634 | C10:OK
+R011: C2:ec y (cm) | C4:0 | C7:Devido ângulo do tronco - Uso de forma?
+R012: C7:ax (º) | C9:45 | C10:> 30° - SIM
+R013: C2:GEOMETRIA DA SAPATA | C7:ay (º) | C9:45 | C10:> 30° - SIM
+R014: C2: A (cm) | C4:120
+R015: C2:B (cm) | C4:120 | C7:PESO PRÓPRIO E SOLO
+R016: C2:htotal (cm) | C4:60 | C7:Vol. sap+ped (m³) | C9:0.5973333333333334
+R017: C2:hbase (cm) | C4:20 | C7:γg: | C9:1
+R018: C2:f (cm) | C4:0 | C7:γg * GSAP (kN) | C9:14.933333333333335
+R019: C7:GSOLO (kN) | C9:8.704
+R020: C2:DADOS GERAIS
+R021: C2:gconcreto (kN/m³) | C4:25 | C7:VERIFICAÇÃO DA TENSÃO APLICADA
+R022: C2:gsolo (kN/m³) | C4:17 | C7:Esforços no topo da sapata ou pedestal
+R023: C2:gf | C4:1.4 | C7:Combinação | C9:1
+R024: C2:gc | C4:1.4 | C7:N | C9:15.3 | C10:kN
+R025: C2:gs | C4:1.15 | C7:Hx | C9:2.9 | C10:kN
+R026: C2:fck (MPa) | C4:30 | C7:My | C9:19 | C10:kN
+R027: C2:fyk (kN/cm²) | C4:50 | C7:Hy | C9:3.7 | C10:kN | C18:20 | C19:20
+R028: C2:Cobrimento (cm) | C4:5 | C7:Mx | C9:24.4 | C10:kN | C15:40 | C17:120
+R029: C2:σ adm, solo (kPa) | C4:300 | C7:Resultante
+R030: C2:H enterrada (cm) | C4:20 | C7:|ex| (cm) | C8:54.75464849501763 | C9:|ey| (cm) | C10:70.26675341574496 | C15:0
+R031: C2:Atrito interno ϕ (°) | C4:25 | C7:Tensão aplicada ao solo | C14:0 | C15:40 | C18:60 | C19:45°        
+R032: C2:Coef. Atrito | C4:0.2993803470957405 | C7:σ adm, solo (kPa) | C9:300
+R033: C2:Coesão (kPa) | C4:5 | C7:σmáx (kPa) | C9:0
+R034: C2:Coesão de proj. (kPa) | C4:3.333333333333333 | C7:OK | C15:120
+R036: C2:VERIFICAÇÕES E DIMENSIONAMENTOS
+R037: C2:Utilizar | C3:tensão admissível do solo | C6:→ Aplicável nas verificações da Necessidade de Armadura de Cisalhamento e no Dimensionamento de Armaduras!
+R039: C2:Unidade de carregamento | C7:tf
+R040: C2:Esforços Característicos: | C10:Esforços Majorados/Corrigidos pela unidade
+R041: C2:Hip. | C3:Vertical (tf) | C4:Esforço Horizontal eixo X (tf) | C5:Esforço Horizontal eixo Y (tf) | C6:Momento Fletor
+eixo X (tf.m) | C7:Momento Fletor
+eixo Y (tf.m) | C10:Hip. | C11:Vertical (kN) | C12:Esforço Horizontal eixo X (kN) | C13:Esforço Horizontal eixo Y (kN) | C14:Momento Fletor
+eixo X (kN.m) | C15:Momento Fletor
+eixo Y (kN.M)
+R042: C2:1 | C3:1.53 | C4:0.29 | C5:0.37 | C6:1.9 | C7:2.44 | C8:0.4701063709417263 | C10:1 | C11:15.3 | C12:2.9 | C13:3.7 | C14:19 | C15:24.4 | C16:4.701063709417263
+R043: C2:2 | C8:0 | C10:2 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R044: C2:3 | C8:0 | C10:3 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R045: C2:4 | C8:0 | C10:4 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R046: C2:5 | C8:0 | C10:5 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R047: C2:6 | C8:0 | C10:6 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R048: C2:7 | C8:0 | C10:7 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R049: C2:8 | C8:0 | C10:8 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R050: C2:9 | C8:0 | C10:9 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R051: C2:10 | C8:0 | C10:10 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R052: C2:11 | C8:0 | C10:11 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R053: C2:12 | C8:0 | C10:12 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R054: C2:13 | C8:0 | C10:13 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R055: C2:14 | C8:0 | C10:14 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R056: C2:15 | C8:0 | C10:15 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0
+R057: C2:16 | C8:0 | C10:16 | C11:0 | C12:0 | C13:0 | C14:0 | C15:0 | C16:0

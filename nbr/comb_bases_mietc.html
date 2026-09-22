@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combinações de Cargas nas Bases (MIETC • Multi-Bases) — NBR • Eurocode • ASCE</title>
+    <script src="../js/tailwind.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <style>
+        .mono-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-sans">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-4">
+            <!-- Header Executivo em Largura Total -->
+            <div class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700/80">
+                <div class="flex flex-wrap items-center gap-2.5 mb-2">
+                    <span class="text-3xl">🏛️</span>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                        Cargas nas Bases & Combinações Triaxiais
+                    </h1>
+                    <span class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow-xs">
+                        MIETC • Multi-Bases
+                    </span>
+                    <span class="bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        Triaxial: V (Vertical), X (Horizontal), Y (Horizontal) & H_res
+                    </span>
+                    <span class="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        ELU • ELS Rara • ELS QP • Geotécnica
+                    </span>
+                    <span class="bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        Envoltórias Críticas de Dimensionamento
+                    </span>
+                </div>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 max-w-6xl leading-relaxed">
+                    Importação direta de planilhas de carregamentos nas bases (ex: <span class="font-semibold text-emerald-600 dark:text-emerald-400">Cópia de Cargas nas bases MIETC.xlsx</span>). Geração simultânea em lote das combinações ponderadas normativas em <strong>V, X e Y</strong>, extraindo as envoltórias críticas de compressão máxima (<span class="font-bold text-blue-600 dark:text-blue-400">V_máx</span>), alívio/tração (<span class="font-bold text-amber-600 dark:text-amber-400">V_mín</span>) e resultante horizontal (<span class="font-bold text-purple-600 dark:text-purple-400">H_res,máx</span>) com seus esforços concomitantes.
+                </p>
+            </div>
+
+            <!-- Painel de Controle Principal (Toolbar de Arquivos & Configurações) -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm mb-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+                    
+                    <!-- Botão 1-Click Carregar Padrão -->
+                    <div class="lg:col-span-3 flex flex-col gap-1.5">
+                        <label class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Planilha de Cargas MIETC
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-load-default" onclick="loadDefaultWorkbook()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                                <span>⚡</span> Carregar Planilha Padrão
+                            </button>
+                            <label for="file-upload-input" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold py-2.5 px-3 rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1" title="Importar outro arquivo Excel (.xlsx)">
+                                <span>📂</span> Outro
+                            </label>
+                            <input type="file" id="file-upload-input" accept=".xlsx,.xlsm" class="hidden" onchange="handleFileUpload(event)">
+                        </div>
+                    </div>
+
+                    <!-- Seletor de Aba / Folha -->
+                    <div class="lg:col-span-2">
+                        <label for="sheet-select" class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Aba / Conjunto de Cargas
+                        </label>
+                        <select id="sheet-select" onchange="onSheetChange()" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
+                            <option value="">Aguardando planilha...</option>
+                        </select>
+                    </div>
+
+                    <!-- Norma Regulamentadora -->
+                    <div class="lg:col-span-2">
+                        <label for="standard-select" class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Norma de Combinação
+                        </label>
+                        <select id="standard-select" onchange="recalculateCombinations()" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
+                            <option value="NBR 8681" selected>🇧🇷 ABNT NBR 8681 / 6118 / 6122</option>
+                            <option value="Eurocode EN 1990">🇪🇺 Eurocode EN 1990 / EN 1997</option>
+                            <option value="ASCE 7-16 / 7-22">🇺🇸 ASCE 7-16 / 7-22 (LRFD / ASD)</option>
+                        </select>
+                    </div>
+
+                    <!-- Método / Estado Limite -->
+                    <div class="lg:col-span-3">
+                        <label for="method-select" class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Método & Estados Limites
+                        </label>
+                        <select id="method-select" onchange="recalculateCombinations()" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
+                            <option value="ELU_NORMAL" selected>ELU Normal + ELS (Estrutural e Geotécnica)</option>
+                            <option value="ELU_ESPECIAL">⚠️ ELU Especial / Acidental (NBR 8681)</option>
+                            <option value="GEO_FS_GLOBAL">🌍 Geotécnica: FS Global / ASD (Tensões Admissíveis)</option>
+                            <option value="GEO_COMPLETA">⚖️ Geotécnica Completa (Ponderada + FS Global + ELS)</option>
+                            <option value="TODAS">📐 Todas as Combinações (Exaustiva)</option>
+                        </select>
+                    </div>
+
+                    <!-- Botões de Exportação -->
+                    <div class="lg:col-span-2 flex items-center gap-1.5">
+                        <button type="button" onclick="exportToExcel()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer" title="Exportar planilha Excel formatada com todas as bases">
+                            <span>📊</span> Excel
+                        </button>
+                        <button type="button" onclick="exportToWord()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer" title="Exportar Relatório Word (.doc)">
+                            <span>📄</span> Word
+                        </button>
+                        <button type="button" onclick="window.print()" class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold py-2.5 px-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center cursor-pointer" title="Imprimir / Salvar PDF">
+                            <span>🖨️</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Status do Arquivo -->
+                <div id="file-status-bar" class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex flex-wrap items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <div class="flex items-center gap-2">
+                        <span id="status-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        <span id="status-text">Nenhuma planilha carregada no momento. Clique em "Carregar Planilha Padrão".</span>
+                    </div>
+                    <div id="file-metadata" class="hidden flex items-center gap-4 text-xs font-medium">
+                        <span id="meta-filename" class="text-gray-700 dark:text-gray-300 font-bold"></span>
+                        <span id="meta-bases-count" class="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de Cargas de Entrada e Regras de Associação (Controle de Grupos XOR / AND) -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm mb-5 transition-all">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 dark:border-gray-700/80 pb-2.5 mb-3 gap-2">
+                    <div>
+                        <h2 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <span>📋</span> Carregamentos e Regras de Associação
+                        </h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Defina as ações, seus valores e regras lógicas de exclusão mútua (XOR) ou coexistência necessária (AND).
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-semibold cursor-pointer select-none bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1.5 rounded-lg" title="Gera combinações adicionais conservadoras zerando carregamentos indicados (ex: sobrecarga vertical ausente em sapata tracionada por vento)">
+                            <input id="toggle-zero-scenarios" type="checkbox" checked onchange="recalculateCombinations()" class="w-4 h-4 text-amber-600 rounded border-amber-300 dark:border-amber-700 focus:ring-amber-500 cursor-pointer">
+                            <span>🛡️ Zerar p/ Tração Máx. / Alívio</span>
+                        </label>
+                        <button id="btn-reset-rules" type="button" onclick="resetDefaultLoadRules()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold py-1.5 px-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors cursor-pointer" title="Restaurar regras e grupos padrões da folha">
+                            🔄 Padrões
+                        </button>
+                        <button id="add-load-btn" type="button" onclick="addNewLoadActionRow()" class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer">
+                            + Adicionar Carga
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Column Header Labels -->
+                <div class="hidden sm:grid grid-cols-12 gap-2 px-2.5 pb-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <div class="col-span-3">Identificação da Ação</div>
+                    <div class="col-span-2">Origem / Tipo de Ação</div>
+                    <div class="col-span-2 text-right">Valor Caract. (kN)</div>
+                    <div class="col-span-2 text-center" title="Ações com o mesmo nome de grupo nunca atuam juntas em nenhuma combinação (Exclusão Mútua).">Grupo Exclusivo (XOR)</div>
+                    <div class="col-span-1 text-center" title="Esta ação só entrará nas combinações onde a ação selecionada estiver presente (Coexistência Obrigatória).">Requer (AND)</div>
+                    <div class="col-span-1 text-center" title="Marque para permitir que esta ação seja zerada em combinações variantes conservadoras, avaliando a máxima tração/arrancamento na fundação sem sobrecargas verticais.">Pode Zerar</div>
+                    <div class="col-span-1 text-center">Ações</div>
+                </div>
+
+                <!-- Dynamic Load Rows Container -->
+                <div class="space-y-2.5" id="loads-container">
+                    <!-- Dynamic Load Rows rendered via JS -->
+                </div>
+
+                <!-- Dynamic Rules Summary Card -->
+                <div class="mt-3.5 pt-3 border-t border-gray-100 dark:border-gray-700/80">
+                    <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
+                        ⚡ Regras Lógicas Ativas nesta Análise:
+                    </span>
+                    <div id="active-rules-summary" class="flex flex-wrap items-center gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Painel de Agrupamento de Bases em Sapatas Conjuntas (ex: BT1 + BT2 na mesma sapata) -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm mb-5 transition-all" id="footing-groups-card">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 dark:border-gray-700/80 pb-2.5 mb-3 gap-2">
+                    <div>
+                        <h2 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <span>🏛️</span> Sapatas Conjuntas & Agrupamento de Bases (Mesma Sapata)
+                        </h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Defina quais bases pertencem à mesma sapata (ex: BT1 e BT2). Os esforços simultâneos são somados algebricamente em cada combinação para a envoltória conjunta.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="flex items-center gap-1.5 text-xs text-indigo-700 dark:text-indigo-400 font-semibold cursor-pointer select-none bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 px-2.5 py-1.5 rounded-lg" title="Habilita o cálculo e visualização de sapatas conjuntas">
+                            <input id="toggle-combined-footings" type="checkbox" checked onchange="onToggleCombinedFootings()" class="w-4 h-4 text-indigo-600 rounded border-indigo-300 dark:border-indigo-700 focus:ring-indigo-500 cursor-pointer">
+                            <span>Ativar Sapatas Conjuntas</span>
+                        </label>
+                        <button type="button" onclick="autoGroupPairsClick()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5" title="Detecta e agrupa automaticamente bases com sufixos subsequentes (BT1+BT2, BT3+BT4...)">
+                            <span>⚡</span> Auto-Agrupar Pares (BT1+BT2...)
+                        </button>
+                        <button type="button" onclick="addNewFootingGroupRow()" class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer">
+                            + Nova Sapata
+                        </button>
+                        <button type="button" onclick="clearFootingGroups()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold py-1.5 px-2.5 rounded-lg transition-colors cursor-pointer" title="Remover todos os agrupamentos">
+                            🗑️ Limpar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Container dinâmico de sapatas configuradas -->
+                <div id="footing-groups-container" class="space-y-2.5">
+                    <!-- Sapatas renderizadas via JavaScript -->
+                </div>
+
+                <!-- Resumo e indicador de sapatas ativas -->
+                <div id="footing-groups-summary" class="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/80 flex flex-wrap items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span id="footing-groups-count-text">Nenhuma sapata conjunta configurada. Clique em "Auto-Agrupar Pares" ou "+ Nova Sapata".</span>
+                </div>
+            </div>
+
+            <!-- KPI Cards Grid (Envoltórias Globais da Folha Ativa) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Total de Bases Analisadas</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-total-bases" class="text-2xl font-extrabold text-gray-900 dark:text-white mono-num">0</span>
+                        <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">Ativas</span>
+                    </div>
+                    <span id="kpi-active-sheet" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block truncate">--</span>
+                </div>
+
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Compressão Máxima (V_máx)</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-global-vmax" class="text-xl font-bold text-blue-600 dark:text-blue-400 mono-num">0.00 kN</span>
+                        <span class="text-xs font-semibold text-blue-500">Compressão</span>
+                    </div>
+                    <span id="kpi-global-vmax-base" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block truncate">Base: --</span>
+                </div>
+
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Alívio / Tração Mínima (V_mín)</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-global-vmin" class="text-xl font-bold text-amber-600 dark:text-amber-400 mono-num">0.00 kN</span>
+                        <span class="text-xs font-semibold text-amber-500">Alívio/Tração</span>
+                    </div>
+                    <span id="kpi-global-vmin-base" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block truncate">Base: --</span>
+                </div>
+
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Resultante Horizontal Máx (H_máx)</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-global-hmax" class="text-xl font-bold text-purple-600 dark:text-purple-400 mono-num">0.00 kN</span>
+                        <span class="text-xs font-semibold text-purple-500">Cisalhamento</span>
+                    </div>
+                    <span id="kpi-global-hmax-base" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block truncate">Base: --</span>
+                </div>
+            </div>
+
+            <!-- Painel de Filtros e Busca da Tabela -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm mb-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <!-- Campo de Busca -->
+                    <div class="flex-1 min-w-[240px] max-w-md relative">
+                        <input type="text" id="base-search-input" oninput="filterBasesTable()" placeholder="🔍 Filtrar base (ex: BT, BA, BM, BC)..." class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2 text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+
+                    <!-- Chips de Filtro Rápido -->
+                    <div id="quick-filter-chips" class="flex flex-wrap items-center gap-1.5">
+                        <button type="button" onclick="setQuickFilter('')" class="chip-filter active px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-xs">Todas</button>
+                        <button type="button" onclick="setQuickFilter('BT')" class="chip-filter px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all">BT</button>
+                        <button type="button" onclick="setQuickFilter('BA')" class="chip-filter px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all">BA</button>
+                        <button type="button" onclick="setQuickFilter('BM')" class="chip-filter px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all">BM</button>
+                        <button type="button" onclick="setQuickFilter('BC')" class="chip-filter px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all">BC</button>
+                    </div>
+
+                    <!-- Ordenação -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500 font-semibold">Ordenar por:</span>
+                        <select id="sort-select" onchange="sortBasesTable()" class="bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-gray-900 dark:text-white focus:outline-none">
+                            <option value="name_asc">Nome da Base (A-Z)</option>
+                            <option value="vmax_desc">V Máx (Maior Compressão)</option>
+                            <option value="vmin_asc">V Mín (Maior Alívio/Tração)</option>
+                            <option value="hmax_desc">H_res Máx (Maior Cisalhamento)</option>
+                        </select>
+                        <button type="button" onclick="copySummaryTableToClipboard()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold py-1.5 px-2.5 rounded-xl transition-all" title="Copiar tabela para área de transferência">
+                            📋 Copiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela Executiva de Envoltórias de Todas as Bases -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2" id="table-main-title">
+                                <span>📋</span> Envoltórias de Projeto (kN)
+                            </h2>
+                            <!-- View Toggle: Bases Individuais vs Sapatas Conjuntas -->
+                            <div class="inline-flex rounded-xl bg-gray-100 dark:bg-gray-900 p-0.5 border border-gray-200 dark:border-gray-700 shadow-2xs">
+                                <button type="button" id="tab-view-individual" onclick="setMainTableView('individual')" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs cursor-pointer">
+                                    📊 Bases Individuais
+                                </button>
+                                <button type="button" id="tab-view-combined" onclick="setMainTableView('combined')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer flex items-center gap-1.5">
+                                    <span>🏛️</span> Sapatas Conjuntas <span id="combined-badge-count" class="bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+                                </button>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 block mt-1" id="table-subtitle">
+                            Cargas máximas e mínimas para dimensionamento geotécnico e estrutural com esforços concomitantes.
+                        </span>
+                    </div>
+                    <span id="table-row-count-badge" class="text-xs font-bold bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full text-gray-700 dark:text-gray-300">
+                        0 bases
+                    </span>
+                </div>
+
+                <div class="px-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+                        <span class="text-gray-500 dark:text-gray-400 font-bold mr-1 flex items-center gap-1">
+                            <span>🎯</span> Envoltórias:
+                        </span>
+                        <button type="button" onclick="setEnvelopeView('all')" id="env-btn-all" class="env-tab-btn active px-2.5 py-1 rounded-lg font-bold bg-emerald-600 text-white shadow-xs cursor-pointer">
+                            🌟 Todas as 6 Envoltórias
+                        </button>
+                        <button type="button" onclick="setEnvelopeView('peaks')" id="env-btn-peaks" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                            1. Picos Globais (V, X, Y, H)
+                        </button>
+                        <button type="button" onclick="setEnvelopeView('vmax')" id="env-btn-vmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                            2. V Máx & Concom.
+                        </button>
+                        <button type="button" onclick="setEnvelopeView('vmin')" id="env-btn-vmin" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                            3. V Mín & Concom.
+                        </button>
+                        <button type="button" onclick="setEnvelopeView('xmax')" id="env-btn-xmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                            4. X Máx & Concom.
+                        </button>
+                        <button type="button" onclick="setEnvelopeView('ymax')" id="env-btn-ymax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                            5. Y Máx & Concom.
+                        </button>
+                        <button type="button" onclick="setEnvelopeView('hmax')" id="env-btn-hmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                            6. H Máx & Concom.
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs border-collapse" id="bases-summary-table">
+                        <thead class="bg-gray-50 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 uppercase tracking-wider font-bold" id="summary-table-head">
+                            <!-- Injetado dinamicamente por renderSummaryTableHead() -->
+                        </thead>
+                        <tbody id="summary-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60">
+                            <tr>
+                                <td colspan="20" class="py-12 text-center text-gray-400 italic">
+                                    Nenhum dado disponível. Carregue a planilha padrão ou selecione um arquivo Excel acima.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Seção de Inspeção de Carregamentos Característicos Brutos (Collapsible) -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
+                <button type="button" onclick="toggleRawLoadsCard()" class="w-full p-4 flex items-center justify-between text-left font-bold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div class="flex items-center gap-2">
+                        <span>🔍</span>
+                        <span>Inspecionar Ações Características da Planilha (PP, CP, Vento, Temperaturas...)</span>
+                    </div>
+                    <span id="raw-loads-toggle-icon" class="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">Mostrar ▼</span>
+                </button>
+                <div id="raw-loads-content" class="hidden p-4 border-t border-gray-200 dark:border-gray-700">
+                    <p class="text-xs text-gray-500 mb-3">
+                        Relação das forças características brutas lidas na planilha para cada direção (V, X, Y) antes das ponderações normativas.
+                    </p>
+                    <div class="overflow-x-auto custom-scrollbar max-h-96">
+                        <table class="w-full text-left text-xs border-collapse" id="raw-loads-table">
+                            <thead class="bg-gray-50 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 uppercase tracking-wider font-bold">
+                                <tr id="raw-loads-header-row">
+                                    <th class="py-2.5 px-3">Item / Ação</th>
+                                    <th class="py-2.5 px-2 text-center">Dir.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="raw-loads-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <div id="footer-placeholder" class="mt-8"></div>
+    </div>
+
+    <!-- MODAL DE DETALHAMENTO DE TODAS AS COMBINAÇÕES DA BASE SELECIONADA -->
+    <div id="base-detail-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden items-center justify-center p-3 md:p-6 transition-opacity">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">🔍</span>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>Detalhamento da Base:</span>
+                            <span id="modal-base-name" class="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 px-2.5 py-0.5 rounded-lg text-base mono-num font-extrabold">--</span>
+                        </h3>
+                        <span class="text-xs text-gray-500 dark:text-gray-400" id="modal-base-subtitle">
+                            Todas as combinações de ações calculadas com valores de V, X, Y e resultante H.
+                        </span>
+                    </div>
+                </div>
+                <button type="button" onclick="closeBaseDetailModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xl font-bold cursor-pointer">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Envelopes: As 6 Envoltórias da Base -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 p-3.5 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 text-xs">
+                <!-- 1. Picos Globais -->
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xs">
+                    <span class="text-gray-500 dark:text-gray-400 block font-bold text-[10px] uppercase">1. Picos Globais</span>
+                    <div id="modal-env-peaks" class="text-[11px] font-bold text-gray-800 dark:text-gray-200 mono-num mt-1 space-y-0.5">
+                        <div>V_pico: <span id="m-peak-v">--</span></div>
+                        <div>|X|_pico: <span id="m-peak-x">--</span></div>
+                        <div>|Y|_pico: <span id="m-peak-y">--</span></div>
+                        <div>H_pico: <span id="m-peak-h">--</span></div>
+                    </div>
+                </div>
+                <!-- 2. V Máx -->
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-blue-200 dark:border-blue-900/40 shadow-2xs">
+                    <span class="text-blue-600 dark:text-blue-400 block font-bold text-[10px] uppercase">2. V Máx & Concom.</span>
+                    <span id="modal-env-vmax" class="text-sm font-bold text-blue-600 dark:text-blue-400 mono-num block mt-0.5">--</span>
+                    <span id="modal-env-vmax-sub" class="text-[10px] text-gray-500 dark:text-gray-400 mono-num block truncate">--</span>
+                </div>
+                <!-- 3. V Mín -->
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 shadow-2xs">
+                    <span class="text-amber-600 dark:text-amber-400 block font-bold text-[10px] uppercase">3. V Mín & Concom.</span>
+                    <span id="modal-env-vmin" class="text-sm font-bold text-amber-600 dark:text-amber-400 mono-num block mt-0.5">--</span>
+                    <span id="modal-env-vmin-sub" class="text-[10px] text-gray-500 dark:text-gray-400 mono-num block truncate">--</span>
+                </div>
+                <!-- 4. X Máx -->
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-900/40 shadow-2xs">
+                    <span class="text-emerald-600 dark:text-emerald-400 block font-bold text-[10px] uppercase">4. X Máx & Concom.</span>
+                    <span id="modal-env-xmax" class="text-sm font-bold text-emerald-600 dark:text-emerald-400 mono-num block mt-0.5">--</span>
+                    <span id="modal-env-xmax-sub" class="text-[10px] text-gray-500 dark:text-gray-400 mono-num block truncate">--</span>
+                </div>
+                <!-- 5. Y Máx -->
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900/40 shadow-2xs">
+                    <span class="text-indigo-600 dark:text-indigo-400 block font-bold text-[10px] uppercase">5. Y Máx & Concom.</span>
+                    <span id="modal-env-ymax" class="text-sm font-bold text-indigo-600 dark:text-indigo-400 mono-num block mt-0.5">--</span>
+                    <span id="modal-env-ymax-sub" class="text-[10px] text-gray-500 dark:text-gray-400 mono-num block truncate">--</span>
+                </div>
+                <!-- 6. H Máx -->
+                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-purple-200 dark:border-purple-900/40 shadow-2xs">
+                    <span class="text-purple-600 dark:text-purple-400 block font-bold text-[10px] uppercase">6. H Máx & Concom.</span>
+                    <span id="modal-env-hmax" class="text-sm font-bold text-purple-600 dark:text-purple-400 mono-num block mt-0.5">--</span>
+                    <span id="modal-env-hmax-sub" class="text-[10px] text-gray-500 dark:text-gray-400 mono-num block truncate">--</span>
+                </div>
+            </div>
+
+            <!-- Modal Table -->
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <table class="w-full text-left text-xs border-collapse" id="modal-combos-table">
+                    <thead class="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300 uppercase tracking-wider font-bold sticky top-0 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="py-2.5 px-3">Estado Limite</th>
+                            <th class="py-2.5 px-3">Identificação da Combinação</th>
+                            <th class="py-2.5 px-3">Fórmula Ponderada</th>
+                            <th class="py-2.5 px-3 text-right text-blue-600 dark:text-blue-400">V (kN)</th>
+                            <th class="py-2.5 px-3 text-right">X (kN)</th>
+                            <th class="py-2.5 px-3 text-right">Y (kN)</th>
+                            <th class="py-2.5 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-combos-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+                <button type="button" onclick="closeBaseDetailModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold cursor-pointer transition-all">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE DETALHAMENTO E DECOMPOSIÇÃO DE SAPATA CONJUNTA (BASES AGRUPADAS) -->
+    <div id="footing-decomposition-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden items-center justify-center p-3 md:p-6 transition-opacity">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">🏛️</span>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>Detalhamento da Sapata Conjunta:</span>
+                            <span id="modal-footing-name" class="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300 px-2.5 py-0.5 rounded-lg text-base mono-num font-extrabold">--</span>
+                        </h3>
+                        <span class="text-xs text-gray-500 dark:text-gray-400" id="modal-footing-subtitle">
+                            Decomposição das cargas transmitidas por cada montante em cada combinação normativa e caso governante.
+                        </span>
+                    </div>
+                </div>
+                <button type="button" onclick="closeFootingDecompositionModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-xl font-bold cursor-pointer">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Seção 1: Envoltórias Governantes com Decomposição Imediata -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 overflow-x-auto">
+                <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <span>⚡</span> Decomposição das Cargas nos Casos Críticos Governantes:
+                </h4>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs border-collapse bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <thead class="bg-gray-100 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 uppercase font-bold text-[10px]">
+                            <tr>
+                                <th class="py-2 px-3">Caso de Envoltória</th>
+                                <th class="py-2 px-3">Elemento / Montante</th>
+                                <th class="py-2 px-3">Combinação Crítica Governante</th>
+                                <th class="py-2 px-3 text-right text-blue-600 dark:text-blue-400">Vertical V (kN)</th>
+                                <th class="py-2 px-3 text-right">Cisalh. X (kN)</th>
+                                <th class="py-2 px-3 text-right">Cisalh. Y (kN)</th>
+                                <th class="py-2 px-3 text-right text-purple-600 dark:text-purple-400">Resultante H (kN)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-footing-decomp-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono text-xs">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Seção 2: Todas as Combinações do Conjunto -->
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <h4 class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>📋 Todas as Combinações da Sapata Conjunta (Soma Simultânea):</span>
+                    <span class="text-[11px] text-gray-500 font-normal">Valores somados para o bloco/sapata</span>
+                </h4>
+                <table class="w-full text-left text-xs border-collapse" id="modal-footing-combos-table">
+                    <thead class="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300 uppercase tracking-wider font-bold sticky top-0 border-b border-gray-200 dark:border-gray-700">
+                        <tr>
+                            <th class="py-2.5 px-3">Estado Limite</th>
+                            <th class="py-2.5 px-3">Identificação da Combinação</th>
+                            <th class="py-2.5 px-3">Fórmula Ponderada</th>
+                            <th class="py-2.5 px-3 text-right text-blue-600 dark:text-blue-400">V_total (kN)</th>
+                            <th class="py-2.5 px-3 text-right">X_total (kN)</th>
+                            <th class="py-2.5 px-3 text-right">Y_total (kN)</th>
+                            <th class="py-2.5 px-3 text-right text-purple-600 dark:text-purple-400">H_total (kN)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-footing-combos-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end">
+                <button type="button" onclick="closeFootingDecompositionModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold cursor-pointer transition-all">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script da Aplicação -->
+    <script src="comb_bases_mietc.js"></script>
+    <script>
+        function initLayoutTemplates() {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'comb-mietc',
+                    pageTitle: 'comb_bases_mietc',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initLayoutTemplates);
+        } else {
+            initLayoutTemplates();
+        }
+    </script>
+</body>
+
+</html>

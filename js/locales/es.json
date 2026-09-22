@@ -6,12 +6,13 @@
     "rain": "Lluvia",
     "combinations": "Combinaciones",
     "steel_check": "Verificación de Acero",
+    "steel_structures": "Estructuras de Acero",
     "base_plate": "Placa Base",
     "splice": "Empalme",
     "aci_concrete": "Concreto ACI",
     "nds_wood": "Madera NDS",
     "nbr_brazil": "NBR (Brasil)",
-    "concrete_beam": "Viga de Concreto",
+    "concrete_beam": "Sección de Hormigón (M-N-V)",
     "prestressed_beam": "Viga Pretensada",
     "steel": "Acero",
     "wood": "Madera",
@@ -136,7 +137,7 @@
     "lateral_loads_seismic": "Cargas Sísmicas",
     "seismic_load_e": "Carga Sísmica (E)",
     "run_load_combinations": "Generar Combinaciones",
-"pcalc": "PCALC",
+    "pcalc": "PCalc (Columnas y Secciones)",
     "mn_diagram": "Diagrama de Interacción M-N",
     "geometry_spacing_checks_title": "Verificaciones de Geometría y Espaciamiento"
   }

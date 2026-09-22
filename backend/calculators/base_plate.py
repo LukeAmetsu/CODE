@@ -46,7 +46,14 @@ NOMINAL_HOLE_TABLE = {
 
 # --- Helper Functions ---
 
-def get_phi(limit_state, design_method, jurisdiction, global_fos=None):
+def is_nbr_standard(inputs):
+    if not isinstance(inputs, dict):
+        return False
+    std = str(inputs.get('design_standard', inputs.get('standard', ''))).strip().upper()
+    code = str(inputs.get('design_code', '')).strip().upper()
+    return 'NBR' in std or '8800' in std or 'NBR' in code or '8800' in code
+
+def get_phi(limit_state, design_method, jurisdiction, global_fos=None, is_nbr=False):
     if global_fos is not None:
         try:
             fos = float(global_fos)
@@ -60,6 +67,26 @@ def get_phi(limit_state, design_method, jurisdiction, global_fos=None):
         if design_method == 'LRFD':
             return 0.25
         return 4.0
+    if is_nbr:
+        # ABNT NBR 8800:2008 & NBR 6118:2023 safety factors:
+        # gamma_a0 = 1.10 (yielding, bending), gamma_a2 = 1.35 (rupture, bolts, weld), gamma_c = 1.40 (concrete)
+        factors_nbr = {
+            'bearing': {'phi': 1.0 / 1.40, 'omega': 1.40},
+            'bending': {'phi': 1.0 / 1.10, 'omega': 1.10},
+            'weld': {'phi': 1.0 / 1.35, 'omega': 1.35},
+            'anchor_tension_steel': {'phi': 1.0 / 1.35, 'omega': 1.35},
+            'anchor_tension_concrete': {'phi': 1.0 / 1.40, 'omega': 1.40},
+            'anchor_pullout': {'phi': 1.0 / 1.40, 'omega': 1.40},
+            'anchor_side_face': {'phi': 1.0 / 1.40, 'omega': 1.40},
+            'anchor_shear_steel': {'phi': 1.0 / 1.35, 'omega': 1.35},
+            'anchor_shear_concrete': {'phi': 1.0 / 1.40, 'omega': 1.40},
+            'anchor_pryout': {'phi': 1.0 / 1.40, 'omega': 1.40},
+            'web_yielding': {'phi': 1.0 / 1.10, 'omega': 1.10},
+            'web_crippling': {'phi': 1.0 / 1.35, 'omega': 1.35},
+            'friction': {'phi': 1.0 / 1.10, 'omega': 1.10}
+        }
+        f = factors_nbr.get(limit_state, {'phi': 1.0 / 1.10, 'omega': 1.10})
+        return f['phi'] if design_method == 'LRFD' else f['omega']
     factors = {
         'bearing': {'phi': 0.65, 'omega': 2.31},
         'bending': {'phi': 0.90, 'omega': 1.67},
@@ -225,9 +252,10 @@ def analyze_bolt_forces(inputs, geo):
 
 def check_plate_bending_unified(inputs, geo, forces, bearing_res):
     checks = {}
+    is_nbr = is_nbr_standard(inputs)
     design_method = inputs.get('design_method', 'ASD')
-    phi = 0.90 # Standard for bending
-    display_phi = phi if design_method == 'LRFD' else (1.0/1.67) 
+    phi_bend = (1.0 / 1.10) if is_nbr else 0.90
+    omega_bend = 1.10 if is_nbr else 1.67
     
     Pu = float(inputs.get('axial_load_P_in', 0))
     Fy = float(inputs.get('base_plate_Fy', 36))
@@ -251,15 +279,22 @@ def check_plate_bending_unified(inputs, geo, forces, bearing_res):
         M_u_yield = max(m_top, m_bot)
         Z_yield = (B * tp**2) / 4.0
         Mn_yield = Fy * Z_yield
-        phi = 0.90
+        phi = phi_bend
         # Check
         capacity = phi * Mn_yield # LRFD
-        # For display, we use phi/omega logic
         
+        yl_ref = "ABNT NBR 8800:2008 Item 6.5 / Anexo B" if is_nbr else "AISC DG1 / Yield Line Theory"
+        design_str_ref = "ABNT NBR 8800:2008 Item 5.4" if is_nbr else "AISC B3.3"
+        design_str_formula = "MRd = Mn / γa0 (γa0 = 1.10)" if is_nbr else ("φMn" if design_method == 'LRFD' else "Mn / Ω")
+        design_str_calc = (f"{Mn_yield/12.0:.2f} / 1.10" if is_nbr else 
+                           (f"{phi} * {Mn_yield/12.0:.2f}" if design_method == 'LRFD' else f"{Mn_yield/12.0:.2f} / 1.67"))
+        design_str_res = (f"{(Mn_yield/1.10)/12.0:.2f} kip-ft" if is_nbr else 
+                          (f"{(phi * Mn_yield)/12.0:.2f} kip-ft" if design_method == 'LRFD' else f"{(Mn_yield/1.67)/12.0:.2f} kip-ft"))
+
         steps = [
             {
                 "label": "Determine Yield Line Moment (M_pl)",
-                "ref": "AISC DG1 / Yield Line Theory",
+                "ref": yl_ref,
                 "formula": "M_pl = max(Σ T_bolt * dist)",
                 "calc": f"Sum of moments about the column face (yield line) from anchor tension forces.<br>M_u = {M_u_yield:.2f} kip-ft",
                 "result": f"{M_u_yield:.2f} kip-ft"
@@ -273,26 +308,27 @@ def check_plate_bending_unified(inputs, geo, forces, bearing_res):
             },
             {
                 "label": "Nominal Bending Strength (Mn)",
-                "ref": "AISC F1",
+                "ref": "ABNT NBR 8800:2008 Item 5.4.1" if is_nbr else "AISC F1",
                 "formula": "Mn = Fy * Z",
                 "calc": f"{Fy} ksi * {Z_yield:.3f} in³",
                 "result": f"{Mn_yield/12.0:.2f} kip-ft"
             },
             {
                 "label": "Design Strength",
-                "ref": "AISC B3.3",
-                "formula": "φMn" if design_method == 'LRFD' else "Mn / Ω",
-                "calc": f"{phi} * {Mn_yield/12.0:.2f}" if design_method == 'LRFD' else f"{Mn_yield/12.0:.2f} / 1.67",
-                "result": f"{(phi * Mn_yield)/12.0:.2f} kip-ft" if design_method == 'LRFD' else f"{(Mn_yield/1.67)/12.0:.2f} kip-ft"
+                "ref": design_str_ref,
+                "formula": design_str_formula,
+                "calc": design_str_calc,
+                "result": design_str_res
             }
         ]
         
         ratio = M_u_yield / (phi * Mn_yield) if Mn_yield > 0 else 9999
         checks['Plate Bending (Yield Line)'] = {
             "demand": M_u_yield,
-            "check": {"Rn": Mn_yield, "phi": phi, "omega": 1.67},
+            "check": {"Rn": Mn_yield, "phi": phi, "omega": omega_bend},
             "details": {
                 "method": "Yield Line Theory (Energy Method)",
+                "standard": "ABNT NBR 8800:2008" if is_nbr else "AISC 360",
                 "status": "PASS" if ratio <= 1.0 else "FAIL",
                 "note": "Critical for thin plates. If FAIL, bolt forces are invalid.",
                 "Z_pl": Z_yield,
@@ -307,48 +343,53 @@ def check_plate_bending_unified(inputs, geo, forces, bearing_res):
         bf = float(inputs.get('column_flange_width_bf', 0))
         m = (N - 0.95*d)/2.0
         n = (B - 0.80*bf)/2.0
-        # Check lambda n'
         n_prime = math.sqrt(d * bf) / 4.0
         l_crit = max(m, n) 
-        # Ideally check lambda*n_prime but simplified here to match DG1 simple cases
-        # For W-shapes, we should use max(m, n, lambda*n')
         
-        phi = 0.90
-        # t_req = l * sqrt(2*fp / phi*Fy)
-        # We compute t_req, currently checks expects 'demand' vs 'Rn'
-        # But for 'Plate Bending (Compression)', usually we compare t_provided vs t_req, or M_u vs phiMn
-        # The existing code returned demand=tp, Rn=t_req. That means Ratio = tp / t_req ?? No, Usually Demand is t_req, Capacity is tp.
-        # But strict 'Demand/Capacity' logic: Demand = Moment, Capacity = Mn.
-        # Let's stick to returning Thickness for "demand" vs "capacity" so the Ratio makes sense (Wait, if Demand(tp) > Capacity(treq), that's good? No.)
-        # Ratio = Demand / Capacity. Failure if > 1.0.
-        # So Demand = t_req. Capacity = tp.
+        if is_nbr:
+            gamma_a0 = 1.10
+            t_req = l_crit * math.sqrt((2.0 * gamma_a0 * f_p_max) / Fy)
+            steps_comp = [
+                {
+                    "label": "Cantilever Lengths",
+                    "ref": "ABNT NBR 8800:2008 Item 6.5.2 / CBCA",
+                    "formula": "m = (N - 0.95d)/2, n = (B - 0.8bf)/2",
+                    "calc": f"m = ({N} - 0.95*{d})/2 = {m:.3f}<br>n = ({B} - 0.8*{bf})/2 = {n:.3f}",
+                    "result": f"l_crit = {l_crit:.3f} in"
+                },
+                {
+                    "label": "Required Thickness (t_req)",
+                    "ref": "ABNT NBR 8800:2008 Item 6.5.2 / CBCA",
+                    "formula": "t_req = l * sqrt(2 * γa0 * fp / fy) (γa0 = 1.10)",
+                    "calc": f"{l_crit:.3f} * sqrt(2 * 1.10 * {f_p_max:.2f} / {Fy})",
+                    "result": f"{t_req:.3f} in"
+                }
+            ]
+        else:
+            phi = 0.90
+            t_req = l_crit * math.sqrt((2 * f_p_max) / (phi * Fy))
+            steps_comp = [
+                {
+                    "label": "Cantilever Lengths",
+                    "ref": "AISC DG1 Sec 3.1",
+                    "formula": "m = (N - 0.95d)/2, n = (B - 0.8bf)/2",
+                    "calc": f"m = ({N} - 0.95*{d})/2 = {m:.3f}<br>n = ({B} - 0.8*{bf})/2 = {n:.3f}",
+                    "result": f"l_crit = {l_crit:.3f} in"
+                },
+                {
+                    "label": "Required Thickness (t_req)",
+                    "ref": "AISC DG1 Eq 3.3.14",
+                    "formula": "t_req = l * sqrt(2*fp / (φ*Fy))",
+                    "calc": f"{l_crit:.3f} * sqrt(2*{f_p_max:.2f} / ({phi}*{Fy}))",
+                    "result": f"{t_req:.3f} in"
+                }
+            ]
         
-        t_req = l_crit * math.sqrt((2 * f_p_max) / (phi * Fy))
-        
-        steps_comp = [
-            {
-                "label": "Cantilever Lengths",
-                "ref": "AISC DG1 Sec 3.1",
-                "formula": "m = (N - 0.95d)/2, n = (B - 0.8bf)/2",
-                "calc": f"m = ({N} - 0.95*{d})/2 = {m:.3f}<br>n = ({B} - 0.8*{bf})/2 = {n:.3f}",
-                "result": f"l_crit = {l_crit:.3f} in"
-            },
-            {
-                "label": "Required Thickness (t_req)",
-                "ref": "AISC DG1 Eq 3.3.14",
-                "formula": "t_req = l * sqrt(2*fp / (φ*Fy))",
-                "calc": f"{l_crit:.3f} * sqrt(2*{f_p_max:.2f} / ({phi}*{Fy}))",
-                "result": f"{t_req:.3f} in"
-            }
-        ]
-        
-        # NOTE: To fit standard Demand/Capacity <= 1.0 model:
-        # Demand = t_req. Capacity = tp.
         checks['Plate Bending (Compression)'] = {
             "demand": t_req, 
-            "check": {"Rn": tp, "phi": 1.0, "omega": 1.0}, # Psi=1.0 effectively
+            "check": {"Rn": tp, "phi": 1.0, "omega": 1.0},
             "details": {
-                "method": "AISC DG1 (Cantilever)",
+                "method": "ABNT NBR 8800:2008 / CBCA (Cantilever)" if is_nbr else "AISC DG1 (Cantilever)",
                 "breakdown": format_educational_breakdown(steps_comp)
             }
         }
@@ -358,6 +399,7 @@ def check_plate_bending_unified(inputs, geo, forces, bearing_res):
 
 def check_anchors_aci_best(inputs, geo, forces):
     checks = {}
+    is_nbr = is_nbr_standard(inputs)
     hef = float(inputs.get('anchor_embedment_hef', 0))
     fc = float(inputs.get('concrete_fc', 4))
     if fc > 10:
@@ -367,8 +409,7 @@ def check_anchors_aci_best(inputs, geo, forces):
     Tu_max = forces['max_tension']
     if Tu_max > 0:
         db = float(inputs.get('anchor_bolt_diameter', 0.75))
-        Fut = float(inputs.get('anchor_bolt_Fut', 58)) # Should be Fnt actually for A325/A490, but Fut for anchors usually
-        # Check if A325/A490 -> use Fnt
+        Fut = float(inputs.get('anchor_bolt_Fut', 58))
         grade = inputs.get('anchor_bolt_grade', 'A307')
         Fnt = get_fnt(grade)
         nominal_stress = Fnt if Fnt > 0 else Fut
@@ -376,7 +417,8 @@ def check_anchors_aci_best(inputs, geo, forces):
 
         Ase = 0.75 * math.pi * (db/2)**2 # Approximate effective area
         Rn_steel = Ase * nominal_stress
-        phi_steel = 0.75
+        phi_steel = (1.0 / 1.35) if is_nbr else 0.75
+        omega_steel = 1.35 if is_nbr else 2.0
         
         # Decompose Tu_max into its components for display
         n_bolts = geo['num_bolts']
@@ -388,6 +430,13 @@ def check_anchors_aci_best(inputs, geo, forces):
         gov_bolt = max(forces['distribution'], key=lambda b: b['T'])
         mom_comp_x = (Mux_in * gov_bolt['z'] / geo['Ix']) if geo['Ix'] > 0 else 0.0
         mom_comp_y = (Muy_in * gov_bolt['x'] / geo['Iy']) if geo['Iy'] > 0 else 0.0
+
+        ref_steel = "ABNT NBR 8800:2008 Item 6.3.3.2 / Tabela 11" if is_nbr else "ACI 17.3.3"
+        formula_steel = "Ft,Rd = 0.75 · Ab · fub / γa2 (γa2 = 1.35)" if is_nbr else ("φ·Nsa (LRFD)" if design_method == 'LRFD' else "Nsa / Ω  (ASD, Ω = 2.0)")
+        calc_steel = (f"{Rn_steel:.3f} / 1.35" if is_nbr else
+                      (f"φ = {phi_steel} → {phi_steel} · {Rn_steel:.3f}" if design_method == 'LRFD' else f"Ω = 2.0 → {Rn_steel:.3f} / 2.0"))
+        res_steel = (f"{(Rn_steel / 1.35):.3f} kips" if is_nbr else
+                     (f"{phi_steel * Rn_steel:.3f} kips" if design_method == 'LRFD' else f"{Rn_steel/2.0:.3f} kips"))
 
         steps_tension = [
             {
@@ -422,43 +471,40 @@ def check_anchors_aci_best(inputs, geo, forces):
             },
             {
                 "label": "Tensile Stress (fut)",
-                "ref": "ACI 17.6.1 / AISC",
+                "ref": "ABNT NBR 8800:2008 Item 6.3.3" if is_nbr else "ACI 17.6.1 / AISC",
                 "formula": "Fnt (grade table) or user Fut",
                 "calc": stress_label,
                 "result": f"{nominal_stress} ksi"
             },
             {
                 "label": "Tensile Stress Area (Ase)",
-                "ref": "ASME B1.1",
+                "ref": "ASME B1.1 / ISO 898-1",
                 "formula": "Ase ≈ 0.75 · (π/4) · db²",
                 "calc": f"0.75 · (π/4) · {db}² = 0.75 · {math.pi/4*db**2:.4f}",
                 "result": f"{Ase:.4f} in²"
             },
             {
                 "label": "Nominal Steel Strength (Nsa)",
-                "ref": "ACI 17.6.1",
+                "ref": "ABNT NBR 8800:2008 Tabela 11" if is_nbr else "ACI 17.6.1",
                 "formula": "Nsa = Ase · fut",
                 "calc": f"{Ase:.4f} · {nominal_stress}",
                 "result": f"{Rn_steel:.3f} kips"
             },
             {
-                "label": "Design Strength (φNsa or Nsa/Ω)",
-                "ref": "ACI 17.3.3",
-                "formula": "φ·Nsa (LRFD)" if design_method == 'LRFD' else "Nsa / Ω  (ASD, Ω = 2.0)",
-                "calc": (f"φ = {phi_steel} → {phi_steel} · {Rn_steel:.3f}"
-                         if design_method == 'LRFD'
-                         else f"Ω = 2.0 → {Rn_steel:.3f} / 2.0"),
-                "result": (f"{phi_steel * Rn_steel:.3f} kips"
-                           if design_method == 'LRFD'
-                           else f"{Rn_steel/2.0:.3f} kips")
+                "label": "Design Strength",
+                "ref": ref_steel,
+                "formula": formula_steel,
+                "calc": calc_steel,
+                "result": res_steel
             }
         ]
 
         checks['Anchor Steel Tension'] = {
             "demand": Tu_max,
-            "check": {"Rn": Rn_steel, "phi": phi_steel, "omega": 2.0},
+            "check": {"Rn": Rn_steel, "phi": phi_steel, "omega": omega_steel},
             "details": {
                 "note": "Max tension per bolt",
+                "standard": "ABNT NBR 8800:2008" if is_nbr else "ACI 318-19",
                 "breakdown": format_educational_breakdown(steps_tension)
             }
         }
@@ -490,13 +536,14 @@ def check_anchors_aci_best(inputs, geo, forces):
             psi_ed = 0.7 + 0.3 * (c_min / (1.5 * hef))
         if Anco > 0:
             Ncbg = (Anc / Anco) * psi_ed * 1.25 * 1.0 * Nb
-    phi_conc = 0.70
+    phi_conc = (1.0 / 1.40) if is_nbr else 0.70
+    omega_conc = 1.40 if is_nbr else 2.5
     
     if True: # Always calculate and return breakout for Pryout reference
         steps_breakout = [
             {
                 "label": "Basic Breakout Strength (Nb)",
-                "ref": "ACI 17.6.2.2",
+                "ref": "ABNT NBR 14832 / ACI 17.6.2.2" if is_nbr else "ACI 17.6.2.2",
                 "formula": "Nb = kc * λa * √fc * hef^1.5",
                 "calc": f"{kc} * 1.0 * √{fc_psi:.0f} * {hef}^1.5",
                 "result": f"{Nb:.2f} kips"
@@ -523,7 +570,7 @@ def check_anchors_aci_best(inputs, geo, forces):
             },
             {
                 "label": "Nominal Group Strength (Ncbg)",
-                "ref": "ACI 17.6.2",
+                "ref": "ABNT NBR 14832 / ACI 17.6.2" if is_nbr else "ACI 17.6.2",
                 "formula": "Ncbg = (Anc/Anco) * ψed * ψec * ψc * Nb",
                 "calc": f"({Anc:.1f}/{Anco:.1f}) * {psi_ed:.2f} * 1.0 * 1.25 * {Nb:.2f}",
                 "result": f"{Ncbg:.2f} kips"
@@ -532,19 +579,19 @@ def check_anchors_aci_best(inputs, geo, forces):
         
         checks['Anchor Concrete Breakout (Group)'] = {
             "demand": Tu_total,
-            "check": {"Rn": Ncbg, "phi": phi_conc, "omega": 2.5},
+            "check": {"Rn": Ncbg, "phi": phi_conc, "omega": omega_conc},
             "details": {
                 "Anc": Anc, "Anco": Anco, "Nb": Nb, "hef": hef,
                 "breakdown": format_educational_breakdown(steps_breakout)
             }
         }
     # Pullout
-    # Pullout
     if Tu_max > 0:
         db = float(inputs.get('anchor_bolt_diameter', 0.75))
         Abrg = 0.5 * (math.pi * (db/2)**2)
         Np = 8 * Abrg * fc
-        phi_pull = 0.70
+        phi_pull = (1.0 / 1.40) if is_nbr else 0.70
+        omega_pull = 1.40 if is_nbr else 2.5
         
         steps_pullout = [
             {
@@ -556,7 +603,7 @@ def check_anchors_aci_best(inputs, geo, forces):
             },
             {
                 "label": "Nominal Pullout Strength (Np)",
-                "ref": "ACI 17.6.3",
+                "ref": "ABNT NBR 14832 / ACI 17.6.3" if is_nbr else "ACI 17.6.3",
                 "formula": "Np = 8 * Abrg * f'c",
                 "calc": f"8 * {Abrg:.3f} * {fc}",
                 "result": f"{Np:.2f} kips"
@@ -565,7 +612,7 @@ def check_anchors_aci_best(inputs, geo, forces):
         
         checks['Anchor Pullout'] = {
             "demand": Tu_max,
-            "check": {"Rn": Np, "phi": phi_pull, "omega": 2.5},
+            "check": {"Rn": Np, "phi": phi_pull, "omega": omega_pull},
             "details": {
                 "note": "Check head size/washer",
                 "breakdown": format_educational_breakdown(steps_pullout)
@@ -749,14 +796,15 @@ def check_concrete_bearing(inputs):
     ratio_A = math.sqrt(A2/A1) if A1 > 0 else 1.0
     psi = min(ratio_A, 2.0)
     
+    is_nbr = is_nbr_standard(inputs)
     if support_mat == 'Wood':
         Pp = fc * A1
         phi = 1.0 # ASD by default for Wood NDS
         omega = 1.0
     else:
         Pp = 0.85 * fc * A1 * psi
-        phi = get_phi('bearing', method, jurisdiction, inputs.get('global_fos'))
-        omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction, inputs.get('global_fos'))
+        phi = get_phi('bearing', method, jurisdiction, inputs.get('global_fos'), is_nbr=is_nbr)
+        omega = get_phi('bearing', 'ASD' if method=='LRFD' else 'LRFD', jurisdiction, inputs.get('global_fos'), is_nbr=is_nbr)
 
     Fp = Pp / A1 if (A1 and A1 > 0) else 0.0
     Rn = Fp
@@ -855,6 +903,11 @@ def check_concrete_bearing(inputs):
                 breakdown_formula = "N/A"
     
     # Generate Breakdown
+    bearing_ref = "ABNT NBR 8800:2008 Item 6.5.2 / NBR 6118:2023 Item 13.2.4" if is_nbr else "AISC J8 / ACI 318"
+    bearing_formula = "Pp = 0.85 * (fck/γc) * A1 * √(A2/A1) (γc=1.40)" if is_nbr else "Pp = 0.85 * f'c * A1 * √(A2/A1)"
+    bearing_calc = f"0.85 * ({fc:.2f}/1.40) * {A1:.2f} * {psi:.2f}" if is_nbr else f"0.85 * {fc} * {A1:.2f} * {psi:.2f}"
+    design_str_val = f"{Pp * phi:.2f} kips" if method == 'LRFD' else f"{Pp / omega:.2f} kips"
+
     steps = [
         {
             "label": "Bearing Area A1",
@@ -865,17 +918,17 @@ def check_concrete_bearing(inputs):
         },
         {
             "label": "Concrete Confinement Factor",
-            "ref": "AISC J8",
+            "ref": "ABNT NBR 6118 Item 13.2.4" if is_nbr else "AISC J8",
             "formula": "√(A2/A1) ≤ 2.0",
             "calc": f"√({A2:.2f} / {A1:.2f}) = {ratio_A:.2f}",
             "result": f"{psi:.2f}"
         },
         {
-            "label": "Nominal Bearing Strength (Pp)",
-            "ref": "AISC J8 / ACI 318",
-            "formula": "Pp = 0.85 * f'c * A1 * √(A2/A1)",
-            "calc": f"0.85 * {fc} * {A1:.2f} * {psi:.2f}",
-            "result": f"{Pp:.2f} kips"
+            "label": "Design Bearing Strength (Pp,Rd)" if is_nbr else "Nominal Bearing Strength (Pp)",
+            "ref": bearing_ref,
+            "formula": bearing_formula,
+            "calc": bearing_calc,
+            "result": f"{Pp * phi:.2f} kips" if is_nbr else f"{Pp:.2f} kips"
         },
         {
             "label": "Max Bearing Pressure (fp_max)",
@@ -951,11 +1004,12 @@ def check_anchors_wood_screw(inputs, geo, forces):
 
 def check_anchors_shear_best(inputs, forces, tension_capacity_group):
     """
-    Checks ACI 318 Shear: Steel Failure & Pryout.
+    Checks Anchor Shear: Steel Failure, Concrete Breakout & Pryout.
     """
     if inputs.get('bolt_type') == 'Wood Screw':
         return {}
     checks = {}
+    is_nbr = is_nbr_standard(inputs)
     design_method = inputs.get('design_method', 'ASD')
     
     # 1. Shear Demand
@@ -966,26 +1020,32 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
     num_bolts = len(forces['distribution'])
     Vu_bolt = Vu_total / num_bolts 
     
-    # 2. Steel Shear Strength (ACI 17.5.1)
+    # 2. Steel Shear Strength
     db = float(inputs.get('anchor_bolt_diameter', 0.75))
-    
-    # Check if A325/A490 -> use Fnv
     grade = inputs.get('anchor_bolt_grade', 'A307')
-    # If grade is valid bolt grade, get Fnv
-    # Need to import FNV_MAP locally or ensure it's available? It's global.
-    
-    # Determine Fnv:
-    # Logic: 
-    # If standard anchor (A36, F1554), Fnt/Fnv usually defined by Fut.
-    # ACI 17.5: Vsa = Ase * fut * 0.6
-    # But for A325/A490, we use Fnv from AISC Table J3.2?
-    # Base Plate calculator usually treats these as Anchors (ACI 318).
-    # ACI 318 Eq 17.5.1.2b: Vsa = 0.6 * Ase * fut
-    
     Fut = float(inputs.get('anchor_bolt_Fut', 58))
-    Ase = 0.75 * math.pi * (db/2)**2 
-    Vn_steel = 0.6 * Ase * Fut
-    phi_shear = 0.65
+    
+    threads_excl = (inputs.get('threads_incl') is False or inputs.get('threads_excl') is True)
+    
+    if is_nbr:
+        # ABNT NBR 8800:2008 Item 6.3.3.1
+        # Fv,Rd = 0.40 * Ab * fub / γa2 (or 0.50 if threads excluded), γa2 = 1.35
+        coeff = 0.50 if threads_excl else 0.40
+        Ab = math.pi * (db / 2.0)**2
+        Vn_steel = coeff * Ab * Fut
+        phi_shear = 1.0 / 1.35
+        omega_shear = 1.35
+        ref_shear = "ABNT NBR 8800:2008 Item 6.3.3.1"
+        formula_nominal = f"Vn = {coeff:.2f} · Ab · fub"
+    else:
+        Ase = 0.75 * math.pi * (db/2)**2 
+        Vn_steel = 0.6 * Ase * Fut
+        phi_shear = 0.65
+        omega_shear = 2.0
+        ref_shear = "ACI 17.5.1.2b"
+        formula_nominal = "Vsa = 0.6 * Ase * fut"
+    
+    design_str_steel = Vn_steel * phi_shear if design_method == 'LRFD' else Vn_steel / omega_shear
     
     steps_steel_shear = [
         {
@@ -995,32 +1055,39 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
             "result": f"{Vu_bolt:.2f} kips"
         },
         {
-            "label": "Shear Area (Ase,V)",
-            "ref": "ACI 17.5.1",
-            "formula": "Ase ≈ 0.75 * (π/4) * db²",
-            "calc": f"0.75 * 0.785 * {db}²",
-            "result": f"{Ase:.3f} in²"
+            "label": "Shear Area",
+            "ref": "ASME B1.1 / ISO 898-1",
+            "formula": "Ab = (π/4) * db²" if is_nbr else "Ase ≈ 0.75 * (π/4) * db²",
+            "calc": f"db = {db} in",
+            "result": f"{math.pi*(db/2)**2:.3f} in²"
         },
         {
-            "label": "Nominal Steel Strength (Vsa)",
-            "ref": "ACI 17.5.1.2b",
-            "formula": "Vsa = 0.6 * Ase * fut",
-            "calc": f"0.6 * {Ase:.3f} * {Fut}",
+            "label": "Nominal Steel Strength",
+            "ref": ref_shear,
+            "formula": formula_nominal,
+            "calc": f"{Vn_steel:.2f} kips",
             "result": f"{Vn_steel:.2f} kips"
+        },
+        {
+            "label": "Design Steel Shear Strength",
+            "ref": ref_shear,
+            "formula": "Fv,Rd = Vn / γa2 (γa2 = 1.35)" if is_nbr else ("φ·Vsa" if design_method == 'LRFD' else "Vsa / Ω"),
+            "calc": f"{Vn_steel:.2f} / 1.35" if is_nbr else (f"{phi_shear} * {Vn_steel:.2f}" if design_method == 'LRFD' else f"{Vn_steel:.2f} / {omega_shear}"),
+            "result": f"{design_str_steel:.2f} kips"
         }
     ]
     
     checks['Anchor Steel Shear'] = {
         "demand": Vu_bolt,
-        "check": {"Rn": Vn_steel, "phi": phi_shear, "omega": 2.0},
+        "check": {"Rn": Vn_steel, "phi": phi_shear, "omega": omega_shear},
         "details": {
             "note": "Shear per bolt",
+            "standard": "ABNT NBR 8800:2008" if is_nbr else "ACI 318-19",
             "breakdown": format_educational_breakdown(steps_steel_shear)
         }
     }
     
-    # 3. Concrete Breakout in Shear (ACI 17.5.2)
-    # Assumes shear load acts towards the CLOSEST edge (c_min).
+    # 3. Concrete Breakout in Shear (ACI 17.5.2 / NBR 14832)
     ca1 = float(inputs.get('concrete_edge_dist_ca1', 0))
     ca2 = float(inputs.get('concrete_edge_dist_ca2', 0))
     c1 = min(ca1, ca2) if (ca1 > 0 and ca2 > 0) else max(ca1, ca2)
@@ -1044,7 +1111,6 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
         Vb = Vb_const * term_1 * term_2 * term_3 * term_4 * term_5
         Avco = 4.5 * (c1 ** 2)
         
-        # Group Area
         num_N = int(inputs.get('num_bolts_N', 1))
         num_B = int(inputs.get('num_bolts_B', 1))
         sp_N = float(inputs.get('bolt_spacing_N', 0))
@@ -1068,12 +1134,13 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
         psi_h_V = 1.0 
         
         Vcbg = (Avc / Avco) * psi_ec_V * psi_ed_V * psi_c_V * psi_h_V * Vb
-        phi_conc_shear = 0.70
+        phi_conc_shear = (1.0 / 1.40) if is_nbr else 0.70
+        omega_conc_shear = 1.40 if is_nbr else 2.5
         
         steps_shear_breakout = [
             {
                 "label": "Basic Breakout Strength (Vb)",
-                "ref": "ACI 17.5.2.2a",
+                "ref": "ABNT NBR 14832 / ACI 17.5.2.2a" if is_nbr else "ACI 17.5.2.2a",
                 "formula": "Vb = 7(le/da)^0.2 * √da * λa * √fc * c1^1.5",
                 "calc": f"7 * ({le/db:.2f})^0.2 * ... * {c1}^1.5",
                 "result": f"{Vb:.0f} lbs"
@@ -1087,7 +1154,7 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
             },
             {
                 "label": "Nominal Shear Strength (Vcbg)",
-                "ref": "ACI 17.5.2",
+                "ref": "ABNT NBR 14832 / ACI 17.5.2" if is_nbr else "ACI 17.5.2",
                 "formula": "Vcbg = (Avc/Avco) * ψed * ψc * ψh * Vb",
                 "calc": f"{Avc/Avco:.2f} * {psi_ed_V:.2f} * {psi_c_V:.2f} * 1.0 * {Vb:.0f}",
                 "result": f"{Vcbg/1000.0:.2f} kips"
@@ -1096,7 +1163,7 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
         
         checks['Anchor Concrete Breakout (Shear)'] = {
             "demand": Vu_total,
-            "check": {"Rn": Vcbg / 1000.0, "phi": phi_conc_shear, "omega": 2.5}, 
+            "check": {"Rn": Vcbg / 1000.0, "phi": phi_conc_shear, "omega": omega_conc_shear}, 
             "details": {
                 "c1 (used)": c1,
                 "Vb (lbs)": Vb,
@@ -1106,18 +1173,19 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
             }
         }
     
-    # 4. Concrete Pryout Strength (ACI 17.5.3)
+    # 4. Concrete Pryout Strength
     hef = float(inputs.get('anchor_embedment_hef', 0))
     kcp = 2.0 if hef >= 2.5 else 1.0
     Ncbg = tension_capacity_group
     
     Vn_pryout = kcp * Ncbg
-    phi_pryout = 0.70
+    phi_pryout = (1.0 / 1.40) if is_nbr else 0.70
+    omega_pryout = 1.40 if is_nbr else 2.5
     
     steps_pryout = [
         {
             "label": "Pryout Factor (kcp)",
-            "ref": "ACI 17.5.3",
+            "ref": "ABNT NBR 14832 / ACI 17.5.3" if is_nbr else "ACI 17.5.3",
             "formula": "1.0 if hef < 2.5, else 2.0",
             "calc": f"hef = {hef}",
             "result": f"{kcp}"
@@ -1131,7 +1199,7 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
         },
         {
             "label": "Nominal Pryout Strength (Vcpg)",
-            "ref": "ACI 17.5.3.1",
+            "ref": "ABNT NBR 14832 / ACI 17.5.3.1" if is_nbr else "ACI 17.5.3.1",
             "formula": "Vcpg = kcp * Ncbg",
             "calc": f"{kcp} * {Ncbg:.2f}",
             "result": f"{Vn_pryout:.2f} kips"
@@ -1140,7 +1208,7 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
     
     checks['Anchor Concrete Pryout (Group)'] = {
         "demand": Vu_total,
-        "check": {"Rn": Vn_pryout, "phi": phi_pryout, "omega": 2.5},
+        "check": {"Rn": Vn_pryout, "phi": phi_pryout, "omega": omega_pryout},
         "details": {
             "kcp": kcp, "Ncbg_ref": Ncbg,
             "breakdown": format_educational_breakdown(steps_pryout)
@@ -1159,16 +1227,15 @@ def check_anchors_shear_best(inputs, forces, tension_capacity_group):
 
 def check_interaction(inputs, checks):
     """
-    ACI 318-19 Sec 17.6 Interaction of Tensile and Shear Forces.
-    Uses Trilinear approximation or standard power interaction.
+    Interaction of Tensile and Shear Forces.
+    NBR 8800: (Ft,Sd/Ft,Rd)² + (Fv,Sd/Fv,Rd)² ≤ 1.00
+    ACI 318-19 Sec 17.6: Trilinear / 5/3 power interaction.
     """
+    is_nbr = is_nbr_standard(inputs)
     design_method = inputs.get('design_method', 'ASD')
     is_lrfd = design_method == 'LRFD'
     
     # 1. Get Max Ratios
-    # Tension Ratio
-    t_ratio = 0
-    # Tension Ratio
     t_ratio = 0
     if 'Anchor Steel Tension' in checks:
         c = checks['Anchor Steel Tension']
@@ -1203,44 +1270,49 @@ def check_interaction(inputs, checks):
         v_ratio = max(v_ratio, c['demand'] / denom if denom > 0 else (0.0 if c['demand'] == 0 else 999.0))
 
     # 2. Interaction Formula
-    # If both <= 0.2, OK.
-    # If one > 0.2, Check (Ratio_N)^5/3 + (Ratio_V)^5/3 <= 1.0
-    
     status = "OK"
-    interaction_val = 0
-    formula_desc = "Max(Ratio_N, Ratio_V)"
-    
-    if t_ratio <= 0.2 and v_ratio <= 0.2:
-        interaction_val = max(t_ratio, v_ratio) 
+    if is_nbr:
+        interaction_val = (t_ratio ** 2) + (v_ratio ** 2)
+        formula_desc = "(Ratio_N)² + (Ratio_V)²"
+        ref_inter = "ABNT NBR 8800:2008 Item 6.3.3.3 / Tabela 11"
+        calc_str = f"({t_ratio:.3f})² + ({v_ratio:.3f})² = {interaction_val:.3f}"
     else:
-        interaction_val = (t_ratio)**(5/3) + (v_ratio)**(5/3)
-        formula_desc = "(Ratio_N)^5/3 + (Ratio_V)^5/3"
+        ref_inter = "ACI 17.8.3"
+        if t_ratio <= 0.2 and v_ratio <= 0.2:
+            interaction_val = max(t_ratio, v_ratio) 
+            formula_desc = "Max(Ratio_N, Ratio_V)"
+            calc_str = "Both ratios ≤ 0.2, check max against 1.0"
+        else:
+            interaction_val = (t_ratio)**(5/3) + (v_ratio)**(5/3)
+            formula_desc = "(Ratio_N)^5/3 + (Ratio_V)^5/3"
+            calc_str = f"({t_ratio:.3f})^1.67 + ({v_ratio:.3f})^1.67"
         
     if interaction_val > 1.0: status = "FAIL"
     
-    formula_N = "Tu / φNn" if is_lrfd else "Ta / (Nn/Ω)"
-    formula_V = "Vu / φVn" if is_lrfd else "Va / (Vn/Ω)"
+    formula_N = "Ft,Sd / Ft,Rd" if is_nbr else ("Tu / φNn" if is_lrfd else "Ta / (Nn/Ω)")
+    formula_V = "Fv,Sd / Fv,Rd" if is_nbr else ("Vu / φVn" if is_lrfd else "Va / (Vn/Ω)")
+    ref_util = "ABNT NBR 8800:2008 Item 6.3.3" if is_nbr else "ACI 17.8"
     
     steps_inter = [
         {
             "label": "Tension Utilization",
-            "ref": "ACI 17.8",
+            "ref": ref_util,
             "formula": f"{formula_N} (max of tension checks)",
             "calc": "-",
             "result": f"{t_ratio:.3f}"
         },
         {
             "label": "Shear Utilization",
-            "ref": "ACI 17.8",
+            "ref": ref_util,
             "formula": f"{formula_V} (max of shear checks)",
             "calc": "-",
             "result": f"{v_ratio:.3f}"
         },
         {
             "label": "Interaction Check",
-            "ref": "ACI 17.8.3",
+            "ref": ref_inter,
             "formula": formula_desc + " ≤ 1.0",
-            "calc": f"({t_ratio:.3f})^1.67 + ({v_ratio:.3f})^1.67" if formula_desc != "Max(Ratio_N, Ratio_V)" else "Both ratios ≤ 0.2, check max against 1.0",
+            "calc": calc_str,
             "result": f"{interaction_val:.3f}"
         }
     ]
@@ -1251,6 +1323,7 @@ def check_interaction(inputs, checks):
         "details": {
             "N_ratio": t_ratio,
             "V_ratio": v_ratio,
+            "standard": "ABNT NBR 8800:2008" if is_nbr else "ACI 318-19",
             "breakdown": format_educational_breakdown(steps_inter)
         }
     }
@@ -1409,13 +1482,14 @@ def check_weld_stress(inputs, forces, weld_props):
     f_norm = fa + fbx + fby
     f_res = math.sqrt(f_norm**2 + fv**2)
     
+    is_nbr = is_nbr_standard(inputs)
     design_method = inputs.get('design_method', 'ASD')
     # Capacity
     # Fnw = 0.60 * Fexx
     Fexx = float(inputs.get('weld_Fexx', 70))
     Fnw = 0.60 * Fexx
-    phi = 0.75 # Weld
-    omega = 2.00
+    phi = (1.0 / 1.35) if is_nbr else 0.75 # Weld
+    omega = 1.35 if is_nbr else 2.00
     Rn = Fnw * 1.0 # Stress units
     
     design_strength = 0
@@ -1439,6 +1513,10 @@ def check_weld_stress(inputs, forces, weld_props):
             "result": "-"
         })
     
+    weld_cap_ref = "ABNT NBR 8800:2008 Item 6.2.5" if is_nbr else "AISC J2.4"
+    weld_cap_formula = ("fw,Rd = 0.60 * Fexx / γa2 (γa2=1.35)" if is_nbr else 
+                        ("φ * 0.60 * Fexx" if design_method == 'LRFD' else "(0.60 * Fexx) / Ω"))
+
     steps_weld.extend([
         {
             "label": "Normal Stress Component (fn)",
@@ -1462,26 +1540,21 @@ def check_weld_stress(inputs, forces, weld_props):
             "result": f"{f_res:.2f} ksi"
         },
         {
-            "label": f"Weld Capacity ({'φFnw' if design_method == 'LRFD' else 'Fnw/Ω'})",
-            "ref": "AISC J2.4",
-            "formula": "φ * 0.60 * Fexx" if design_method == 'LRFD' else "(0.60 * Fexx) / Ω",
-            "calc": f"{phi} * 0.60 * {Fexx}" if design_method == 'LRFD' else f"(0.60 * {Fexx}) / {omega}",
+            "label": f"Weld Capacity ({'φFnw' if (design_method == 'LRFD' or is_nbr) else 'Fnw/Ω'})",
+            "ref": weld_cap_ref,
+            "formula": weld_cap_formula,
+            "calc": (f"{Fnw:.2f} / 1.35" if is_nbr else 
+                     (f"{phi} * 0.60 * {Fexx}" if design_method == 'LRFD' else f"(0.60 * {Fexx}) / {omega}")),
             "result": f"{design_strength:.2f} ksi"
         }
     ])
     
     return {
         "demand": f_res,
-        "check": {"Rn": Rn if design_method == 'ASD' else design_strength, "phi": phi, "omega": omega}, # Rn passed to frontend often treated as Nominal. Logic in JS: if LRFD -> Rn*phi. If ASD -> Rn/Omega.
-        # Wait, if I pass 'Rn': Rn (Nominal), JS will do Rn/Omega.
-        # So I should pass Rn = Nominal Strength.
-        # JS Logic: capacity_val = is_anchor_check ? capacity * (check.phi || 0.75) : design_capacity;
-        # For Weld Strength, it falls into "else" (Standard).
-        # Standard: design_capacity = design_method === 'LRFD' ? capacity * (phi || 0.75) : capacity / (omega || 2.00); (Line 1914 in JS).
-        # So I should return Rn = NOMINAL STRENGTH regardless of method.
         "check": {"Rn": Rn, "phi": phi, "omega": omega},
         "details": {
             "method": "Elastic Method (Conservative)",
+            "standard": "ABNT NBR 8800:2008" if is_nbr else "AISC 360",
             "Aw": Aw,
             "Swx": Swx,
             "f_norm": f_norm,

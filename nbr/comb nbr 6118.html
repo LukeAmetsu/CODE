@@ -4,12 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador Interativo de Combinações NBR 8681</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Gerador de Combinações de Ações (NBR • Eurocode • ASCE)</title>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
-        // Lógica de Tema Imediata para evitar o "flash"
         (function () {
             if (localStorage.getItem('theme') === 'dark' ||
                 (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -20,47 +19,218 @@
         })();
     </script>
     <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/validation-rules.js" defer></script>
     <script src="../js/template.js" defer></script>
+    <style>
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
 </head>
 
-<body>
-
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
-        <main>
-            <div class="form-section">
-                <h2>1. Adicione e Configure os Carregamentos</h2>
-                <div class="space-y-3" id="loads-container">
-                    <!-- Load rows will be injected here -->
+        <main class="mt-4">
+            <!-- Header Executivo em Largura Total -->
+            <div class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700/80">
+                <div class="flex flex-wrap items-center gap-2.5 mb-2">
+                    <span class="text-3xl">⚖️</span>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                        Gerador de Combinações de Ações
+                    </h1>
+                    <span class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow-xs">
+                        Estrutural & Geotécnica
+                    </span>
+                    <span class="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        NBR 8681 • NBR 6118 • NBR 6122 • Eurocode EN 1990 • ASCE 7
+                    </span>
+                    <span class="bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        ELU • ELS • EQU • GEO
+                    </span>
+                    <span class="bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        Regras XOR / AND
+                    </span>
                 </div>
-                <button id="add-load-btn"
-                    class="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all text-sm">
-                    + Adicionar Carga
-                </button>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 max-w-6xl leading-relaxed">
+                    Geração automatizada de combinações de esforços para estruturas e geotecnia. Suporta exclusão mútua (<span class="font-semibold text-rose-600 dark:text-rose-400">XOR</span>), coexistência obrigatória (<span class="font-semibold text-emerald-600 dark:text-emerald-400">AND</span>), envoltórias extremas de projeto, verificações geotécnicas de tombamento e deslizamento, e exportação tabular.
+                </p>
             </div>
-            <div class="mt-8 flex justify-center">
-                <button id="generate-report-btn"
-                    class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-300 transform hover:scale-105">
-                    Gerar Relatório de Combinações
-                </button>
+
+            <!-- Painel Dedicado de Configuração e Ações (Toolbar) -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+                    <!-- Norma Regulamentadora -->
+                    <div class="lg:col-span-3">
+                        <label for="standard-select" class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Norma Regulamentadora
+                        </label>
+                        <select id="standard-select" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                            <option value="NBR 8681" selected>🇧🇷 ABNT NBR 8681 / 6118 / 6122 (Brasil)</option>
+                            <option value="Eurocode EN 1990">🇪🇺 Eurocode EN 1990 / EN 1997 (Europa)</option>
+                            <option value="ASCE 7-16 / 7-22">🇺🇸 ASCE 7-16 / 7-22 & IBC (EUA)</option>
+                        </select>
+                    </div>
+
+                    <!-- Método de Análise -->
+                    <div class="lg:col-span-4">
+                        <label for="method-select" class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Método de Análise / Estado Limite
+                        </label>
+                        <select id="method-select" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                            <option value="ELU_NORMAL">ELU Normal + ELS (Estrutural NBR 8681/6118)</option>
+                            <option value="ELU_ESPECIAL">ELU Especial / Construção</option>
+                            <option value="GEO_PONDERADA" selected>⚖️ Geotécnica: Ponderada (NBR 6122 • EQU, GEO & STR)</option>
+                            <option value="GEO_FS_GLOBAL">🌍 Geotécnica: FS Global (NBR 6122 • Tombamento, Deslizamento & Tensão Adm)</option>
+                            <option value="GEO_COMPLETA">📐 Geotécnica: Completa (Ponderada + FS Global)</option>
+                        </select>
+                    </div>
+
+                    <!-- Preset de Carregamentos -->
+                    <div class="lg:col-span-3">
+                        <label for="combo-preset-select" class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Carregar Exemplo Típico
+                        </label>
+                        <select id="combo-preset-select" onchange="loadComboPreset(this.value)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                            <option value="fundacao_rasa_tomb_desl" selected>Fundação Rasa (Normal + Vento + Tombamento/Deslizamento)</option>
+                            <option value="fundacao_rasa_completa">Fundação Rasa Completa (PP + Solo + Carga Normal + Cortante + Momento)</option>
+                            <option value="muro_arrimo">Muro de Arrimo (Solo Seco/Sat + Água)</option>
+                            <option value="edificio">Edifício Residencial Padrão</option>
+                            <option value="galpao">Galpão Metálico (Vento Sucção/Pressão)</option>
+                            <option value="subterraneo">Estrutura Subterrânea (Subpressão + N.A.)</option>
+                        </select>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="lg:col-span-2 flex items-center gap-2">
+                        <button type="button" id="generate-report-btn" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-md hover:shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>⚡</span> Gerar
+                        </button>
+                        <button type="button" onclick="exportCombinationsCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Exportar tabela de combinações formatada">
+                            <span>📊</span> CSV
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            <!-- KPI Cards Grid (Envoltórias) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Envoltória Máx. ELU / LRFD</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-max-elu" class="text-lg font-bold text-rose-600 dark:text-rose-400">0.00</span>
+                        <span class="text-xs font-semibold text-rose-500">Máximo</span>
+                    </div>
+                    <span id="kpi-max-elu-comb" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block truncate">Aguardando cálculo</span>
+                </div>
+
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Envoltória Mín. ELU / Alívio</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-min-elu" class="text-lg font-bold text-blue-600 dark:text-blue-400">0.00</span>
+                        <span class="text-xs font-semibold text-blue-500">Mínimo / Alívio</span>
+                    </div>
+                    <span id="kpi-min-elu-comb" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block truncate">Carga desfavorável/favorável</span>
+                </div>
+
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Máx. ELS Rara / ASD</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-els-rara" class="text-lg font-bold text-emerald-600 dark:text-emerald-400">0.00</span>
+                        <span class="text-xs font-semibold text-emerald-500">Serviço / Rara</span>
+                    </div>
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">Fissuração / Tensão Admissível</span>
+                </div>
+
+                <div class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Máx. ELS Quase-Perm. (QP)</span>
+                    <div class="flex items-baseline justify-between mt-1">
+                        <span id="kpi-els-qp" class="text-lg font-bold text-purple-600 dark:text-purple-400">0.00</span>
+                        <span class="text-xs font-semibold text-purple-500">Longa Duração</span>
+                    </div>
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">Fluência e Deformação Lenta</span>
+                </div>
+            </div>
+
+            <!-- Tabela de Cargas de Entrada e Regras de Associação -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm mb-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3 gap-2">
+                    <div>
+                        <h2 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <span>📋</span> Carregamentos e Regras de Associação
+                        </h2>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Defina as ações, seus valores e regras lógicas de exclusão mútua (XOR) ou coexistência necessária (AND).
+                        </p>
+                    </div>
+                    <button id="add-load-btn" type="button" class="self-start sm:self-auto bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors">
+                        + Adicionar Carga
+                    </button>
+                </div>
+
+                <!-- Table Column Header Labels -->
+                <div class="hidden sm:grid grid-cols-12 gap-2 px-2.5 pb-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <div class="col-span-3">Identificação da Ação</div>
+                    <div class="col-span-3">Origem / Tipo de Ação</div>
+                    <div class="col-span-2 text-right">Valor Caract. (kN)</div>
+                    <div class="col-span-2 text-center" title="Ações com o mesmo nome de grupo nunca atuam juntas em nenhuma combinação (Exclusão Mútua).">Grupo Exclusivo (XOR)</div>
+                    <div class="col-span-1 text-center" title="Esta ação só entrará nas combinações onde a ação selecionada estiver presente (Coexistência Obrigatória).">Requer (AND)</div>
+                    <div class="col-span-1 text-center">Ações</div>
+                </div>
+
+                <div class="space-y-2.5" id="loads-container">
+                    <!-- Dynamic Load Rows -->
+                </div>
+
+                <!-- Dynamic Rules Summary Card -->
+                <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/80">
+                    <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
+                        ⚡ Regras Lógicas Ativas nesta Análise:
+                    </span>
+                    <div id="active-rules-summary" class="flex flex-wrap items-center gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Combination Filter Bar & Report Output -->
+            <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2">
+                    <label for="combo-filter-select" class="text-xs font-semibold text-gray-600 dark:text-gray-300">Filtrar Tabela:</label>
+                    <select id="combo-filter-select" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-800 dark:text-gray-200 shadow-sm cursor-pointer">
+                        <option value="ALL">Todas as Combinações Geradas</option>
+                        <option value="Tombamento">⚖️ Apenas Tombamento (EQU / FS Tombamento)</option>
+                        <option value="Deslizamento">🛷 Apenas Deslizamento (GEO-SLI / FS Deslizamento)</option>
+                        <option value="Capacidade">🏛️ Apenas Capacidade de Carga (GEO-STR / Ruptura)</option>
+                        <option value="ELU">Apenas ELU / LRFD / Ponderada</option>
+                        <option value="Rara">Apenas ELS Rara / ASD / FS Global</option>
+                        <option value="Quase-Permanente">Apenas ELS Quase-Permanente</option>
+                        <option value="Frequente">Apenas ELS Frequente</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Report Output Container -->
+            <div id="report-output" class="results-container"></div>
         </main>
 
-        <div id="report-output" class="mt-10 results-container"></div>
         <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
         <div id="footer-placeholder"></div>
     </div>
+
     <script src="comb nbr 6118.js" defer></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof injectHeader === 'function') {
                 injectHeader({
-                    activePage: 'comb-nbr', // Verify key in nav-config.json
+                    activePage: 'comb-nbr',
                     pageTitle: 'load_combinations_nbr',
                     headerPlaceholderId: 'header-placeholder',
                     pathPrefix: '../'

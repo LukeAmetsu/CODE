@@ -63,7 +63,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawCanvas() {
         if (!canvas.width) resizeCanvas();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 1. Unified RS2 / CAD Slate Background & Grid
+        if (typeof EngCAD !== 'undefined') {
+            EngCAD.drawBackground(ctx, canvas.width, canvas.height, true);
+            EngCAD.drawGrid(ctx, canvas.width, canvas.height, { step: 24, majorEvery: 4 });
+        } else {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         
         if (segments.length === 0) return;
 
@@ -92,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             maxY = Math.max(maxY, currentResults.properties.cy);
         }
 
-        const padding = 20;
+        const padding = 35;
         const w = maxX - minX;
         const h = maxY - minY;
         
@@ -110,55 +118,75 @@ document.addEventListener('DOMContentLoaded', () => {
             return canvas.height / 2 - (val - cy) * scale; // Invert Y for standard Cartesian
         }
 
-        // Draw grid/axes
-        ctx.strokeStyle = 'rgba(150, 150, 150, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, toPx(0, false));
-        ctx.lineTo(canvas.width, toPx(0, false));
-        ctx.moveTo(toPx(0, true), 0);
-        ctx.lineTo(toPx(0, true), canvas.height);
-        ctx.stroke();
-
-        // Draw segments
-        ctx.strokeStyle = '#3b82f6'; // blue-500
+        // 2. Draw Weld Segments (CAD Blueprint Styling with Luminous Beads)
         ctx.lineCap = 'round';
         segments.forEach(seg => {
-            ctx.lineWidth = Math.max(2, seg.t * scale * 0.1); // Visual scaling for thickness
+            const sx1 = toPx(seg.x1, true);
+            const sy1 = toPx(seg.y1, false);
+            const sx2 = toPx(seg.x2, true);
+            const sy2 = toPx(seg.y2, false);
+
+            // Glow underlay
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+            ctx.lineWidth = Math.max(6, (seg.t || 6) * scale * 0.15 + 4);
             ctx.beginPath();
-            ctx.moveTo(toPx(seg.x1, true), toPx(seg.y1, false));
-            ctx.lineTo(toPx(seg.x2, true), toPx(seg.y2, false));
+            ctx.moveTo(sx1, sy1);
+            ctx.lineTo(sx2, sy2);
+            ctx.stroke();
+
+            // Core weld bead
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = Math.max(2.5, (seg.t || 6) * scale * 0.1);
+            ctx.beginPath();
+            ctx.moveTo(sx1, sy1);
+            ctx.lineTo(sx2, sy2);
             ctx.stroke();
         });
 
-        // Draw centroid if available
+        // 3. Draw centroid if available
         if (currentResults && currentResults.properties) {
             const centroidX = toPx(currentResults.properties.cx, true);
             const centroidY = toPx(currentResults.properties.cy, false);
             
-            ctx.strokeStyle = '#ef4444'; // red-500
+            ctx.strokeStyle = '#ef4444';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(centroidX - 5, centroidY - 5);
-            ctx.lineTo(centroidX + 5, centroidY + 5);
-            ctx.moveTo(centroidX + 5, centroidY - 5);
-            ctx.lineTo(centroidX - 5, centroidY + 5);
+            ctx.moveTo(centroidX - 6, centroidY - 6);
+            ctx.lineTo(centroidX + 6, centroidY + 6);
+            ctx.moveTo(centroidX + 6, centroidY - 6);
+            ctx.lineTo(centroidX - 6, centroidY + 6);
             ctx.stroke();
             
-            ctx.fillStyle = '#ef4444';
-            ctx.font = '12px Arial';
-            ctx.fillText('CG', centroidX + 8, centroidY - 8);
+            ctx.fillStyle = '#f87171';
+            ctx.font = 'bold 10px Inter, sans-serif';
+            ctx.fillText('C.G.', centroidX + 8, centroidY - 8);
         }
 
-        // Draw load point
+        // 4. Draw load point with vector indicator
         const loadXpx = toPx(loadPx, true);
         const loadYpx = toPx(loadPy, false);
-        ctx.fillStyle = '#8b5cf6'; // purple-500
+        ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
-        ctx.arc(loadXpx, loadYpx, 4, 0, Math.PI * 2);
+        ctx.arc(loadXpx, loadYpx, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.font = '12px Arial';
-        ctx.fillText('Load', loadXpx + 6, loadYpx - 6);
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillText('P (Carga)', loadXpx + 8, loadYpx - 6);
+
+        // 5. Floating CAD HUD Overlay (RS2 Standard)
+        if (typeof EngCAD !== 'undefined' && canvas.parentElement) {
+            const nSegs = segments.length;
+            const tauMax = currentResults?.max_stress !== undefined ? `${currentResults.max_stress.toFixed(2)} MPa` : '--';
+            const cgStr = currentResults?.properties ? `(${currentResults.properties.cx.toFixed(1)}, ${currentResults.properties.cy.toFixed(1)})` : '--';
+            EngCAD.updateHUD(canvas.parentElement, 'Grupo de Soldas Elásticas', [
+                { label: 'Cordões', value: `${nSegs} segmentos`, color: '#38bdf8' },
+                { label: 'Centroide', value: cgStr, color: '#f1f5f9' },
+                { label: 'Tensão Máx τ', value: tauMax, color: '#f59e0b' }
+            ]);
+        }
     }
 
     // Attach load input listeners to redraw canvas

@@ -1,0 +1,491 @@
+[
+  {
+    "filename": "Tutorial_01_Quick_Start.pdf",
+    "number": 1,
+    "title": "Phase2 Tutorial 01: Quick Start",
+    "short_title": "Quick Start",
+    "pages": 19,
+    "summary": "Quick Start Tutorial This “quick start” tutorial will demonstrate some of the basic features of Phase2 using the simple model shown above. You will see how quickly and easily a model can be created and analyzed with Phase2.",
+    "topics": [],
+    "text_len": 24164
+  },
+  {
+    "filename": "Tutorial_02_Materials_and_Staging.pdf",
+    "number": 2,
+    "title": "Phase2 Tutorial 02: Materials and Staging",
+    "short_title": "Materials and Staging",
+    "pages": 25,
+    "summary": "Materials & Staging Tutorial This tutorial will demonstrate the use of multiple materials and staging in Phase2, using material and stage boundaries. The model represents a longhole stope in an orebody which has different properties than the",
+    "topics": [],
+    "text_len": 33621
+  },
+  {
+    "filename": "Tutorial_03_Support.pdf",
+    "number": 3,
+    "title": "Phase2 Tutorial 03: Support",
+    "short_title": "Support",
+    "pages": 30,
+    "summary": "Support Tutorial – Step 1 In this first step of the Support tutorial, the above model will be created and analyzed without support. Both elastic and plastic analyses will be carried out. Support (bolts and shotcrete) will be added in Step 2 of the",
+    "topics": [],
+    "text_len": 39148
+  },
+  {
+    "filename": "Tutorial_04_Surface_Excavation.pdf",
+    "number": 4,
+    "title": "Phase2 Tutorial 04: Surface Excavation",
+    "short_title": "Surface Excavation",
+    "pages": 22,
+    "summary": "Surface Excavation Tutorial This tutorial illustrates how to model a simple surface excavation, consisting of a trench located near a circular tunnel, and a distributed load directly above the tunnel. The gravity field stress option will be used,",
+    "topics": [],
+    "text_len": 27599
+  },
+  {
+    "filename": "Tutorial_05_Joint.pdf",
+    "number": 5,
+    "title": "Phase2 Tutorial 05: Joint",
+    "short_title": "Joint",
+    "pages": 12,
+    "summary": "This tutorial involves a circular opening of 2.5 meter radius, to be excavated close to a horizontal plane of weakness (joint), located 3.5 meters above the center of the circular opening. For this analysis, the rock mass is assumed to be elastic, but the joint will",
+    "topics": [],
+    "text_len": 13721
+  },
+  {
+    "filename": "Tutorial_06_Axisymmetric.pdf",
+    "number": 6,
+    "title": "Phase2 Tutorial 06: Axisymmetric",
+    "short_title": "Axisymmetric",
+    "pages": 24,
+    "summary": "Axisymmetry Tutorial This tutorial will illustrate the axisymmetric modeling option of Phase2. Axisymmetric modeling allows you to analyze a 3-D excavation which is rotationally symmetric about an axis. The input is 2-dimensional, but the",
+    "topics": [],
+    "text_len": 31396
+  },
+  {
+    "filename": "Tutorial_07_Finite_Element_Groundwater_Seepage.pdf",
+    "number": 7,
+    "title": "Phase2 Tutorial 07: Finite Element Groundwater Seepage",
+    "short_title": "Finite Element Groundwater Seepage",
+    "pages": 19,
+    "summary": "Finite Element Groundwater Seepage Phase2 has the capability to carry out a finite element groundwater seepage analysis, for saturated / unsaturated, steady state flow This tutorial will demonstrate the basic features of performing a",
+    "topics": [
+      "Hydraulic boundary conditions",
+      "Hydraulic material properties",
+      "Ponded water loading",
+      "Groundwater + Stress Analysis",
+      "Computed Water Table",
+      "Flow Vectors",
+      "Flow Lines",
+      "IsoLines",
+      "Discharge Sections"
+    ],
+    "text_len": 22227
+  },
+  {
+    "filename": "Tutorial_08_Shear_Strength_Reduction.pdf",
+    "number": 8,
+    "title": "Phase2 Tutorial 08: Shear Strength Reduction",
+    "short_title": "Shear Strength Reduction",
+    "pages": 12,
+    "summary": "Shear Strength Reduction Analysis In this tutorial, Phase2 is used to determine the safety factor of a simple homogeneous slope using the shear strength reduction (SSR) method. This tutorial covers the basics of setting up a model for an SSR analysis",
+    "topics": [
+      "Project Settings",
+      "Shear Strength Reduction",
+      "Boundary Conditions",
+      "Field Stress",
+      "SSR Analysis Results",
+      "Critical SRF"
+    ],
+    "text_len": 11653
+  },
+  {
+    "filename": "Tutorial_09_Importing_Slide_Files_+_SSR.pdf",
+    "number": 9,
+    "title": "Phase2 Tutorial 09: Importing Slide Files + SSR",
+    "short_title": "Importing Slide Files + SSR",
+    "pages": 14,
+    "summary": "Importing Slide Files / SSR Analysis Slide is a 2D limit equilibrium slope stability program produced by Rocscience. Phase2 version 8 can import files written by version 6 of Slide. This allows you to perform a finite element stress analysis and",
+    "topics": [
+      "Importing a Slide file",
+      "Slide options which are supported in Phase2",
+      "Slide options which are not supported in Phase2",
+      "Shear Strength Reduction (SSR) analysis"
+    ],
+    "text_len": 24392
+  },
+  {
+    "filename": "Tutorial_10_SSR_Search_Area.pdf",
+    "number": 10,
+    "title": "Phase2 Tutorial 10: SSR Search Area",
+    "short_title": "SSR Search Area",
+    "pages": 7,
+    "summary": "In this tutorial, Phase2 is used to determine the factor of safety of an embankment using the shear strength reduction (SSR) method. The slope stability analysis is restricted to one side of the embankment by defining an SSR search area.",
+    "topics": [
+      "Import from Slide",
+      "Shear strength reduction",
+      "SSR search area",
+      "Add failure surface from Slide",
+      "SSR Search Area 102"
+    ],
+    "text_len": 7285
+  },
+  {
+    "filename": "Tutorial_11_Geogrid_Embankment_(no_slip).pdf",
+    "number": 11,
+    "title": "Phase2 Tutorial 11: Geogrid Embankment (no slip)",
+    "short_title": "Geogrid Embankment (no slip)",
+    "pages": 13,
+    "summary": "Geogrid Embankment (no slip) This tutorial will demonstrate the use of geosynthetics in Phase2, by performing a shear strength reduction (SSR) analysis for a sand embankment on top of a soft clay layer with a geogrid liner in between.",
+    "topics": [
+      "Shear strength reduction",
+      "Slope stability",
+      "Multiple materials",
+      "Liner support (Geogrid)",
+      "Graphing liner data"
+    ],
+    "text_len": 12225
+  },
+  {
+    "filename": "Tutorial_12_Geogrid_Embankment_(with_slip).pdf",
+    "number": 12,
+    "title": "Phase2 Tutorial 12: Geogrid Embankment (with slip)",
+    "short_title": "Geogrid Embankment (with slip)",
+    "pages": 13,
+    "summary": "Geogrid Embankment (with slip) In Tutorial 11, we performed a shear strength reduction (SSR) analysis for a sand embankment on top of a soft clay layer with a geogrid liner in between. We will now proceed with the same model and add the following",
+    "topics": [
+      "Shear strength reduction",
+      "Slope stability",
+      "Staging",
+      "Multiple materials",
+      "Initial element loading",
+      "Structural interfaces",
+      "Joints",
+      "Liner support (geogrids)"
+    ],
+    "text_len": 12633
+  },
+  {
+    "filename": "Tutorial_13_Cofferdam_Seepage.pdf",
+    "number": 13,
+    "title": "Phase2 Tutorial 13: Cofferdam Seepage",
+    "short_title": "Cofferdam Seepage",
+    "pages": 15,
+    "summary": "Groundwater Flow in a Coffer Dam In this tutorial, finite element groundwater seepage analysis is used to determine the quantity of seepage entering a cofferdam. The problem is solved in three stages as follows:",
+    "topics": [
+      "Seepage analysis",
+      "Renaming stages",
+      "Multiple materials",
+      "Relative coordinates",
+      "Boundary copying",
+      "Discharge sections",
+      "Groundwater only calculation",
+      "Flownets"
+    ],
+    "text_len": 15550
+  },
+  {
+    "filename": "Tutorial_14_Geotextile_Reinforced_Ramp.pdf",
+    "number": 14,
+    "title": "Phase2 Tutorial 14: Geotextile Reinforced Ramp",
+    "short_title": "Geotextile Reinforced Ramp",
+    "pages": 22,
+    "summary": "Geotextile Reinforced Ramp In this tutorial, a ramp is constructed and its performance under loading is assessed. The model is created in four stages as follows: 1. Foundation soil layer is brought to equilibrium.",
+    "topics": [
+      "Import DXF",
+      "Geotextiles",
+      "Liners",
+      "Structural Interfaces",
+      "Selection Windows",
+      "Selection Filter",
+      "Discretization Density",
+      "Mapped meshing",
+      "Staged Loading",
+      "Liner Bending Moments"
+    ],
+    "text_len": 19168
+  },
+  {
+    "filename": "Tutorial_15_Composite_Liner.pdf",
+    "number": 15,
+    "title": "Phase2 Tutorial 15: Composite Liner",
+    "short_title": "Composite Liner",
+    "pages": 21,
+    "summary": "Composite Liner Tutorial This tutorial describes the support of a tunnel using composite liners. A Composite Liner in Phase2, is a liner which may consist of multiple layers of material. The different layers of a Composite Liner may have",
+    "topics": [
+      "Composite Liners",
+      "Staged liner installation",
+      "Selection Window",
+      "Selection Filter",
+      "Graph composite liner data",
+      "Show values"
+    ],
+    "text_len": 12898
+  },
+  {
+    "filename": "Tutorial_16_Retaining_Wall.pdf",
+    "number": 16,
+    "title": "Phase2 Tutorial 16: Retaining Wall",
+    "short_title": "Retaining Wall",
+    "pages": 11,
+    "summary": "Retaining Wall Tutorial In this tutorial, Phase2 is used to simulate the construction of an earth retaining wall. The wall is subjected to forces from backfill and from ponded water. Joint elements are included between the wall and the soil",
+    "topics": [
+      "Joints",
+      "Add vertex",
+      "Staged piezometric lines",
+      "Ponded water load",
+      "Staged loading",
+      "Graph joint data",
+      "Reference stages"
+    ],
+    "text_len": 11093
+  },
+  {
+    "filename": "Tutorial_17_Trench_with_Piles_and_Struts.pdf",
+    "number": 17,
+    "title": "Phase2 Tutorial 17: Trench with Piles and Struts",
+    "short_title": "Trench with Piles and Struts",
+    "pages": 16,
+    "summary": "In this tutorial, Phase2 is used to simulate the excavation of a trench into a sloped embankment. The trench is supported by soldier piles and struts. The model is built in five stages: 1. Bring soil layers to equilibrium",
+    "topics": [
+      "Soldier piles",
+      "Strut with crosssectional area and moment of inertia",
+      "Staged support",
+      "Staged piezometric lines",
+      "Staged excavation",
+      "Automatic Liner Removal option = OFF",
+      "Show Values",
+      "Plot Liner data",
+      "Trench Tutorial 172"
+    ],
+    "text_len": 13530
+  },
+  {
+    "filename": "Tutorial_18_3D_Tunnel_Simulation_using_Core_Replacement.pdf",
+    "number": 18,
+    "title": "Phase2 Tutorial 18: 3D Tunnel Simulation using Core Replacement",
+    "short_title": "3D Tunnel Simulation using Core Replacement",
+    "pages": 27,
+    "summary": "3D Tunnel Simulation using the Core Replacement Technique In this tutorial, Phase2 is used to simulate the three-dimensional excavation of a tunnel. In three dimensions, the tunnel face provides",
+    "topics": [
+      "3D tunnel simulation",
+      "Core Replacement Technique (Material Softening)",
+      "Reinforced concrete liners",
+      "Support capacity curves",
+      "3D Tunnel Simulation using the Core Replacement Technique 182"
+    ],
+    "text_len": 29514
+  },
+  {
+    "filename": "Tutorial_19_Joint-Liner_Interaction.pdf",
+    "number": 19,
+    "title": "Phase2 Tutorial 19: Joint-Liner Interaction",
+    "short_title": "Joint-Liner Interaction",
+    "pages": 20,
+    "summary": "This tutorial demonstrates how to model liner support in a jointed rock mass, when joints intersect excavation boundaries on which liner support will be installed. In order to correctly model the interaction of the joint- liner intersections, we must define a Composite Liner which includes a",
+    "topics": [
+      "Rock joints",
+      "Composite Liner with joint",
+      "Generalized HoekBrown failure criterion",
+      "Copying boundaries and relative coordinates",
+      "Graph joint data",
+      "Liner bending moments",
+      "JointLiner Interaction Tutorial 192"
+    ],
+    "text_len": 18089
+  },
+  {
+    "filename": "Tutorial_20_Liner_with_Sliding_Gap.pdf",
+    "number": 20,
+    "title": "Phase2 Tutorial 20: Liner with Sliding Gap",
+    "short_title": "Liner with Sliding Gap",
+    "pages": 26,
+    "summary": "Liner with Sliding Gap This tutorial describes the support of a tunnel using a circular steel-set liner which includes sliding gaps. The steel-sets are constructed with sliding gaps that enable a squeezing tunnel to contract with little",
+    "topics": [
+      "Liners with Sliding Gap",
+      "Simulated threedimensional tunnel excavation",
+      "Staged tractions",
+      "Liner axial forces",
+      "Graph Single Point vs Stage",
+      "Liner with Sliding Gap 202"
+    ],
+    "text_len": 26482
+  },
+  {
+    "filename": "Tutorial_21_Levee_with_Toe_Drain.pdf",
+    "number": 21,
+    "title": "Phase2 Tutorial 21: Levee with Toe Drain",
+    "short_title": "Levee with Toe Drain",
+    "pages": 12,
+    "summary": "Levee with Toe Drain In this tutorial, finite element groundwater seepage analysis is used to simulate a levee with a horizontal toe drain. Toe drains are often used to prevent capillary rise on the downstream sloping surface. Phase2 can be",
+    "topics": [
+      "Seepage analysis",
+      "Levee drainage",
+      "Multiple materials",
+      "Phreatic surface",
+      "Groundwater only calculation",
+      "Flownets"
+    ],
+    "text_len": 10770
+  },
+  {
+    "filename": "Tutorial_22_SSR_Polygonal_Search_Area.pdf",
+    "number": 22,
+    "title": "Phase2 Tutorial 22: SSR Polygonal Search Area",
+    "short_title": "SSR Polygonal Search Area",
+    "pages": 8,
+    "summary": "SSR Polygonal Search Area In this tutorial, Phase2 is used to determine the factor of safety of a slope using the shear strength reduction (SSR) method. The SSR Polygon Search Area option is used to focus the SSR analysis to a specific region",
+    "topics": [
+      "Shear Strength Reduction",
+      "SSR Polygonal Search Area"
+    ],
+    "text_len": 7922
+  },
+  {
+    "filename": "Tutorial_23_Anchored_Sheet_Pile_Wall.pdf",
+    "number": 23,
+    "title": "Phase2 Tutorial 23: Anchored Sheet Pile Wall",
+    "short_title": "Anchored Sheet Pile Wall",
+    "pages": 21,
+    "summary": "Anchored Sheet Pile Wall Tutorial In this tutorial, Phase2 is used to simulate the construction of an excavation supported by a sheet pile wall anchored with grouted tiebacks. The complete model can be found in the Tutorial 23 Anchored Sheet",
+    "topics": [
+      "Liners",
+      "Joints",
+      "Structural interface",
+      "Grouted tieback bolts",
+      "Surcharge pressure",
+      "Anchored Sheet Pile Wall Tutorial 232"
+    ],
+    "text_len": 14748
+  },
+  {
+    "filename": "Tutorial_24_Tunnel_Lining_Design.pdf",
+    "number": 24,
+    "title": "Phase2 Tutorial 24: Tunnel Lining Design",
+    "short_title": "Tunnel Lining Design",
+    "pages": 32,
+    "summary": "Tunnel Lining Design In this tutorial, Phase2 is used to design a reinforced concrete tunnel The complete model can be found in the Tutorial 24 Tunnel Lining Design.fez file. All tutorial files installed with Phase2 8.0 can be",
+    "topics": [
+      "Reinforced concrete liners",
+      "3D tunnel simulation",
+      "Distributed loads – field stress vector option",
+      "Support capacity curves",
+      "GSI calculator",
+      "Tunnel Lining Design 242"
+    ],
+    "text_len": 29553
+  },
+  {
+    "filename": "Tutorial_26_Drawdown_Analysis_for_Slope.pdf",
+    "number": 26,
+    "title": "Phase2 Tutorial 26: Drawdown Analysis for Slope",
+    "short_title": "Drawdown Analysis for Slope",
+    "pages": 17,
+    "summary": "Drawdown Analysis for Slope In this tutorial, two different methods of modeling the staged drawdown of ponded water against a slope are examined, and an SSR slope stability analysis is performed. The drawdown is implemented in two ways: 1) by",
+    "topics": [
+      "Drawdown",
+      "Staged piezo lines",
+      "Staged groundwater analysis",
+      "Shear strength reduction",
+      "Importing coordinates",
+      "Ponded water loading",
+      "Drawdown Analysis for Slope 262"
+    ],
+    "text_len": 12821
+  },
+  {
+    "filename": "Tutorial_27_Drawdown_Analysis_for_Tunnel.pdf",
+    "number": 27,
+    "title": "Phase2 Tutorial 27: Drawdown Analysis for Tunnel",
+    "short_title": "Drawdown Analysis for Tunnel",
+    "pages": 22,
+    "summary": "Drawdown due to tunnel excavation In this tutorial, Phase2 is used to simulate tunnel excavation in a saturated soil. The tunnel is assumed to have a permeable liner so there is a drawdown in the water table as water drains into the tunnel. The",
+    "topics": [
+      "Staged tunnel excavation",
+      "Groundwater drawdown",
+      "Permeable tunnel liner",
+      "User defined permeability function",
+      "3D tunnel simulation",
+      "Drawdown due to tunnel excavation 272"
+    ],
+    "text_len": 14372
+  },
+  {
+    "filename": "Tutorial_28_Coal_Mine_Stope.pdf",
+    "number": 28,
+    "title": "Phase2 Tutorial 28: Coal Mine Stope",
+    "short_title": "Coal Mine Stope",
+    "pages": 18,
+    "summary": "Development of a Stope in a Coal Mine This tutorial will model the development of a stope and access roads in a coal mine. The tutorial demonstrates the use of multiple materials and staging in Phase2, including specification of different in-situ stresses for",
+    "topics": [
+      "Staged excavation",
+      "Multiple materials",
+      "Custom field stresses",
+      "Lockedin horizontal stress",
+      "Advanced discretization",
+      "Copy boundary",
+      "Development of a Stope in a Coal Mine 282"
+    ],
+    "text_len": 17222
+  },
+  {
+    "filename": "Tutorial_29_Application_of_Joint_Networks.pdf",
+    "number": 29,
+    "title": "Phase2 Tutorial 29: Application of Joint Networks",
+    "short_title": "Application of Joint Networks",
+    "pages": 17,
+    "summary": "Application of Joint Networks This tutorial will demonstrate how to specify joint networks or discrete fracture networks (DFN) in Phase2 using the automatic joint network generator. It will also demonstrate a few techniques for analyzing the",
+    "topics": [
+      "Adding joint networks to different model regions",
+      "Specifying joint end conditions",
+      "Interpreting joint movements",
+      "Application of Joint Networks 292"
+    ],
+    "text_len": 19921
+  },
+  {
+    "filename": "Tutorial_30_Slope_Angle_Optimization.pdf",
+    "number": 30,
+    "title": "Phase2 Tutorial 30: Slope Angle Optimization",
+    "short_title": "Slope Angle Optimization",
+    "pages": 13,
+    "summary": "Slope Angle Optimization In this tutorial, Phase2 is used to examine the stability of an open pit mine. The Change Slope Angle editing option is used to help optimize the open pit design to make the slope as steep as possible while",
+    "topics": [
+      "Importing Slide files",
+      "Change slope angle editing option",
+      "Batch compute",
+      "Slope angle optimization",
+      "Shear strength reduction",
+      "Slope Angle Optimization 302"
+    ],
+    "text_len": 10438
+  },
+  {
+    "filename": "Tutorial_31_Probabilistic_Analysis.pdf",
+    "number": 31,
+    "title": "Phase2 Tutorial 31: Probabilistic Analysis",
+    "short_title": "Probabilistic Analysis",
+    "pages": 16,
+    "summary": "Probabilistic Analysis in Phase2 Often the parameters required for analysis are not well known. In these cases it is desirable to perform a parametric study where model behaviour is examined for a range of possible inputs. This tutorial",
+    "topics": [
+      "Principles",
+      "Statistics",
+      "Error plots",
+      "Probabilistic Analysis in Phase2 312"
+    ],
+    "text_len": 21427
+  },
+  {
+    "filename": "Tutorial_32_Probabilistic_Slope_Stability_Analysis.pdf",
+    "number": 32,
+    "title": "Phase2 Tutorial 32: Probabilistic Slope Stability Analysis",
+    "short_title": "Probabilistic Slope Stability Analysis",
+    "pages": 12,
+    "summary": "Probabilistic Slope Stability Analysis This tutorial will demonstrate how to carry out a probabilistic finite element slope stability analysis with Phase2 using the SSR (shear strength reduction) method in combination with the point estimate",
+    "topics": [
+      "Point estimate method of probabilistic analysis",
+      "SSR slope stability analysis",
+      "Probability of failure",
+      "Component files",
+      "Comparison with Slide results"
+    ],
+    "text_len": 11556
+  }
+]

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASCE Rain Load Calculator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -26,10 +26,38 @@
     <script src="../js/validation-rules.js" defer></script>
 </head>
 
-<body>
+<body class="min-h-screen flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
+
+                <!-- Executive Header Section -->
+        <div class="px-5 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 rounded-xl shadow-xs">
+            <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                        ASCE 7-16 & ASCE 7-22
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                        Hydraulic Head & Drainage
+                    </span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>🌧️</span> Cargas de Chuva & Drenagem (Rain Loads)
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="document.getElementById('save-rain-inputs-btn')?.click()" class="eng-btn-save">
+                    <span>💾</span> Salvar
+                </button>
+                <button type="button" onclick="document.getElementById('load-rain-inputs-btn')?.click()" class="eng-btn-open">
+                    <span>📂</span> Abrir
+                </button>
+                <button type="button" onclick="document.getElementById('run-rain-calculation-btn')?.click()" class="eng-btn-primary">
+                    <span>⚡</span> Calcular Chuva
+                </button>
+            </div>
+        </div>
 
         <main id="rain-calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -59,7 +87,7 @@
                         <h2>General Parameters</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="rain_asce_standard" class="block text-sm font-medium mb-1">ASCE
+                                <label for="rain_asce_standard" class="eng-label">ASCE
                                     Standard</label>
                                 <select id="rain_asce_standard">
                                     <option value="ASCE 7-16" selected>ASCE 7-16</option>
@@ -67,14 +95,14 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="rain_unit_system" class="block text-sm font-medium mb-1">Unit System</label>
+                                <label for="rain_unit_system" class="eng-label">Unit System</label>
                                 <select id="rain_unit_system">
                                     <option value="imperial" selected>Imperial (in, psf)</option>
                                     <option value="metric">Metric (mm, kPa)</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="rain_design_method" class="block text-sm font-medium mb-1">Design
+                                <label for="rain_design_method" class="eng-label">Design
                                     Method</label>
                                 <select id="rain_design_method">
                                     <option value="ASD" selected>ASD</option>
@@ -95,7 +123,7 @@
                         <div id="dh_auto_calc_container" class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label for="rain_drain_type" class="block text-sm font-medium mb-1">Secondary Drain
+                                    <label for="rain_drain_type" class="eng-label">Secondary Drain
                                         Type</label>
                                     <select id="rain_drain_type" data-ui-toggle-controller>
                                         <option value="scupper" selected>Scupper</option>
@@ -104,7 +132,7 @@
                                 </div>
                                 <div id="scupper_inputs_container">
                                     <div id="scupper_inputs">
-                                        <label for="rain_scupper_width" class="block text-sm font-medium mb-1">Scupper
+                                        <label for="rain_scupper_width" class="eng-label">Scupper
                                             Width (L)</label>
                                         <input type="number" id="rain_scupper_width" value="12"
                                             data-ui-toggle-target-for="rain_drain_type"
@@ -113,7 +141,7 @@
                                 </div>
                                 <div id="drain_inputs_container" class="hidden">
                                     <div id="drain_inputs">
-                                        <label for="rain_drain_diameter" class="block text-sm font-medium mb-1">Drain
+                                        <label for="rain_drain_diameter" class="eng-label">Drain
                                             Diameter (d)</label>
                                         <input type="number" id="rain_drain_diameter" value="4"
                                             data-ui-toggle-target-for="rain_drain_type"
@@ -136,24 +164,24 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="rain_jurisdiction"
-                                    class="block text-sm font-medium mb-1">Jurisdiction</label>
+                                    class="eng-label">Jurisdiction</label>
                                 <select id="rain_jurisdiction">
                                     <option value="ASCE 7" selected>ASCE 7</option>
                                     <option value="NYCBC 2022">NYCBC 2022</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="rain_tributary_area" class="block text-sm font-medium mb-1">Tributary Area
+                                <label for="rain_tributary_area" class="eng-label">Tributary Area
                                     (A)</label>
                                 <input type="number" id="rain_tributary_area" value="1000">
                             </div>
                             <div>
-                                <label for="rain_intensity" class="block text-sm font-medium mb-1">Rainfall Intensity
+                                <label for="rain_intensity" class="eng-label">Rainfall Intensity
                                     (i)</label>
                                 <input type="number" id="rain_intensity" value="4.0">
                             </div>
                             <div>
-                                <label for="rain_city_selector" class="block text-sm font-medium mb-1">Select City (for
+                                <label for="rain_city_selector" class="eng-label">Select City (for
                                     intensity)</label>
                                 <select id="rain_city_selector">
                                     <option value="">-- Select a City --</option>
@@ -167,14 +195,14 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="rain_static_head" class="block text-sm font-medium mb-1">Static Head
+                                <label for="rain_static_head" class="eng-label">Static Head
                                     (ds)</label>
                                 <input type="number" id="rain_static_head" value="2.0">
                             </div>
                             <div id="dh_manual_input_container_wrapper" class="hidden">
                                 <div id="dh_manual_input_container" data-ui-toggle-controller
                                     data-ui-toggle-target-for="dh_auto_calc_toggle" data-ui-toggle-invert="true">
-                                    <label for="rain_hydraulic_head" class="block text-sm font-medium mb-1">Hydraulic
+                                    <label for="rain_hydraulic_head" class="eng-label">Hydraulic
                                         Head (dh)</label>
                                     <input type="number" id="rain_hydraulic_head" value="1.0">
                                 </div>
@@ -185,14 +213,14 @@
             </div>
             <div class="lg:col-span-3 mt-8 flex justify-center">
                 <button id="load-rain-inputs-btn"
-                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600 mr-4">Load
+                    class="eng-btn-open mr-4">Load
                     Inputs</button>
                 <button id="save-rain-inputs-btn"
-                    class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 mr-4">Save
+                    class="eng-btn-save mr-4">Save
                     Inputs</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
                 <button id="run-rain-calculation-btn"
-                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run
+                    class="eng-btn-primary">Run
                     Rain Load Calculation</button>
                 <input type="file" id="rain-file-input" class="hidden" accept=".txt">
             </div>

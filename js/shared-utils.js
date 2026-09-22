@@ -320,25 +320,29 @@ function showFeedback(message, typeOrIsError, elementId = 'feedback-message') {
  * Returns the HTML string.
  */
 function renderValidationResults(validation, container) {
-    let html = '<div class="validation-summary error-box border border-red-400 bg-red-50 p-4 rounded text-red-700">';
-    html += '<h4 class="font-bold mb-2">Please correct the following errors:</h4><ul class="list-disc pl-5">';
-
-    if (validation.errors) {
+    const hasErrors = validation.errors && validation.errors.length > 0;
+    const hasWarnings = validation.warnings && validation.warnings.length > 0;
+    
+    let html = '';
+    if (hasErrors) {
+        html += '<div class="validation-summary error-box border border-rose-300 dark:border-rose-800/80 bg-rose-50 dark:bg-rose-950/40 p-4 rounded-xl text-rose-800 dark:text-rose-200 mb-3 shadow-sm">';
+        html += '<div class="flex items-center gap-2 mb-2 font-bold text-sm text-rose-900 dark:text-rose-100"><span>⚠️</span> <span>Erros de Entrada Detectados:</span></div><ul class="list-disc pl-5 space-y-1 text-xs text-rose-800 dark:text-rose-200">';
         validation.errors.forEach(err => {
             const msg = (typeof err === 'object') ? (err.message || err.msg || JSON.stringify(err)) : err;
             html += `<li>${msg}</li>`;
         });
+        html += '</ul></div>';
     }
     
-    if (validation.warnings && validation.warnings.length > 0) {
-         html += '</ul><h4 class="font-bold mt-4 mb-2 text-yellow-700">Warnings:</h4><ul class="list-disc pl-5 text-yellow-700">';
-         validation.warnings.forEach(warn => {
-             html += `<li>${warn}</li>`;
-         });
+    if (hasWarnings) {
+        html += '<div class="validation-summary warning-box border border-amber-300 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl text-amber-800 dark:text-amber-200 mb-3 shadow-sm">';
+        html += '<div class="flex items-center gap-2 mb-2 font-bold text-sm text-amber-900 dark:text-amber-100"><span>⚡</span> <span>Avisos e Recomendações:</span></div><ul class="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-200">';
+        validation.warnings.forEach(warn => {
+            html += `<li>${warn}</li>`;
+        });
+        html += '</ul></div>';
     }
 
-    html += '</ul></div>';
-    
     if (container) {
         container.innerHTML = html;
     }
@@ -372,6 +376,102 @@ function saveInputsToLocalStorage(key, inputs, version) {
     } catch (e) {
         console.warn('Failed to save to localStorage:', e);
     }
+}
+
+/**
+ * Universal Form Session Management
+ * Automatically serializes and saves all input, select, textarea elements in a container/form.
+ */
+function saveFormSession(key, formOrSelector, customData = null) {
+    if (!key) return;
+    try {
+        const root = typeof formOrSelector === 'string' ? document.querySelector(formOrSelector) : formOrSelector;
+        const inputs = {};
+        if (root) {
+            const elements = root.querySelectorAll('input, select, textarea');
+            elements.forEach(el => {
+                if (!el.id) return;
+                if (el.type === 'checkbox') {
+                    inputs[el.id] = el.checked;
+                } else if (el.type === 'radio') {
+                    if (el.checked) inputs[el.name || el.id] = el.value;
+                } else {
+                    inputs[el.id] = el.value;
+                }
+            });
+        }
+        const payload = {
+            version: '1.1',
+            timestamp: Date.now(),
+            inputs: inputs,
+            customData: customData
+        };
+        localStorage.setItem(key, JSON.stringify(payload));
+    } catch (e) {
+        console.warn(`[saveFormSession] Error saving ${key}:`, e);
+    }
+}
+
+function loadFormSession(key, formOrSelector, customDataApplyFn = null) {
+    if (!key) return false;
+    const raw = localStorage.getItem(key);
+    if (!raw) return false;
+    try {
+        const payload = JSON.parse(raw);
+        if (!payload) return false;
+
+        const root = typeof formOrSelector === 'string' ? document.querySelector(formOrSelector) : formOrSelector;
+        const inputs = payload.inputs || {};
+
+        if (root) {
+            Object.entries(inputs).forEach(([id, val]) => {
+                const el = root.querySelector(`#${id}`) || document.getElementById(id);
+                if (!el) return;
+                if (el.type === 'checkbox') {
+                    el.checked = !!val;
+                } else if (el.type === 'radio') {
+                    if (el.value === val) el.checked = true;
+                } else if (val !== undefined && val !== null) {
+                    el.value = val;
+                }
+            });
+        }
+
+        if (typeof customDataApplyFn === 'function' && payload.customData !== undefined) {
+            customDataApplyFn(payload.customData);
+        }
+
+        return true;
+    } catch (e) {
+        console.warn(`[loadFormSession] Error restoring ${key}:`, e);
+        return false;
+    }
+}
+
+function clearFormSession(key) {
+    if (!key) return;
+    localStorage.removeItem(key);
+}
+
+function bindFormAutoSave(key, formOrSelector, getCustomDataFn = null, debounceMs = 300) {
+    const root = typeof formOrSelector === 'string' ? document.querySelector(formOrSelector) : formOrSelector;
+    if (!root) return;
+
+    let timeout;
+    const triggerSave = () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            const customData = typeof getCustomDataFn === 'function' ? getCustomDataFn() : null;
+            saveFormSession(key, root, customData);
+        }, debounceMs);
+    };
+
+    root.addEventListener('input', triggerSave);
+    root.addEventListener('change', triggerSave);
+    window.addEventListener('beforeunload', () => {
+        const customData = typeof getCustomDataFn === 'function' ? getCustomDataFn() : null;
+        saveFormSession(key, root, customData);
+    });
 }
 
 /**
@@ -1461,22 +1561,23 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
     if (dataStr) {
         try {
             const inputs = JSON.parse(dataStr);
-
+            const version = inputs._version || inputs.version || '1.1';
             // Version check: If the saved data has a matching version, apply it.
-            if (inputs._version === appVersion) {
-                loadedInputs = inputs; // Mark as valid
+            if (version === appVersion || !inputs.version) {
+                const values = inputs.inputs || inputs;
+                loadedInputs = values; // Mark as valid
 
                 inputIds.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
 
                     let valueToApply;
-                    if (inputs[id] !== undefined) {
-                        valueToApply = inputs[id];
+                    if (values[id] !== undefined) {
+                        valueToApply = values[id];
                     } else if (storageKey === 'buildingProjectData') {
                         const genericKey = id.substring(id.indexOf('_') + 1);
-                        if (inputs[genericKey] !== undefined) {
-                            valueToApply = inputs[genericKey];
+                        if (values[genericKey] !== undefined) {
+                            valueToApply = values[genericKey];
                         }
                     }
 
@@ -1492,7 +1593,7 @@ function loadInputsFromLocalStorage(storageKey, inputIds, onComplete, appVersion
                 });
             } else {
                 // If version is mismatched, discard the old data.
-                console.warn(`LocalStorage data for '${storageKey}' is outdated (v${inputs._version} vs current v${appVersion}). Discarding.`);
+                console.warn(`LocalStorage data for '${storageKey}' is outdated (v${version} vs current v${appVersion}). Discarding.`);
                 localStorage.removeItem(storageKey);
             }
         } catch (error) {
@@ -1759,28 +1860,28 @@ class ReportBuilder {
 
         // --- Build Header ---
         const actionButtons = this.actionButtons.map(btn =>
-            createDOMElement('button', { id: btn.id, className: `bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden ${btn.classes || ''}` }, [btn.text])
+            createDOMElement('button', { id: btn.id, className: `eng-btn-secondary text-xs print-hidden ${btn.classes || ''}` }, [btn.text])
         );
 
-        const header = createDOMElement('div', { className: 'flex justify-between items-center border-b-2 border-gray-300 dark:border-gray-600 pb-4 mb-4' }, [
-            createDOMElement('h2', { className: 'text-2xl font-bold' }, [this.title]),
-            createDOMElement('div', { className: 'flex items-center gap-2 print-hidden' }, [
-                createDOMElement('button', { id: 'toggle-all-details-btn', className: 'bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs', dataset: { state: 'hidden' } }, ['Show All Details']),
+        const header = createDOMElement('div', { className: 'flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 mb-4' }, [
+            createDOMElement('h2', { className: 'text-2xl font-bold text-gray-800 dark:text-gray-100' }, [this.title]),
+            createDOMElement('div', { className: 'flex items-center gap-2 print-hidden flex-wrap' }, [
+                createDOMElement('button', { id: 'toggle-all-details-btn', className: 'eng-btn-secondary text-xs', dataset: { state: 'hidden' } }, ['👁️ Detalhes']),
                 ...actionButtons,
-                createDOMElement('button', { id: 'copy-report-btn', className: 'bg-blue-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-700 text-xs' }, ['Copy']),
-                createDOMElement('button', { id: 'download-word-btn', className: 'bg-blue-800 text-white font-semibold py-1 px-3 rounded-lg hover:bg-blue-900 text-xs' }, ['Word']),
-                createDOMElement('button', { id: 'download-csv-btn', className: 'bg-green-700 text-white font-semibold py-1 px-3 rounded-lg hover:bg-green-800 text-xs' }, ['CSV']),
-                createDOMElement('button', { id: 'download-pdf-btn', className: 'bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-xs' }, ['Download PDF'])
+                createDOMElement('button', { id: 'copy-report-btn', className: 'eng-btn-secondary text-xs' }, ['📋 Copiar']),
+                createDOMElement('button', { id: 'download-word-btn', className: 'eng-btn-secondary text-xs' }, ['📝 Word']),
+                createDOMElement('button', { id: 'download-csv-btn', className: 'eng-btn-secondary text-xs' }, ['📊 CSV']),
+                createDOMElement('button', { id: 'download-pdf-btn', className: 'eng-btn-pdf text-xs' }, ['📄 PDF'])
             ])
         ]);
 
         // --- Build Report Container ---
-        const reportContainer = createDOMElement('div', { id: this.reportId, className: 'p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg' });
+        const reportContainer = createDOMElement('div', { id: this.reportId, className: 'p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700' });
         reportContainer.appendChild(header);
 
         // --- Add Warnings Section (if any) ---
         if (this.warnings.length > 0) {
-            const warningsContainer = createDOMElement('div', { className: 'report-section-container' });
+            const warningsContainer = createDOMElement('div', { className: 'report-section-container mb-4' });
             warningsContainer.innerHTML = renderValidationResults({ warnings: this.warnings, errors: [] });
             reportContainer.appendChild(warningsContainer);
         }
@@ -1794,8 +1895,8 @@ class ReportBuilder {
 
             if (section.title) {
                 sectionEl.appendChild(createDOMElement('div', { className: 'flex justify-between items-center mb-2' }, [
-                    createDOMElement('h3', { className: 'report-header' }, [section.title]),
-                    createDOMElement('button', { className: 'copy-section-btn bg-gray-200 text-gray-700 font-semibold py-1 px-3 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 text-xs print-hidden', dataset: { copyTargetId: contentId } }, ['Copy Section'])
+                    createDOMElement('h3', { className: 'report-header font-bold text-base text-gray-800 dark:text-gray-200' }, [section.title]),
+                    createDOMElement('button', { className: 'copy-section-btn eng-btn-secondary text-xs print-hidden', dataset: { copyTargetId: contentId } }, ['📋 Copiar Seção'])
                 ]));
             }
 
@@ -1804,7 +1905,7 @@ class ReportBuilder {
             // Handle different section types
             if (section.type === 'table') {
                 const { headers, rows } = section.tableConfig;
-                const table = createDOMElement('table', { className: 'w-full mt-2 results-table' });
+                const table = createDOMElement('table', { className: 'w-full mt-2 results-table eng-table' });
 
                 // Apply a distinct grey background to the table header row
                 const headerRow = createDOMElement('tr', {});
@@ -2487,3 +2588,644 @@ function parseExcelToBatch(e, casesArray, rowMapper, renderCallback, errorMessag
     reader.readAsArrayBuffer(file);
     e.target.value = ''; // Clean input for repeated selections
 }
+
+// =========================================================================
+// UNIFIED ENGINEERING 2D GRAPHICS & CAD ENGINE (EngCAD)
+// Standardized across RS2, PCALC, Concrete Beam, Retaining Wall & Footings
+// =========================================================================
+
+const EngCAD = {
+    /**
+     * Palette & Themes for CAD 2D rendering
+     */
+    getTheme(isDark = null) {
+        if (isDark === null) {
+            isDark = document.documentElement.classList.contains('dark') || true;
+        }
+        return {
+            isDark,
+            bg: '#0f172a',
+            bgGradient: ['#090d16', '#0f172a'],
+            border: '#334155',
+            gridMajor: 'rgba(148, 163, 184, 0.12)',
+            gridMinor: 'rgba(148, 163, 184, 0.04)',
+            gridText: 'rgba(148, 163, 184, 0.45)',
+            axis: '#3b82f6',
+            concrete: {
+                fill: 'rgba(56, 189, 248, 0.08)',
+                hatch: 'rgba(148, 163, 184, 0.12)',
+                stroke: '#38bdf8',
+                compressedFill: 'rgba(239, 68, 68, 0.25)',
+                compressedStroke: '#ef4444'
+            },
+            rebar: {
+                fill: '#ef4444',
+                stroke: '#991b1b',
+                highlight: 'rgba(255, 255, 255, 0.90)',
+                stirrup: '#38bdf8'
+            },
+            dim: {
+                line: 'rgba(148, 163, 184, 0.70)',
+                text: '#f1f5f9',
+                badgeBg: 'rgba(15, 23, 42, 0.92)',
+                badgeBorder: 'rgba(148, 163, 184, 0.45)'
+            },
+            neutralAxis: '#f59e0b',
+            load: '#3b82f6'
+        };
+    },
+
+    /**
+     * Initializes a canvas with High-DPI scaling (Retina / 4K support)
+     */
+    setupCanvas(canvas, targetWidth, targetHeight) {
+        if (!canvas) return null;
+        const dpr = window.devicePixelRatio || 1;
+        const parent = canvas.parentElement;
+        const w = targetWidth || (parent ? parent.clientWidth : canvas.width) || 400;
+        const h = targetHeight || (parent ? parent.clientHeight : canvas.height) || 300;
+
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+        return { ctx, width: w, height: h, dpr };
+    },
+
+    /**
+     * Draws rich gradient blueprint background
+     */
+    drawBackground(ctx, width, height, isDark = true) {
+        const theme = this.getTheme(isDark);
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, theme.bgGradient[0]);
+        grad.addColorStop(1, theme.bgGradient[1]);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+    },
+
+    /**
+     * Draws precision engineering CAD coordinate grid (RS2 style)
+     */
+    drawGrid(ctx, width, height, options = {}) {
+        const theme = this.getTheme(options.isDark);
+        const step = options.step || 20;
+        const majorEvery = options.majorEvery || 5; // every 5 steps
+        const showLabels = options.showLabels !== false;
+
+        ctx.save();
+        ctx.lineWidth = 1;
+
+        // Minor grid
+        ctx.strokeStyle = theme.gridMinor;
+        ctx.beginPath();
+        for (let x = 0; x <= width; x += step) {
+            ctx.moveTo(x, 0); ctx.lineTo(x, height);
+        }
+        for (let y = 0; y <= height; y += step) {
+            ctx.moveTo(0, y); ctx.lineTo(width, y);
+        }
+        ctx.stroke();
+
+        // Major grid
+        const majorStep = step * majorEvery;
+        ctx.strokeStyle = theme.gridMajor;
+        ctx.beginPath();
+        for (let x = 0; x <= width; x += majorStep) {
+            ctx.moveTo(x, 0); ctx.lineTo(x, height);
+        }
+        for (let y = 0; y <= height; y += majorStep) {
+            ctx.moveTo(0, y); ctx.lineTo(width, y);
+        }
+        ctx.stroke();
+
+        // Subtle coordinate ticks / labels
+        if (showLabels) {
+            ctx.fillStyle = theme.gridText;
+            ctx.font = "9px 'JetBrains Mono', Consolas, monospace";
+            for (let x = majorStep; x < width; x += majorStep) {
+                ctx.fillText(`${x}`, x + 3, height - 5);
+            }
+            for (let y = majorStep; y < height; y += majorStep) {
+                ctx.fillText(`${y}`, 5, y - 3);
+            }
+        }
+        ctx.restore();
+    },
+
+    /**
+     * Draws architectural / engineering dimension line (Cota Técnica) with witness lines,
+     * 45° ticks or arrowheads, and pill knockout badge
+     */
+    drawDimension(ctx, x1, y1, x2, y2, text, options = {}) {
+        const theme = this.getTheme(options.isDark);
+        const tickLen = options.tickLen || 5;
+        const offset = options.offset || 0;
+        const isArrow = options.style === 'arrow';
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) return;
+        const ux = dx / len;
+        const uy = dy / len;
+        const px = -uy;
+        const py = ux;
+
+        const lineX1 = x1 + px * offset;
+        const lineY1 = y1 + py * offset;
+        const lineX2 = x2 + px * offset;
+        const lineY2 = y2 + py * offset;
+
+        ctx.save();
+        ctx.strokeStyle = theme.dim.line;
+        ctx.lineWidth = 1;
+
+        // Witness lines
+        if (Math.abs(offset) > 2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(lineX1 + px * (offset > 0 ? 3 : -3), lineY1 + py * (offset > 0 ? 3 : -3));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(lineX2 + px * (offset > 0 ? 3 : -3), lineY2 + py * (offset > 0 ? 3 : -3));
+            ctx.stroke();
+        }
+
+        // Main dimension line
+        ctx.beginPath();
+        ctx.moveTo(lineX1, lineY1);
+        ctx.lineTo(lineX2, lineY2);
+
+        // Ticks or Arrows
+        if (isArrow) {
+            const arrLen = 7;
+            const arrW = 3;
+            ctx.moveTo(lineX1, lineY1);
+            ctx.lineTo(lineX1 + ux * arrLen + px * arrW, lineY1 + uy * arrLen + py * arrW);
+            ctx.moveTo(lineX1, lineY1);
+            ctx.lineTo(lineX1 + ux * arrLen - px * arrW, lineY1 + uy * arrLen - py * arrW);
+            ctx.moveTo(lineX2, lineY2);
+            ctx.lineTo(lineX2 - ux * arrLen + px * arrW, lineY2 - uy * arrLen + py * arrW);
+            ctx.moveTo(lineX2, lineY2);
+            ctx.lineTo(lineX2 - ux * arrLen - px * arrW, lineY2 - uy * arrLen - py * arrW);
+        } else {
+            // Standard 45-deg ticks
+            ctx.moveTo(lineX1 - (ux + px) * tickLen, lineY1 - (uy + py) * tickLen);
+            ctx.lineTo(lineX1 + (ux + px) * tickLen, lineY1 + (uy + py) * tickLen);
+            ctx.moveTo(lineX2 - (ux + px) * tickLen, lineY2 - (uy + py) * tickLen);
+            ctx.lineTo(lineX2 + (ux + px) * tickLen, lineY2 + (uy + py) * tickLen);
+        }
+        ctx.stroke();
+
+        // Text Pill Knockout Badge
+        if (text) {
+            const midX = (lineX1 + lineX2) / 2;
+            const midY = (lineY1 + lineY2) / 2;
+
+            ctx.font = options.font || "bold 11px 'Inter', sans-serif";
+            const metrics = ctx.measureText(text);
+            const padX = 6;
+            const bW = metrics.width + padX * 2;
+            const bH = 18;
+
+            let angle = Math.atan2(dy, dx);
+            if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+                angle += Math.PI;
+            }
+
+            ctx.translate(midX, midY);
+            ctx.rotate(angle);
+
+            // Knockout badge background
+            ctx.fillStyle = theme.dim.badgeBg;
+            ctx.strokeStyle = theme.dim.badgeBorder;
+            ctx.lineWidth = 1;
+            if (ctx.roundRect) {
+                ctx.beginPath();
+                ctx.roundRect(-bW / 2, -bH / 2, bW, bH, 4);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                ctx.fillRect(-bW / 2, -bH / 2, bW, bH);
+                ctx.strokeRect(-bW / 2, -bH / 2, bW, bH);
+            }
+
+            // Text
+            ctx.fillStyle = theme.dim.text;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 0, 0);
+        }
+        ctx.restore();
+    },
+
+    /**
+     * Draws high-contrast rebar circle with core fill, stroke, and specular shine dot
+     */
+    drawRebar(ctx, cx, cy, radius, options = {}) {
+        const theme = this.getTheme(options.isDark);
+        const fill = options.fill || theme.rebar.fill;
+        const stroke = options.stroke || theme.rebar.stroke;
+        
+        // When drawing inside a transformed/scaled context, options.scale provides currentScale (px/unit)
+        const scale = options.scale || 1.0;
+        const minPx = options.minPixels !== undefined ? options.minPixels : 1.8;
+        const r = options.scale ? Math.max(minPx / scale, radius) : Math.max(3, radius);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = fill;
+        ctx.fill();
+
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = options.lineWidth || (options.scale ? Math.max(0.8 / scale, r * 0.15) : Math.max(1, r * 0.25));
+        ctx.stroke();
+
+        // Specular highlight dot (if sufficiently visible on screen)
+        const screenR = r * scale;
+        if (screenR >= 3.0) {
+            ctx.beginPath();
+            ctx.arc(cx - r * 0.28, cy - r * 0.28, Math.max(0.4 / scale, r * 0.2), 0, Math.PI * 2);
+            ctx.fillStyle = theme.rebar.highlight;
+            ctx.fill();
+        }
+        ctx.restore();
+    },
+
+    /**
+     * Draws stirrup tie (estribo) with rounded corners
+     */
+    drawStirrup(ctx, x, y, w, h, radius = 6, options = {}) {
+        const theme = this.getTheme(options.isDark);
+        ctx.save();
+        ctx.strokeStyle = options.stroke || theme.rebar.stirrup;
+        ctx.lineWidth = options.lineWidth || 2.5;
+        const r = Math.min(radius, w / 6, h / 6);
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(x, y, w, h, r);
+        } else {
+            ctx.rect(x, y, w, h);
+        }
+        ctx.stroke();
+        ctx.restore();
+    },
+
+    /**
+     * Draws neutral axis dashed line with callout badge
+     */
+    drawNeutralAxis(ctx, x1, y1, x2, y2, label = 'L.N.', options = {}) {
+        const theme = this.getTheme(options.isDark);
+        const color = options.color || theme.neutralAxis;
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (label) {
+            ctx.font = "bold 10px 'Inter', sans-serif";
+            const m = ctx.measureText(label);
+            const bW = m.width + 10;
+            const bH = 16;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            if (ctx.roundRect) {
+                ctx.beginPath();
+                ctx.roundRect(x2 + 4, y2 - bH / 2, bW, bH, 3);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                ctx.fillRect(x2 + 4, y2 - bH / 2, bW, bH);
+                ctx.strokeRect(x2 + 4, y2 - bH / 2, bW, bH);
+            }
+            ctx.fillStyle = color;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, x2 + 9, y2);
+        }
+        ctx.restore();
+    },
+
+    /**
+     * Injects or updates a floating CAD HUD on top of canvas container (RS2 / PCalc style)
+     */
+    updateHUD(container, title, items = []) {
+        if (!container) return;
+        let hud = container.querySelector('.eng-cad-hud');
+        if (!hud) {
+            hud = document.createElement('div');
+            hud.className = 'eng-cad-hud';
+            if (getComputedStyle(container).position === 'static') {
+                container.style.position = 'relative';
+            }
+            container.appendChild(hud);
+        }
+
+        let html = `<div class="eng-cad-hud-title"><span>📐</span> ${title}</div>`;
+        items.forEach(it => {
+            html += `
+                <div class="eng-cad-hud-item">
+                    <span class="eng-cad-hud-label">${it.label}:</span>
+                    <span class="eng-cad-hud-val" ${it.color ? `style="color:${it.color}"` : ''}>${it.value}</span>
+                </div>
+            `;
+        });
+        hud.innerHTML = html;
+    }
+};
+
+// =========================================================================
+// UNIVERSAL APP UNDO/REDO MANAGER (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+// Provides seamless cross-application state undo/redo across all engineering apps
+// =========================================================================
+
+const UniversalAppUndoManager = (function () {
+    const MAX_HISTORY = 50;
+    const undoStack = [];
+    const redoStack = [];
+    let isApplyingState = false;
+    let debounceTimer = null;
+    let customHandlers = [];
+
+    function generateElementSelector(el) {
+        if (el.id) return `#${CSS.escape(el.id)}`;
+        if (el.name) {
+            const form = el.form;
+            if (form && form.id) return `#${CSS.escape(form.id)} [name="${CSS.escape(el.name)}"]`;
+            return `[name="${CSS.escape(el.name)}"]`;
+        }
+        const parent = el.parentElement;
+        if (!parent) return el.tagName.toLowerCase();
+        const index = Array.from(parent.children).indexOf(el);
+        return `${generateElementSelector(parent)} > :nth-child(${index + 1})`;
+    }
+
+    function captureFormState() {
+        const elements = document.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]), select, textarea');
+        const state = [];
+        elements.forEach(el => {
+            const selector = generateElementSelector(el);
+            let val;
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                val = el.checked;
+            } else {
+                val = el.value;
+            }
+            state.push({ selector, type: el.type, val });
+        });
+        return state;
+    }
+
+    function captureFullSnapshot(label = '') {
+        const formState = captureFormState();
+        const customState = {};
+        customHandlers.forEach(h => {
+            try {
+                if (typeof h.getState === 'function') {
+                    customState[h.name] = h.getState();
+                }
+            } catch (err) {
+                console.warn('[UndoManager] Error capturing custom state for', h.name, err);
+            }
+        });
+
+        return {
+            timestamp: Date.now(),
+            label: label || 'Edição',
+            form: formState,
+            custom: customState
+        };
+    }
+
+    function statesEqual(a, b) {
+        if (!a || !b) return false;
+        if (a.form.length !== b.form.length) return false;
+        for (let i = 0; i < a.form.length; i++) {
+            if (a.form[i].selector !== b.form[i].selector || a.form[i].val !== b.form[i].val) {
+                return false;
+            }
+        }
+        if (JSON.stringify(a.custom) !== JSON.stringify(b.custom)) {
+            return false;
+        }
+        return true;
+    }
+
+    function showUndoToast(msg, icon = '↩️') {
+        let toast = document.getElementById('app-undo-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'app-undo-toast';
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                background: rgba(15, 23, 42, 0.92);
+                color: #ffffff;
+                padding: 8px 14px;
+                border-radius: 8px;
+                box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                font-size: 12px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                z-index: 999999;
+                pointer-events: none;
+                transition: opacity 0.25s ease, transform 0.25s ease;
+                opacity: 0;
+                transform: translateY(10px);
+                border: 1px solid rgba(255,255,255,0.15);
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+        clearTimeout(toast._hideTimer);
+        toast._hideTimer = setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+        }, 1800);
+    }
+
+    function applySnapshot(snapshot) {
+        if (!snapshot) return;
+        isApplyingState = true;
+        try {
+            // Restore form fields
+            if (Array.isArray(snapshot.form)) {
+                snapshot.form.forEach(item => {
+                    try {
+                        const el = document.querySelector(item.selector);
+                        if (el) {
+                            if (item.type === 'checkbox' || item.type === 'radio') {
+                                if (el.checked !== item.val) {
+                                    el.checked = item.val;
+                                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            } else {
+                                if (el.value !== item.val) {
+                                    el.value = item.val;
+                                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // ignore selector lookup errors
+                    }
+                });
+            }
+
+            // Restore custom handlers
+            if (snapshot.custom) {
+                customHandlers.forEach(h => {
+                    try {
+                        if (typeof h.restoreState === 'function' && snapshot.custom[h.name] !== undefined) {
+                            h.restoreState(snapshot.custom[h.name]);
+                        }
+                    } catch (err) {
+                        console.warn('[UndoManager] Error restoring custom state for', h.name, err);
+                    }
+                });
+            }
+        } finally {
+            setTimeout(() => {
+                isApplyingState = false;
+            }, 50);
+        }
+    }
+
+    function recordSnapshot(label = '') {
+        if (isApplyingState) return;
+        const snapshot = captureFullSnapshot(label);
+        if (undoStack.length > 0 && statesEqual(undoStack[undoStack.length - 1], snapshot)) {
+            return;
+        }
+        undoStack.push(snapshot);
+        if (undoStack.length > MAX_HISTORY) {
+            undoStack.shift();
+        }
+        redoStack.length = 0; // Clear redo on fresh action
+    }
+
+    function undo() {
+        if (undoStack.length <= 1) {
+            showUndoToast('Nada para desfazer', 'ℹ️');
+            return false;
+        }
+        const current = undoStack.pop();
+        redoStack.push(current);
+        const prev = undoStack[undoStack.length - 1];
+        applySnapshot(prev);
+        showUndoToast(`Desfazer: ${prev.label || 'Ação anterior'} (Ctrl+Z)`, '↩️');
+        window.dispatchEvent(new CustomEvent('app-undo', { detail: prev }));
+        return true;
+    }
+
+    function redo() {
+        if (redoStack.length === 0) {
+            showUndoToast('Nada para refazer', 'ℹ️');
+            return false;
+        }
+        const next = redoStack.pop();
+        undoStack.push(next);
+        applySnapshot(next);
+        showUndoToast(`Refazer: ${next.label || 'Ação seguinte'} (Ctrl+Y)`, '↪️');
+        window.dispatchEvent(new CustomEvent('app-redo', { detail: next }));
+        return true;
+    }
+
+    function registerCustomHandler(handler) {
+        if (!handler || !handler.name) return;
+        customHandlers = customHandlers.filter(h => h.name !== handler.name);
+        customHandlers.push(handler);
+        // Refresh base snapshot with custom handler state
+        if (undoStack.length > 0) {
+            try {
+                if (typeof handler.getState === 'function') {
+                    undoStack[0].custom[handler.name] = handler.getState();
+                }
+            } catch (e) {}
+        }
+    }
+
+    function init() {
+        // Record initial state
+        setTimeout(() => {
+            if (undoStack.length === 0) {
+                undoStack.push(captureFullSnapshot('Estado Inicial'));
+            }
+        }, 300);
+
+        // Listen to user input changes with debouncing
+        document.addEventListener('input', (e) => {
+            if (isApplyingState) return;
+            const target = e.target;
+            if (!target || !target.matches('input, select, textarea')) return;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                recordSnapshot(`Edição em ${target.name || target.id || 'campo'}`);
+            }, 300);
+        }, true);
+
+        document.addEventListener('change', (e) => {
+            if (isApplyingState) return;
+            const target = e.target;
+            if (!target || !target.matches('input, select, textarea')) return;
+            clearTimeout(debounceTimer);
+            recordSnapshot(`Alteração em ${target.name || target.id || 'campo'}`);
+        }, true);
+
+        // Global Keydown listener for Ctrl+Z and Ctrl+Y / Ctrl+Shift+Z
+        window.addEventListener('keydown', (e) => {
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+            if (!isCtrlOrCmd) return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    redo();
+                } else {
+                    undo();
+                }
+            } else if (key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+        }, false);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    return {
+        recordSnapshot,
+        undo,
+        redo,
+        registerCustomHandler,
+        getHistoryLength: () => undoStack.length,
+        canUndo: () => undoStack.length > 1,
+        canRedo: () => redoStack.length > 0
+    };
+})();
+
+window.AppUndoManager = UniversalAppUndoManager;

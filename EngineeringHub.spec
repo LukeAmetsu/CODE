@@ -9,6 +9,7 @@ a = Analysis(
     datas=[
         ('gui', 'gui'), 
         ('backend', 'backend'), 
+        ('js', 'js'),
         ('aisc-shapes-database-v16.0.xlsx', '.')
     ],
     hiddenimports=['eel', 'pandas', 'openpyxl'],

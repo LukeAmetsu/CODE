@@ -302,25 +302,29 @@ class SteelChecker:
             'bf': safe_float(inputs.get('bf', 0)),
             'tf': safe_float(inputs.get('tf', 0)),
             'tw': safe_float(inputs.get('tw', 0)),
-            'Ag': safe_float(inputs.get('Ag_manual', 0)),
-            'Ix': safe_float(inputs.get('I_manual', 0)),
-            'Sx': safe_float(inputs.get('Sx_manual', 0)),
-            'Zx': safe_float(inputs.get('Zx_manual', 0)),
-            'Iy': safe_float(inputs.get('Iy_manual', 0)),
-            'Sy': safe_float(inputs.get('Sy_manual', 0)),
-            'Zy': safe_float(inputs.get('Zy_manual', 0)),
-            'ry': safe_float(inputs.get('ry_manual', 0)),
-            'rts': safe_float(inputs.get('rts_manual', 0)),
-            'J': safe_float(inputs.get('J_manual', 0)),
-            'Cw': safe_float(inputs.get('Cw_manual', 0)),
+            'Ag': safe_float(inputs.get('Ag_manual', 0)) or safe_float(inputs.get('Ag', 0)),
+            'Ix': safe_float(inputs.get('I_manual', 0)) or safe_float(inputs.get('Ix', 0)),
+            'Sx': safe_float(inputs.get('Sx_manual', 0)) or safe_float(inputs.get('Sx', 0)),
+            'Zx': safe_float(inputs.get('Zx_manual', 0)) or safe_float(inputs.get('Zx', 0)),
+            'Iy': safe_float(inputs.get('Iy_manual', 0)) or safe_float(inputs.get('Iy', 0)),
+            'Sy': safe_float(inputs.get('Sy_manual', 0)) or safe_float(inputs.get('Sy', 0)),
+            'Zy': safe_float(inputs.get('Zy_manual', 0)) or safe_float(inputs.get('Zy', 0)),
+            'rx': safe_float(inputs.get('rx', 0)),
+            'ry': safe_float(inputs.get('ry_manual', 0)) or safe_float(inputs.get('ry', 0)),
+            'rts': safe_float(inputs.get('rts_manual', 0)) or safe_float(inputs.get('rts', 0)),
+            'J': safe_float(inputs.get('J_manual', 0)) or safe_float(inputs.get('J', 0)),
+            'Cw': safe_float(inputs.get('Cw_manual', 0)) or safe_float(inputs.get('Cw', 0)),
             'k_des': safe_float(inputs.get('k_des', 0)) or safe_float(inputs.get('tf', 0)),
         }
         # Derived
         props['h'] = props['d'] - 2*props['k_des']
-        if props['Ag'] > 0 and props['Ix'] > 0:
-             props['rx'] = math.sqrt(props['Ix'] / props['Ag'])
-        else:
-             props['rx'] = 0
+        if props['rx'] == 0:
+            if props['Ag'] > 0 and props['Ix'] > 0:
+                props['rx'] = math.sqrt(props['Ix'] / props['Ag'])
+            elif props['d'] > 0:
+                props['rx'] = 0.42 * props['d']
+        if props['ry'] == 0 and props['bf'] > 0:
+            props['ry'] = 0.25 * props['bf']
              
         # rts recalc if missing for I-shapes
         if (props['rts'] == 0) and props['type'].endswith('Shape'):

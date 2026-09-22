@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise de Liquefação de Solos - Método NCEER / Youd & Idriss</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -44,9 +44,9 @@
     </script>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
         <main class="mt-6">
@@ -67,10 +67,13 @@
                     </p>
                 </div>
 
-                <!-- Reference Preset Action -->
+                <!-- Action Buttons -->
                 <div class="flex flex-wrap items-center gap-3 shrink-0">
                     <button type="button" onclick="loadReferencePreset()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-3.5 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-2" title="Carregar sondagem de referência SPT">
                         <span>📋</span> Carregar Ref. Planilha
+                    </button>
+                    <button type="button" onclick="scrollToExecutiveReport()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3.5 rounded-lg shadow-sm transition-colors text-sm flex items-center gap-2" title="Ver figuras de alta resolução (Perfil com Envelope e Diagrama de Tornado em 300 DPI)">
+                        <span>📊</span> Relatório & Gráficos (300 DPI)
                     </button>
                 </div>
             </div>
@@ -78,7 +81,7 @@
             <!-- Mode Switcher Tabs -->
             <div class="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-2">
                 <button id="tab-btn-profile" type="button" onclick="switchMode('profile')" class="px-5 py-2.5 text-sm font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm flex items-center gap-2">
-                    <span>📊</span> Análise Paramétrica por Perfil (Aba 1)
+                    <span>📊</span> Análise Paramétrica & Sensibilidade (Aba 1)
                 </button>
                 <button id="tab-btn-layers" type="button" onclick="switchMode('layers')" class="px-5 py-2.5 text-sm font-medium rounded-lg transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
                     <span>📑</span> Sondagem SPT por Camadas (Aba 2)
@@ -110,142 +113,309 @@
 
             <!-- MODE 1: PARAMETRIC PROFILE VIEW -->
             <div id="view-profile" class="space-y-8">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <!-- Left: Parameters Form (4 cols) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Coluna 1: Parâmetros Globais do Terreno (4 cols) -->
                     <div class="lg:col-span-4 space-y-6">
-                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                            <h3 class="text-base font-bold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
-                                <span>⚙️</span> Parâmetros Globais do Terreno
-                            </h3>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 h-full flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-base font-bold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
+                                    <span>⚙️</span> Parâmetros Globais do Terreno
+                                </h3>
 
-                            <div class="space-y-4 text-sm">
-                                <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-4 text-sm">
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="eng-label">Nível d'Água NA (m)</label>
+                                            <input type="number" id="prof_na" value="3.5" step="0.1" min="0" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label">γ Solo (kN/m³)</label>
+                                            <input type="number" id="prof_gamma" value="19.0" step="0.5" min="10" class="eng-input">
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label class="block font-medium mb-1">Nível d'Água NA (m)</label>
-                                        <input type="number" id="prof_na" value="3.5" step="0.1" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <label class="eng-label">Teor de Finos FC (%)</label>
+                                        <input type="number" id="prof_fc" value="10.0" step="1" min="0" max="100" class="eng-input">
                                     </div>
+
+                                    <!-- N1(60) Range -->
                                     <div>
-                                        <label class="block font-medium mb-1">γ Solo (kN/m³)</label>
-                                        <input type="number" id="prof_gamma" value="19.0" step="0.5" min="10" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <label class="eng-label">Faixa N1(60) [Mín, Méd, Máx]</label>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <input type="number" id="prof_n1_min" value="27" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mínimo">
+                                            <input type="number" id="prof_n1_med" value="33" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Médio">
+                                            <input type="number" id="prof_n1_max" value="58" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Máximo">
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label class="block font-medium mb-1">Teor de Finos FC (%)</label>
-                                    <input type="number" id="prof_fc" value="10.0" step="1" min="0" max="100" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
-                                </div>
-
-                                <!-- N1(60) Range -->
-                                <div>
-                                    <label class="block font-medium mb-1">Faixa N1(60) [Mín, Méd, Máx]</label>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <input type="number" id="prof_n1_min" value="27" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mínimo">
-                                        <input type="number" id="prof_n1_med" value="33" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Médio">
-                                        <input type="number" id="prof_n1_max" value="58" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Máximo">
-                                    </div>
-                                </div>
-
-                                <!-- Aceleração a0 -->
-                                <div>
-                                    <label class="block font-medium mb-1">Aceleração a0 / a_max (g) [Mín, Máx]</label>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <input type="number" id="prof_a0_min" value="0.55" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Mínimo">
-                                        <input type="number" id="prof_a0_max" value="0.70" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Máximo">
-                                    </div>
-                                </div>
-
-                                <!-- Magnitude Mw -->
-                                <div>
-                                    <label class="block font-medium mb-1">Magnitude Mw [Mín, Méd, Máx]</label>
-                                    <div class="grid grid-cols-3 gap-2">
-                                        <input type="number" id="prof_mw_min" value="6.0" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Mínimo">
-                                        <input type="number" id="prof_mw_med" value="7.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Médio">
-                                        <input type="number" id="prof_mw_max" value="8.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Máximo">
-                                    </div>
-                                </div>
-
-                                <!-- Profundidade máxima -->
-                                <div class="grid grid-cols-2 gap-3">
+                                    <!-- Aceleração a0 -->
                                     <div>
-                                        <label class="block font-medium mb-1">Prof. Máx (m)</label>
-                                        <input type="number" id="prof_max_depth" value="20.0" step="1.0" min="5.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <label class="eng-label">Aceleração a0 / a_max (g) [Mín, Máx]</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <input type="number" id="prof_a0_min" value="0.55" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Mínimo">
+                                            <input type="number" id="prof_a0_max" value="0.70" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Máximo">
+                                        </div>
                                     </div>
+
+                                    <!-- Magnitude Mw -->
                                     <div>
-                                        <label class="block font-medium mb-1">Passo Δz (m)</label>
-                                        <input type="number" id="prof_depth_step" value="0.5" step="0.1" min="0.2" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                        <label class="eng-label">Magnitude Mw [Mín, Méd, Máx]</label>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <input type="number" id="prof_mw_min" value="6.0" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Mínimo">
+                                            <input type="number" id="prof_mw_med" value="7.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Médio">
+                                            <input type="number" id="prof_mw_max" value="8.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Máximo">
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Scenarios Matrix Card -->
-                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                            <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                                📌 Matriz de Cenários e Menor FS
-                            </h3>
-                            <div class="text-xs space-y-2">
-                                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
-                                    <div class="font-bold text-blue-600 dark:text-blue-400 mb-1">Cenário a0 = 0.55g (Mín)</div>
-                                    <div class="flex justify-between py-0.5"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0min-min" class="text-emerald-600">FS 1.223 @ 9m</strong></div>
-                                    <div class="flex justify-between py-0.5"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0min-med" class="text-emerald-600">FS 2.002 @ 9m</strong></div>
-                                    <div class="flex justify-between py-0.5"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0min-max" class="text-emerald-600">FS 3.289 @ 9m</strong></div>
-                                </div>
-
-                                <div class="bg-gray-50 dark:bg-gray-700/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
-                                    <div class="font-bold text-red-600 dark:text-red-400 mb-1">Cenário a0 = 0.70g (Máx)</div>
-                                    <div class="flex justify-between py-0.5"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0max-min" class="text-red-600 font-black">FS 0.961 @ 9m</strong></div>
-                                    <div class="flex justify-between py-0.5"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0max-med" class="text-emerald-600">FS 1.573 @ 9m</strong></div>
-                                    <div class="flex justify-between py-0.5"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0max-max" class="text-emerald-600">FS 2.585 @ 9m</strong></div>
+                                    <!-- Profundidade máxima -->
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="eng-label">Prof. Máx (m)</label>
+                                            <input type="number" id="prof_max_depth" value="20.0" step="1.0" min="5.0" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label">Passo Δz (m)</label>
+                                            <input type="number" id="prof_depth_step" value="0.5" step="0.1" min="0.2" class="eng-input">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right: Charts & Table (8 cols) -->
-                    <div class="lg:col-span-8 space-y-6">
-                        <!-- Chart 1: FS vs Depth -->
-                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
-                            <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                <span>📈</span> Fator de Segurança (FS) vs Profundidade (m)
-                            </h3>
-                            <div class="h-72">
-                                <canvas id="chartFsProfile"></canvas>
+                    <!-- Coluna 2: Gráfico FS vs Profundidade (5 cols) -->
+                    <div class="lg:col-span-5 space-y-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700 h-full flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span>📈</span> Fator de Segurança (FS) vs Profundidade (m)
+                                    </h3>
+                                    <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg text-xs font-semibold">
+                                        <button type="button" id="btn-chart-view-chartjs" onclick="toggleProfileChartMode('chartjs')" class="px-2.5 py-1 rounded-md bg-white dark:bg-gray-800 shadow-xs text-blue-600 dark:text-blue-400 font-bold transition-all">
+                                            Curva Interativa
+                                        </button>
+                                        <button type="button" id="btn-chart-view-envelope" onclick="toggleProfileChartMode('envelope')" class="px-2.5 py-1 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all">
+                                            🛡️ Envelope (300 DPI)
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="container-chartjs" class="h-80">
+                                    <canvas id="chartFsProfile"></canvas>
+                                </div>
+                                <div id="container-envelope" class="hidden flex flex-col items-center justify-center p-2 bg-gray-50 dark:bg-gray-900/40 rounded-lg min-h-[320px]">
+                                    <img id="img-profile-envelope-inline" src="" alt="Perfil com Envelope" class="max-h-80 w-auto object-contain rounded-md shadow-xs">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna 3: Matriz de Cenários e Menor FS (3 cols) -->
+                    <div class="lg:col-span-3 space-y-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700 h-full flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                    <span>📌</span> Matriz de Cenários e Menor FS
+                                </h3>
+                                <div class="flex flex-col gap-3 text-xs">
+                                    <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <div class="font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center justify-between">
+                                            <span id="scen-title-a0min">Cenário a0 = 0.55g (Mín)</span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0min-min" class="text-emerald-600">FS 1.223 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0min-med" class="text-emerald-600">FS 2.002 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0min-max" class="text-emerald-600">FS 3.289 @ 9m</strong></div>
+                                    </div>
+
+                                    <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <div class="font-bold text-red-600 dark:text-red-400 mb-2 flex items-center justify-between">
+                                            <span id="scen-title-a0max">Cenário a0 = 0.70g (Máx)</span>
+                                        </div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0max-min" class="text-red-600 font-black">FS 0.961 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0max-med" class="text-emerald-600">FS 1.573 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0max-max" class="text-emerald-600">FS 2.585 @ 9m</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: EXECUTIVE REPORT & SENSITIVITY ENVELOPES (ABA 1) -->
+                <div id="section-executive-report" class="space-y-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-gray-950 dark:text-white flex items-center gap-2">
+                                <span>🛡️</span> Envelopes de Incerteza & Análise de Sensibilidade
+                            </h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Síntese executiva fundamentada: distinção entre cenário operacional de projeto, verificação ULS não-restritiva e diagramas em 300 DPI.
+                            </p>
+                        </div>
+                        <button type="button" onclick="triggerSensitivityCalculation()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3.5 rounded-lg text-xs flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer" title="Recalcular figuras e tabela executiva">
+                            <span>🔄</span> Atualizar Figuras (300 DPI)
+                        </button>
+                    </div>
+
+                    <!-- KPI Banner Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Razão de Sensibilidade</div>
+                            <div id="tab-stat-ratio" class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">17.8x</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Variação do Solo (N1) governa expressivamente vs Sismo (a0)</div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Impacto Médio do Solo (N1)</div>
+                            <div id="tab-stat-delta-n1" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">ΔFS = 1.508</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Ganho de segurança ao variar N1 mín (27) → máx (58)</div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Impacto Aceleração Sísmica (a0)</div>
+                            <div id="tab-stat-delta-a0" class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">ΔFS = 0.085</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Sensibilidade marginal com a0 mín (0.55g) → máx (0.70g)</div>
+                        </div>
+                    </div>
+
+                    <!-- Methodological Alert Banner -->
+                    <div class="p-4 rounded-xl border border-amber-300 bg-amber-50/90 dark:bg-amber-950/40 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs leading-relaxed flex items-start gap-3 shadow-sm">
+                        <span class="text-2xl shrink-0">💡</span>
+                        <div>
+                            <strong class="font-bold">Fundamentação Metodológica para o Relatório Geotécnico:</strong> A conjunção contínua de <code class="bg-amber-100 dark:bg-amber-900/60 px-1 py-0.5 rounded font-mono font-bold">N1 mínimo</code> ao longo de todos os 20 metros de perfil simultaneamente com a aceleração sísmica máxima é uma hipótese determinística extrema de baixíssima plausibilidade física contínua. Para o evento sísmico de topo (<code class="bg-amber-100 dark:bg-amber-900/60 px-1 py-0.5 rounded font-mono font-bold">a0 máx</code>), a verificação atua em Estado Limite Último (ULS), onde o critério normativo de integridade é <code class="font-bold">FS ≥ 1.0</code> (não restritivo).
+                        </div>
+                    </div>
+
+                    <!-- High-Res Charts Side by Side -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <!-- Chart 1: Profile with Envelope (7 cols) -->
+                        <div class="lg:col-span-7 bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                        <span>🛡️</span> 1. Perfil com Envelope de Incerteza Paramétrica
+                                    </h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Curva de projeto (azul), sismo extremo (vermelho) e faixa sombreada de sensibilidade.
+                                    </p>
+                                </div>
+                                <a id="tab-btn-download-profile" download="perfil_seguranca_envelope_300dpi.png" href="#" class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/40 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 transition-colors shrink-0">
+                                    📥 Baixar PNG 300 DPI
+                                </a>
+                            </div>
+                            <div class="w-full bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[480px] relative">
+                                <div id="tab-loader-profile" class="text-sm text-gray-400 animate-pulse font-medium">Gerando perfil em alta resolução (300 DPI)...</div>
+                                <img id="tab-img-profile-envelope" src="" alt="Perfil Geotécnico com Envelope" class="max-h-[520px] w-auto object-contain rounded-lg shadow-sm">
                             </div>
                         </div>
 
-                        <!-- Parametric Profile Table -->
-                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <span>📑</span> Matriz de Resultados ao Longo da Profundidade
-                                </h3>
-                                <button type="button" onclick="exportProfileCSV()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 transition-colors">
-                                    <span>📥</span> Exportar CSV
-                                </button>
+                        <!-- Chart 2: Tornado Sensitivity (5 cols) -->
+                        <div class="lg:col-span-5 bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                        <span>🌪️</span> 2. Diagrama de Tornado (Sensibilidade)
+                                    </h3>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Impacto médio provocado no FS por variável analisada.
+                                    </p>
+                                </div>
+                                <a id="tab-btn-download-tornado" download="tornado_sensibilidade_300dpi.png" href="#" class="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/40 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold py-1.5 px-3 rounded-lg text-xs flex items-center gap-1 transition-colors shrink-0">
+                                    📥 Baixar PNG 300 DPI
+                                </a>
                             </div>
-                            <div class="overflow-x-auto max-h-[360px] border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <table class="min-w-full text-xs text-left">
-                                    <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 sticky top-0 uppercase font-semibold">
-                                        <tr>
-                                            <th class="py-2.5 px-3">Prof (m)</th>
-                                            <th class="py-2.5 px-3">σv (kPa)</th>
-                                            <th class="py-2.5 px-3">u (kPa)</th>
-                                            <th class="py-2.5 px-3">σv' (kPa)</th>
-                                            <th class="py-2.5 px-3">rd</th>
-                                            <th class="py-2.5 px-3">CSR (Mín)</th>
-                                            <th class="py-2.5 px-3">CSR (Máx)</th>
-                                            <th class="py-2.5 px-3">FS-a0mín-mín</th>
-                                            <th class="py-2.5 px-3">FS-a0mín-méd</th>
-                                            <th class="py-2.5 px-3">FS-a0máx-mín</th>
-                                            <th class="py-2.5 px-3">FS-a0máx-méd</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="profile-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
-                                        <!-- Dynamically filled -->
-                                    </tbody>
-                                </table>
+                            <div class="w-full bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[300px] relative mb-4">
+                                <div id="tab-loader-tornado" class="text-sm text-gray-400 animate-pulse font-medium">Gerando tornado em 300 DPI...</div>
+                                <img id="tab-img-tornado-sensitivity" src="" alt="Diagrama de Tornado" class="max-h-[320px] w-auto object-contain rounded-lg shadow-sm">
+                            </div>
+
+                            <!-- Technical Note Text Box -->
+                            <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2 mt-auto">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300">Minuta da Nota Técnica (Relatório)</span>
+                                    <button type="button" onclick="copyTechnicalNoteTextTab()" id="tab-btn-copy-tech-note" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-semibold py-1 px-2.5 rounded-md flex items-center gap-1 transition-colors shadow-sm cursor-pointer">
+                                        <span>📋</span> Copiar Texto
+                                    </button>
+                                </div>
+                                <textarea id="tab-txt-technical-note" readonly rows="7" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-xs font-mono text-gray-700 dark:text-gray-300 focus:outline-none"></textarea>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Executive Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span>📊</span> Tabela Executiva de Desempenho e Critérios Normativos
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    Classificação fundamentada distinguindo cenários operacionais de projeto vs. limite de colapso extremo ULS.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
+                            <table class="min-w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 uppercase font-semibold">
+                                    <tr>
+                                        <th class="py-3 px-4">Categoria</th>
+                                        <th class="py-3 px-4">Parâmetros</th>
+                                        <th class="py-3 px-4">Finalidade Técnica</th>
+                                        <th class="py-3 px-4 text-center">Menor FS</th>
+                                        <th class="py-3 px-4 text-center">Status</th>
+                                        <th class="py-3 px-4">Justificativa de Engenharia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tab-executive-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION: DETAILED DEPTH RESULTS MATRIX (ABA 1) -->
+                <div id="section-profile-matrix" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>📑</span> Matriz de Resultados ao Longo da Profundidade
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                Tensões geoestáticas, razão cíclica CSR e fatores de segurança para todas as combinações de aceleração e índice SPT.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-export-xls" onclick="exportProfileXLS()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer" title="Exportar planilha Excel (.xlsx) com números formatados com vírgula decimal (Brasil/PT) sem perda de precisão">
+                                <span>📊</span> Exportar Excel (.xlsx)
+                            </button>
+                            <button type="button" onclick="exportProfileCSV()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 px-3.5 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer" title="Exportar arquivo CSV com separador ';' e decimais com vírgula ','">
+                                <span>📥</span> Exportar CSV (BR)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-[460px] border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <table class="min-w-full text-xs text-left">
+                            <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 sticky top-0 uppercase font-semibold">
+                                <tr>
+                                    <th class="py-2.5 px-3">Prof (m)</th>
+                                    <th class="py-2.5 px-3">σv (kPa)</th>
+                                    <th class="py-2.5 px-3">u (kPa)</th>
+                                    <th class="py-2.5 px-3">σv' (kPa)</th>
+                                    <th class="py-2.5 px-3">rd</th>
+                                    <th class="py-2.5 px-3">CSR (a0 mín)</th>
+                                    <th class="py-2.5 px-3">CSR (a0 máx)</th>
+                                    <th class="py-2.5 px-3">FS-a0mín-mín</th>
+                                    <th class="py-2.5 px-3">FS-a0mín-méd</th>
+                                    <th class="py-2.5 px-3">FS-a0mín-máx</th>
+                                    <th class="py-2.5 px-3 font-bold text-red-600 dark:text-red-400">FS-a0máx-mín</th>
+                                    <th class="py-2.5 px-3">FS-a0máx-méd</th>
+                                    <th class="py-2.5 px-3">FS-a0máx-máx</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profile-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Dynamically filled -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -261,23 +431,23 @@
                             </h3>
                             <div class="space-y-4 text-sm">
                                 <div>
-                                    <label class="block font-medium mb-1">Aceleração a_max (g)</label>
+                                    <label class="eng-label">Aceleração a_max (g)</label>
                                     <input type="number" id="layer_def_amax" value="0.55" step="0.05" min="0.05" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-amber-600">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Magnitude Mw</label>
+                                    <label class="eng-label">Magnitude Mw</label>
                                     <input type="number" id="layer_def_mw" value="7.5" step="0.1" min="5.0" max="9.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-blue-600">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">NA Padrão (m)</label>
-                                    <input type="number" id="layer_def_na" value="3.5" step="0.1" min="0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">NA Padrão (m)</label>
+                                    <input type="number" id="layer_def_na" value="3.5" step="0.1" min="0" class="eng-input">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">γ Padrão (kN/m³)</label>
-                                    <input type="number" id="layer_def_gamma" value="19.0" step="0.5" min="10" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">γ Padrão (kN/m³)</label>
+                                    <input type="number" id="layer_def_gamma" value="19.0" step="0.5" min="10" class="eng-input">
                                 </div>
                                 <div class="col-span-2">
-                                    <label class="block font-medium mb-1">Formulação de Verificação</label>
+                                    <label class="eng-label">Formulação de Verificação</label>
                                     <select id="layer_formulation" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-xs text-blue-700 dark:text-blue-300">
                                         <option value="nceer" selected>NCEER / Youd & Idriss (Canônico: Kσ na Resistência)</option>
                                         <option value="spreadsheet">Planilha LZC-3 (Legado: Kσ no denom. do CSR)</option>
@@ -369,6 +539,110 @@
         </main>
 
         <div id="footer-placeholder"></div>
+    </div>
+
+    <!-- EXECUTIVE REPORT & SENSITIVITY MODAL -->
+    <div id="modal-executive-report" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden my-auto animate-fade-in">
+            <!-- Header -->
+            <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50/80 dark:bg-gray-900/50">
+                <div>
+                    <h2 class="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span>📋</span> Relatório Executivo e Envelopes de Sensibilidade
+                    </h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Apresentação metodológica: distinção entre cenários de projeto, verificação ULS não-restritiva e envelopes de incerteza.
+                    </p>
+                </div>
+                <button type="button" onclick="closeExecutiveReportModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-lg text-lg">
+                    ✕
+                </button>
+            </div>
+            
+            <!-- Content -->
+            <div class="p-6 overflow-y-auto space-y-6 text-sm">
+                <!-- Methodological Alert Banner -->
+                <div class="p-4 rounded-xl border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-xs leading-relaxed flex items-start gap-3">
+                    <span class="text-xl shrink-0">💡</span>
+                    <div>
+                        <strong>Racional de Engenharia:</strong> A conjunção contínua de <code class="bg-amber-100 dark:bg-amber-900/60 px-1 py-0.5 rounded font-mono">N1 mínimo</code> ao longo de 20 metros concomitante à aceleração sísmica máxima é uma hipótese hipotética extrema sem plausibilidade física contínua. Para o evento extremo (<code class="bg-amber-100 dark:bg-amber-900/60 px-1 py-0.5 rounded font-mono">a0 máx</code>), a verificação atua em Estado Limite Último (ULS), onde o critério normativo de integridade é <code class="font-bold">FS ≥ 1.0</code> (não restritivo).
+                    </div>
+                </div>
+
+                <!-- Two Plots Display -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Plot 1: Profile with Envelope -->
+                    <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                        <div class="w-full flex items-center justify-between mb-2">
+                            <span class="font-bold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300">1. Perfil com Envelope de Incerteza</span>
+                            <a id="btn-download-profile" download="perfil_seguranca_envelope_300dpi.png" href="#" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1">
+                                📥 Baixar PNG 300 DPI
+                            </a>
+                        </div>
+                        <div class="w-full bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[340px]">
+                            <div id="loader-profile" class="text-xs text-gray-400 animate-pulse hidden">Gerando gráfico 300 DPI...</div>
+                            <img id="img-profile-envelope" src="" alt="Perfil Geotécnico com Envelope" class="max-h-[380px] w-auto object-contain rounded">
+                        </div>
+                    </div>
+
+                    <!-- Plot 2: Tornado Sensitivity -->
+                    <div class="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
+                        <div class="w-full flex items-center justify-between mb-2">
+                            <span class="font-bold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300">2. Diagrama de Tornado (Sensibilidade)</span>
+                            <a id="btn-download-tornado" download="tornado_sensibilidade_300dpi.png" href="#" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1">
+                                📥 Baixar PNG 300 DPI
+                            </a>
+                        </div>
+                        <div class="w-full bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700 flex items-center justify-center min-h-[340px]">
+                            <div id="loader-tornado" class="text-xs text-gray-400 animate-pulse hidden">Gerando gráfico 300 DPI...</div>
+                            <img id="img-tornado-sensitivity" src="" alt="Diagrama de Tornado" class="max-h-[380px] w-auto object-contain rounded">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Executive Table -->
+                <div>
+                    <h3 class="font-bold text-sm text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                        <span>📊</span> Tabela Executiva de Desempenho e Critérios
+                    </h3>
+                    <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
+                        <table class="min-w-full text-xs text-left">
+                            <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 uppercase font-semibold">
+                                <tr>
+                                    <th class="py-2.5 px-3">Categoria</th>
+                                    <th class="py-2.5 px-3">Parâmetros</th>
+                                    <th class="py-2.5 px-3">Finalidade Técnica</th>
+                                    <th class="py-2.5 px-3 text-center">Menor FS</th>
+                                    <th class="py-2.5 px-3 text-center">Status</th>
+                                    <th class="py-2.5 px-3">Justificativa de Projeto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="executive-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Filled via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Technical Note Text Box -->
+                <div class="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300">Minuta da Nota Técnica (Pronta para Relatório)</span>
+                        <button type="button" onclick="copyTechnicalNoteText()" id="btn-copy-tech-note" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-semibold py-1 px-2.5 rounded-md flex items-center gap-1 transition-colors">
+                            <span>📋</span> Copiar Texto
+                        </button>
+                    </div>
+                    <textarea id="txt-technical-note" readonly rows="6" class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-xs font-mono text-gray-700 dark:text-gray-300 focus:outline-none"></textarea>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/50 flex justify-end gap-3">
+                <button type="button" onclick="closeExecutiveReportModal()" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg text-xs transition-colors">
+                    Fechar
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 

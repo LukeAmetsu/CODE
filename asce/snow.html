@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASCE Snow Load Calculator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -26,10 +26,38 @@
     <script src="../js/validation-rules.js" defer></script>
 </head>
 
-<body>
+<body class="min-h-screen flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
+
+                <!-- Executive Header Section -->
+        <div class="px-5 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 rounded-xl shadow-xs">
+            <div>
+                <div class="flex items-center gap-2 mb-0.5">
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                        ASCE 7-16 & ASCE 7-22
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                        Balanced, Unbalanced & Drift Snow
+                    </span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>❄️</span> Cargas de Neve (Snow Loads)
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="document.getElementById('save-snow-inputs-btn')?.click()" class="eng-btn-save">
+                    <span>💾</span> Salvar
+                </button>
+                <button type="button" onclick="document.getElementById('load-snow-inputs-btn')?.click()" class="eng-btn-open">
+                    <span>📂</span> Abrir
+                </button>
+                <button type="button" onclick="document.getElementById('run-snow-calculation-btn')?.click()" class="eng-btn-primary">
+                    <span>⚡</span> Calcular Neve
+                </button>
+            </div>
+        </div>
 
         <main id="snow-calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -64,7 +92,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="snow_surface_roughness_category"
-                                    class="block text-sm font-medium mb-1">Surface Roughness</label>
+                                    class="eng-label">Surface Roughness</label>
                                 <select id="snow_surface_roughness_category">
                                     <option value="B">B</option>
                                     <option value="C" selected>C</option>
@@ -75,7 +103,7 @@
                             </div>
                             <div>
                                 <label for="snow_exposure_condition"
-                                    class="block text-sm font-medium mb-1">Exposure</label>
+                                    class="eng-label">Exposure</label>
                                 <select id="snow_exposure_condition">
                                     <option>Fully Exposed</option>
                                     <option selected>Partially Exposed</option>
@@ -83,7 +111,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_thermal_condition" class="block text-sm font-medium mb-1">Thermal
+                                <label for="snow_thermal_condition" class="eng-label">Thermal
                                     Condition (Ct)</label>
                                 <select id="snow_thermal_condition">
                                     <option>Heated Structure</option>
@@ -91,7 +119,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_roof_type" class="block text-sm font-medium mb-1">Roof Type</label>
+                                <label for="snow_roof_type" class="eng-label">Roof Type</label>
                                 <select id="snow_roof_type">
                                     <option value="gable_hip" selected>Gable/Hip</option>
                                     <option value="monoslope">Monoslope</option>
@@ -99,12 +127,12 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_roof_slope_degrees" class="block text-sm font-medium mb-1">Roof Slope
+                                <label for="snow_roof_slope_degrees" class="eng-label">Roof Slope
                                     (°)</label>
                                 <input type="number" id="snow_roof_slope_degrees" value="10" min="0" max="90">
                             </div>
                             <div>
-                                <label for="snow_is_roof_slippery" class="block text-sm font-medium mb-1">Slippery
+                                <label for="snow_is_roof_slippery" class="eng-label">Slippery
                                     Roof?</label>
                                 <select id="snow_is_roof_slippery" data-ui-toggle-controller
                                     data-ui-toggle-target="#sliding-snow-inputs" data-ui-toggle-condition-value="Yes">
@@ -121,7 +149,7 @@
                         <h2>General Parameters</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="snow_asce_standard" class="block text-sm font-medium mb-1">ASCE
+                                <label for="snow_asce_standard" class="eng-label">ASCE
                                     Standard</label>
                                 <select id="snow_asce_standard">
                                     <option value="ASCE 7-16" selected>ASCE 7-16</option>
@@ -129,14 +157,14 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_unit_system" class="block text-sm font-medium mb-1">Unit System</label>
+                                <label for="snow_unit_system" class="eng-label">Unit System</label>
                                 <select id="snow_unit_system">
                                     <option value="imperial" selected>Imperial (psf, ft)</option>
                                     <option value="metric">Metric (kPa, m)</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_risk_category" class="block text-sm font-medium mb-1">Risk
+                                <label for="snow_risk_category" class="eng-label">Risk
                                     Category</label>
                                 <select id="snow_risk_category">
                                     <option value="I">I</option>
@@ -146,7 +174,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_design_method" class="block text-sm font-medium mb-1">Design
+                                <label for="snow_design_method" class="eng-label">Design
                                     Method</label>
                                 <select id="snow_design_method">
                                     <option value="ASD" selected>ASD</option>
@@ -159,7 +187,7 @@
                         <h2>Additional Load Cases</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="snow_calculate_unbalanced" class="block text-sm font-medium mb-1">Calculate
+                                <label for="snow_calculate_unbalanced" class="eng-label">Calculate
                                     Unbalanced Load?</label>
                                 <select id="snow_calculate_unbalanced">
                                     <option value="Yes">Yes</option>
@@ -167,7 +195,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_calculate_drift" class="block text-sm font-medium mb-1">Calculate Drift
+                                <label for="snow_calculate_drift" class="eng-label">Calculate Drift
                                     Load?</label>
                                 <select id="snow_calculate_drift">
                                     <option value="Yes">Yes</option>
@@ -175,7 +203,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_calculate_sliding" class="block text-sm font-medium mb-1">Calculate
+                                <label for="snow_calculate_sliding" class="eng-label">Calculate
                                     Sliding Snow?</label>
                                 <select id="snow_calculate_sliding">
                                     <option value="Yes">Yes</option>
@@ -192,7 +220,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="snow_jurisdiction"
-                                    class="block text-sm font-medium mb-1">Jurisdiction</label>
+                                    class="eng-label">Jurisdiction</label>
                                 <select id="snow_jurisdiction">
                                     <option value="ASCE 7" selected>ASCE 7</option>
                                     <option value="NYCBC 2022">NYCBC 2022</option>
@@ -200,11 +228,11 @@
                             </div>
                             <div>
                                 <label for="snow_nycbc_minimum_roof_snow_load"
-                                    class="block text-sm font-medium mb-1">NYCBC Min. Load (psf)</label>
+                                    class="eng-label">NYCBC Min. Load (psf)</label>
                                 <input type="number" id="snow_nycbc_minimum_roof_snow_load" value="20">
                             </div>
                             <div>
-                                <label for="snow_ground_snow_load" class="block text-sm font-medium mb-1">Ground Snow
+                                <label for="snow_ground_snow_load" class="eng-label">Ground Snow
                                     Load (pg)</label>
                                 <input type="number" id="snow_ground_snow_load" value="25" min="0">
                             </div>
@@ -215,34 +243,34 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="snow_eave_to_ridge_distance_W"
-                                    class="block text-sm font-medium mb-1">Eave-to-Ridge (W)</label>
+                                    class="eng-label">Eave-to-Ridge (W)</label>
                                 <input type="number" id="snow_eave_to_ridge_distance_W" value="25">
                             </div>
                             <div>
                                 <label for="snow_is_simply_supported_prismatic"
-                                    class="block text-sm font-medium mb-1">Simply Supported?</label>
+                                    class="eng-label">Simply Supported?</label>
                                 <select id="snow_is_simply_supported_prismatic">
                                     <option value="Yes">Yes</option>
                                     <option value="No" selected>No</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="snow_winter_wind_parameter_W2" class="block text-sm font-medium mb-1">Winter
+                                <label for="snow_winter_wind_parameter_W2" class="eng-label">Winter
                                     Wind (W₂)</label>
                                 <input type="number" id="snow_winter_wind_parameter_W2" value="0.55">
                             </div>
                             <div>
-                                <label for="snow_upper_roof_length_lu" class="block text-sm font-medium mb-1">Upper Roof
+                                <label for="snow_upper_roof_length_lu" class="eng-label">Upper Roof
                                     L (lu)</label>
                                 <input type="number" id="snow_upper_roof_length_lu" value="30">
                             </div>
                             <div>
-                                <label for="snow_height_difference_hc" class="block text-sm font-medium mb-1">Height
+                                <label for="snow_height_difference_hc" class="eng-label">Height
                                     Diff (hc)</label>
                                 <input type="number" id="snow_height_difference_hc" value="10">
                             </div>
                             <div>
-                                <label for="snow_lower_roof_length_ll" class="block text-sm font-medium mb-1">Lower Roof
+                                <label for="snow_lower_roof_length_ll" class="eng-label">Lower Roof
                                     L (ll)</label>
                                 <input type="number" id="snow_lower_roof_length_ll" value="30">
                             </div>
@@ -252,13 +280,13 @@
             </div>
             <div class="lg:col-span-3 mt-8 flex justify-center items-center gap-4 flex-wrap">
                 <button id="load-snow-inputs-btn"
-                    class="bg-gray-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600">Load Inputs</button>
+                    class="eng-btn-open">Load Inputs</button>
                 <button id="save-snow-inputs-btn"
-                    class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Save
+                    class="eng-btn-save">Save
                     Inputs</button>
                 <span id="file-name-display" class="text-sm text-gray-500 dark:text-gray-400"></span>
                 <button id="run-snow-calculation-btn"
-                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">Run
+                    class="eng-btn-primary">Run
                     Snow Load Calculation</button>
                 <input type="file" id="snow-file-input" class="hidden" accept=".txt">
             </div>

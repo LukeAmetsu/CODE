@@ -1,4 +1,3 @@
-import pandas as pd
 import os
 import json
 
@@ -11,30 +10,36 @@ class AISCDatabase:
             cls._instance = super(AISCDatabase, cls).__new__(cls)
         return cls._instance
 
-    def load_database(self, db_path):
+    def ensure_loaded(self):
         if self._shapes is None:
-            # Check for JSON in the same directory as this script (backend/)
-            # This is more robust than relying on db_path arg location
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            json_path = os.path.join(base_dir, 'aisc_shapes.json')
+            if os.path.exists(json_path):
+                self.load_database(json_path)
+            else:
+                db_path = os.path.join(base_dir, '..', 'aisc-shapes-database-v16.0.xlsx')
+                self.load_database(db_path)
+
+    def load_database(self, db_path=None):
+        if self._shapes is None:
             base_dir = os.path.dirname(os.path.abspath(__file__))
             json_path = os.path.join(base_dir, 'aisc_shapes.json')
             
-            print(f"DEBUG: base_dir={base_dir}")
-            print(f"DEBUG: json_path={json_path}")
-            print(f"DEBUG: exists={os.path.exists(json_path)}")
-            
             if os.path.exists(json_path):
-                print(f"Loading database from JSON: {json_path}")
                 try:
                     with open(json_path, 'r', encoding='utf-8') as f:
                         self._shapes = json.load(f)
-                    print(f"Successfully loaded {len(self._shapes)} shapes from JSON.")
                     return
                 except Exception as e:
                     print(f"Failed to load JSON database: {e}. Falling back to Excel if available.")
 
-            if not os.path.exists(db_path):
-                # If neither exists, raise error
-                raise FileNotFoundError(f"Database file not found. Checked: {json_path} and {db_path}")
+            if not db_path or not os.path.exists(db_path):
+                # Check root directory for excel
+                fallback_excel = os.path.join(base_dir, '..', 'aisc-shapes-database-v16.0.xlsx')
+                if os.path.exists(fallback_excel):
+                    db_path = fallback_excel
+                else:
+                    raise FileNotFoundError(f"Database file not found. Checked: {json_path} and {db_path}")
             
             print(f"Loading database from: {db_path}")
             
@@ -42,19 +47,14 @@ class AISCDatabase:
             _, ext = os.path.splitext(db_path)
             
             if ext.lower() in ['.xlsx', '.xls']:
-                # READ EXCEL
+                # READ EXCEL (pandas imported on demand only when reading raw excel)
+                import pandas as pd
                 try:
-                    # Try loading the specific sheet usually found in AISC DB
                     df = pd.read_excel(db_path, sheet_name='Database v16.0')
-                except:
-                    # Fallback to the first sheet if name doesn't match
-                    print("Sheet 'Database v16.0' not found, loading first sheet...")
+                except Exception:
                     df = pd.read_excel(db_path, sheet_name=0)
                 
-                # Fill NaN values with 0 to prevent calculation errors
                 df.fillna(0, inplace=True)
-                
-                # Clean column names (remove extra spaces)
                 df.columns = df.columns.str.strip()
                 
                 self._shapes = {}
@@ -78,13 +78,11 @@ class AISCDatabase:
                 raise ValueError("Unsupported file format. Please use .xlsx")
 
     def get_all_shapes(self):
-         if self._shapes is None:
-             raise Exception("Database not loaded.")
-         return self._shapes
+        self.ensure_loaded()
+        return self._shapes
 
     def get_shapes_by_type(self, shape_type):
-        if self._shapes is None:
-            raise Exception("Database not loaded. Call load_database() first.")
+        self.ensure_loaded()
         
         # Filter shapes where 'Type' matches (e.g., 'W', 'L', etc.)
         # Fix: Check both 'Type' (Excel) and 'type' (JSON)
@@ -110,8 +108,7 @@ class AISCDatabase:
         return {k: v for k, v in self._shapes.items() if v.get('Type') in target_types or v.get('type') in target_types}
 
     def get_shape_details(self, shape_name):
-        if self._shapes is None:
-             raise Exception("Database not loaded. Call load_database() first.")
+        self.ensure_loaded()
         
         # Try exact match first
         if shape_name in self._shapes:

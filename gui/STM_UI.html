@@ -1,30 +1,483 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Strut & Tie Analysis</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babylon.js for 3D Visualization -->
+    <title>Método de Bielas e Tirantes (STM) - NBR 6118 / ACI 318</title>
+    <script src="../js/tailwind.min.js"></script>
+    <!-- Babylon.js para Visualização 3D Interativa -->
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="../styles.min.css">
-    
-    <!-- Shared Utils -->
+
+    <!-- Shared Utils & Eel -->
     <script type="text/javascript" src="/eel.js"></script>
     <script src="../js/i18n.js" defer></script>
     <script src="../js/shared-utils.js" defer></script>
     <script src="../js/template.js" defer></script>
-    <!-- Page Specific Script -->
     <script src="STM_UI.js" defer></script>
+
+    <style>
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-4">
+            <!-- RS2 Executive Header -->
+            <div
+                class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🔺</span>
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">
+                            Método de Bielas e Tirantes (STM)
+                        </h1>
+                        <span
+                            class="bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                            NBR 6118 / ACI 318
+                        </span>
+                        <span
+                            class="hidden sm:inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 text-xs font-semibold px-2 py-0.5 rounded">
+                            Regiões D & Treliça 3D
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Análise de descontinuidades estruturais em concreto armado (vigas-parede, consolos e sapatas)
+                        pelo método da rigidez direta com verificação angular de bielas (&theta; &ge; 25&deg;).
+                    </p>
+                </div>
+
+                <!-- Action Toolbar & Presets -->
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <div
+                        class="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 shadow-sm">
+                        <label for="template-select" class="eng-label">Modelo:</label>
+                        <select id="template-select"
+                            class="bg-transparent text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer">
+                            <optgroup label="Modelos 3D Espaciais">
+                                <option value="pile-cap-3d-3piles" selected>Bloco sobre 3 Estacas 3D (Triangular)
+                                </option>
+                                <option value="pile-cap-3d-4piles">Bloco sobre 4 Estacas 3D (Pirâmide)</option>
+                                <option value="corbel-3d">Consolo Espacial 3D (Ação Biaxial)</option>
+                            </optgroup>
+                            <optgroup label="Modelos 2D Planos">
+                                <option value="deep-beam">Viga Parede 2D (Deep Beam)</option>
+                                <option value="corbel">Consolo Curto 2D (Short Corbel)</option>
+                                <option value="pile-cap">Bloco sobre 2 Estacas 2D</option>
+                            </optgroup>
+                            <option value="custom">Personalizado (Manual)</option>
+                        </select>
+                    </div>
+
+                    <button type="button" id="generate-btn"
+                        class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                        <span>✨</span> Gerar Modelo
+                    </button>
+                    <button type="button" onclick="saveProjectJSON()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                        <span>💾</span> Salvar
+                    </button>
+                    <button type="button" onclick="document.getElementById('stm-file-input').click()"
+                        class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                        <span>📂</span> Abrir
+                    </button>
+                    <input type="file" id="stm-file-input" class="hidden" accept=".json"
+                        onchange="loadProjectJSON(event)">
+                    <button type="button" id="run-stm-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform active:scale-95 flex items-center gap-2">
+                        <span>⚡</span> Resolver Treliça
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main 2-Column Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Inputs (5 Cols) -->
+                <div class="lg:col-span-5 space-y-5">
+                    <!-- Geometria do Elemento de Concreto -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <h2
+                            class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2 mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <span>📦</span> Geometria do Prisma de Concreto
+                        </h2>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label for="geom-x" class="eng-label">
+                                    Vão / Compr. (X)
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="geom-x" value="220" min="20" max="2000" step="5"
+                                        class="eng-input">
+                                    <span class="absolute right-2 top-2 text-xs text-gray-400">cm</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="geom-y" class="eng-label">
+                                    Altura (Y)
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="geom-y" value="110" min="20" max="1000" step="5"
+                                        class="eng-input">
+                                    <span class="absolute right-2 top-2 text-xs text-gray-400">cm</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="geom-z" class="eng-label">
+                                    Espessura / Prof. (Z)
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="geom-z" value="220" min="10" max="1000" step="5"
+                                        class="eng-input">
+                                    <span class="absolute right-2 top-2 text-xs text-gray-400">cm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Nós -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <div
+                            class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <h2
+                                class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                <span>📍</span> Nós da Treliça 3D & Cargas
+                            </h2>
+                            <button type="button" id="add-node-btn"
+                                class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold py-1 px-2 rounded border border-blue-200 dark:border-blue-800">
+                                + Adicionar Nó
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto max-h-64">
+                            <table class="w-full text-xs text-left" id="nodes-table">
+                                <thead
+                                    class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 sticky top-0">
+                                    <tr>
+                                        <th class="p-2 w-8">ID</th>
+                                        <th class="p-2 w-14">X</th>
+                                        <th class="p-2 w-14">Y</th>
+                                        <th class="p-2 w-14">Z</th>
+                                        <th class="p-2 text-center w-24" title="Vínculos por eixo (X, Y, Z)">Apoios (X Y
+                                            Z)</th>
+                                        <th class="p-2 text-center" title="Cargas nodais nos eixos X, Y e Z (kN)">Cargas
+                                            [Fx, Fy, Fz] (kN)</th>
+                                        <th class="p-2 w-8"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-2">Cargas gravitacionais no eixo Y devem ter sinal
+                            negativo (ex: Fy = -600 kN).</p>
+                    </div>
+
+                    <!-- Tabela de Barras (Bielas e Tirantes) -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <div
+                            class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <h2
+                                class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                <span>🔗</span> Barras (Bielas / Tirantes)
+                            </h2>
+                            <button type="button" id="add-member-btn"
+                                class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold py-1 px-2 rounded border border-blue-200 dark:border-blue-800">
+                                + Adicionar Barra
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto max-h-56">
+                            <table class="w-full text-xs text-left" id="members-table">
+                                <thead
+                                    class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 sticky top-0">
+                                    <tr>
+                                        <th class="p-2 w-14">De</th>
+                                        <th class="p-2 w-14">Para</th>
+                                        <th class="p-2">Tipo</th>
+                                        <th class="p-2 text-right">Força (kN)</th>
+                                        <th class="p-2 w-8"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: 3D Visualization & Analytics (7 Cols) -->
+                <div class="lg:col-span-7 space-y-5">
+                    <!-- Status Banner -->
+                    <div id="status-banner"
+                        class="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span id="status-icon" class="text-3xl">✅</span>
+                            <div>
+                                <h3 id="status-title"
+                                    class="text-base font-bold text-emerald-800 dark:text-emerald-300">
+                                    TRELIÇA EM EQUILÍBRIO & CONFORME
+                                </h3>
+                                <p id="status-subtitle" class="text-xs text-emerald-700 dark:text-emerald-400">
+                                    Todos os nós estão em equilíbrio estático e os ângulos entre bielas e tirantes
+                                    respeitam o limite normativo (&theta; &ge; 25&deg;).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="status-badge"
+                                class="inline-block bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                Modelo Válido
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards Grid (4 Cards) -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Biela Máx.
+                                (Compressão)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-comp-val" class="text-lg font-bold text-rose-600 dark:text-rose-400">0.0
+                                    kN</span>
+                                <span class="text-xs font-semibold text-gray-400">Biela</span>
+                            </div>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">Concreto
+                                comprimido</span>
+                        </div>
+
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Tirante Máx.
+                                (Tração)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-tens-val" class="text-lg font-bold text-blue-600 dark:text-blue-400">0.0
+                                    kN</span>
+                                <span class="text-xs font-semibold text-gray-400">Tirante</span>
+                            </div>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">Aço tracionado</span>
+                        </div>
+
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Ângulo Mínimo
+                                (&theta;)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-angle-val"
+                                    class="text-lg font-bold text-gray-900 dark:text-white">--&deg;</span>
+                                <span id="kpi-angle-badge"
+                                    class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">&ge;
+                                    25&deg;</span>
+                            </div>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">NBR 6118 item
+                                22.3</span>
+                        </div>
+
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Trabalho Total
+                                (W)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-energy-val"
+                                    class="text-lg font-bold text-purple-600 dark:text-purple-400">0.0</span>
+                                <span class="text-xs font-semibold text-gray-400">kN·cm</span>
+                            </div>
+                            <span id="kpi-steel-sub" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">Aço
+                                tirantes: 0.0 kg</span>
+                        </div>
+                    </div>
+
+                    <!-- Optimization Panel Card -->
+                    <div
+                        class="bg-gradient-to-r from-purple-900/10 via-blue-900/10 to-indigo-900/10 dark:from-purple-950/40 dark:via-blue-950/40 dark:to-indigo-950/40 rounded-xl border border-purple-200 dark:border-purple-800/60 p-4 shadow-sm">
+                        <div
+                            class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-100 dark:border-purple-900/40 pb-3 mb-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-2xl p-1.5 bg-purple-100 dark:bg-purple-900/60 rounded-lg">🎯</span>
+                                <div>
+                                    <h2
+                                        class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                                        Módulo de Otimização Estrutural (Princípio do Mínimo Trabalho)
+                                    </h2>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        Otimização geométrica de nós conforme Critério de Schlaich e NBR 6118 (&theta;
+                                        &ge; 25&deg;)
+                                    </p>
+                                </div>
+                            </div>
+                            <button type="button" id="optimize-btn"
+                                class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs md:text-sm font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform active:scale-95 flex items-center gap-2 shrink-0">
+                                <span id="optimize-spinner" class="hidden animate-spin text-sm">⏳</span>
+                                <span>⚡ Executar Otimização</span>
+                            </button>
+                        </div>
+
+                        <!-- Optimization Controls -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label for="opt-objective" class="eng-label">
+                                    Critério de Otimização:
+                                </label>
+                                <select id="opt-objective"
+                                    class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:ring-2 focus:ring-purple-500">
+                                    <option value="strain_energy" selected>Mínimo Trabalho de Deformação (Schlaich)
+                                    </option>
+                                    <option value="tie_volume">Mínimo Consumo de Aço nos Tirantes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="opt-min-angle-range" class="eng-label">
+                                    Ângulo Mínimo Normativo (&theta;<sub>min</sub>):
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="opt-min-angle-range" min="20" max="40" value="25" step="1"
+                                        class="w-full accent-purple-600">
+                                    <span id="opt-min-angle-val"
+                                        class="text-xs font-bold text-purple-700 dark:text-purple-300 w-12 text-right">25&deg;</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="opt-cover" class="eng-label">
+                                    Recobrimento / Limite Físico (cm):
+                                </label>
+                                <input type="number" id="opt-cover" value="5" min="2" max="30" step="1"
+                                    class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:ring-2 focus:ring-purple-500">
+                            </div>
+                        </div>
+
+                        <!-- Optimization Results Display (Hidden by default, shown after optimization) -->
+                        <div id="opt-results-box"
+                            class="hidden mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/40 space-y-3">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div
+                                    class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Trabalho Deformação
+                                        (W)</span>
+                                    <div class="flex items-baseline justify-between mt-0.5">
+                                        <span id="opt-energy-reduction"
+                                            class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">-0.0%</span>
+                                        <span id="opt-energy-val" class="text-xs font-mono text-gray-500">0.0
+                                            kN·cm</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Volume de Aço
+                                        (Tirantes)</span>
+                                    <div class="flex items-baseline justify-between mt-0.5">
+                                        <span id="opt-steel-reduction"
+                                            class="text-base font-extrabold text-blue-600 dark:text-blue-400">-0.0%</span>
+                                        <span id="opt-steel-val" class="text-xs font-mono text-gray-500">0.0 cm³</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Ângulo Mínimo
+                                        Final</span>
+                                    <div class="flex items-baseline justify-between mt-0.5">
+                                        <span id="opt-final-angle"
+                                            class="text-base font-extrabold text-gray-900 dark:text-white">--&deg;</span>
+                                        <span id="opt-angle-badge"
+                                            class="text-xs font-semibold text-emerald-600">Conforme</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Compressão
+                                        Máxima</span>
+                                    <div class="flex items-baseline justify-between mt-0.5">
+                                        <span id="opt-final-comp"
+                                            class="text-base font-extrabold text-rose-600 dark:text-rose-400">0.0
+                                            kN</span>
+                                        <span class="text-xs text-gray-400">Biela</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                                <span id="opt-status-msg"
+                                    class="text-xs font-medium text-purple-800 dark:text-purple-300"></span>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="opt-apply-btn"
+                                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow transition-colors flex items-center gap-1.5">
+                                        <span>✅</span> Aplicar Geometria Otimizada
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3D Visualization Canvas (Babylon.js) -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <div
+                            class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <h2
+                                class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                <span>🌐</span> Modelo 3D Interativo (Bielas Vermelhas / Tirantes Azuis)
+                            </h2>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-3">
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2.5 h-2.5 bg-red-600 rounded-full"></span> Biela (Compressão)</span>
+                                <span class="flex items-center gap-1"><span
+                                        class="w-2.5 h-2.5 bg-blue-600 rounded-full"></span> Tirante (Tração)</span>
+                            </span>
+                        </div>
+                        <div
+                            class="relative w-full h-[400px] rounded-lg overflow-hidden border border-gray-200/60 dark:border-gray-700/60 bg-gray-900">
+                            <canvas id="renderCanvas" class="w-full h-full outline-none touch-none"></canvas>
+                            <div
+                                class="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-gray-300 text-[11px] px-2.5 py-1 rounded">
+                                Botão Esq: Rotacionar | Botão Dir: Pan | Scroll: Zoom
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Results Table -->
+                    <div id="stm-results-container"
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="feedback-message" class="text-center mt-2 text-sm h-5"></div>
+        <div id="footer-placeholder"></div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof injectHeader === 'function') {
                 injectHeader({
                     activePage: 'stm',
-                    pageTitle: 'stm',
+                    pageTitle: 'strut_tie',
                     headerPlaceholderId: 'header-placeholder',
                     pathPrefix: '../'
                 });
@@ -37,139 +490,6 @@
             }
         });
     </script>
-</head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
-
-    <div class="container mx-auto p-4 md:p-8 max-w-6xl">
-        <div id="header-placeholder" style="min-height: 110px;"></div>
-
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Left Column: Inputs -->
-            <div class="lg:col-span-1 space-y-6">
-                
-                <!-- Project Settings -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-blue-600">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-xl font-bold">Settings</h2>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Concrete (f'c) [ksi]</label>
-                            <input type="number" id="fc" value="4" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Steel (fy) [ksi]</label>
-                            <input type="number" id="fy" value="60" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-4 border-t dark:border-gray-700">
-                        <label class="block text-sm font-medium mb-2">Member Geometry (in)</label>
-                        <div class="grid grid-cols-3 gap-2">
-                             <div>
-                                <label class="text-xs text-gray-500">Length (X)</label>
-                                <input type="number" id="geom-x" value="120" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500">Height (Y)</label>
-                                <input type="number" id="geom-y" value="24" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
-                            </div>
-                            <div>
-                                <label class="text-xs text-gray-500">Thickness (Z)</label>
-                                <input type="number" id="geom-z" value="12" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 text-sm">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Template Generator -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-purple-600">
-                    <h2 class="text-xl font-bold mb-4">Model Generator</h2>
-                    <div class="flex space-x-2">
-                        <select id="template-select" class="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-                            <option value="custom">Custom Manual Input</option>
-                            <option value="deep-beam">Deep Beam (Single Panel)</option>
-                            <!-- <option value="wall">Wall Panel</option> -->
-                        </select>
-                        <button id="generate-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold">Generate</button>
-                    </div>
-                     <p class="text-xs text-gray-500 mt-2">Generates nodes/members based on geometry and supports.</p>
-                </div>
-
-                <!-- Nodes Input -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-xl font-bold">Nodes</h2>
-                        <button id="add-node-btn" class="text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 px-2 py-1 rounded">+ Add</button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left" id="nodes-table">
-                            <thead class="bg-gray-100 dark:bg-gray-700">
-                                <tr>
-                                    <th class="p-2">ID</th>
-                                    <th class="p-2">X</th>
-                                    <th class="p-2">Y</th>
-                                    <th class="p-2">Z</th>
-                                    <th class="p-2">Fix?</th>
-                                    <th class="p-2">Load(Y)</th>
-                                    <th class="p-2"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dynamic Rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">* Fix: check to pin node (support). Load is vertical (kips).</p>
-                </div>
-
-                <!-- Members Input -->
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-xl font-bold">Members</h2>
-                        <button id="add-member-btn" class="text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 px-2 py-1 rounded">+ Add</button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left" id="members-table">
-                            <thead class="bg-gray-100 dark:bg-gray-700">
-                                <tr>
-                                    <th class="p-2">Start</th>
-                                    <th class="p-2">End</th>
-                                    <th class="p-2">Type</th>
-                                    <th class="p-2">Force</th>
-                                    <th class="p-2"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dynamic Rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <button id="run-stm-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-lg">
-                    Calculate (Python) & Visualize
-                </button>
-                
-                <div id="feedback-message" class="hidden text-center font-medium mt-2"></div>
-            </div>
-
-            <!-- Right Column: Visualization & Results -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- 3D Canvas -->
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md h-[500px] flex flex-col">
-                    <div class="flex justify-between items-center mb-2">
-                         <h3 class="font-bold text-gray-700 dark:text-gray-300">3D Visualization</h3>
-                         <span class="text-xs text-gray-500">Left Click: Rotate | Right Click: Pan | Scroll: Zoom</span>
-                    </div>
-                    <canvas id="renderCanvas" class="w-full flex-grow outline-none touch-none"></canvas>
-                </div>
-
-                <!-- Report Output -->
-                <div id="stm-results-container"></div>
-            </div>
-        </main>
-
-        <div id="footer-placeholder"></div>
-    </div>
 </body>
+
 </html>

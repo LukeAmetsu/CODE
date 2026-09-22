@@ -624,6 +624,15 @@ function validateField(id, isRequired = true) {
         'As_linha': { min: 0, required: true, label: 'Arm. Sup. (As\')' },
         'gamma_c': { min: 0.1, required: true, label: 'Coef. Concreto (γc)' },
         'gamma_s': { min: 0.1, required: true, label: 'Coef. Aço (γs)' }
+    },
+    nbr_concreto: {
+        'bw': { min: 10, max: 300, required: true, label: 'Largura (bw)' },
+        'h': { min: 15, max: 400, required: true, label: 'Altura (h)' },
+        'c': { min: 1.5, max: 10, required: true, label: 'Cobrimento (c)' },
+        'fck': { min: 15, max: 120, required: true, label: 'fck' },
+        'fyk': { min: 250, max: 800, required: true, label: 'fyk' },
+        'num_barras': { min: 1, max: 50, required: true, label: 'Número de Barras' },
+        'Msd': { min: 0, required: true, label: 'Momento Fletor (Msd)' }
     }
 };
 // ===================================================================================

@@ -131,7 +131,14 @@ function drawShed(res) {
     const width = canvas.width;
     const height = canvas.height;
     
-    ctx.clearRect(0, 0, width, height);
+    // 1. Unified RS2 / CAD Slate Background & Grid
+    if (typeof EngCAD !== 'undefined') {
+        EngCAD.drawBackground(ctx, width, height, true);
+        EngCAD.drawGrid(ctx, width, height, { step: 24, majorEvery: 4 });
+    } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, width, height);
+    }
     
     const marginX = 60; // Side margins
     const paddingY = 60; // Top margin for parapet
@@ -287,6 +294,14 @@ function drawShed(res) {
     ctx.translate(cx1 - 42, (gradeY + beamY)/2);
     ctx.rotate(-Math.PI/2);
     ctx.fillStyle = '#6b7280';
-    ctx.fillText(`±${beamH_ft}'`, -10, 0);
     ctx.restore();
+
+    // Floating CAD HUD Overlay (RS2 Standard)
+    if (typeof EngCAD !== 'undefined' && canvas.parentElement) {
+        EngCAD.updateHUD(canvas.parentElement, 'Galpão Metálico (Shed Header)', [
+            { label: 'Vão Máximo L', value: `${spanFt.toFixed(2)} ft`, color: '#38bdf8' },
+            { label: 'Perfil Viga', value: res.geometry?.beam_name || 'W-Section', color: '#f1f5f9' },
+            { label: 'Condição Crítica', value: res.critical || '--', color: '#f59e0b' }
+        ]);
+    }
 }

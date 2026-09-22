@@ -3,14 +3,29 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Register event listeners for live drawing updates
+    // 1. Restore previous session data if available
+    if (typeof loadFormSession === 'function') {
+        const restored = loadFormSession('retaining_wall_session_data', '#retaining-wall-form');
+        if (restored) {
+            toggleKeyOptions();
+            toggleTheoryOptions();
+        }
+    }
+
+    // Register event listeners for live drawing updates and auto-saving
     const formInputs = document.querySelectorAll('#retaining-wall-form input, #retaining-wall-form select');
     formInputs.forEach(input => {
         input.addEventListener('input', () => {
             triggerCalculation();
+            if (typeof saveFormSession === 'function') {
+                saveFormSession('retaining_wall_session_data', '#retaining-wall-form');
+            }
         });
         input.addEventListener('change', () => {
             triggerCalculation();
+            if (typeof saveFormSession === 'function') {
+                saveFormSession('retaining_wall_session_data', '#retaining-wall-form');
+            }
         });
     });
 
@@ -24,6 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
             wallFrictionInput.dataset.customized = 'true';
         });
     }
+
+    // Auto-save on page unload
+    window.addEventListener('beforeunload', () => {
+        if (typeof saveFormSession === 'function') {
+            saveFormSession('retaining_wall_session_data', '#retaining-wall-form');
+        }
+    });
 
     // Initial calculation & render
     triggerCalculation();
@@ -193,7 +215,7 @@ function updateUIResults(res) {
     // Detailed Geotechnical Table
     if (document.getElementById('res-theory-info')) {
         const isCoulomb = (ep.theory || '').toUpperCase() === 'COULOMB';
-        document.getElementById('res-theory-info').innerText = isCoulomb 
+        document.getElementById('res-theory-info').innerText = isCoulomb
             ? `Coulomb (δ = ${ep.wall_friction_deg != null ? ep.wall_friction_deg.toFixed(1) : '20.0'}°)`
             : 'Rankine (sem atrito no dorso, δ = 0°)';
     }
@@ -235,7 +257,7 @@ function updateUIResults(res) {
     const reinf = res.reinforcement;
     if (reinf) {
         if (document.getElementById('res-rebar-materials')) {
-            document.getElementById('res-rebar-materials').innerText = 
+            document.getElementById('res-rebar-materials').innerText =
                 `fck = ${reinf.fck} MPa • CA-${reinf.fyk} • Cobrimentos: ${reinf.haste?.cover || 40}mm / ${reinf.puntera?.cover || 50}mm • γf = ${reinf.gamma_f}`;
         }
 
@@ -322,14 +344,14 @@ function loadReferenceMemoV3() {
     document.getElementById('toe_length').value = 1.00;
     document.getElementById('heel_length').value = 4.25;
     document.getElementById('stem_front_batter').value = 0.0;
-    
+
     document.getElementById('gamma_soil').value = 20.0;
     document.getElementById('phi_soil').value = 30.0;
     document.getElementById('backfill_slope').value = 0.0;
     document.getElementById('q_surcharge').value = 58.0;
     document.getElementById('water_height').value = 0.0;
     document.getElementById('theory').value = 'rankine';
-    
+
     document.getElementById('toe_embedment').value = 1.0;
     document.getElementById('gamma_front').value = 20.0;
     document.getElementById('phi_front').value = 30.0;
@@ -361,9 +383,9 @@ function updateBadge(badgeId, isPass, text) {
 }
 
 /**
- * CAD-Style Dimensioning Helper Function (Linha de Cota)
+ * CAD-Style Dimensioning Helper Function (Linha de Cota Profissional)
  */
-function drawDimension(ctx, p1, p2, offsetPx, label, isVertical = false, color = '#64748b') {
+function drawDimension(ctx, p1, p2, offsetPx, label, isVertical = false, color = '#94a3b8') {
     ctx.save();
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
@@ -384,13 +406,23 @@ function drawDimension(ctx, p1, p2, offsetPx, label, isVertical = false, color =
         cy2 = y2 + offsetPx;
     }
 
-    // 1. Linhas de Chamada (Extension Lines)
+    // 1. Linhas de Chamada (Extension Lines) com folga inicial do objeto
+    const extOver = 4;
     ctx.setLineDash([2, 2]);
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(cx1 + (isVertical ? Math.sign(offsetPx) * 5 : 0), cy1 + (!isVertical ? Math.sign(offsetPx) * 5 : 0));
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(cx2 + (isVertical ? Math.sign(offsetPx) * 5 : 0), cy2 + (!isVertical ? Math.sign(offsetPx) * 5 : 0));
+    if (isVertical) {
+        const dir = Math.sign(offsetPx) || 1;
+        ctx.moveTo(x1 + dir * 2, y1);
+        ctx.lineTo(cx1 + dir * extOver, cy1);
+        ctx.moveTo(x2 + dir * 2, y2);
+        ctx.lineTo(cx2 + dir * extOver, cy2);
+    } else {
+        const dir = Math.sign(offsetPx) || 1;
+        ctx.moveTo(x1, y1 + dir * 2);
+        ctx.lineTo(cx1, cy1 + dir * extOver);
+        ctx.moveTo(x2, y2 + dir * 2);
+        ctx.lineTo(cx2, cy2 + dir * extOver);
+    }
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -400,32 +432,38 @@ function drawDimension(ctx, p1, p2, offsetPx, label, isVertical = false, color =
     ctx.lineTo(cx2, cy2);
     ctx.stroke();
 
-    // 3. Setas ou Ticks nas extremidades
-    const arrowSize = 4;
-    const drawArrow = (x, y, angle) => {
+    // 3. Ticks Arquitetônicos a 45 graus (Norma ABNT/CAD)
+    const tickLen = 4.5;
+    const drawTick = (x, y) => {
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - arrowSize * Math.cos(angle - Math.PI / 6), y - arrowSize * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(x - arrowSize * Math.cos(angle + Math.PI / 6), y - arrowSize * Math.sin(angle + Math.PI / 6));
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(x - tickLen, y + tickLen);
+        ctx.lineTo(x + tickLen, y - tickLen);
+        ctx.stroke();
     };
+    drawTick(cx1, cy1);
+    drawTick(cx2, cy2);
 
-    const angle = Math.atan2(cy2 - cy1, cx2 - cx1);
-    drawArrow(cx1, cy1, angle + Math.PI);
-    drawArrow(cx2, cy2, angle);
-
-    // 4. Texto da Cota com fundo protegido
+    // 4. Texto da Cota em Pill Badge de Alto Contraste
     const midX = (cx1 + cx2) / 2;
     const midY = (cy1 + cy2) / 2;
 
-    ctx.font = '500 11px Inter, sans-serif';
+    ctx.font = 'bold 10px Inter, monospace';
     const textWidth = ctx.measureText(label).width;
+    const padX = 5, padY = 3;
 
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; // pill background shadow
-    ctx.fillRect(midX - textWidth / 2 - 3, midY - 7, textWidth + 6, 14);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+        ctx.roundRect(midX - textWidth / 2 - padX, midY - 7 - padY, textWidth + padX * 2, 14 + padY * 2, 4);
+    } else {
+        ctx.rect(midX - textWidth / 2 - padX, midY - 7 - padY, textWidth + padX * 2, 14 + padY * 2);
+    }
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
 
-    ctx.fillStyle = '#cbd5e1'; // slate-300
+    ctx.fillStyle = '#f8fafc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(label, midX, midY);
@@ -434,7 +472,7 @@ function drawDimension(ctx, p1, p2, offsetPx, label, isVertical = false, color =
 }
 
 /**
- * HTML5 2D Canvas Retaining Wall Drawing Engine
+ * HTML5 2D Canvas Retaining Wall Drawing Engine (Design CAD Premium)
  */
 function drawWallCanvas(inputs, res) {
     const canvas = document.getElementById('wallCanvas');
@@ -450,9 +488,14 @@ function drawWallCanvas(inputs, res) {
     const width = rect.width;
     const height = rect.height;
 
-    // Clear Background
-    ctx.fillStyle = '#0f172a'; // slate-900
-    ctx.fillRect(0, 0, width, height);
+    // Clear Background with rich engineering dark slate & RS2 CAD Grid
+    if (typeof EngCAD !== 'undefined') {
+        EngCAD.drawBackground(ctx, width, height, true);
+        EngCAD.drawGrid(ctx, width, height, { step: 30, majorEvery: 4 });
+    } else {
+        ctx.fillStyle = '#0b1329';
+        ctx.fillRect(0, 0, width, height);
+    }
 
     // Geometry Variables
     const H_stem = inputs.stem_height;
@@ -470,44 +513,88 @@ function drawWallCanvas(inputs, res) {
     const key_w = inputs.has_key ? inputs.key_width : 0.0;
     const key_pos = inputs.has_key ? inputs.key_pos : 0.0;
 
-    // Determine scale & margins to fit wall, dimensions, and stress diagram cleanly
-    const marginX = 85;
-    const marginY = 65;
-    const total_draw_width = B + 2.5; // space for dimensions & force vectors
-    const total_draw_height = H_total + key_d + 1.8;
+    // Dynamic Model Bounding Box (in meters) to center wall cleanly on wide viewports:
+    // Left: dimension lines & front soil (~ -1.6m)
+    // Right: backfill & active pressure vectors (~ B + 1.8m)
+    // Bottom: shear key & contact pressure distribution (~ -(key_d + 1.4m))
+    // Top: surcharge arrows & crest (~ H_total + 1.2m)
+    const modelMinX = -1.6;
+    const modelMaxX = B + 1.8;
+    const modelMinY = -(key_d + 1.4);
+    const modelMaxY = H_total + 1.2;
 
-    const scaleX = (width - 2 * marginX) / total_draw_width;
-    const scaleY = (height - 2 * marginY) / total_draw_height;
-    const scale = Math.min(scaleX, scaleY);
+    const modelW = Math.max(1.0, modelMaxX - modelMinX);
+    const modelH = Math.max(1.0, modelMaxY - modelMinY);
 
-    // Origin (0,0) at toe front bottom of footing
-    const originX = marginX + 0.8 * scale;
-    const originY = height - marginY - (key_d + 1.0) * scale;
+    const padX = 35;
+    const padY = 35;
+    const availW = Math.max(100, width - 2 * padX);
+    const availH = Math.max(100, height - 2 * padY);
+
+    const scale = Math.min(availW / modelW, availH / modelH);
+
+    // Center the model in the canvas
+    const modelMidX = (modelMinX + modelMaxX) / 2;
+    const modelMidY = (modelMinY + modelMaxY) / 2;
+
+    const originX = (width / 2) - modelMidX * scale;
+    const originY = (height / 2) + modelMidY * scale;
 
     const toPxX = (x) => originX + x * scale;
     const toPxY = (y) => originY - y * scale;
     const P = (x, y) => ({ x: toPxX(x), y: toPxY(y) });
 
+    // Geotechnical Ground Surface Hatch Helper
+    const drawGroundSurface = (x1, y1, x2, y2, color = '#64748b') => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const step = 14;
+        const tick = 6;
+        ctx.lineWidth = 1.0;
+        ctx.strokeStyle = color;
+        for (let s = 4; s < len - 4; s += step) {
+            const px = x1 + s * Math.cos(angle);
+            const py = y1 + s * Math.sin(angle);
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + tick * Math.cos(angle + Math.PI / 4), py + tick * Math.sin(angle + Math.PI / 4));
+            ctx.stroke();
+        }
+        ctx.restore();
+    };
+
     // 1. Draw Foundation Soil Below Base
-    ctx.fillStyle = '#1e293b'; // slate-800
+    ctx.fillStyle = '#0f172a';
     ctx.beginPath();
     ctx.rect(0, toPxY(0), width, height - toPxY(0));
     ctx.fill();
 
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(0, toPxY(0));
     ctx.lineTo(width, toPxY(0));
     ctx.stroke();
 
-    // 1.5 Draw Front Soil Layer (Aterro Frontal / Passivo em frente à puntera)
+    // 1.5 Draw Front Soil Layer (Aterro Frontal / Passivo)
     const H_front = inputs.toe_embedment;
     if (H_front > 0) {
-        ctx.fillStyle = 'rgba(20, 184, 166, 0.35)'; // teal-500 vibrant translucent
+        const frontGrad = ctx.createLinearGradient(toPxX(-1.5), toPxY(0), toPxX(L_toe), toPxY(0));
+        frontGrad.addColorStop(0, 'rgba(20, 184, 166, 0.10)');
+        frontGrad.addColorStop(1, 'rgba(20, 184, 166, 0.25)');
+
+        ctx.fillStyle = frontGrad;
         ctx.beginPath();
-        ctx.moveTo(toPxX(-1.2), toPxY(0));
-        ctx.lineTo(toPxX(-1.2), toPxY(t_base + H_front));
+        ctx.moveTo(toPxX(-1.5), toPxY(0));
+        ctx.lineTo(toPxX(-1.5), toPxY(t_base + H_front));
         ctx.lineTo(toPxX(L_toe), toPxY(t_base + H_front));
         ctx.lineTo(toPxX(L_toe), toPxY(t_base));
         ctx.lineTo(toPxX(0), toPxY(t_base));
@@ -515,21 +602,26 @@ function drawWallCanvas(inputs, res) {
         ctx.closePath();
         ctx.fill();
 
-        // Top Surface Line of Front Soil
-        ctx.strokeStyle = '#14b8a6'; // teal-500
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.moveTo(toPxX(-1.2), toPxY(t_base + H_front));
-        ctx.lineTo(toPxX(L_toe), toPxY(t_base + H_front));
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // Top Surface of Front Soil with ground symbols
+        drawGroundSurface(toPxX(-1.5), toPxY(t_base + H_front), toPxX(L_toe), toPxY(t_base + H_front), '#14b8a6');
 
-        // Front Soil Label
-        ctx.fillStyle = '#2dd4bf'; // teal-400
-        ctx.font = 'bold 11px Inter, sans-serif';
+        // Front Soil Label cleanly placed to the left
+        const lblFrontX = toPxX(-0.8);
+        const lblFrontY = toPxY(t_base + H_front) - 12;
+        ctx.font = 'bold 10px Inter, sans-serif';
+        const fw = ctx.measureText(`Aterro Frontal (${H_front.toFixed(2)}m)`).width;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(lblFrontX - fw / 2 - 5, lblFrontY - 8, fw + 10, 16, 4);
+        else ctx.rect(lblFrontX - fw / 2 - 5, lblFrontY - 8, fw + 10, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#14b8a6';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.fillStyle = '#2dd4bf';
         ctx.textAlign = 'center';
-        ctx.fillText(`Aterro Frontal (${H_front.toFixed(2)} m)`, toPxX(-0.6), toPxY(t_base + H_front) - 8);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`Aterro Frontal (${H_front.toFixed(2)}m)`, lblFrontX, lblFrontY);
     }
 
     // 2. Draw Backfill Soil behind wall stem
@@ -537,67 +629,86 @@ function drawWallCanvas(inputs, res) {
     const x_stem_top_front = L_toe + b_front;
     const x_stem_top_back = x_stem_top_front + b_top;
 
-    ctx.fillStyle = 'rgba(180, 83, 9, 0.22)'; // amber-700 translucent
+    const backfillGrad = ctx.createLinearGradient(toPxX(x_stem_back_base), toPxY(t_base), toPxX(B + 1.2), toPxY(t_base));
+    backfillGrad.addColorStop(0, 'rgba(217, 119, 6, 0.22)');
+    backfillGrad.addColorStop(1, 'rgba(180, 83, 9, 0.12)');
+
+    ctx.fillStyle = backfillGrad;
     ctx.beginPath();
     ctx.moveTo(toPxX(x_stem_back_base), toPxY(t_base));
     ctx.lineTo(toPxX(x_stem_top_back), toPxY(t_base + H_stem));
-    ctx.lineTo(toPxX(B), toPxY(t_base + H_stem + H_slope));
+    ctx.lineTo(toPxX(B + 0.8), toPxY(t_base + H_stem + (L_heel + 0.8) * Math.tan(beta_rad)));
+    ctx.lineTo(toPxX(B + 0.8), toPxY(t_base));
     ctx.lineTo(toPxX(B), toPxY(t_base));
     ctx.closePath();
     ctx.fill();
 
-    // Draw Backfill Slope Line
-    ctx.strokeStyle = '#f59e0b'; // amber-500
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
+    // Subtle 45 deg soil hatching in backfill
+    ctx.save();
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.14)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(toPxX(x_stem_top_back), toPxY(t_base + H_stem));
-    ctx.lineTo(toPxX(B), toPxY(t_base + H_stem + H_slope));
-    ctx.lineTo(toPxX(B + 1.0), toPxY(t_base + H_stem + H_slope + 1.0 * Math.tan(beta_rad)));
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.moveTo(toPxX(x_stem_back_base), toPxY(t_base));
+    ctx.lineTo(toPxX(x_stem_top_back), toPxY(t_base + H_stem));
+    ctx.lineTo(toPxX(B + 0.8), toPxY(t_base + H_stem + (L_heel + 0.8) * Math.tan(beta_rad)));
+    ctx.lineTo(toPxX(B + 0.8), toPxY(t_base));
+    ctx.lineTo(toPxX(B), toPxY(t_base));
+    ctx.closePath();
+    ctx.clip();
+    for (let hx = toPxX(x_stem_top_front) - 100; hx < toPxX(B + 1.5); hx += 22) {
+        ctx.beginPath();
+        ctx.moveTo(hx, toPxY(t_base + H_stem + 1.5));
+        ctx.lineTo(hx + 120, toPxY(t_base - 1.0));
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // Draw Backfill Top Ground Surface with CAD symbols
+    drawGroundSurface(
+        toPxX(x_stem_top_back), toPxY(t_base + H_stem),
+        toPxX(B + 0.8), toPxY(t_base + H_stem + (L_heel + 0.8) * Math.tan(beta_rad)),
+        '#f59e0b'
+    );
 
     // 3. Draw Water Table (if any)
     if (inputs.water_height > 0) {
         const H_w = Math.min(inputs.water_height, H_total);
         if (H_w > t_base) {
             const h_water_soil = H_w - t_base;
-            ctx.fillStyle = 'rgba(6, 182, 212, 0.2)'; // cyan translucent
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.2)';
             ctx.fillRect(toPxX(x_stem_back_base), toPxY(H_w), (B - x_stem_back_base) * scale, h_water_soil * scale);
         }
 
-        ctx.strokeStyle = '#06b6d4'; // cyan-500
+        ctx.strokeStyle = '#06b6d4';
         ctx.lineWidth = 2;
+        ctx.setLineDash([5, 4]);
         ctx.beginPath();
         ctx.moveTo(toPxX(x_stem_back_base), toPxY(H_w));
         ctx.lineTo(toPxX(B + 0.8), toPxY(H_w));
         ctx.stroke();
+        ctx.setLineDash([]);
     }
 
-    // 4. Draw Concrete Retaining Wall Polygon (FIXED PERFECT PATH)
-    ctx.fillStyle = '#3b82f6'; // blue-500
-    ctx.strokeStyle = '#60a5fa'; // blue-400
-    ctx.lineWidth = 2.5;
+    // 4. Draw Concrete Retaining Wall Polygon with rich architectural gradient
+    const wallGrad = ctx.createLinearGradient(toPxX(0), toPxY(t_base + H_stem), toPxX(0), toPxY(0));
+    wallGrad.addColorStop(0, '#2563eb');
+    wallGrad.addColorStop(1, '#1d4ed8');
+
+    ctx.fillStyle = wallGrad;
+    ctx.strokeStyle = '#93c5fd';
+    ctx.lineWidth = 2.2;
 
     ctx.beginPath();
-    // (1) Footing Toe Front Bottom
     ctx.moveTo(toPxX(0), toPxY(0));
-    // (2) Footing Toe Front Top
     ctx.lineTo(toPxX(0), toPxY(t_base));
-    // (3) Top of Toe to Base of Stem Front
     ctx.lineTo(toPxX(L_toe), toPxY(t_base));
-    // (4) Stem Front Slope to Stem Top Front
     ctx.lineTo(toPxX(x_stem_top_front), toPxY(t_base + H_stem));
-    // (5) Stem Top Face to Stem Top Back
     ctx.lineTo(toPxX(x_stem_top_back), toPxY(t_base + H_stem));
-    // (6) Stem Back Slope down to Stem Base Back (Top of Heel Slab!)
     ctx.lineTo(toPxX(x_stem_back_base), toPxY(t_base));
-    // (7) Top of Heel Slab to Heel Back Tip
     ctx.lineTo(toPxX(B), toPxY(t_base));
-    // (8) Heel Back Tip down to Footing Bottom
     ctx.lineTo(toPxX(B), toPxY(0));
 
-    // (9) Base Bottom & Shear Key (if present)
+    // Base Shear Key
     if (inputs.has_key && key_d > 0 && key_w > 0) {
         const k_start = key_pos;
         const k_end = key_pos + key_w;
@@ -612,33 +723,59 @@ function drawWallCanvas(inputs, res) {
     ctx.fill();
     ctx.stroke();
 
+    // Subtle construction joint dashed line between stem and footing base
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(toPxX(L_toe), toPxY(t_base));
+    ctx.lineTo(toPxX(x_stem_back_base), toPxY(t_base));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     // 5. Draw Surcharge Arrows (if q > 0)
     if (inputs.q_surcharge > 0) {
-        ctx.strokeStyle = '#ef4444'; // red-500
+        ctx.strokeStyle = '#ef4444';
         ctx.fillStyle = '#ef4444';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1.6;
 
-        const numArrows = 4;
+        const numArrows = 5;
         const arrowStep = L_heel / numArrows;
         for (let i = 0; i <= numArrows; i++) {
             const ax = x_stem_back_base + i * arrowStep;
-            const ay_top = t_base + H_stem + (i * arrowStep) * Math.tan(beta_rad) + 0.5;
-            const ay_bot = ay_top - 0.35;
+            const ay_base = t_base + H_stem + (i * arrowStep) * Math.tan(beta_rad);
+            const ay_top = ay_base + 0.65;
 
             ctx.beginPath();
             ctx.moveTo(toPxX(ax), toPxY(ay_top));
-            ctx.lineTo(toPxX(ax), toPxY(ay_bot));
+            ctx.lineTo(toPxX(ax), toPxY(ay_base + 0.05));
             ctx.stroke();
 
             // Arrow head
             ctx.beginPath();
-            ctx.moveTo(toPxX(ax) - 3, toPxY(ay_bot) + 5);
-            ctx.lineTo(toPxX(ax), toPxY(ay_bot));
-            ctx.lineTo(toPxX(ax) + 3, toPxY(ay_bot) + 5);
+            ctx.moveTo(toPxX(ax) - 3.5, toPxY(ay_base + 0.05) - 6);
+            ctx.lineTo(toPxX(ax), toPxY(ay_base + 0.05));
+            ctx.lineTo(toPxX(ax) + 3.5, toPxY(ay_base + 0.05) - 6);
             ctx.fill();
         }
-        ctx.font = '500 11px Inter, sans-serif';
-        ctx.fillText(`q = ${inputs.q_surcharge} kPa`, toPxX(x_stem_back_base + L_heel / 2), toPxY(t_base + H_stem + H_slope + 0.6));
+
+        // Pill badge for q
+        const qX = toPxX(x_stem_back_base + L_heel / 2);
+        const qY = toPxY(t_base + H_stem + H_slope + 0.85);
+        ctx.font = 'bold 11px Inter, sans-serif';
+        const qw = ctx.measureText(`q = ${inputs.q_surcharge} kPa`).width;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(qX - qw / 2 - 6, qY - 9, qw + 12, 18, 5);
+        else ctx.rect(qX - qw / 2 - 6, qY - 9, qw + 12, 18);
+        ctx.fill();
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#f87171';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`q = ${inputs.q_surcharge} kPa`, qX, qY);
     }
 
     // 6. Draw Active Pressure Resultant Force Arrow (P_a,h & P_a,v)
@@ -648,129 +785,65 @@ function drawWallCanvas(inputs, res) {
         const P_v = ep.total_P_v || 0.0;
         const isCoulomb = (ep.theory || '').toUpperCase() === 'COULOMB' && P_v > 0.01;
 
-        ctx.strokeStyle = '#f43f5e'; // rose-500
+        ctx.strokeStyle = '#f43f5e';
         ctx.fillStyle = '#f43f5e';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.2;
 
         const arrowY = t_base + H_stem / 3.0;
         const arrowX_end = isCoulomb ? x_stem_back_base : B;
-        const arrowX_start = arrowX_end + 1.0;
-        const arrowY_start = isCoulomb ? arrowY + (1.0 * Math.tan(Math.min(0.7, (ep.angle_force_deg || 20) * Math.PI / 180))) : arrowY;
+        const arrowLen = 65;
+        const endPxX = toPxX(arrowX_end);
+        const endPxY = toPxY(arrowY);
+        const startPxX = endPxX + arrowLen;
+        const startPxY = isCoulomb ? endPxY - (arrowLen * Math.tan(Math.min(0.7, (ep.angle_force_deg || 20) * Math.PI / 180))) : endPxY;
 
         ctx.beginPath();
-        ctx.moveTo(toPxX(arrowX_start), toPxY(arrowY_start));
-        ctx.lineTo(toPxX(arrowX_end), toPxY(arrowY));
+        ctx.moveTo(startPxX, startPxY);
+        ctx.lineTo(endPxX, endPxY);
         ctx.stroke();
 
-        // Arrow head directed towards wall
-        const angleArr = Math.atan2(toPxY(arrowY) - toPxY(arrowY_start), toPxX(arrowX_end) - toPxX(arrowX_start));
-        const ahSize = 8;
+        // Arrowhead
+        const angleArr = Math.atan2(endPxY - startPxY, endPxX - startPxX);
+        const ahSize = 9;
         ctx.beginPath();
-        ctx.moveTo(toPxX(arrowX_end), toPxY(arrowY));
-        ctx.lineTo(toPxX(arrowX_end) - ahSize * Math.cos(angleArr - Math.PI / 6), toPxY(arrowY) - ahSize * Math.sin(angleArr - Math.PI / 6));
-        ctx.lineTo(toPxX(arrowX_end) - ahSize * Math.cos(angleArr + Math.PI / 6), toPxY(arrowY) - ahSize * Math.sin(angleArr + Math.PI / 6));
+        ctx.moveTo(endPxX, endPxY);
+        ctx.lineTo(endPxX - ahSize * Math.cos(angleArr - Math.PI / 6), endPxY - ahSize * Math.sin(angleArr - Math.PI / 6));
+        ctx.lineTo(endPxX - ahSize * Math.cos(angleArr + Math.PI / 6), endPxY - ahSize * Math.sin(angleArr + Math.PI / 6));
         ctx.closePath();
         ctx.fill();
 
-        ctx.font = 'bold 11px Inter, sans-serif';
+        // Pill badge for Pa placed neatly to the right
+        const paText = isCoulomb
+            ? `P_a = ${(Math.sqrt(P_h ** 2 + P_v ** 2)).toFixed(1)} kN/m (δ=${ep.wall_friction_deg}°)`
+            : `P_a,h = ${P_h.toFixed(1)} kN/m (Rankine, Ka=${ep.Ka.toFixed(3)})`;
+        ctx.font = 'bold 10px Inter, sans-serif';
+        const paw = ctx.measureText(paText).width;
+        const pax = startPxX + 8;
+        const pay = startPxY;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(pax, pay - 10, paw + 14, 20, 5);
+        else ctx.rect(pax, pay - 10, paw + 14, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#fda4af';
         ctx.textAlign = 'left';
-        if (isCoulomb) {
-            ctx.fillText(`P_a = ${(Math.sqrt(P_h**2 + P_v**2)).toFixed(1)} kN/m`, toPxX(arrowX_start) + 4, toPxY(arrowY_start) - 4);
-            ctx.fillText(`(P_h=${P_h.toFixed(1)}, P_v=${P_v.toFixed(1)}, δ=${ep.wall_friction_deg}°)`, toPxX(arrowX_start) + 4, toPxY(arrowY_start) + 12);
-        } else {
-            ctx.fillText(`P_a,h = ${P_h.toFixed(1)} kN/m (Rankine, Ka=${ep.Ka.toFixed(3)})`, toPxX(arrowX_start) + 4, toPxY(arrowY) + 4);
-        }
-    }
-
-    // 7. Draw Base Contact Soil Pressure Diagram
-    if (res && res.stability) {
-        const q_toe = res.stability.q_toe;
-        const q_heel = res.stability.q_heel;
-        const max_q = res.stability.q_max;
-
-        if (max_q > 0) {
-            const h_scale_q = 0.5 / Math.max(max_q, 100);
-
-            const h_toe_px = q_toe * h_scale_q * scale;
-            const h_heel_px = q_heel * h_scale_q * scale;
-
-            ctx.fillStyle = 'rgba(244, 63, 94, 0.25)'; // rose-500 translucent
-            ctx.strokeStyle = '#f43f5e';
-            ctx.lineWidth = 1.5;
-
-            ctx.beginPath();
-            ctx.moveTo(toPxX(0), toPxY(0));
-            ctx.lineTo(toPxX(0), toPxY(0) + h_toe_px);
-            ctx.lineTo(toPxX(B), toPxY(0) + h_heel_px);
-            ctx.lineTo(toPxX(B), toPxY(0));
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Stress Labels
-            ctx.fillStyle = '#f43f5e';
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${q_toe.toFixed(1)} kPa`, toPxX(0), toPxY(0) + h_toe_px + 14);
-            ctx.fillText(`${q_heel.toFixed(1)} kPa`, toPxX(B), toPxY(0) + h_heel_px + 14);
-        }
-    }
-
-    // ====================================================================
-    // 8. TECHNICAL CAD DIMENSION LINES (COTAS TÉCNICAS REQUISITADAS)
-    // ====================================================================
-
-    // Cota 1: Height of Stem - Vertical line on the left of stem
-    drawDimension(ctx, P(L_toe, t_base), P(x_stem_top_front, t_base + H_stem), -30, `${H_stem.toFixed(2)} m`, true, '#38bdf8');
-
-    // Cota 2: Footing Thickness - Vertical line on the left of toe
-    drawDimension(ctx, P(0, 0), P(0, t_base), -30, `${t_base.toFixed(2)} m`, true, '#94a3b8');
-
-    // Cota 3: Stem Top Width - Horizontal line above stem top
-    drawDimension(ctx, P(x_stem_top_front, t_base + H_stem), P(x_stem_top_back, t_base + H_stem), 22, `${b_top.toFixed(2)} m`, false, '#38bdf8');
-
-    // Cota 4: Stem Base Width - Horizontal line at stem base
-    if (b_bot !== b_top || b_front > 0) {
-        drawDimension(ctx, P(L_toe, t_base), P(x_stem_back_base, t_base), 18, `${b_bot.toFixed(2)} m`, false, '#60a5fa');
-    }
-
-    // Cota 5: Toe Length - Horizontal line under toe
-    if (L_toe > 0.001) {
-        drawDimension(ctx, P(0, 0), P(L_toe, 0), -22, `${L_toe.toFixed(2)} m`, false, '#94a3b8');
-    }
-
-    // Cota 6: Heel Length - Horizontal line under heel
-    if (L_heel > 0.001) {
-        drawDimension(ctx, P(x_stem_back_base, 0), P(B, 0), -22, `${L_heel.toFixed(2)} m`, false, '#94a3b8');
-    }
-
-    // Cota 7: Total Base Width - Main horizontal line below entire footing
-    drawDimension(ctx, P(0, 0), P(B, 0), -48, `${B.toFixed(2)} m`, false, '#f59e0b');
-
-    // Cota 8: Shear Key Dimensions (if key active)
-    if (inputs.has_key && key_d > 0 && key_w > 0) {
-        const k_start = key_pos;
-        const k_end = key_pos + key_w;
-        // Key Depth
-        drawDimension(ctx, P(k_start, 0), P(k_start, -key_d), -20, `${key_d.toFixed(2)} m`, true, '#a855f7');
-        // Key Width
-        drawDimension(ctx, P(k_start, -key_d), P(k_end, -key_d), -18, `${key_w.toFixed(2)} m`, false, '#a855f7');
-    }
-
-    // Cota 9: Front Soil Cover Height (H_front)
-    if (inputs.toe_embedment > 0) {
-        drawDimension(ctx, P(-0.5, 0), P(-0.5, inputs.toe_embedment), -15, `${inputs.toe_embedment.toFixed(2)} m`, true, '#14b8a6');
+        ctx.textBaseline = 'middle';
+        ctx.fillText(paText, pax + 7, pay);
     }
 
     // Passive Earth Force Vector (P_p)
     if (res && res.earth_pressures && res.earth_pressures.use_passive && res.earth_pressures.P_passive_used > 0) {
         const P_p = res.earth_pressures.P_passive_used;
-        ctx.strokeStyle = '#10b981'; // emerald-500
+        ctx.strokeStyle = '#10b981';
         ctx.fillStyle = '#10b981';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2.2;
 
         const arrowY = (inputs.toe_embedment + key_d) / 3.0;
-        const arrowX_start = -0.7;
+        const arrowX_start = -0.8;
         const arrowX_end = 0;
 
         ctx.beginPath();
@@ -785,9 +858,169 @@ function drawWallCanvas(inputs, res) {
         ctx.lineTo(toPxX(arrowX_end) - 8, toPxY(arrowY) + 5);
         ctx.fill();
 
-        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.font = 'bold 10px Inter, sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText(`P_p = ${P_p.toFixed(1)} kN/m`, toPxX(arrowX_start) - 4, toPxY(arrowY) + 4);
+    }
+
+    // ====================================================================
+    // 7. TECHNICAL CAD DIMENSION LINES (ESTRUTURA EM FAIXAS NÃO COLIDENTES)
+    // ====================================================================
+
+    // Cota 1: Altura da Haste (Faixa 1 interna à esquerda: offset -25px)
+    drawDimension(ctx, P(L_toe, t_base), P(L_toe, t_base + H_stem), -25, `${H_stem.toFixed(2)} m`, true, '#38bdf8');
+
+    // Cota 2: Espessura da Sapata (Faixa 1 interna: offset -25px)
+    drawDimension(ctx, P(0, 0), P(0, t_base), -25, `${t_base.toFixed(2)} m`, true, '#e2e8f0');
+
+    // Cota 3: Altura Total da Parede (Faixa 2 intermediária: offset -55px)
+    drawDimension(ctx, P(0, 0), P(0, t_base + H_stem), -55, `H = ${(H_stem + t_base).toFixed(2)} m`, true, '#f59e0b');
+
+    // Cota 4: Altura do Solo Frontal D_f (Faixa 3 externa: no limite do aterro frontal x = -1.2)
+    // Ficando em x = -1.2 com offset -16px, fica a mais de 50px de distância de t_base, eliminando a colisão "0.50 m m"
+    if (inputs.toe_embedment > 0) {
+        drawDimension(ctx, P(-1.2, 0), P(-1.2, inputs.toe_embedment), -16, `D_f = ${inputs.toe_embedment.toFixed(2)} m`, true, '#14b8a6');
+    }
+
+    // Cota 5: Largura do Topo da Haste (Acima do topo: offset negativo em Y de tela)
+    drawDimension(ctx, P(x_stem_top_front, t_base + H_stem), P(x_stem_top_back, t_base + H_stem), -22, `${b_top.toFixed(2)} m`, false, '#38bdf8');
+
+    // ====================================================================
+    // COTAS INFERIORES: Linha 1 (+24px componentes) e Linha 2 (+48px total)
+    // ====================================================================
+    // Linha 1: Puntera, Base Haste e Calcanhar
+    if (L_toe > 0.001) {
+        drawDimension(ctx, P(0, 0), P(L_toe, 0), 24, `${L_toe.toFixed(2)} m`, false, '#e2e8f0');
+    }
+    if (b_bot > 0.001) {
+        drawDimension(ctx, P(L_toe, 0), P(x_stem_back_base, 0), 24, `${b_bot.toFixed(2)} m`, false, '#60a5fa');
+    }
+    if (L_heel > 0.001) {
+        drawDimension(ctx, P(x_stem_back_base, 0), P(B, 0), 24, `${L_heel.toFixed(2)} m`, false, '#e2e8f0');
+    }
+
+    // Linha 2: Largura Total da Base B
+    drawDimension(ctx, P(0, 0), P(B, 0), 48, `B = ${B.toFixed(2)} m`, false, '#f59e0b');
+
+    // Cotas do Dente de Cisalhamento (se ativo)
+    if (inputs.has_key && key_d > 0 && key_w > 0) {
+        const k_start = key_pos;
+        const k_end = key_pos + key_w;
+        drawDimension(ctx, P(k_start, 0), P(k_start, -key_d), -18, `${key_d.toFixed(2)} m`, true, '#c084fc');
+        drawDimension(ctx, P(k_start, -key_d), P(k_end, -key_d), 20, `${key_w.toFixed(2)} m`, false, '#c084fc');
+    }
+
+    // ====================================================================
+    // 8. DIAGRAMA DE PRESSÃO DE CONTATO NO SOLO (BASE ISOLADA LIMPA)
+    // ====================================================================
+    if (res && res.stability) {
+        const q_toe = res.stability.q_toe;
+        const q_heel = res.stability.q_heel;
+        const max_q = res.stability.q_max;
+        const q_adm = inputs.q_adm || 200.0;
+
+        if (max_q > 0) {
+            // Linha de base dedicada posicionada ABAIXO das cotas inferiores
+            const pressBaseY = toPxY(0) + (inputs.has_key ? Math.max(key_d * scale, 0) + 72 : 75);
+
+            // Eixo de referência
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(toPxX(0) - 15, pressBaseY);
+            ctx.lineTo(toPxX(B) + 15, pressBaseY);
+            ctx.stroke();
+
+            // Marcas nos extremos da sapata
+            ctx.beginPath();
+            ctx.moveTo(toPxX(0), pressBaseY - 4);
+            ctx.lineTo(toPxX(0), pressBaseY + 4);
+            ctx.moveTo(toPxX(B), pressBaseY - 4);
+            ctx.lineTo(toPxX(B), pressBaseY + 4);
+            ctx.stroke();
+
+            // Altura do trapézio
+            const maxTrapH = 32;
+            const qRef = Math.max(max_q, q_adm, 1.0);
+            const h_toe_px = (q_toe / qRef) * maxTrapH;
+            const h_heel_px = (q_heel / qRef) * maxTrapH;
+
+            // Preenchimento gradiente elegante
+            const trapGrad = ctx.createLinearGradient(toPxX(0), pressBaseY, toPxX(B), pressBaseY);
+            trapGrad.addColorStop(0, q_toe <= q_adm ? 'rgba(59, 130, 246, 0.35)' : 'rgba(239, 68, 68, 0.40)');
+            trapGrad.addColorStop(1, q_heel >= 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.40)');
+
+            ctx.fillStyle = trapGrad;
+            ctx.beginPath();
+            ctx.moveTo(toPxX(0), pressBaseY);
+            ctx.lineTo(toPxX(0), pressBaseY + h_toe_px);
+            ctx.lineTo(toPxX(B), pressBaseY + h_heel_px);
+            ctx.lineTo(toPxX(B), pressBaseY);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = q_toe <= q_adm ? '#38bdf8' : '#f43f5e';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(toPxX(0), pressBaseY + h_toe_px);
+            ctx.lineTo(toPxX(B), pressBaseY + h_heel_px);
+            ctx.stroke();
+
+            // Setas verticais de compressão
+            const numPressArrows = 6;
+            const pStep = B / numPressArrows;
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+            ctx.lineWidth = 1.0;
+            for (let i = 0; i <= numPressArrows; i++) {
+                const pxX = toPxX(i * pStep);
+                const frac = i / numPressArrows;
+                const pY_end = pressBaseY + h_toe_px + frac * (h_heel_px - h_toe_px);
+                if (pY_end > pressBaseY + 3) {
+                    ctx.beginPath();
+                    ctx.moveTo(pxX, pressBaseY);
+                    ctx.lineTo(pxX, pY_end);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(pxX - 2.5, pY_end - 4);
+                    ctx.lineTo(pxX, pY_end);
+                    ctx.lineTo(pxX + 2.5, pY_end - 4);
+                    ctx.fill();
+                }
+            }
+
+            // Badges para Tensões no Solo
+            const drawStressBadge = (text, x, y, isSafe) => {
+                ctx.font = 'bold 10px Inter, monospace';
+                const tw = ctx.measureText(text).width;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(x - tw / 2 - 6, y - 8, tw + 12, 17, 4);
+                else ctx.rect(x - tw / 2 - 6, y - 8, tw + 12, 17);
+                ctx.fill();
+                ctx.strokeStyle = isSafe ? '#34d399' : '#f87171';
+                ctx.lineWidth = 1.0;
+                ctx.stroke();
+                ctx.fillStyle = isSafe ? '#a7f3d0' : '#fca5a5';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, x, y);
+            };
+
+            const toeSafe = q_toe <= q_adm;
+            const heelSafe = q_heel >= 0;
+            drawStressBadge(`σ_toe = ${q_toe.toFixed(1)} kPa`, toPxX(0) + 18, pressBaseY + h_toe_px + 14, toeSafe);
+            drawStressBadge(`σ_heel = ${q_heel.toFixed(1)} kPa`, toPxX(B) - 18, pressBaseY + h_heel_px + 14, heelSafe);
+
+            // Eccentricity Check Badge
+            const eVal = res.stability.eccentricity ?? res.stability.e;
+            const eLimit = B / 6.0;
+            const eSafe = (eVal != null) && (eVal <= eLimit);
+            if (eVal != null) {
+                drawStressBadge(`e = ${eVal.toFixed(2)}m (≤ B/6 = ${eLimit.toFixed(2)}m ${eSafe ? '✓' : '⚠'})`, toPxX(B / 2), pressBaseY - 14, eSafe);
+            }
+        }
     }
 
     // ====================================================================
@@ -801,10 +1034,9 @@ function drawWallCanvas(inputs, res) {
 
         ctx.save();
 
-        // 1. Stem Main Vertical Rebar (Face Tracionada / Posterior)
-        // From stem top down to base bottom, then bent horizontally under heel
-        ctx.strokeStyle = '#f43f5e'; // rose-500
-        ctx.lineWidth = 3.0;
+        // 1. Stem Main Vertical Rebar (Face Tracionada Posterior)
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 2.8;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
@@ -820,9 +1052,9 @@ function drawWallCanvas(inputs, res) {
         ctx.lineTo(toPxX(hookX_heel), toPxY(barY_bot));
         ctx.stroke();
 
-        // 2. Stem Front Face Bar (Face Frontal / Retração / Montagem)
-        ctx.strokeStyle = '#38bdf8'; // sky-400
-        ctx.lineWidth = 2.0;
+        // 2. Stem Front Face Bar (Face Frontal)
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.8;
         const frontBarX_top = x_stem_top_front + c_stem;
         const frontBarX_bot = L_toe + b_front + c_stem;
         const hookX_toe = Math.max(c_base, frontBarX_bot - 0.35);
@@ -833,22 +1065,22 @@ function drawWallCanvas(inputs, res) {
         ctx.lineTo(toPxX(hookX_toe), toPxY(barY_bot));
         ctx.stroke();
 
-        // 3. Toe Bottom Rebar (Armadura Inferior da Puntera)
-        ctx.strokeStyle = '#6366f1'; // indigo-500
-        ctx.lineWidth = 2.6;
+        // 3. Toe Bottom Rebar (Puntera)
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2.2;
         const toeX_left = c_base;
         const toeX_right = Math.min(B - c_base, L_toe + b_bot * 0.7);
         const toeY_bar = c_base;
 
         ctx.beginPath();
-        ctx.moveTo(toPxX(toeX_left), toPxY(t_base - c_base)); // Vertical bend
+        ctx.moveTo(toPxX(toeX_left), toPxY(t_base - c_base));
         ctx.lineTo(toPxX(toeX_left), toPxY(toeY_bar));
         ctx.lineTo(toPxX(toeX_right), toPxY(toeY_bar));
         ctx.stroke();
 
-        // 4. Heel Top Rebar (Armadura Superior do Calcanhar)
-        ctx.strokeStyle = '#c084fc'; // purple-400
-        ctx.lineWidth = 2.6;
+        // 4. Heel Top Rebar (Calcanhar)
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 2.2;
         const heelX_left = Math.max(c_base, L_toe + b_bot * 0.2);
         const heelX_right = B - c_base;
         const heelY_bar = t_base - c_base;
@@ -856,72 +1088,117 @@ function drawWallCanvas(inputs, res) {
         ctx.beginPath();
         ctx.moveTo(toPxX(heelX_left), toPxY(heelY_bar));
         ctx.lineTo(toPxX(heelX_right), toPxY(heelY_bar));
-        ctx.lineTo(toPxX(heelX_right), toPxY(c_base)); // Vertical bend
+        ctx.lineTo(toPxX(heelX_right), toPxY(c_base));
         ctx.stroke();
 
-        // 5. Horizontal Distribution Dots along Stem
-        ctx.fillStyle = '#fbbf24'; // amber-400
-        const numDistBars = Math.max(3, Math.floor(H_stem / 0.30));
+        // 5. Horizontal Distribution Dots along Stem (espaçamento realista e elegante)
+        ctx.fillStyle = '#fbbf24';
+        const numDistBars = Math.max(3, Math.floor(H_stem / 0.40));
         for (let i = 1; i <= numDistBars; i++) {
             const frac = i / (numDistBars + 1);
             const dotY = t_base + frac * H_stem;
-            const dotX_back = barX_bot + frac * (barX_top - barX_bot) - 0.035;
-            const dotX_front = frontBarX_bot + frac * (frontBarX_top - frontBarX_bot) + 0.035;
+            const dotX_back = barX_bot + frac * (barX_top - barX_bot) - 0.03;
+            const dotX_front = frontBarX_bot + frac * (frontBarX_top - frontBarX_bot) + 0.03;
 
             [dotX_back, dotX_front].forEach(dx => {
                 ctx.beginPath();
-                ctx.arc(toPxX(dx), toPxY(dotY), 2.8, 0, 2 * Math.PI);
+                ctx.arc(toPxX(dx), toPxY(dotY), 2.5, 0, 2 * Math.PI);
                 ctx.fill();
             });
         }
 
         // 6. Longitudinal Distribution Dots in Footing
-        const numFootingDots = Math.max(3, Math.floor(B / 0.35));
+        const numFootingDots = Math.max(3, Math.floor(B / 0.45));
         for (let i = 1; i <= numFootingDots; i++) {
             const dotX = c_base + (i / (numFootingDots + 1)) * (B - 2 * c_base);
-            // Bottom layer
             ctx.beginPath();
-            ctx.arc(toPxX(dotX), toPxY(c_base + 0.04), 2.5, 0, 2 * Math.PI);
+            ctx.arc(toPxX(dotX), toPxY(c_base + 0.035), 2.2, 0, 2 * Math.PI);
             ctx.fill();
-            // Top layer (in heel zone)
             if (dotX > x_stem_back_base) {
                 ctx.beginPath();
-                ctx.arc(toPxX(dotX), toPxY(t_base - c_base - 0.04), 2.5, 0, 2 * Math.PI);
+                ctx.arc(toPxX(dotX), toPxY(t_base - c_base - 0.035), 2.2, 0, 2 * Math.PI);
                 ctx.fill();
             }
         }
 
-        // 7. Callout Labels with Protected Badges
-        ctx.font = 'bold 10px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const drawCallout = (text, px, py, color, strokeColor) => {
-            const tw = ctx.measureText(text).width;
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-            ctx.fillRect(px - tw / 2 - 5, py - 8, tw + 10, 16);
+        // Leader Lines & Callout Badges
+        const drawCalloutWithLeader = (text, targetX, targetY, boxX, boxY, color, strokeColor) => {
             ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 1;
-            ctx.strokeRect(px - tw / 2 - 5, py - 8, tw + 10, 16);
+            ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            ctx.moveTo(targetX, targetY);
+            const elbowX = (targetX + boxX) / 2;
+            ctx.lineTo(elbowX, boxY);
+            ctx.lineTo(boxX, boxY);
+            ctx.stroke();
+
+            // Ponto de fixação na armadura
+            ctx.fillStyle = strokeColor;
+            ctx.beginPath();
+            ctx.arc(targetX, targetY, 3.2, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Pill box
+            ctx.font = 'bold 10px Inter, sans-serif';
+            const tw = ctx.measureText(text).width;
+            const padX = 6;
+            const bw = tw + padX * 2;
+            const bh = 17;
+            const bx = boxX > targetX ? boxX : boxX - bw;
+            const by = boxY - bh / 2;
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 4);
+            else ctx.rect(bx, by, bw, bh);
+            ctx.fill();
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 1.0;
+            ctx.stroke();
+
             ctx.fillStyle = color;
-            ctx.fillText(text, px, py);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, bx + padX, boxY);
         };
 
+        // Callout 1: Haste (aponta para a barra tracionada, estende para o solo limpo)
         if (reinf.haste?.detailing) {
-            const midX = (barX_bot + barX_top) / 2;
-            const midY = t_base + H_stem * 0.5;
-            drawCallout(`Haste: ${reinf.haste.detailing.text}`, toPxX(midX) - 60, toPxY(midY), '#f43f5e', '#f43f5e');
+            const tgtX = toPxX(barX_bot + 0.55 * (barX_top - barX_bot));
+            const tgtY = toPxY(t_base + 0.55 * H_stem);
+            const bxX = tgtX + 45;
+            const bxY = tgtY - 16;
+            drawCalloutWithLeader(`Haste: ${reinf.haste.detailing.text}`, tgtX, tgtY, bxX, bxY, '#fda4af', '#f43f5e');
         }
 
-        if (reinf.puntera?.detailing && L_toe > 0.4) {
-            drawCallout(`Puntera: ${reinf.puntera.detailing.text}`, toPxX(L_toe * 0.5), toPxY(c_base) + 18, '#818cf8', '#6366f1');
+        // Callout 2: Puntera (aponta para a armadura inferior da puntera)
+        if (reinf.puntera?.detailing && L_toe > 0.3) {
+            const tgtX = toPxX(L_toe * 0.4);
+            const tgtY = toPxY(c_base);
+            const bxX = toPxX(0) - 22;
+            const bxY = toPxY(t_base * 0.5);
+            drawCalloutWithLeader(`Puntera: ${reinf.puntera.detailing.text}`, tgtX, tgtY, bxX, bxY, '#a5b4fc', '#6366f1');
         }
 
-        if (reinf.calcanhar?.detailing && L_heel > 0.4) {
-            drawCallout(`Calcanhar: ${reinf.calcanhar.detailing.text}`, toPxX(x_stem_back_base + L_heel * 0.5), toPxY(t_base - c_base) - 18, '#e879f9', '#c084fc');
+        // Callout 3: Calcanhar (aponta para a armadura superior do calcanhar)
+        if (reinf.calcanhar?.detailing && L_heel > 0.3) {
+            const tgtX = toPxX(x_stem_back_base + L_heel * 0.5);
+            const tgtY = toPxY(t_base - c_base);
+            const bxX = tgtX + 25;
+            const bxY = toPxY(t_base + 0.35 * H_stem);
+            drawCalloutWithLeader(`Calcanhar: ${reinf.calcanhar.detailing.text}`, tgtX, tgtY, bxX, bxY, '#e879f9', '#c084fc');
         }
 
         ctx.restore();
+    }
+
+    if (typeof EngCAD !== 'undefined' && canvas.parentElement && res && res.stability) {
+        EngCAD.updateHUD(canvas.parentElement, 'Muro de Arrimo (Estabilidade)', [
+            { label: 'Geometria (H / B)', value: `${(H_stem + t_base).toFixed(2)}m / ${B.toFixed(2)}m` },
+            { label: 'FS Tombamento', value: `${res.stability.fs_overturning.toFixed(2)}`, color: res.stability.fs_overturning >= 1.5 ? '#10b981' : '#f43f5e' },
+            { label: 'FS Deslizamento', value: `${res.stability.fs_sliding.toFixed(2)}`, color: res.stability.fs_sliding >= 1.5 ? '#10b981' : '#f43f5e' },
+            { label: 'q_max / q_adm', value: `${res.stability.q_max.toFixed(1)} / ${(inputs.q_adm || 200).toFixed(0)} kPa` }
+        ]);
     }
 }
 
@@ -992,3 +1269,282 @@ function loadProjectJSON(event) {
     };
     reader.readAsText(file);
 }
+
+/**
+ * Export Current Retaining Wall Model to RS2 FEA 2D Suite
+ * Compiles real structural stiffnesses (EI, EA), conforming multi-layer mesh boundaries,
+ * backfill, foundation, shear key and operation surcharges for MEF and SSR global stability.
+ */
+function exportToRS2FEA() {
+    const inputs = getFormInputs();
+
+    // 1. Dimensions
+    const stem_h = inputs.stem_height;
+    const t_base = inputs.base_thickness;
+    const b_bot = inputs.stem_bot_width;
+    const b_top = inputs.stem_top_width;
+    const toe = inputs.toe_length;
+    const heel = inputs.heel_length;
+    const batter = inputs.stem_front_batter;
+    const has_key = Boolean(inputs.has_key);
+    const key_d = has_key ? inputs.key_depth : 0.0;
+    const key_w = has_key ? inputs.key_width : 0.0;
+    const key_pos = has_key ? inputs.key_pos : 0.0;
+    const toe_emb = Math.max(0.0, inputs.toe_embedment || 0.5);
+
+    const H_wall = stem_h + t_base;
+    const B_base = toe + b_bot + heel;
+    const H_found = Math.max(5.0, Math.round(H_wall * 1.0 * 10) / 10);
+    const L_left = Math.max(7.0, Math.round(H_wall * 1.4 * 10) / 10);
+    const L_right = Math.max(8.0, Math.round(H_wall * 1.6 * 10) / 10);
+
+    // 2. Global Coordinates
+    const X_toe = L_left;
+    const X_stem_bot_f = X_toe + toe;
+    const X_stem_top_f = X_stem_bot_f + batter;
+    const X_stem_top_b = X_stem_top_f + b_top;
+    const X_stem_bot_b = X_stem_bot_f + b_bot;
+    const X_heel = X_toe + B_base;
+    const X_right = X_heel + L_right;
+
+    const Y_base_bot = H_found;
+    const Y_base_top = Y_base_bot + t_base;
+    const Y_stem_top = Y_base_bot + H_wall;
+    const Y_toe_ground = Y_base_bot + toe_emb;
+
+    // Interface intersection along front stem face if front soil covers footing
+    let X_front_stem = X_stem_bot_f;
+    if (toe_emb > t_base && stem_h > 0) {
+        const dy = Y_toe_ground - Y_base_top;
+        X_front_stem = X_stem_bot_f + batter * (dy / stem_h);
+    }
+
+    // 3. Conforming Layer Polygons
+    // Wall Polygon
+    const wall_poly = [];
+    wall_poly.push([roundCoord(X_toe), roundCoord(Y_base_bot)]);
+    if (has_key && key_w > 0 && key_d > 0) {
+        const X_k1 = X_toe + key_pos;
+        const X_k2 = X_k1 + key_w;
+        wall_poly.push([roundCoord(X_k1), roundCoord(Y_base_bot)]);
+        wall_poly.push([roundCoord(X_k1), roundCoord(Y_base_bot - key_d)]);
+        wall_poly.push([roundCoord(X_k2), roundCoord(Y_base_bot - key_d)]);
+        wall_poly.push([roundCoord(X_k2), roundCoord(Y_base_bot)]);
+    }
+    wall_poly.push([roundCoord(X_heel), roundCoord(Y_base_bot)]);
+    wall_poly.push([roundCoord(X_heel), roundCoord(Y_base_top)]);
+    wall_poly.push([roundCoord(X_stem_bot_b), roundCoord(Y_base_top)]);
+    wall_poly.push([roundCoord(X_stem_top_b), roundCoord(Y_stem_top)]);
+    wall_poly.push([roundCoord(X_stem_top_f), roundCoord(Y_stem_top)]);
+    if (toe_emb > t_base) {
+        wall_poly.push([roundCoord(X_front_stem), roundCoord(Y_toe_ground)]);
+    }
+    wall_poly.push([roundCoord(X_stem_bot_f), roundCoord(Y_base_top)]);
+    wall_poly.push([roundCoord(X_toe), roundCoord(Y_base_top)]);
+
+    // Foundation Polygon (Layer 0)
+    const found_poly = [
+        [0.0, 0.0],
+        [roundCoord(X_right), 0.0],
+        [roundCoord(X_right), roundCoord(Y_base_bot)],
+        [roundCoord(X_heel), roundCoord(Y_base_bot)]
+    ];
+    if (has_key && key_w > 0 && key_d > 0) {
+        const X_k1 = X_toe + key_pos;
+        const X_k2 = X_k1 + key_w;
+        found_poly.push([roundCoord(X_k2), roundCoord(Y_base_bot)]);
+        found_poly.push([roundCoord(X_k2), roundCoord(Y_base_bot - key_d)]);
+        found_poly.push([roundCoord(X_k1), roundCoord(Y_base_bot - key_d)]);
+        found_poly.push([roundCoord(X_k1), roundCoord(Y_base_bot)]);
+    }
+    found_poly.push([roundCoord(X_toe), roundCoord(Y_base_bot)]);
+    found_poly.push([0.0, roundCoord(Y_base_bot)]);
+
+    // Backfill Polygon (Layer 1)
+    const backfill_poly = [
+        [roundCoord(X_stem_bot_b), roundCoord(Y_base_top)],
+        [roundCoord(X_heel), roundCoord(Y_base_top)],
+        [roundCoord(X_heel), roundCoord(Y_base_bot)],
+        [roundCoord(X_right), roundCoord(Y_base_bot)],
+        [roundCoord(X_right), roundCoord(Y_stem_top)],
+        [roundCoord(X_stem_top_b), roundCoord(Y_stem_top)]
+    ];
+
+    // Front Cover Soil (Layer 3)
+    let front_poly = null;
+    if (toe_emb > 0) {
+        if (toe_emb <= t_base) {
+            front_poly = [
+                [0.0, roundCoord(Y_base_bot)],
+                [roundCoord(X_toe), roundCoord(Y_base_bot)],
+                [roundCoord(X_toe), roundCoord(Y_toe_ground)],
+                [0.0, roundCoord(Y_toe_ground)]
+            ];
+        } else {
+            front_poly = [
+                [0.0, roundCoord(Y_base_bot)],
+                [roundCoord(X_toe), roundCoord(Y_base_bot)],
+                [roundCoord(X_toe), roundCoord(Y_base_top)],
+                [roundCoord(X_stem_bot_f), roundCoord(Y_base_top)],
+                [roundCoord(X_front_stem), roundCoord(Y_toe_ground)],
+                [0.0, roundCoord(Y_toe_ground)]
+            ];
+        }
+    }
+
+    // Outer Domain Boundary
+    const domain_poly = [
+        [0.0, 0.0],
+        [roundCoord(X_right), 0.0],
+        [roundCoord(X_right), roundCoord(Y_stem_top)],
+        [roundCoord(X_stem_top_b), roundCoord(Y_stem_top)],
+        [roundCoord(X_stem_top_f), roundCoord(Y_stem_top)]
+    ];
+    if (front_poly) {
+        if (toe_emb > t_base) {
+            domain_poly.push([roundCoord(X_front_stem), roundCoord(Y_toe_ground)]);
+        } else {
+            domain_poly.push([roundCoord(X_toe), roundCoord(Y_base_top)]);
+            domain_poly.push([roundCoord(X_toe), roundCoord(Y_toe_ground)]);
+        }
+        domain_poly.push([0.0, roundCoord(Y_toe_ground)]);
+    } else {
+        domain_poly.push([roundCoord(X_stem_bot_f), roundCoord(Y_base_top)]);
+        domain_poly.push([roundCoord(X_toe), roundCoord(Y_base_top)]);
+        domain_poly.push([roundCoord(X_toe), roundCoord(Y_base_bot)]);
+        domain_poly.push([0.0, roundCoord(Y_base_bot)]);
+    }
+
+    // 4. Materials
+    const materials = [
+        {
+            name: 'Solo de Fundação (' + (inputs.base_soil_type || 'Silte Arenoso') + ')',
+            color: '#64748b',
+            gamma: 19.5,
+            E: 60000.0,
+            nu: 0.28,
+            c: Math.max(5.0, inputs.cohesion_found || 15.0),
+            phi: Math.max(20.0, inputs.phi_found || 30.0),
+            tension: 5.0
+        },
+        {
+            name: 'Solo de Aterro Compactado',
+            color: '#d97706',
+            gamma: Math.max(15.0, inputs.gamma_soil || 18.0),
+            E: 35000.0,
+            nu: 0.30,
+            c: 2.0,
+            phi: Math.max(22.0, inputs.phi_soil || 30.0),
+            tension: 2.0
+        },
+        {
+            name: 'Concreto Armado (Muro de Arrimo fck=' + (inputs.fck || 25) + 'MPa)',
+            color: '#0284c7',
+            gamma: 25.0,
+            E: 28000000.0,
+            nu: 0.20,
+            c: 4000.0,
+            phi: 42.0,
+            tension: 2000.0,
+            model: 'elastic'
+        }
+    ];
+
+    const layer_polygons = [
+        { polygon: found_poly, material_idx: 0 },
+        { polygon: backfill_poly, material_idx: 1 },
+        { polygon: wall_poly, material_idx: 2 }
+    ];
+
+    if (front_poly) {
+        materials.push({
+            name: 'Solo Frontal (Passivo)',
+            color: '#0d9488',
+            gamma: Math.max(16.0, inputs.gamma_front || 18.0),
+            E: 40000.0,
+            nu: 0.28,
+            c: Math.max(2.0, inputs.cohesion_front || 8.0),
+            phi: Math.max(20.0, inputs.phi_front || 30.0),
+            tension: 3.0
+        });
+        layer_polygons.push({ polygon: front_poly, material_idx: 3 });
+    }
+
+    // 5. Surcharges
+    const surcharges = [];
+    if (inputs.q_surcharge > 0) {
+        surcharges.push({
+            x1: roundCoord(X_stem_top_b + 0.5),
+            x2: roundCoord(X_right - 0.5),
+            q: parseFloat(inputs.q_surcharge)
+        });
+    }
+
+    // 6. Stages
+    const activeLayersBase = [0];
+    const activeLayersWall = front_poly ? [0, 2, 3] : [0, 2];
+    const activeLayersBackfill = front_poly ? [0, 1, 2, 3] : [0, 1, 2];
+
+    const stages = [
+        {
+            id: 1,
+            name: 'Fase 1: Fundação In-Situ',
+            active_layers: activeLayersBase,
+            reset_disp: true,
+            description: 'Equilíbrio litostático natural da fundação virgem (deslocamentos zerados).'
+        },
+        {
+            id: 2,
+            name: 'Fase 2: Concretagem da Sapata e Muro',
+            active_layers: activeLayersWall,
+            reset_disp: false,
+            description: 'Construção da sapata com dente de chave e fuste em concreto armado.'
+        },
+        {
+            id: 3,
+            name: 'Fase 3: Aterro de Tardoz Compactado',
+            active_layers: activeLayersBackfill,
+            reset_disp: false,
+            description: 'Lançamento e compactação do reaterro gerando empuxo ativo e flexão do muro.'
+        },
+        {
+            id: 4,
+            name: 'Fase 4: Sobrecargas de Operação',
+            active_layers: activeLayersBackfill,
+            active_surcharges: surcharges.length > 0 ? [0] : [],
+            reset_disp: false,
+            description: 'Aplicação da sobrecarga nominal q=' + inputs.q_surcharge + ' kPa na crista do aterro.'
+        }
+    ];
+
+    // Build RS2 Model Object
+    const rs2Model = {
+        name: 'Muro de Arrimo em Balanço (H=' + H_wall.toFixed(1) + 'm, B=' + B_base.toFixed(1) + 'm)',
+        type: 'retaining_wall',
+        retaining_type: 'cantilever',
+        domain_poly: domain_poly,
+        internal_boundaries: [],
+        layer_polygons: layer_polygons,
+        materials: materials,
+        surcharges: surcharges,
+        stages: stages,
+        target_elem_size: 1.1,
+        k0: 0.50
+    };
+
+    // Save payload to sessionStorage and redirect
+    try {
+        sessionStorage.setItem('rs2_imported_model', JSON.stringify(rs2Model));
+        window.location.href = 'rs2_fem.html';
+    } catch (err) {
+        console.error('Falha ao exportar modelo para RS2:', err);
+        alert('Erro ao transferir dados para o RS2: ' + err.message);
+    }
+}
+
+function roundCoord(v) {
+    return Math.round(v * 1000) / 1000;
+}
+
+window.exportToRS2FEA = exportToRS2FEA;
+

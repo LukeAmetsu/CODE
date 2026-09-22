@@ -1,4 +1,3 @@
-﻿// --- ESTRUTURA DE DADOS ---
 const pcalcData = {
     secao: {
         tipoSecao: 'Retangular',
@@ -53,6 +52,93 @@ const pcalcData = {
     }
 };
 
+// --- SISTEMA DE UNIDADES ---
+const unitState = {
+    current: localStorage.getItem('pcalc_unit') || 'kN' // 'kN' ou 'tf'
+};
+const TF_TO_KN = 9.80665; // 1 tf = 9.80665 kN
+
+/** Converte valor da UI para kN (unidade interna) */
+function toKN(v) {
+    return unitState.current === 'tf' ? v * TF_TO_KN : v;
+}
+/** Converte kN para a unidade da UI */
+function fromKN(v) {
+    return unitState.current === 'tf' ? v / TF_TO_KN : v;
+}
+/** Converte kNm para a unidade de momento da UI (tf·m ou kN·m) */
+function toKNm(v) {
+    return unitState.current === 'tf' ? v * TF_TO_KN : v;
+}
+function fromKNm(v) {
+    return unitState.current === 'tf' ? v / TF_TO_KN : v;
+}
+
+function setUnits(unit) {
+    // Convert existing load values from old unit to new unit before switching
+    const oldUnit = unitState.current;
+    if (oldUnit === unit) return;
+
+    // Convert loads displayed in table to new unit
+    pcalcData.esforcos.listaEsforcos.forEach(l => {
+        if (oldUnit === 'tf') {
+            // was tf -> convert stored kN back to display, now store as kN (display kN)
+            // stored values are always in kN internally - table shows converted
+            // no-op: internal is always kN
+        }
+    });
+
+    unitState.current = unit;
+    localStorage.setItem('pcalc_unit', unit);
+    _updateUnitButtons();
+    renderLoads();
+    updateRS2LiveSummaries();
+    _updateUnitLabels();
+}
+
+function _updateUnitButtons() {
+    const kn = document.getElementById('btn-unit-kn');
+    const tf = document.getElementById('btn-unit-tf');
+    if (!kn || !tf) return;
+    const activeClass = 'px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-slate-600 text-white shadow-xs flex items-center gap-1 cursor-pointer';
+    const inactiveClass = 'px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer';
+    if (unitState.current === 'kN') {
+        kn.className = activeClass;
+        tf.className = inactiveClass;
+    } else {
+        tf.className = activeClass;
+        kn.className = inactiveClass;
+    }
+}
+
+function _updateUnitLabels() {
+    const u = unitState.current;
+    const um = u === 'tf' ? 'tf·m' : 'kNm';
+    // Table headers
+    document.querySelectorAll('th[data-unit-n]').forEach(el => el.textContent = `N (${u})`);
+    document.querySelectorAll('th[data-unit-m]').forEach(el => el.textContent = `M (${um})`);
+    // Sign reference
+    const lbl = document.getElementById('unit-label-m');
+    if (lbl) lbl.textContent = um;
+}
+
+/** Toggle hy-wrapper visibility and label updates based on section type */
+function updateSectionTypeUI() {
+    const type = pcalcData.secao.tipoSecao;
+    const isCirc = type === 'Circular';
+    const hyWrapper = document.getElementById('hy-wrapper');
+    const lblHx = document.getElementById('lbl-hx');
+    const patLabel = document.getElementById('gen-pattern-label');
+    const hint = document.getElementById('rebar-coord-hint');
+
+    if (hyWrapper) hyWrapper.style.display = isCirc ? 'none' : '';
+    if (lblHx) lblHx.textContent = isCirc ? 'Diâmetro (D)' : 'Largura (hx)';
+    if (patLabel) patLabel.textContent = isCirc ? 'Padrão Circular' : 'Padrão Cantos';
+    if (hint) hint.textContent = isCirc
+        ? 'Coordenadas relativas ao centro (origem = canto inf. esq. = 0, 0).'
+        : 'Coordenadas relativas ao canto inferior esquerdo (0,0).';
+}
+
 // --- ESTADO DE VISUALIZAÇÃO DO CANVAS (SEÇÃO) ---
 const canvasView = {
     scale: 1.0,
@@ -63,11 +149,15 @@ const canvasView = {
 // --- INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
 
-
     injectDynamicUI();
+
+    // Init unit system
+    _updateUnitButtons();
+    _updateUnitLabels();
 
     // Renderizações Iniciais
     updateDataFromInputs();
+    updateSectionTypeUI(); // Aplica estado inicial da UI de seção
     renderLoads();
     renderReinforcement();
 
@@ -166,6 +256,14 @@ function setupEventListeners() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => {
             updateDataFromInputs();
+            updateSectionTypeUI();
+            fitViewToSection();
+            renderCrossSection();
+        });
+        // Also listen for 'change' (select)
+        if (el && el.tagName === 'SELECT') el.addEventListener('change', () => {
+            updateDataFromInputs();
+            updateSectionTypeUI();
             fitViewToSection();
             renderCrossSection();
         });
@@ -295,15 +393,15 @@ function setupExcelImport() {
 
                 if (values.length > 0) {
                     const load = {
-                        n: parseFloat(values[0]) || 0,
-                        mxTop: parseFloat(values[1]) || 0,
-                        mxBot: parseFloat(values[2]) || 0,
-                        myTop: parseFloat(values[3]) || 0,
-                        myBot: parseFloat(values[4]) || 0
+                        n: toKN(parseFloat(values[0]) || 0),
+                        mxTop: toKNm(parseFloat(values[1]) || 0),
+                        mxBot: toKNm(parseFloat(values[2]) || 0),
+                        myTop: toKNm(parseFloat(values[3]) || 0),
+                        myBot: toKNm(parseFloat(values[4]) || 0)
                     };
                     if (values.length === 3) {
                         load.mxBot = load.mxTop;
-                        load.myTop = parseFloat(values[2]) || 0;
+                        load.myTop = toKNm(parseFloat(values[2]) || 0);
                         load.myBot = load.myTop;
                     }
 
@@ -333,14 +431,15 @@ function processImportedData(jsonArray) {
     }
     pcalcData.esforcos.listaEsforcos = [];
     validRows.forEach(row => {
-        const n = parseFloat(row[0]) || 0;
-        let mxTop = parseFloat(row[1]) || 0;
-        let mxBot = parseFloat(row[2]) || 0;
-        let myTop = parseFloat(row[3]) || 0;
-        let myBot = parseFloat(row[4]) || 0;
+        // Values in Excel are in the current unit -> convert to kN internally
+        const n = toKN(parseFloat(row[0]) || 0);
+        let mxTop = toKNm(parseFloat(row[1]) || 0);
+        let mxBot = toKNm(parseFloat(row[2]) || 0);
+        let myTop = toKNm(parseFloat(row[3]) || 0);
+        let myBot = toKNm(parseFloat(row[4]) || 0);
         if (row.length === 3) {
             mxBot = mxTop;
-            myTop = parseFloat(row[2]) || 0;
+            myTop = toKNm(parseFloat(row[2]) || 0);
             myBot = myTop;
         }
         pcalcData.esforcos.listaEsforcos.push({ n, mxTop, mxBot, myTop, myBot });
@@ -356,7 +455,8 @@ function updateDataFromInputs() {
     pcalcData.secao.tipoSecao = getStr('section-type');
     pcalcData.secao.boundary = getStr('boundary-type');
     pcalcData.secao.hx = getVal('hx');
-    pcalcData.secao.hy = getVal('hy');
+    // Para circular, hy = hx (pilar simétrico)
+    pcalcData.secao.hy = pcalcData.secao.tipoSecao === 'Circular' ? pcalcData.secao.hx : getVal('hy');
     pcalcData.secao.length = getVal('length');
     pcalcData.secao.xm = pcalcData.secao.hx / 2;
     pcalcData.secao.ym = pcalcData.secao.hy / 2;
@@ -393,30 +493,179 @@ function updateDataFromInputs() {
     pcalcData.config.creepPhi = getVal('creep-phi');
     pcalcData.config.minRate = getVal('rate-min');
     pcalcData.config.maxRate = getVal('rate-max');
+    updateRS2LiveSummaries();
+}
+
+function updateRS2LiveSummaries() {
+    try {
+        // 1. Geometria do Pilar
+        const isCirc = pcalcData.secao.tipoSecao === 'Circular';
+        const Ac = pcalcData.secao.areaAc || (pcalcData.secao.hx * pcalcData.secao.hy);
+        const Ix = pcalcData.secao.ix || ((pcalcData.secao.hx * Math.pow(pcalcData.secao.hy, 3)) / 12);
+        const Iy = pcalcData.secao.iy || ((pcalcData.secao.hy * Math.pow(pcalcData.secao.hx, 3)) / 12);
+        const L = pcalcData.secao.length || 400;
+        const boundary = pcalcData.secao.boundary || 'pinned';
+        const kFactor = boundary === 'cantilever' ? 2.0 : 1.0;
+        const Le = L * kFactor;
+        const ix = Ac > 0 ? Math.sqrt(Ix / Ac) : 0;
+        const iy = Ac > 0 ? Math.sqrt(Iy / Ac) : 0;
+        const lambdaX = ix > 0 ? (Le / ix) : 0;
+        const lambdaY = iy > 0 ? (Le / iy) : 0;
+
+        const badgeGeo = document.getElementById('col-geo-badge');
+        if (badgeGeo) {
+            badgeGeo.textContent = isCirc ? `Circular D=${pcalcData.secao.hx} cm` : `${pcalcData.secao.hx} × ${pcalcData.secao.hy} cm`;
+        }
+        const elAc = document.getElementById('pcalc-col-ac-preview');
+        if (elAc) elAc.textContent = `${Math.round(Ac)} cm²`;
+        const elInertia = document.getElementById('pcalc-col-inertia-preview');
+        if (elInertia) elInertia.textContent = `${Math.round(Ix).toLocaleString()} / ${Math.round(Iy).toLocaleString()} cm⁴`;
+        const elLambda = document.getElementById('pcalc-col-lambda-preview');
+        if (elLambda) {
+            const maxLambda = Math.max(lambdaX, lambdaY);
+            const colorClass = maxLambda <= 35 ? 'text-emerald-600 dark:text-emerald-400' : (maxLambda <= 90 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400');
+            elLambda.className = `font-semibold ${colorClass}`;
+            elLambda.textContent = `λx=${lambdaX.toFixed(1)} | λy=${lambdaY.toFixed(1)} (Le=${Math.round(Le)}cm)`;
+        }
+
+        // 2. Materiais do Pilar
+        const fck = pcalcData.materiais.fck || 25;
+        const fyk = pcalcData.materiais.fyk || 500;
+        const gamaC = pcalcData.config.gamaC || 1.4;
+        const gamaS = pcalcData.config.gamaS || 1.15;
+        const fcd = fck / gamaC;
+        const fyd = fyk / gamaS;
+        const Eci = 5600 * Math.sqrt(fck);
+        const alphaE = fck <= 50 ? (0.8 + 0.2 * fck / 80) : 1.0;
+        const Ecs = (alphaE * Eci) / 1000;
+
+        const badgeMat = document.getElementById('col-mat-badge');
+        if (badgeMat) badgeMat.textContent = `C${fck} • CA-${Math.round(fyk/10)}`;
+        const elFcd = document.getElementById('pcalc-col-fcd-preview');
+        if (elFcd) elFcd.textContent = `${fcd.toFixed(2)} MPa (γc=${gamaC.toFixed(2)})`;
+        const elFyd = document.getElementById('pcalc-col-fyd-preview');
+        if (elFyd) elFyd.textContent = `${fyd.toFixed(2)} MPa (γs=${gamaS.toFixed(2)})`;
+        const elEcs = document.getElementById('pcalc-col-ecs-preview');
+        if (elEcs) elEcs.textContent = `${Ecs.toFixed(1)} GPa`;
+
+        // 3. Armadura do Pilar
+        let totalAs = 0;
+        (pcalcData.armacao.barras || []).forEach(b => {
+            const phi = b.diametro || 16;
+            totalAs += (Math.PI * Math.pow(phi / 10, 2)) / 4;
+        });
+        const rho = Ac > 0 ? (totalAs / Ac) * 100 : 0;
+        const asMin = 0.004 * Ac;
+
+        const badgeRebar = document.getElementById('col-rebar-badge');
+        if (badgeRebar) badgeRebar.textContent = `${(pcalcData.armacao.barras || []).length} barras • ${totalAs.toFixed(2)} cm²`;
+        const elAs = document.getElementById('pcalc-col-as-preview');
+        if (elAs) elAs.textContent = `${totalAs.toFixed(2)} cm²`;
+        const elRho = document.getElementById('pcalc-col-rho-preview');
+        if (elRho) {
+            const rhoColor = rho < 0.4 ? 'text-amber-600 dark:text-amber-400' : (rho <= 4.0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400');
+            elRho.className = `font-semibold ${rhoColor}`;
+            elRho.textContent = `${rho.toFixed(2)}% (Mín 0.40% • Máx 4.0%)`;
+        }
+        const elAsMin = document.getElementById('pcalc-col-asmin-preview');
+        if (elAsMin) elAsMin.textContent = `${asMin.toFixed(2)} cm²`;
+
+        // 4. Cargas do Pilar
+        const lista = pcalcData.esforcos.listaEsforcos || [];
+        let maxN = 0;
+        lista.forEach(l => {
+            if (Math.abs(l.n) > Math.abs(maxN)) maxN = l.n;
+        });
+        const gamaF = pcalcData.config.gamaF || 1.4;
+        const NSdMax = maxN * gamaF;
+        const hx = pcalcData.secao.hx || 30;
+        const hy = pcalcData.secao.hy || 50;
+        const hMin = Math.min(hx, hy);
+        const ea = Math.max(hMin / 30, 2.0);
+        const M1dMin = Math.abs(NSdMax) * (1.5 + 0.03 * hMin) / 100;
+
+        const badgeLoads = document.getElementById('col-loads-badge');
+        if (badgeLoads) badgeLoads.textContent = `${lista.length} Caso(s)`;
+        const elNsd = document.getElementById('pcalc-col-nsd-preview');
+        const u = unitState.current;
+        const um = u === 'tf' ? 'tf·m' : 'kNm';
+        if (elNsd) elNsd.textContent = `${fromKN(NSdMax).toFixed(2)} ${u} (γf=${gamaF.toFixed(2)})`;
+        const elMmin = document.getElementById('pcalc-col-mmin-preview');
+        if (elMmin) elMmin.textContent = `M1d,min = ${fromKNm(M1dMin).toFixed(2)} ${um}`;
+        const elEa = document.getElementById('pcalc-col-ea-preview');
+        if (elEa) elEa.textContent = `ea = ${ea.toFixed(1)} cm (h/30)`;
+
+        // Sign convention badge - dinamically shows compression/tension
+        const signBadge = document.getElementById('sign-convention-badge');
+        if (signBadge) {
+            if (maxN < 0) {
+                signBadge.innerHTML = '🔴 N < 0 = Compressão';
+                signBadge.className = 'shrink-0 px-1.5 py-0.5 rounded font-bold text-[10px] bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800';
+            } else if (maxN > 0) {
+                signBadge.innerHTML = '🔵 N > 0 = Tração';
+                signBadge.className = 'shrink-0 px-1.5 py-0.5 rounded font-bold text-[10px] bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800';
+            } else {
+                signBadge.innerHTML = '⚪ N = 0 (sem normal)';
+                signBadge.className = 'shrink-0 px-1.5 py-0.5 rounded font-bold text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600';
+            }
+        }
+
+        // 5. Critérios
+        const badgeCrit = document.getElementById('col-crit-badge');
+        if (badgeCrit) {
+            const std = window.pcalcState?.standard || 'nbr';
+            badgeCrit.textContent = std.toUpperCase();
+        }
+    } catch (err) {
+        console.error("Error updating RS2 summaries:", err);
+    }
 }
 
 function renderLoads() {
+    const u = unitState.current;
     const tbody = document.getElementById('loads-table').getElementsByTagName('tbody')[0];
+    // Update header units
+    const thead = document.getElementById('loads-table').getElementsByTagName('thead')[0];
+    if (thead) {
+        const um = u === 'tf' ? 'tf·m' : 'kNm';
+        const ths = thead.querySelectorAll('th');
+        if (ths[0]) ths[0].textContent = `N (${u})`;
+        if (ths[1]) ths[1].textContent = `Mx↑ (${um})`;
+        if (ths[2]) ths[2].textContent = `Mx↓ (${um})`;
+        if (ths[3]) ths[3].textContent = `My↑ (${um})`;
+        if (ths[4]) ths[4].textContent = `My↓ (${um})`;
+    }
     tbody.innerHTML = '';
     pcalcData.esforcos.listaEsforcos.forEach((l, i) => {
         const row = tbody.insertRow();
         row.className = "border-b border-gray-100 dark:border-gray-700";
+        // Display values converted from kN internal to current unit
+        const dispN = +fromKN(l.n).toFixed(4);
+        const dispMxt = +fromKNm(l.mxTop).toFixed(4);
+        const dispMxb = +fromKNm(l.mxBot).toFixed(4);
+        const dispMyt = +fromKNm(l.myTop).toFixed(4);
+        const dispMyb = +fromKNm(l.myBot).toFixed(4);
         row.innerHTML = `
-            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.n}" data-idx="${i}" data-key="n"></td>
-            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.mxTop}" data-idx="${i}" data-key="mxTop"></td>
-            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.mxBot}" data-idx="${i}" data-key="mxBot"></td>
-            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.myTop}" data-idx="${i}" data-key="myTop"></td>
-            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${l.myBot}" data-idx="${i}" data-key="myBot"></td>
+            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${dispN}" data-idx="${i}" data-key="n"></td>
+            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${dispMxt}" data-idx="${i}" data-key="mxTop"></td>
+            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${dispMxb}" data-idx="${i}" data-key="mxBot"></td>
+            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${dispMyt}" data-idx="${i}" data-key="myTop"></td>
+            <td class="p-1"><input type="number" class="w-full border rounded text-center text-xs p-1 bg-white dark:bg-gray-700 dark:text-white" value="${dispMyb}" data-idx="${i}" data-key="myBot"></td>
             <td class="p-1 text-center"><button class="text-red-500 hover:text-red-700 font-bold px-1" data-idx="${i}" data-action="remove">X</button></td>
         `;
     });
+    updateRS2LiveSummaries();
 }
 
 function handleLoadInput(e) {
     if (e.target.tagName === 'INPUT') {
-        const idx = e.target.dataset.idx;
+        const idx = parseInt(e.target.dataset.idx);
         const key = e.target.dataset.key;
-        pcalcData.esforcos.listaEsforcos[idx][key] = parseFloat(e.target.value);
+        // Input is in current unit, convert to kN for internal storage
+        const displayVal = parseFloat(e.target.value) || 0;
+        const internalVal = (key === 'n') ? toKN(displayVal) : toKNm(displayVal);
+        pcalcData.esforcos.listaEsforcos[idx][key] = internalVal;
+        updateRS2LiveSummaries();
     }
 }
 
@@ -432,6 +681,7 @@ function handleReinforcementInput(e) {
         const idx = e.target.dataset.idx;
         const key = e.target.dataset.key;
         pcalcData.armacao.barras[idx][key] = parseFloat(e.target.value);
+        updateRS2LiveSummaries();
         renderCrossSection();
     }
 }
@@ -457,27 +707,99 @@ function renderReinforcement() {
             <td class="p-1 text-center"><button class="text-red-500 hover:text-red-700 font-bold px-1" data-idx="${i}" data-action="remove">X</button></td>
         `;
     });
+    updateRS2LiveSummaries();
 }
 
-function generateRectPattern() {
+function generateBarPattern() {
     const hx = pcalcData.secao.hx;
     const hy = pcalcData.secao.hy;
-    const cover = 3.0;
-    const barsX = 3;
-    const barsY = 3;
+    const cover = parseFloat(document.getElementById('quick-cover')?.value) || 3.0;
+    const diam = parseFloat(document.getElementById('quick-diam')?.value) || 16;
+    const isCirc = pcalcData.secao.tipoSecao === 'Circular';
+
     pcalcData.armacao.barras = [];
-    for (let i = 0; i < barsX; i++) {
-        const x = cover + (i * (hx - 2 * cover) / (barsX - 1));
-        pcalcData.armacao.barras.push({ x: x, y: cover, diametro: 16 });
-        pcalcData.armacao.barras.push({ x: x, y: hy - cover, diametro: 16 });
+
+    if (isCirc) {
+        // Circular pattern: N bars evenly spaced on a ring
+        const n = parseInt(document.getElementById('quick-n-bars')?.value) || 6;
+        const R = hx / 2;
+        const rBar = R - cover - (diam / 10) / 2;
+        for (let i = 0; i < n; i++) {
+            const theta = (2 * Math.PI * i) / n - Math.PI / 2; // Start at top
+            const x = R + rBar * Math.cos(theta);
+            const y = R + rBar * Math.sin(theta);
+            pcalcData.armacao.barras.push({ x: +x.toFixed(2), y: +y.toFixed(2), diametro: diam });
+        }
+    } else {
+        // Rectangular pattern along edges
+        const barsX = 3;
+        const barsY = 3;
+        for (let i = 0; i < barsX; i++) {
+            const x = cover + (i * (hx - 2 * cover) / (barsX - 1));
+            pcalcData.armacao.barras.push({ x: +x.toFixed(2), y: cover, diametro: diam });
+            pcalcData.armacao.barras.push({ x: +x.toFixed(2), y: hy - cover, diametro: diam });
+        }
+        for (let i = 1; i < barsY - 1; i++) {
+            const y = cover + (i * (hy - 2 * cover) / (barsY - 1));
+            pcalcData.armacao.barras.push({ x: cover, y: +y.toFixed(2), diametro: diam });
+            pcalcData.armacao.barras.push({ x: hx - cover, y: +y.toFixed(2), diametro: diam });
+        }
     }
-    for (let i = 1; i < barsY - 1; i++) {
-        const y = cover + (i * (hy - 2 * cover) / (barsY - 1));
-        pcalcData.armacao.barras.push({ x: cover, y: y, diametro: 16 });
-        pcalcData.armacao.barras.push({ x: hx - cover, y: y, diametro: 16 });
-    }
+
     renderReinforcement();
     renderCrossSection();
+    updateRS2LiveSummaries();
+}
+
+// Alias for button (retangular pattern = just call generateBarPattern)
+function generateRectPattern() { generateBarPattern(); }
+
+/** Armadura Rápida: gera N barras com diâmetro e cobrimento definidos pelo painel rápido */
+function applyQuickRebar() {
+    const nBars = parseInt(document.getElementById('quick-n-bars')?.value) || 6;
+    const diam = parseFloat(document.getElementById('quick-diam')?.value) || 16;
+    const cover = parseFloat(document.getElementById('quick-cover')?.value) || 3.0;
+    const hx = pcalcData.secao.hx;
+    const hy = pcalcData.secao.hy;
+    const isCirc = pcalcData.secao.tipoSecao === 'Circular';
+
+    pcalcData.armacao.barras = [];
+
+    if (isCirc) {
+        const R = hx / 2;
+        const rBar = Math.max(1, R - cover - (diam / 10) / 2);
+        for (let i = 0; i < nBars; i++) {
+            const theta = (2 * Math.PI * i) / nBars - Math.PI / 2;
+            const x = R + rBar * Math.cos(theta);
+            const y = R + rBar * Math.sin(theta);
+            pcalcData.armacao.barras.push({ x: +x.toFixed(2), y: +y.toFixed(2), diametro: diam });
+        }
+    } else {
+        // Rectangular: distribute nBars evenly around perimeter
+        const perimBars = Math.max(4, nBars);
+        // Compute perimeter positions
+        const sides = [
+            { axis: 'x', from: cover, to: hx - cover, fixed: 'y', fixedVal: cover },           // Bottom
+            { axis: 'y', from: cover + (hy - 2*cover)/(perimBars), to: hy - cover, fixed: 'x', fixedVal: hx - cover }, // Right
+            { axis: 'x', from: hx - cover - (hx - 2*cover)/(perimBars), to: cover, fixed: 'y', fixedVal: hy - cover }, // Top
+            { axis: 'y', from: hy - cover - (hy - 2*cover)/(perimBars), to: cover, fixed: 'x', fixedVal: cover }       // Left
+        ];
+        const perSide = Math.max(1, Math.floor(perimBars / 4));
+        sides.forEach(s => {
+            for (let i = 0; i < perSide; i++) {
+                const t = i / Math.max(1, perSide - 1);
+                const pos = s.from + t * (s.to - s.from);
+                const bar = s.axis === 'x'
+                    ? { x: +pos.toFixed(2), y: s.fixedVal, diametro: diam }
+                    : { x: s.fixedVal, y: +pos.toFixed(2), diametro: diam };
+                pcalcData.armacao.barras.push(bar);
+            }
+        });
+    }
+
+    renderReinforcement();
+    renderCrossSection();
+    updateRS2LiveSummaries();
 }
 
 function discretizeSection() {
@@ -513,17 +835,29 @@ function discretizeSection() {
 }
 
 function getConcreteStress(epsilon, fcd) {
-    // Parábola-Retângulo
+    // Parábola-Retângulo (NBR 6118:2023 item 8.2.10.1)
     if (epsilon >= 0) return 0; // Tração ignorada no concreto
 
     const ec = Math.abs(epsilon);
-    const ec2 = 0.002;
-    const ecu = 0.0035;
+    const fck = pcalcData.materiais.fck || 25;
+    let ec2 = 0.0020;
+    let ecu = 0.0035;
+    let n = 2.0;
+    let alpha_c = 0.85;
+
+    if (fck > 50) {
+        ec2 = 0.0020 + 0.000085 * Math.pow(fck - 50, 0.53);
+        const term = (90 - fck) / 100;
+        ecu = 0.0026 + 0.035 * Math.pow(term, 4);
+        n = 1.4 + 23.4 * Math.pow(term, 4);
+        alpha_c = 0.85 * (1.0 - (fck - 50) / 200);
+        if (alpha_c < 0.5) alpha_c = 0.5;
+    }
 
     if (ec <= ec2) {
-        return -0.85 * fcd * (1 - Math.pow(1 - ec / ec2, 2));
+        return -alpha_c * fcd * (1 - Math.pow(1 - ec / ec2, n));
     } else if (ec <= ecu) {
-        return -0.85 * fcd;
+        return -alpha_c * fcd;
     }
     return 0;
 }
@@ -561,8 +895,11 @@ function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
         const strain = epsilon0 + curvatureX * by + curvatureY * bx;
 
         const sigma = getSteelStress(strain, fyd, Es);
+        const sigma_c_at_bar = getConcreteStress(strain, fcd);
+        // Subtrai concreto deslocado pelo aço para evitar dupla contagem da área (NBR 6118)
+        const effective_sigma = sigma - sigma_c_at_bar;
         const area = Math.PI * Math.pow(bar.diametro / 10 / 2, 2);
-        const F = sigma * area;
+        const F = effective_sigma * area;
 
         N_int += F;
         Mx_int += F * (by / 100);
@@ -574,9 +911,12 @@ function calculateSectionResistance(epsilon0, curvatureX, curvatureY) {
 
 function generateInteractionSurface() {
     const points = { x: [], y: [], z: [] };
-    const ecu = -0.0035;
+    const fck = pcalcData.materiais.fck || 25;
+    const ecu = (fck > 50) ? -(0.0026 + 0.035 * Math.pow((90 - fck) / 100, 4)) : -0.0035;
+    const ec2 = (fck > 50) ? -(0.0020 + 0.000085 * Math.pow(fck - 50, 0.53)) : -0.0020;
     const es_yield_tension = 0.010;
     const numAngles = 72;
+    let statesPerAngle = 0;
 
     for (let i = 0; i < numAngles; i++) {
         const theta = (i / numAngles) * 2 * Math.PI;
@@ -586,18 +926,25 @@ function generateInteractionSurface() {
         let u_min = Infinity;
         let u_max = -Infinity;
 
-        const corners = [
-            { x: -pcalcData.secao.hx / 2, y: -pcalcData.secao.hy / 2 },
-            { x: pcalcData.secao.hx / 2, y: -pcalcData.secao.hy / 2 },
-            { x: pcalcData.secao.hx / 2, y: pcalcData.secao.hy / 2 },
-            { x: -pcalcData.secao.hx / 2, y: pcalcData.secao.hy / 2 }
-        ];
+        if (pcalcData.secao.tipoSecao === 'Circular') {
+            // For a circle, the projection along any direction is exactly ±R
+            const R = pcalcData.secao.hx / 2;
+            u_min = -R;
+            u_max = R;
+        } else {
+            const corners = [
+                { x: -pcalcData.secao.hx / 2, y: -pcalcData.secao.hy / 2 },
+                { x: pcalcData.secao.hx / 2, y: -pcalcData.secao.hy / 2 },
+                { x: pcalcData.secao.hx / 2, y: pcalcData.secao.hy / 2 },
+                { x: -pcalcData.secao.hx / 2, y: pcalcData.secao.hy / 2 }
+            ];
 
-        corners.forEach(p => {
-            const u = p.x * cosT + p.y * sinT;
-            if (u < u_min) u_min = u;
-            if (u > u_max) u_max = u;
-        });
+            corners.forEach(p => {
+                const u = p.x * cosT + p.y * sinT;
+                if (u < u_min) u_min = u;
+                if (u > u_max) u_max = u;
+            });
+        }
 
         pcalcData.armacao.barras.forEach(b => {
             const bx = b.x - pcalcData.secao.xm;
@@ -628,8 +975,19 @@ function generateInteractionSurface() {
             deformationStates.push({ k: K, e0: e0 });
         }
 
-        deformationStates.push({ k: 0, e0: ecu });
-        deformationStates.push({ k: 0, e0: -0.002 });
+        // Domínio 5 com Pivô C (distância 3/7 h da borda mais comprimida, NBR 6118 item 17.2.2)
+        const u_pivot = u_max - (3.0 / 7.0) * (u_max - u_min);
+        const stepsD5 = 6;
+        for (let k = 1; k <= stepsD5; k++) {
+            const eps_opp = 0.0 + (k / stepsD5) * (ec2 - 0.0);
+            const K = (ec2 - eps_opp) / (u_pivot - u_min);
+            const e0 = ec2 - K * u_pivot;
+            deformationStates.push({ k: K, e0: e0 });
+        }
+
+        // Compressão uniforme limitada a ec2 (NBR 6118 não permite ecu em compressão uniforme)
+        deformationStates.push({ k: 0, e0: ec2 });
+        statesPerAngle = deformationStates.length;
 
         for (const state of deformationStates) {
             const Kx = state.k * sinT;
@@ -641,6 +999,7 @@ function generateInteractionSurface() {
         }
     }
 
+    pcalcData.resultados.statesPerAngle = statesPerAngle;
     return points;
 }
 
@@ -735,34 +1094,66 @@ function performCalculation() {
 }
 
 function calculateSafetyFactor(N, Mx, My) {
-    if (Math.abs(Mx) < 0.1 && Math.abs(My) < 0.1) {
-        const surface = pcalcData.resultados.surfacePoints;
-        if (surface.z.length === 0) return 0;
-        let minN = 0;
-        for (let z of surface.z) if (z < minN) minN = z;
-        if (N === 0) return 99.99;
-        return Math.abs(minN) / Math.abs(N);
-    }
+    const surface = pcalcData.resultados.surfacePoints;
+    if (!surface || surface.x.length === 0) return 0;
 
     const R_load = Math.sqrt(Mx * Mx + My * My);
     let angleLoad = Math.atan2(My, Mx);
     if (angleLoad < 0) angleLoad += 2 * Math.PI;
 
-    const surface = pcalcData.resultados.surfacePoints;
-    if (surface.x.length === 0) return 0;
+    // Se carga puramente axial (momento desprezível)
+    if (R_load < 0.01) {
+        let minN = 0, maxN = 0;
+        for (let z of surface.z) {
+            if (z < minN) minN = z;
+            if (z > maxN) maxN = z;
+        }
+        if (Math.abs(N) < 1e-4) return 99.99;
+        return (N < 0) ? (Math.abs(minN) / Math.abs(N)) : (maxN / N);
+    }
 
-    const toleranceN = Math.max(20, Math.abs(N) * 0.10);
+    // Interpolação analítica na altura exata N = Nsd através dos meridianos gerados
+    const ptsPerAngle = pcalcData.resultados.statesPerAngle || 43;
+    const numAngles = Math.round(surface.x.length / ptsPerAngle);
     const slicePoints = [];
 
-    for (let i = 0; i < surface.x.length; i++) {
-        const pN = surface.z[i];
-        if (Math.abs(pN - N) < toleranceN) {
-            const pMx = surface.x[i];
-            const pMy = surface.y[i];
-            const R = Math.sqrt(pMx * pMx + pMy * pMy);
-            let Ang = Math.atan2(pMy, pMx);
-            if (Ang < 0) Ang += 2 * Math.PI;
-            slicePoints.push({ r: R, ang: Ang });
+    if (numAngles >= 8) {
+        for (let a = 0; a < numAngles; a++) {
+            const startIdx = a * ptsPerAngle;
+            const endIdx = startIdx + ptsPerAngle;
+
+            for (let j = startIdx; j < endIdx - 1; j++) {
+                const z1 = surface.z[j];
+                const z2 = surface.z[j + 1];
+
+                if ((z1 >= N && z2 <= N) || (z1 <= N && z2 >= N)) {
+                    const denom = (z2 - z1);
+                    const t = Math.abs(denom) > 1e-9 ? (N - z1) / denom : 0;
+                    const pMx = surface.x[j] + t * (surface.x[j + 1] - surface.x[j]);
+                    const pMy = surface.y[j] + t * (surface.y[j + 1] - surface.y[j]);
+                    const R = Math.sqrt(pMx * pMx + pMy * pMy);
+                    let Ang = Math.atan2(pMy, pMx);
+                    if (Ang < 0) Ang += 2 * Math.PI;
+                    slicePoints.push({ r: R, ang: Ang });
+                    break;
+                }
+            }
+        }
+    }
+
+    // Fallback para fatia tolerante se poucos pontos interpolados
+    if (slicePoints.length < 4) {
+        const toleranceN = Math.max(20, Math.abs(N) * 0.10);
+        for (let i = 0; i < surface.x.length; i++) {
+            const pN = surface.z[i];
+            if (Math.abs(pN - N) < toleranceN) {
+                const pMx = surface.x[i];
+                const pMy = surface.y[i];
+                const R = Math.sqrt(pMx * pMx + pMy * pMy);
+                let Ang = Math.atan2(pMy, pMx);
+                if (Ang < 0) Ang += 2 * Math.PI;
+                slicePoints.push({ r: R, ang: Ang });
+            }
         }
     }
 
@@ -812,9 +1203,21 @@ function calculateLoadCase(load, index) {
     const method = pcalcData.config.method2ndOrder;
     const checkSlenderness = pcalcData.config.checkSlenderness;
 
-    // Momento Mínimo (NBR 6118)
-    const e_min_x = 1.5 + 0.03 * hy;
-    const e_min_y = 1.5 + 0.03 * hx;
+    // Momento Mínimo e Imperfeições por Norma
+    const std = window.pcalcState?.standard || 'nbr';
+    let e_min_x = 1.5 + 0.03 * hy;
+    let e_min_y = 1.5 + 0.03 * hx;
+
+    if (std === 'aci') {
+        // ACI 318-22 §6.6.4.5.4: M2,min = Pu * (15 + 0.03h) mm
+        e_min_x = 1.5 + 0.03 * hy;
+        e_min_y = 1.5 + 0.03 * hx;
+    } else if (std === 'ec2') {
+        // Eurocode 2 §5.2: e0 = max(h/30, 20mm)
+        e_min_x = Math.max(hy / 30.0, 2.0);
+        e_min_y = Math.max(hx / 30.0, 2.0);
+    }
+
     const M1d_min_x = Math.abs(Nsd) * (e_min_x / 100);
     const M1d_min_y = Math.abs(Nsd) * (e_min_y / 100);
 
@@ -832,9 +1235,11 @@ function calculateLoadCase(load, index) {
     const boundary = pcalcData.secao.boundary;
     const le = (boundary === 'pinned') ? length : 2 * length;
 
-    // lambda = le / i (i approx h/3.46 for rect)
-    const lambdaX = (hy > 0) ? (3.46 * le) / hy : 0; // Giro em torno de X, altura é hy
-    const lambdaY = (hx > 0) ? (3.46 * le) / hx : 0; // Giro em torno de Y, altura é hx
+    // lambda = le / i (i approx h/3.46 para retângulo, D/4 para círculo -> fator 4.0)
+    const isCirc = pcalcData.secao.tipoSecao === 'Circular';
+    const factor_i = isCirc ? 4.0 : 3.4641;
+    const lambdaX = (hy > 0) ? (factor_i * le) / hy : 0; // Giro em torno de X, altura é hy
+    const lambdaY = (hx > 0) ? (factor_i * le) / hx : 0; // Giro em torno de Y, altura é hx
 
     const alphaBx = getAlphaB(M1d_x_top, M1d_x_bot);
     const alphaBy = getAlphaB(M1d_y_top, M1d_y_bot);
@@ -843,8 +1248,20 @@ function calculateLoadCase(load, index) {
     const e1x = Math.abs(Nsd) > 0 ? Math.max(Math.abs(M1d_x_top), Math.abs(M1d_x_bot)) / Math.abs(Nsd) * 100 : 0;
     const e1y = Math.abs(Nsd) > 0 ? Math.max(Math.abs(M1d_y_top), Math.abs(M1d_y_bot)) / Math.abs(Nsd) * 100 : 0;
 
-    const lambda1_x = Math.min(90, Math.max(35, (25 + 12.5 * (e1x / hy)) / alphaBx));
-    const lambda1_y = Math.min(90, Math.max(35, (25 + 12.5 * (e1y / hx)) / alphaBy));
+    let lambda1_x = Math.min(90, Math.max(35, (25 + 12.5 * (e1x / hy)) / alphaBx));
+    let lambda1_y = Math.min(90, Math.max(35, (25 + 12.5 * (e1y / hx)) / alphaBy));
+
+    if (std === 'aci') {
+        // ACI 318-22 §6.2.5.1: k*Lu/r limit = 22 for nonsway columns
+        lambda1_x = 22.0;
+        lambda1_y = 22.0;
+    } else if (std === 'ec2') {
+        // EC2 §5.8.3.1: lambda_lim = 20 * A * B * C / sqrt(n)
+        const n_rel = Math.max(0.05, Math.abs(Nsd) / (pcalcData.secao.areaAc * (pcalcData.materiais.fck / 10 / 1.5)));
+        const lambda_lim = Math.min(90, Math.max(25, (20.0 * 0.7 * 1.1 * 1.0) / Math.sqrt(n_rel)));
+        lambda1_x = lambda_lim;
+        lambda1_y = lambda_lim;
+    }
 
     const needs2ndOrderX = checkSlenderness ? (lambdaX > lambda1_x) : true;
     const needs2ndOrderY = checkSlenderness ? (lambdaY > lambda1_y) : true;
@@ -901,7 +1318,10 @@ function calculateLoadCase(load, index) {
         info = "1a Ordem";
     }
 
-    const safetyFactor = calculateSafetyFactor(Nsd, Mtot_x, Mtot_y);
+    let safetyFactor = calculateSafetyFactor(Nsd, Mtot_x, Mtot_y);
+    if (std === 'aci') {
+        safetyFactor = safetyFactor * 0.65;
+    }
 
     console.groupEnd();
 
@@ -978,15 +1398,7 @@ function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
         const nsd_abs = Math.abs(Nsd);
 
         // Coeficientes da Equação (CalculaEsforcos.java - calculaMomento2OrdP2)
-        // a = 5*h
-        // b = -h^2*N + (N*L^2)/320 - 5*h*M1max
-        // c = N*h^2*M1max
-
         const a = 5.0 * h;
-        // Nota: Le = comprimento de flambagem. No Java é 'lFlamb'.
-        // Fórmula Java: b = ((-h * h) * nsd) + (((((nsd * lFlamb) / 100) * lFlamb) / 100) / 320) - ((5 * h) * md1Max);
-        // Assumindo Le em metros e N em kN.
-
         const termNLe2 = (nsd_abs * Le * Le) / 320.0;
         const b = (-h * h * nsd_abs) + termNLe2 - (5.0 * h * M1Max);
         const c = nsd_abs * h * h * M1Max;
@@ -997,14 +1409,15 @@ function calculateMethod2_StiffnessApprox(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
         if (delta >= 0) {
             Mtot = (-b + Math.sqrt(delta)) / (2 * a);
         } else {
-            // Fallback se delta < 0 (muito instável)
-            Mtot = M1Max * 1.5;
+            // Fallback normativo NBR 6118 se discriminante negativo: usa Método 1 (Curvatura Aproximada)
+            const m1_fallback = calculateMethod1_CurvatureApprox(Nsd, M1t, M1b, 0, 0, Min, 0, true, false);
+            Mtot = m1_fallback.Mtot_x;
         }
 
         // Garante que não é menor que 1a ordem
         Mtot = Math.max(Mtot, M1Max);
 
-        return { Mtot, M2d: Mtot - M1Max };
+        return { Mtot, M2d: Math.max(0, Mtot - M1Max) };
     };
 
     const resX = solveQuadratic(hy, M1xt, M1xb, MinX, calcX);
@@ -1023,17 +1436,25 @@ function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
     const Ac = pcalcData.secao.areaAc;
     const nu = Math.abs(Nsd) / (Ac * fcd);
 
+    const getAlphaB = (M1, M2) => {
+        const Ma = Math.max(Math.abs(M1), Math.abs(M2));
+        const Mb = Math.min(Math.abs(M1), Math.abs(M2));
+        if (Ma === 0) return 1.0;
+        const ratio = (M1 * M2 >= 0) ? (Mb / Ma) : -(Mb / Ma);
+        return Math.max(0.4, 0.6 + 0.4 * ratio);
+    };
+
     const solveKappa = (M1t, M1b, Min, lambda, axis) => {
-        const M1Max = Math.max(Math.abs(M1t), Math.abs(M1b), Min);
-        if (lambda < 35) return { Mtot: M1Max, M2d: 0 }; // Segurança extra
+        const Ma = Math.max(Math.abs(M1t), Math.abs(M1b));
+        const alphaB = getAlphaB(M1t, M1b);
+        const M1d_equiv = Math.max(alphaB * Ma, Min);
+        if (lambda < 35) return { Mtot: M1d_equiv, M2d: 0 };
 
-        // Estimar Rigidez Secante (Kappa)
-        // Precisa do momento atuante Mtot para achar rigidez. Processo iterativo simplificado.
-        let Mtarget = M1Max;
-        let kappa = 100; // Valor inicial alto
+        // Estimar Rigidez Secante (Kappa) NBR 6118 item 15.8.3.3.4
+        let Mtarget = M1d_equiv;
+        let kappa = 100;
 
-        // Iterar algumas vezes para convergir Mtot e Rigidez
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 4; i++) {
             const mx_try = (axis === 'x') ? Mtarget : 0;
             const my_try = (axis === 'y') ? Mtarget : 0;
 
@@ -1041,22 +1462,20 @@ function calculateMethod3_StandardDiagram(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, Min
             const stiff = getSecantStiffness(Nsd, mx_try, my_try);
             const EI = (axis === 'x') ? stiff.EIx : stiff.EIy;
 
-            // Kappa = EI_sec / (Ac * h^2 * fcd) ??? 
-            // NBR define rigidez adimensional Kappa = Stiffness da secão
-            // Na verdade, a fórmula NBR usa kapa diretamente da rigidez.
-            // Mtot = M1d / (1 - (lambda^2 / 120 / kappa) * nu)
-
-            // No Java: kapa = EIsec / (Ac * h * h * fcd)
-            const h = (axis === 'x') ? pcalcData.secao.hy / 100 : pcalcData.secao.hx / 100; // h na direção da flexão
+            const h = (axis === 'x') ? pcalcData.secao.hy / 100 : pcalcData.secao.hx / 100;
             kappa = EI / (Ac * h * h * fcd);
 
-            const denom = 1.0 - ((lambda * lambda) / 120.0 / kappa) * nu;
+            const denom = 1.0 - ((lambda * lambda) / 120.0 / Math.max(0.1, kappa)) * nu;
 
-            if (denom <= 0) Mtarget = M1Max * 3; // Instabilidade
-            else Mtarget = M1Max / denom;
+            if (denom <= 0.05) {
+                Mtarget = M1d_equiv * 3;
+                break;
+            } else {
+                Mtarget = Math.max(M1d_equiv / denom, Min);
+            }
         }
 
-        return { Mtot: Mtarget, M2d: Mtarget - M1Max };
+        return { Mtot: Mtarget, M2d: Math.max(0, Mtarget - M1d_equiv) };
     };
 
     const resX = calcX ? solveKappa(M1xt, M1xb, MinX, lamX, 'x') : { Mtot: Math.max(Math.abs(M1xt), Math.abs(M1xb), MinX), M2d: 0 };
@@ -1251,8 +1670,11 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, biaxial
             // O termo é - P * delta. Como P (compressão) é negativo no nosso sign convention, fica - (-) * delta = + delta.
             // Então M_new = M1 + abs(N) * w.
 
-            const newMx = nodes[i].M1x + Math.abs(Nsd) * nodes[i].wY;
-            const newMy = nodes[i].M1y + Math.abs(Nsd) * nodes[i].wX;
+            const signX = nodes[i].M1x >= 0 ? 1 : -1;
+            const signY = nodes[i].M1y >= 0 ? 1 : -1;
+
+            const newMx = nodes[i].M1x + signX * Math.abs(Nsd) * Math.abs(nodes[i].wY);
+            const newMy = nodes[i].M1y + signY * Math.abs(Nsd) * Math.abs(nodes[i].wX);
 
             nodes[i].MtotX = newMx;
             nodes[i].MtotY = newMy;
@@ -1264,15 +1686,19 @@ function calculateMethodGeneral(Nsd, M1xt, M1xb, M1yt, M1yb, MinX, MinY, biaxial
     }
 
     // Encontrar máximos finais
-    let maxMx = 0, maxMy = 0, maxM2x = 0, maxM2y = 0;
+    let maxMx = 0, maxMy = 0;
     nodes.forEach(n => {
         if (Math.abs(n.MtotX) > Math.abs(maxMx)) maxMx = n.MtotX;
         if (Math.abs(n.MtotY) > Math.abs(maxMy)) maxMy = n.MtotY;
     });
 
-    // M2d aproximado na seção crítica
-    maxM2x = maxMx - Math.max(Math.abs(M1xt), Math.abs(M1xb), MinX);
-    maxM2y = maxMy - Math.max(Math.abs(M1yt), Math.abs(M1yb), MinY);
+    const max_wY = Math.max(...nodes.map(n => Math.abs(n.wY)));
+    const max_wX = Math.max(...nodes.map(n => Math.abs(n.wX)));
+    const max_m1_x = Math.max(Math.abs(M1xt), Math.abs(M1xb));
+    const max_m1_y = Math.max(Math.abs(M1yt), Math.abs(M1yb));
+
+    const maxM2x = Math.max(Math.abs(maxMx) - max_m1_x, Math.abs(Nsd) * max_wY);
+    const maxM2y = Math.max(Math.abs(maxMy) - max_m1_y, Math.abs(Nsd) * max_wX);
 
     return {
         Mtot_x: maxMx, Mtot_y: maxMy,
@@ -1610,14 +2036,6 @@ function updateSectionStats() {
     const container = document.getElementById('cross-section-container');
     if (!container) return;
 
-    let statsDiv = document.getElementById('section-stats-overlay');
-    if (!statsDiv) {
-        statsDiv = document.createElement('div');
-        statsDiv.id = 'section-stats-overlay';
-        statsDiv.className = 'absolute top-2 left-2 bg-white/80 dark:bg-gray-800/80 p-2 rounded border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300 pointer-events-none shadow-sm backdrop-blur-sm z-10';
-        container.appendChild(statsDiv);
-    }
-
     const { hx, hy, length, boundary, areaAc } = pcalcData.secao;
     const { fck } = pcalcData.materiais;
     const { barras } = pcalcData.armacao;
@@ -1634,6 +2052,24 @@ function updateSectionStats() {
     const lamX = (hy > 0) ? (3.46 * Le) / hy : 0;
     const lamY = (hx > 0) ? (3.46 * Le) / hx : 0;
 
+    if (typeof EngCAD !== 'undefined') {
+        EngCAD.updateHUD(container, 'Pilar de Concreto Armado', [
+            { label: 'Seção', value: `${hx} × ${hy} cm` },
+            { label: 'Taxa (ρ)', value: `${rho.toFixed(2)}%`, color: '#38bdf8' },
+            { label: 'Esbeltez λx / λy', value: `${lamX.toFixed(0)} / ${lamY.toFixed(0)}` },
+            { label: 'Concreto', value: `fck = ${fck} MPa` }
+        ]);
+        return;
+    }
+
+    let statsDiv = document.getElementById('section-stats-overlay');
+    if (!statsDiv) {
+        statsDiv = document.createElement('div');
+        statsDiv.id = 'section-stats-overlay';
+        statsDiv.className = 'absolute top-2 left-2 bg-slate-900/85 p-2 rounded border border-slate-700 text-xs text-slate-200 pointer-events-none shadow-sm backdrop-blur-sm z-10';
+        container.appendChild(statsDiv);
+    }
+
     statsDiv.innerHTML = `
         <div class="font-bold mb-1 border-b border-gray-300 dark:border-gray-600 pb-1">Propriedades</div>
         <div class="mb-1">Taxa de armadura = <span class="font-bold text-blue-600 dark:text-blue-400">${rho.toFixed(2)} %</span></div>
@@ -1646,10 +2082,19 @@ function updateSectionStats() {
 
 function renderCrossSection() {
     const canvas = document.getElementById('sectionCanvas');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Draw Unified RS2 / CAD Slate Background & Grid
+    if (typeof EngCAD !== 'undefined') {
+        EngCAD.drawBackground(ctx, canvas.width, canvas.height, true);
+        EngCAD.drawGrid(ctx, canvas.width, canvas.height, { step: 24, majorEvery: 4 });
+    } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -1659,19 +2104,27 @@ function renderCrossSection() {
 
     const { hx, hy } = pcalcData.secao;
 
-    const dark = typeof isDark === 'function' ? isDark() : false;
-    const concreteFill = dark ? '#374151' : '#e5e7eb';
-    const concreteStroke = dark ? '#94a3b8' : '#64748b';
-    const rebarFill = '#dc2626';
-    const rebarStroke = dark ? '#fca5a5' : '#7f1d1d';
-    const axisColor = '#3b82f6';
-
-    ctx.fillStyle = concreteFill;
-    ctx.strokeStyle = concreteStroke;
+    // 2. Concrete Outline & Technical 45-deg Hatching
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2 / currentScale;
 
     if (pcalcData.secao.tipoSecao === 'Retangular') {
         ctx.fillRect(-hx / 2, -hy / 2, hx, hy);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(-hx / 2, -hy / 2, hx, hy);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+        ctx.lineWidth = 1 / currentScale;
+        const diag = Math.max(hx, hy) * 2;
+        for (let d = -diag; d < diag; d += 14 / currentScale) {
+            ctx.beginPath();
+            ctx.moveTo(d, -diag);
+            ctx.lineTo(d + diag, diag);
+            ctx.stroke();
+        }
+        ctx.restore();
         ctx.strokeRect(-hx / 2, -hy / 2, hx, hy);
     } else {
         ctx.beginPath();
@@ -1680,74 +2133,399 @@ function renderCrossSection() {
         ctx.stroke();
     }
 
+    // 3. Stirrup Tie (Estribo) & Longitudinal Rebars to Scale
     const { barras } = pcalcData.armacao;
-    if (barras) {
-        ctx.fillStyle = rebarFill;
-        ctx.strokeStyle = rebarStroke;
-        ctx.lineWidth = 1 / currentScale;
+    if (barras && barras.length > 0) {
+        // Draw stirrup tie enclosing the rebars if rectangular
+        if (pcalcData.secao.tipoSecao === 'Retangular' && barras.length >= 4) {
+            let minBx = Infinity, maxBx = -Infinity, minBy = Infinity, maxBy = -Infinity;
+            for (let b of barras) {
+                const bx = b.x - pcalcData.secao.xm;
+                const by = b.y - pcalcData.secao.ym;
+                const rad = (b.diametro / 10) / 2;
+                minBx = Math.min(minBx, bx - rad);
+                maxBx = Math.max(maxBx, bx + rad);
+                minBy = Math.min(minBy, by - rad);
+                maxBy = Math.max(maxBy, by + rad);
+            }
+            if (minBx < maxBx && minBy < maxBy) {
+                ctx.save();
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.6 / currentScale;
+                const stW = maxBx - minBx;
+                const stH = maxBy - minBy;
+                const cornerR = Math.min(1.2, stW / 8, stH / 8);
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(minBx, minBy, stW, stH, cornerR);
+                } else {
+                    ctx.rect(minBx, minBy, stW, stH);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+        } else if (pcalcData.secao.tipoSecao === 'Circular' && barras.length >= 2) {
+            // Draw circular stirrup ring at outermost bar radius
+            let maxBarR = 0;
+            for (let b of barras) {
+                const bx = b.x - pcalcData.secao.xm;
+                const by = b.y - pcalcData.secao.ym;
+                const rBar = Math.sqrt(bx*bx + by*by) + (b.diametro / 10) / 2;
+                if (rBar > maxBarR) maxBarR = rBar;
+            }
+            if (maxBarR > 0) {
+                ctx.save();
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.6 / currentScale;
+                ctx.beginPath();
+                ctx.arc(0, 0, maxBarR, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
 
+        // Draw individual rebars with true physical scale
         for (let b of barras) {
             const bx = b.x - pcalcData.secao.xm;
             const by = b.y - pcalcData.secao.ym;
             const rad = (b.diametro / 10) / 2;
 
-            ctx.beginPath();
-            ctx.arc(bx, by, rad, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.stroke();
+            if (typeof EngCAD !== 'undefined') {
+                EngCAD.drawRebar(ctx, bx, by, rad, { isDark: true, scale: currentScale });
+            } else {
+                ctx.beginPath();
+                ctx.arc(bx, by, rad, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ef4444';
+                ctx.fill();
+                ctx.strokeStyle = '#991b1b';
+                ctx.lineWidth = 1 / currentScale;
+                ctx.stroke();
+            }
         }
     }
 
+    // 4. Centroid Axes
     ctx.beginPath();
-    ctx.strokeStyle = axisColor;
-    ctx.lineWidth = 1 / currentScale;
-    ctx.moveTo(0, 0); ctx.lineTo(hx / 2, 0);
-    ctx.moveTo(0, 0); ctx.lineTo(0, hy / 2);
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.7)';
+    ctx.lineWidth = 1.2 / currentScale;
+    ctx.setLineDash([4 / currentScale, 3 / currentScale]);
+    ctx.moveTo(-hx / 2 - 8 / currentScale, 0); ctx.lineTo(hx / 2 + 8 / currentScale, 0);
+    ctx.moveTo(0, -hy / 2 - 8 / currentScale); ctx.lineTo(0, hy / 2 + 8 / currentScale);
     ctx.stroke();
+    ctx.setLineDash([]);
 
-    const dimColor = dark ? '#94a3b8' : '#475569';
-    ctx.fillStyle = dimColor;
-    ctx.strokeStyle = dimColor;
-    ctx.lineWidth = 1 / currentScale;
-
-    const offset = 15 / currentScale;
-    const tickLen = 5 / currentScale;
-
-    const yDimX = -hy / 2 - offset;
-    ctx.beginPath();
-    ctx.moveTo(-hx / 2, -hy / 2 - 2 / currentScale); ctx.lineTo(-hx / 2, yDimX - tickLen);
-    ctx.moveTo(hx / 2, -hy / 2 - 2 / currentScale); ctx.lineTo(hx / 2, yDimX - tickLen);
-    ctx.moveTo(-hx / 2, yDimX); ctx.lineTo(hx / 2, yDimX);
-    ctx.moveTo(-hx / 2 - tickLen, yDimX - tickLen); ctx.lineTo(-hx / 2 + tickLen, yDimX + tickLen);
-    ctx.moveTo(hx / 2 - tickLen, yDimX - tickLen); ctx.lineTo(hx / 2 + tickLen, yDimX + tickLen);
-    ctx.stroke();
-
-    const xDimY = -hx / 2 - offset;
-    ctx.beginPath();
-    ctx.moveTo(-hx / 2 - 2 / currentScale, -hy / 2); ctx.lineTo(xDimY - tickLen, -hy / 2);
-    ctx.moveTo(-hx / 2 - 2 / currentScale, hy / 2); ctx.lineTo(xDimY - tickLen, hy / 2);
-    ctx.moveTo(xDimY, -hy / 2); ctx.lineTo(xDimY, hy / 2);
-    ctx.moveTo(xDimY - tickLen, -hy / 2 - tickLen); ctx.lineTo(xDimY + tickLen, -hy / 2 + tickLen);
-    ctx.moveTo(xDimY - tickLen, hy / 2 - tickLen); ctx.lineTo(xDimY + tickLen, hy / 2 + tickLen);
-    ctx.stroke();
-
-    ctx.save();
-    ctx.scale(1, -1);
-    const fontSize = 14 / currentScale;
-    ctx.font = `${fontSize}px sans-serif`;
-    ctx.textAlign = 'center';
-
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${hx} cm`, 0, -yDimX + 2 / currentScale);
-
-    ctx.save();
-    ctx.translate(xDimY - 2 / currentScale, 0);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(`${hy} cm`, 0, 0);
     ctx.restore();
 
-    ctx.restore();
-    ctx.restore();
+    // 5. Dimension Lines (Cotas Técnicas com Pill Badges) - Desenhadas em coordenadas de tela (pixels 1:1)
+    if (typeof EngCAD !== 'undefined') {
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const x1 = cx - (hx / 2) * currentScale;
+        const x2 = cx + (hx / 2) * currentScale;
+        const yTop = cy - (hy / 2) * currentScale;
+        const yBot = cy + (hy / 2) * currentScale;
+
+        // Dimensão hx (Largura horizontal inferior)
+        EngCAD.drawDimension(ctx, x1, yBot, x2, yBot, `${hx} cm`, {
+            offset: 24,
+            tickLen: 5,
+            isDark: true
+        });
+
+        // Dimensão hy (Altura vertical esquerda)
+        EngCAD.drawDimension(ctx, x1, yBot, x1, yTop, `${hy} cm`, {
+            offset: -24,
+            tickLen: 5,
+            isDark: true
+        });
+    }
+
     updateSectionStats();
 }
+
+// =========================================================================
+// UNIFIED PCALC CONTROLLER (PILAR vs SEÇÃO / VIGA & MULTI-NORMA)
+// =========================================================================
+window.pcalcState = {
+    mode: 'column', // 'column' or 'section'
+    standard: 'nbr' // 'nbr', 'aci', 'ec2', 'all'
+};
+
+function updatePcalcUI() {
+    const isCol = window.pcalcState.mode === 'column';
+    const std = window.pcalcState.standard;
+
+    // 1. View visibility
+    const viewCol = document.getElementById('view-column');
+    const viewSec = document.getElementById('view-section');
+    if (viewCol) viewCol.classList.toggle('hidden', !isCol);
+    if (viewSec) viewSec.classList.toggle('hidden', isCol);
+
+    // 2. Mode buttons styling
+    const btnCol = document.getElementById('btn-mode-column');
+    const btnSec = document.getElementById('btn-mode-section');
+    const activeModeClass = "px-3 py-1.5 rounded-md text-xs font-bold transition-all bg-blue-600 text-white shadow-xs flex items-center gap-1.5";
+    const inactiveModeClass = "px-3 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1.5";
+    if (btnCol) btnCol.className = isCol ? activeModeClass : inactiveModeClass;
+    if (btnSec) btnSec.className = !isCol ? activeModeClass : inactiveModeClass;
+
+    // 3. Active badge
+    const badge = document.getElementById('active-pcalc-badge');
+    if (badge) {
+        badge.textContent = isCol ? "PILAR" : "SEÇÃO / VIGA";
+        badge.className = isCol
+            ? "px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 uppercase"
+            : "px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 uppercase";
+    }
+
+    // 4. Code buttons styling
+    const codes = ['nbr', 'aci', 'ec2', 'all'];
+    const activeCodeClasses = {
+        nbr: "px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-emerald-600 text-white shadow-xs flex items-center gap-1",
+        aci: "px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-blue-600 text-white shadow-xs flex items-center gap-1",
+        ec2: "px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-indigo-600 text-white shadow-xs flex items-center gap-1",
+        all: "px-2.5 py-1.5 rounded-md text-xs font-bold transition-all bg-purple-600 text-white shadow-xs flex items-center gap-1"
+    };
+    const inactiveCodeClass = "px-2.5 py-1.5 rounded-md text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1";
+
+    codes.forEach(c => {
+        const btn = document.getElementById(`btn-code-${c}`);
+        if (btn) btn.className = (c === std) ? activeCodeClasses[c] : inactiveCodeClass;
+    });
+
+    // 5. Dynamic Banner update
+    const bTitle = document.getElementById('banner-code-title');
+    const bDesc = document.getElementById('banner-code-desc');
+    const bMode = document.getElementById('banner-mode-indicator');
+
+    if (bMode) {
+        bMode.textContent = isCol ? "Modo: Pilar (Flexo-Compressão Biaxial & 2ª Ordem)" : "Modo: Seção / Viga (Flexão M-N & Cisalhamento V)";
+    }
+
+    if (std === 'nbr') {
+        if (bTitle) bTitle.innerHTML = "🇧🇷 ABNT NBR 6118:2023";
+        if (bDesc) bDesc.innerHTML = isCol
+            ? "• Pilar: &gamma;c=1.40, &gamma;s=1.15, &gamma;f=1.40 • Pilar-Padrão (1/r, Rigidez) e Momento Mínimo M<sub>1d,min</sub>"
+            : "• Seção: &gamma;c=1.40, &gamma;s=1.15 • Domínios 2/3 (x/d &le; 0.45) • Cisalhamento Modelo I com &sigma;<sub>cp</sub>";
+    } else if (std === 'aci') {
+        if (bTitle) bTitle.innerHTML = "🇺🇸 ACI 318-22 (LRFD)";
+        if (bDesc) bDesc.innerHTML = isCol
+            ? "• Column: &phi;c = 0.65 (tied) / 0.75 (spiral) • Moment Magnifier (&delta; M<sub>2</sub>) • Minimum Moment M<sub>2,min</sub> = Pu(15+0.03h) mm"
+            : "• Section: Whitney Block (&beta;<sub>1</sub>) • &phi;<sub>flex</sub> = 0.65 – 0.90 (&epsilon;<sub>t</sub>) • Shear &phi;V<sub>c</sub> com Nu";
+    } else if (std === 'ec2') {
+        if (bTitle) bTitle.innerHTML = "🇪🇺 Eurocode 2 (EN 1992-1-1)";
+        if (bDesc) bDesc.innerHTML = isCol
+            ? "• Column: &gamma;C = 1.50, &gamma;S = 1.15, &gamma;F = 1.35 • Imperfection e<sub>0</sub> = max(h/30, 20mm) • Curvature / Stiffness"
+            : "• Section: &gamma;C = 1.50, &gamma;S = 1.15 • Variable Strut Angle cot&theta; = 2.5 • Shear com &sigma;<sub>cp</sub>";
+    } else {
+        if (bTitle) bTitle.innerHTML = "🌐 Comparativo Multi-Norma";
+        if (bDesc) bDesc.innerHTML = "• NBR 6118 vs ACI 318-22 vs Eurocode 2 • Análise paralela dos fatores de segurança, resistências e taxas de trabalho";
+    }
+
+    // 6. Presets visibility (Column vs Section)
+    const secPreset = document.getElementById('section-preset-wrapper');
+    const colPreset = document.getElementById('column-preset-wrapper');
+    if (secPreset) {
+        if (isCol) {
+            secPreset.classList.add('hidden');
+            secPreset.classList.remove('flex');
+        } else {
+            secPreset.classList.remove('hidden');
+            secPreset.classList.add('flex');
+        }
+    }
+    if (colPreset) {
+        if (isCol) {
+            colPreset.classList.remove('hidden');
+            colPreset.classList.add('flex');
+        } else {
+            colPreset.classList.add('hidden');
+            colPreset.classList.remove('flex');
+        }
+    }
+
+    // 7. Trigger responsive redraws
+    setTimeout(() => {
+        if (isCol) {
+            if (typeof renderCrossSection === 'function') renderCrossSection();
+            if (typeof Plotly !== 'undefined' && document.getElementById('chart3d')) {
+                Plotly.Plots.resize('chart3d');
+            }
+        } else {
+            if (typeof pcalcSection !== 'undefined') pcalcSection.calculate();
+        }
+    }, 80);
+}
+
+function setPcalcMode(mode) {
+    window.pcalcState.mode = mode;
+    updatePcalcUI();
+}
+
+function setPcalcStandard(std) {
+    window.pcalcState.standard = std;
+    if (window.pcalcState.mode === 'column') {
+        if (std === 'nbr') {
+            const gc = document.getElementById('gamac'); if (gc) gc.value = '1.4';
+            const gs = document.getElementById('gamas'); if (gs) gs.value = '1.15';
+            const gf = document.getElementById('gamaf'); if (gf) gf.value = '1.4';
+        } else if (std === 'aci') {
+            const gc = document.getElementById('gamac'); if (gc) gc.value = '1.54'; // 1/0.65
+            const gs = document.getElementById('gamas'); if (gs) gs.value = '1.0';
+            const gf = document.getElementById('gamaf'); if (gf) gf.value = '1.0';
+        } else if (std === 'ec2') {
+            const gc = document.getElementById('gamac'); if (gc) gc.value = '1.5';
+            const gs = document.getElementById('gamas'); if (gs) gs.value = '1.15';
+            const gf = document.getElementById('gamaf'); if (gf) gf.value = '1.35';
+        }
+        updateDataFromInputs();
+    }
+    updatePcalcUI();
+}
+
+function triggerPcalcCalculation() {
+    if (window.pcalcState.mode === 'column') {
+        performCalculation();
+    } else {
+        if (typeof pcalcSection !== 'undefined') pcalcSection.calculate();
+    }
+}
+
+// =========================================================================
+// TYPICAL COLUMN PRESETS (SEÇÕES TÍPICAS DE ENGENHARIA ESTRUTURAL)
+// =========================================================================
+const COLUMN_PRESETS = {
+    'retangular_30x50': {
+        name: 'Pilar 30x50 cm (Padrão)',
+        tipoSecao: 'Retangular',
+        hx: 30, hy: 50, length: 400, fck: 25, boundary: 'pinned',
+        barras: [
+            { x: 4, y: 4, diametro: 16 },
+            { x: 26, y: 4, diametro: 16 },
+            { x: 4, y: 46, diametro: 16 },
+            { x: 26, y: 46, diametro: 16 }
+        ],
+        esforcos: [{ n: -800, mxTop: 50, mxBot: -50, myTop: 20, myBot: -20 }]
+    },
+    'borda_20x40': {
+        name: 'Pilar Borda 20x40 cm',
+        tipoSecao: 'Retangular',
+        hx: 20, hy: 40, length: 300, fck: 30, boundary: 'pinned',
+        barras: [
+            { x: 3.5, y: 3.5, diametro: 12.5 },
+            { x: 16.5, y: 3.5, diametro: 12.5 },
+            { x: 3.5, y: 20.0, diametro: 12.5 },
+            { x: 16.5, y: 20.0, diametro: 12.5 },
+            { x: 3.5, y: 36.5, diametro: 12.5 },
+            { x: 16.5, y: 36.5, diametro: 12.5 }
+        ],
+        esforcos: [{ n: -500, mxTop: 30, mxBot: 30, myTop: 15, myBot: 15 }]
+    },
+    'quadrado_30x30': {
+        name: 'Pilar Central 30x30 cm',
+        tipoSecao: 'Retangular',
+        hx: 30, hy: 30, length: 320, fck: 30, boundary: 'pinned',
+        barras: [
+            { x: 3.5, y: 3.5, diametro: 16 },
+            { x: 15.0, y: 3.5, diametro: 16 },
+            { x: 26.5, y: 3.5, diametro: 16 },
+            { x: 3.5, y: 15.0, diametro: 16 },
+            { x: 26.5, y: 15.0, diametro: 16 },
+            { x: 3.5, y: 26.5, diametro: 16 },
+            { x: 15.0, y: 26.5, diametro: 16 },
+            { x: 26.5, y: 26.5, diametro: 16 }
+        ],
+        esforcos: [{ n: -900, mxTop: 25, mxBot: 25, myTop: 25, myBot: 25 }]
+    },
+    'robusto_40x60': {
+        name: 'Pilar Garagem 40x60 cm',
+        tipoSecao: 'Retangular',
+        hx: 40, hy: 60, length: 360, fck: 35, boundary: 'pinned',
+        barras: [
+            { x: 4.0, y: 4.0, diametro: 20 },
+            { x: 36.0, y: 4.0, diametro: 20 },
+            { x: 4.0, y: 30.0, diametro: 20 },
+            { x: 36.0, y: 30.0, diametro: 20 },
+            { x: 4.0, y: 56.0, diametro: 20 },
+            { x: 36.0, y: 56.0, diametro: 20 },
+            { x: 20.0, y: 4.0, diametro: 20 },
+            { x: 20.0, y: 56.0, diametro: 20 }
+        ],
+        esforcos: [{ n: -2000, mxTop: 100, mxBot: -50, myTop: 50, myBot: -25 }]
+    },
+    'circular_d40': {
+        name: 'Pilar Circular Ø40 cm',
+        tipoSecao: 'Circular',
+        hx: 40, hy: 40, length: 300, fck: 30, boundary: 'pinned',
+        barras: [
+            { x: 36.5, y: 20.0, diametro: 16 },
+            { x: 28.25, y: 34.29, diametro: 16 },
+            { x: 11.75, y: 34.29, diametro: 16 },
+            { x: 3.5, y: 20.0, diametro: 16 },
+            { x: 11.75, y: 5.71, diametro: 16 },
+            { x: 28.25, y: 5.71, diametro: 16 }
+        ],
+        esforcos: [{ n: -600, mxTop: 35, mxBot: 35, myTop: 0, myBot: 0 }]
+    },
+    'parede_20x100': {
+        name: 'Pilar-Parede 20x100 cm',
+        tipoSecao: 'Retangular',
+        hx: 20, hy: 100, length: 300, fck: 30, boundary: 'pinned',
+        barras: [
+            { x: 3.5, y: 4.0, diametro: 16 },
+            { x: 16.5, y: 4.0, diametro: 16 },
+            { x: 3.5, y: 27.0, diametro: 16 },
+            { x: 16.5, y: 27.0, diametro: 16 },
+            { x: 3.5, y: 50.0, diametro: 16 },
+            { x: 16.5, y: 50.0, diametro: 16 },
+            { x: 3.5, y: 73.0, diametro: 16 },
+            { x: 16.5, y: 73.0, diametro: 16 },
+            { x: 3.5, y: 96.0, diametro: 16 },
+            { x: 16.5, y: 96.0, diametro: 16 }
+        ],
+        esforcos: [{ n: -1500, mxTop: 80, mxBot: 80, myTop: 25, myBot: 25 }]
+    }
+};
+
+function loadColumnPreset(key) {
+    const p = COLUMN_PRESETS[key];
+    if (!p) return;
+
+    pcalcData.secao.tipoSecao = p.tipoSecao;
+    pcalcData.secao.hx = p.hx;
+    pcalcData.secao.hy = p.hy;
+    pcalcData.secao.length = p.length;
+    pcalcData.secao.boundary = p.boundary || 'pinned';
+    pcalcData.secao.xm = p.hx / 2;
+    pcalcData.secao.ym = p.hy / 2;
+    pcalcData.materiais.fck = p.fck;
+
+    pcalcData.armacao.barras = JSON.parse(JSON.stringify(p.barras));
+    pcalcData.esforcos.listaEsforcos = JSON.parse(JSON.stringify(p.esforcos));
+
+    // Update DOM inputs
+    const secTypeEl = document.getElementById('section-type');
+    if (secTypeEl) secTypeEl.value = p.tipoSecao;
+    const hxEl = document.getElementById('hx');
+    if (hxEl) hxEl.value = p.hx;
+    const hyEl = document.getElementById('hy');
+    if (hyEl) hyEl.value = p.hy;
+    const lenEl = document.getElementById('length');
+    if (lenEl) lenEl.value = p.length;
+    const fckEl = document.getElementById('fck');
+    if (fckEl) fckEl.value = p.fck;
+    const bndEl = document.getElementById('boundary-type');
+    if (bndEl) bndEl.value = p.boundary || 'pinned';
+
+    updateDataFromInputs();
+    updateSectionTypeUI(); // Update hy-wrapper visibility and labels
+    renderReinforcement();
+    renderLoads();
+    fitViewToSection();
+    renderCrossSection();
+    triggerPcalcCalculation();
+}
+
+window.loadColumnPreset = loadColumnPreset;
+window.applyQuickRebar = applyQuickRebar;
+window.setUnits = setUnits;

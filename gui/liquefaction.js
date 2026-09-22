@@ -25,6 +25,67 @@ let currentProfileData = [];
 let chartFsInstance = null;
 let chartCsrCrrInstance = null;
 
+const LIQUEFACTION_SESSION_KEY = 'liquefaction_session_data';
+
+function saveLiquefactionSession() {
+    try {
+        const inputs = {};
+        const elements = document.querySelectorAll('input, select');
+        elements.forEach(el => {
+            if (!el.id) return;
+            if (el.type === 'checkbox') {
+                inputs[el.id] = el.checked;
+            } else {
+                inputs[el.id] = el.value;
+            }
+        });
+        const data = {
+            version: '1.1',
+            timestamp: Date.now(),
+            inputs: inputs,
+            boreholeLayers: currentBoreholeLayers,
+            activeMode: activeMode
+        };
+        localStorage.setItem(LIQUEFACTION_SESSION_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Erro ao salvar sessão Liquefação:', e);
+    }
+}
+
+function loadLiquefactionSession() {
+    const raw = localStorage.getItem(LIQUEFACTION_SESSION_KEY);
+    if (!raw) return false;
+    try {
+        const data = JSON.parse(raw);
+        if (!data) return false;
+        let applied = false;
+        if (data.inputs) {
+            Object.entries(data.inputs).forEach(([id, val]) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined && val !== null) {
+                    if (el.type === 'checkbox') {
+                        el.checked = !!val;
+                    } else {
+                        el.value = val;
+                    }
+                    applied = true;
+                }
+            });
+        }
+        if (Array.isArray(data.boreholeLayers) && data.boreholeLayers.length > 0) {
+            currentBoreholeLayers = data.boreholeLayers;
+            applied = true;
+        }
+        if (data.activeMode) {
+            activeMode = data.activeMode;
+        }
+        return applied;
+    } catch (e) {
+        console.warn('Erro ao restaurar sessão Liquefação:', e);
+        return false;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Fetch presets from backend if available
     if (typeof eel !== 'undefined' && eel.get_liquefaction_reference_data) {
@@ -38,15 +99,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    currentBoreholeLayers = JSON.parse(JSON.stringify(defaultBoreholeLayers));
+    // 2. Try restore previous session data; if not, use backend/default
+    const restored = loadLiquefactionSession();
+    if (!restored || !currentBoreholeLayers || currentBoreholeLayers.length === 0) {
+        currentBoreholeLayers = JSON.parse(JSON.stringify(defaultBoreholeLayers));
+    }
 
-    // 2. Setup listeners for inputs
+    // 3. Setup listeners for inputs
     setupProfileListeners();
     setupLayerGlobalListeners();
 
-    // 3. Initial execution
+    // 4. Initial execution
     renderBoreholeLayersTable();
     triggerProfileCalculation();
+    triggerSensitivityCalculation();
+
+    window.addEventListener('beforeunload', saveLiquefactionSession);
 });
 
 function switchMode(mode) {
@@ -56,19 +124,36 @@ function switchMode(mode) {
     const viewProf = document.getElementById('view-profile');
     const viewLay = document.getElementById('view-layers');
 
+    const inactiveClass = "px-5 py-2.5 text-sm font-medium rounded-lg transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2";
+    if (btnProf) btnProf.className = inactiveClass;
+    if (btnLay) btnLay.className = inactiveClass;
+
+    if (viewProf) viewProf.classList.add('hidden');
+    if (viewLay) viewLay.classList.add('hidden');
+
     if (mode === 'profile') {
-        btnProf.className = "px-5 py-2.5 text-sm font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm flex items-center gap-2";
-        btnLay.className = "px-5 py-2.5 text-sm font-medium rounded-lg transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2";
-        viewProf.classList.remove('hidden');
-        viewLay.classList.add('hidden');
+        if (btnProf) btnProf.className = "px-5 py-2.5 text-sm font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm flex items-center gap-2";
+        if (viewProf) viewProf.classList.remove('hidden');
         triggerProfileCalculation();
-    } else {
-        btnLay.className = "px-5 py-2.5 text-sm font-bold rounded-lg transition-all bg-amber-600 text-white shadow-sm flex items-center gap-2";
-        btnProf.className = "px-5 py-2.5 text-sm font-medium rounded-lg transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2";
-        viewLay.classList.remove('hidden');
-        viewProf.classList.add('hidden');
+        triggerSensitivityCalculation();
+    } else if (mode === 'layers') {
+        if (btnLay) btnLay.className = "px-5 py-2.5 text-sm font-bold rounded-lg transition-all bg-amber-600 text-white shadow-sm flex items-center gap-2";
+        if (viewLay) viewLay.classList.remove('hidden');
         triggerLayersCalculation();
     }
+    saveLiquefactionSession();
+}
+
+function scrollToExecutiveReport() {
+    if (activeMode !== 'profile') {
+        switchMode('profile');
+    }
+    setTimeout(() => {
+        const el = document.getElementById('section-executive-report');
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 60);
 }
 
 function parseNum(id, def = 0.0) {
@@ -78,6 +163,7 @@ function parseNum(id, def = 0.0) {
     return isNaN(v) ? def : v;
 }
 
+let sensDebounceTimer = null;
 function setupProfileListeners() {
     const ids = ['prof_na', 'prof_gamma', 'prof_fc', 'prof_n1_min', 'prof_n1_med', 'prof_n1_max',
                  'prof_a0_min', 'prof_a0_max', 'prof_mw_min', 'prof_mw_med', 'prof_mw_max',
@@ -85,8 +171,17 @@ function setupProfileListeners() {
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            el.addEventListener('input', () => triggerProfileCalculation());
-            el.addEventListener('change', () => triggerProfileCalculation());
+            el.addEventListener('input', () => {
+                triggerProfileCalculation();
+                clearTimeout(sensDebounceTimer);
+                sensDebounceTimer = setTimeout(() => {
+                    triggerSensitivityCalculation();
+                }, 400);
+            });
+            el.addEventListener('change', () => {
+                triggerProfileCalculation();
+                triggerSensitivityCalculation();
+            });
         }
     });
 }
@@ -126,6 +221,7 @@ function getProfilePayload() {
 
 function triggerProfileCalculation() {
     const payload = getProfilePayload();
+    saveLiquefactionSession();
     if (typeof eel !== 'undefined' && eel.calculate_liquefaction_profile) {
         eel.calculate_liquefaction_profile(payload)(function (response) {
             if (response && response.success) {
@@ -169,6 +265,14 @@ function updateProfileUI(res) {
     setScen('scen-a0max-med', scen.a0_max.scenario_med);
     setScen('scen-a0max-max', scen.a0_max.scenario_max);
 
+    // Update Scenario Card Titles
+    const a0MinInput = document.getElementById('prof_a0_min');
+    const a0MaxInput = document.getElementById('prof_a0_max');
+    const titleA0Min = document.getElementById('scen-title-a0min');
+    const titleA0Max = document.getElementById('scen-title-a0max');
+    if (titleA0Min && a0MinInput) titleA0Min.innerText = `Cenário a0 = ${Number(a0MinInput.value).toFixed(2)}g (Mín)`;
+    if (titleA0Max && a0MaxInput) titleA0Max.innerText = `Cenário a0 = ${Number(a0MaxInput.value).toFixed(2)}g (Máx)`;
+
     // Update Table
     const tbody = document.getElementById('profile-table-body');
     tbody.innerHTML = '';
@@ -179,23 +283,29 @@ function updateProfileUI(res) {
             tr.className += " bg-red-50/40 dark:bg-red-950/20";
         }
         tr.innerHTML = `
-            <td class="py-2 px-3 font-bold text-gray-800 dark:text-gray-200">${row.depth.toFixed(1)}</td>
-            <td class="py-2 px-3">${row.sigma_v.toFixed(1)}</td>
-            <td class="py-2 px-3">${row.u.toFixed(1)}</td>
-            <td class="py-2 px-3 font-semibold">${row.sigma_v_eff.toFixed(1)}</td>
-            <td class="py-2 px-3 text-gray-500">${row.rd.toFixed(4)}</td>
-            <td class="py-2 px-3">${row.csr_a0_min.toFixed(4)}</td>
-            <td class="py-2 px-3 font-medium">${row.csr_a0_max.toFixed(4)}</td>
-            <td class="py-2 px-3 ${formatFsColor(row.fs_a0min_min)}">${row.fs_a0min_min.toFixed(3)}</td>
-            <td class="py-2 px-3 ${formatFsColor(row.fs_a0min_med)}">${row.fs_a0min_med.toFixed(3)}</td>
-            <td class="py-2 px-3 font-bold ${formatFsColor(row.fs_a0max_min)}">${row.fs_a0max_min.toFixed(3)}</td>
-            <td class="py-2 px-3 ${formatFsColor(row.fs_a0max_med)}">${row.fs_a0max_med.toFixed(3)}</td>
+            <td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">${row.depth.toFixed(1)}</td>
+            <td class="py-2.5 px-3">${row.sigma_v.toFixed(1)}</td>
+            <td class="py-2.5 px-3">${row.u.toFixed(1)}</td>
+            <td class="py-2.5 px-3 font-semibold">${row.sigma_v_eff.toFixed(1)}</td>
+            <td class="py-2.5 px-3 text-gray-500">${row.rd.toFixed(4)}</td>
+            <td class="py-2.5 px-3">${row.csr_a0_min.toFixed(4)}</td>
+            <td class="py-2.5 px-3 font-medium">${row.csr_a0_max.toFixed(4)}</td>
+            <td class="py-2.5 px-3 ${formatFsColor(row.fs_a0min_min)}">${row.fs_a0min_min.toFixed(3)}</td>
+            <td class="py-2.5 px-3 ${formatFsColor(row.fs_a0min_med)}">${row.fs_a0min_med.toFixed(3)}</td>
+            <td class="py-2.5 px-3 ${formatFsColor(row.fs_a0min_max != null ? row.fs_a0min_max : row.fs_a0min_med)}">${(row.fs_a0min_max != null ? row.fs_a0min_max : row.fs_a0min_med).toFixed(3)}</td>
+            <td class="py-2.5 px-3 font-bold ${formatFsColor(row.fs_a0max_min)}">${row.fs_a0max_min.toFixed(3)}</td>
+            <td class="py-2.5 px-3 ${formatFsColor(row.fs_a0max_med)}">${row.fs_a0max_med.toFixed(3)}</td>
+            <td class="py-2.5 px-3 ${formatFsColor(row.fs_a0max_max != null ? row.fs_a0max_max : row.fs_a0max_med)}">${(row.fs_a0max_max != null ? row.fs_a0max_max : row.fs_a0max_med).toFixed(3)}</td>
         `;
         tbody.appendChild(tr);
     });
 
     // Update Chart
     renderChartFsProfile(res.profile);
+    const boxEnv = document.getElementById('container-envelope');
+    if (boxEnv && !boxEnv.classList.contains('hidden')) {
+        toggleProfileChartMode('envelope');
+    }
 }
 
 function formatFsColor(fs) {
@@ -299,6 +409,7 @@ function getLayersPayload() {
 
 function triggerLayersCalculation() {
     const payload = getLayersPayload();
+    saveLiquefactionSession();
     if (typeof eel !== 'undefined' && eel.calculate_liquefaction_layers) {
         eel.calculate_liquefaction_layers(payload)(function (response) {
             if (response && response.success) {
@@ -598,12 +709,91 @@ function loadProjectJSON(event) {
     reader.readAsText(file);
 }
 
+async function exportProfileXLS() {
+    const btn = document.getElementById('btn-export-xls');
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span>⏳</span> Exportando Excel...';
+        btn.disabled = true;
+    }
+
+    const payload = {
+        inputs: getProfilePayload(),
+        profile: currentProfileData
+    };
+
+    if (typeof eel !== 'undefined' && eel.export_liquefaction_profile_excel) {
+        try {
+            eel.export_liquefaction_profile_excel(payload)(function (res) {
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+                if (res && res.success && res.base64) {
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = res.base64;
+                    downloadLink.download = res.filename || 'perfil_liquefacao_detalhado.xlsx';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                } else {
+                    console.warn("Falha no openpyxl backend, exportando CSV brasileiro:", res?.error);
+                    exportProfileCSV();
+                }
+            });
+        } catch (err) {
+            console.error("Erro na chamada Eel export_liquefaction_profile_excel:", err);
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+            exportProfileCSV();
+        }
+    } else {
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+        exportProfileCSV();
+    }
+}
+
 function exportProfileCSV() {
-    let csv = "Profundidade (m);Sigma_v (kPa);u (kPa);Sigma_v_eff (kPa);rd;CSR_a0_min;CSR_a0_max;FS_a0min_min;FS_a0min_med;FS_a0max_min;FS_a0max_med\n";
+    if (!currentProfileData || currentProfileData.length === 0) {
+        alert("Nenhum dado de perfil para exportar.");
+        return;
+    }
+
+    // Formata números com vírgula decimal (,) para conformidade nativa com o Excel no Brasil (pt-BR)
+    const fmt = (val, decimals = 3) => {
+        if (val == null || isNaN(val)) return "";
+        return Number(val).toFixed(decimals).replace('.', ',');
+    };
+
+    // Prepend UTF-8 BOM (\uFEFF) para garantir abertura sem perda de acentuação no Excel
+    let csv = "\uFEFF";
+    csv += "Profundidade (m);Sigma_v (kPa);u (kPa);Sigma_v_eff (kPa);rd;CSR (a0 min);CSR (a0 max);FS (a0 min - N1 min);FS (a0 min - N1 med);FS (a0 min - N1 max);FS (a0 max - N1 min);FS (a0 max - N1 med);FS (a0 max - N1 max)\n";
+
     currentProfileData.forEach(r => {
-        csv += `${r.depth};${r.sigma_v};${r.u};${r.sigma_v_eff};${r.rd};${r.csr_a0_min};${r.csr_a0_max};${r.fs_a0min_min};${r.fs_a0min_med};${r.fs_a0max_min};${r.fs_a0max_med}\n`;
+        const row = [
+            fmt(r.depth, 1),
+            fmt(r.sigma_v, 1),
+            fmt(r.u, 1),
+            fmt(r.sigma_v_eff, 1),
+            fmt(r.rd, 4),
+            fmt(r.csr_a0_min, 4),
+            fmt(r.csr_a0_max, 4),
+            fmt(r.fs_a0min_min, 3),
+            fmt(r.fs_a0min_med, 3),
+            fmt(r.fs_a0min_max != null ? r.fs_a0min_max : r.fs_a0min_med, 3),
+            fmt(r.fs_a0max_min, 3),
+            fmt(r.fs_a0max_med, 3),
+            fmt(r.fs_a0max_max != null ? r.fs_a0max_max : r.fs_a0max_med, 3)
+        ];
+        csv += row.join(';') + '\n';
     });
-    downloadCSV(csv, `perfil_liquefacao_${new Date().toISOString().slice(0, 10)}.csv`);
+
+    downloadCSV(csv, `perfil_liquefacao_detalhado_${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 function exportLayersCSV() {
@@ -626,4 +816,329 @@ function downloadCSV(csvContent, filename) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+// ----------------------------------------------------
+// EXECUTIVE REPORT & SENSITIVITY MODAL CONTROLLER
+// ----------------------------------------------------
+
+async function openExecutiveReportModal() {
+    const modal = document.getElementById('modal-executive-report');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    const loaderProf = document.getElementById('loader-profile');
+    const loaderTor = document.getElementById('loader-tornado');
+    const imgProf = document.getElementById('img-profile-envelope');
+    const imgTor = document.getElementById('img-tornado-sensitivity');
+    const tbody = document.getElementById('executive-table-body');
+    const txtNote = document.getElementById('txt-technical-note');
+
+    if (loaderProf) loaderProf.classList.remove('hidden');
+    if (loaderTor) loaderTor.classList.remove('hidden');
+    if (imgProf) imgProf.style.display = 'none';
+    if (imgTor) imgTor.style.display = 'none';
+
+    // Collect profile parameters from UI
+    const payload = {
+        water_depth: parseNum('prof_na', 3.5),
+        soil_gamma: parseNum('prof_gamma', 19.0),
+        fines_content_fc: parseNum('prof_fc', 10.0),
+        n1_values: [
+            parseNum('prof_n1_min', 27),
+            parseNum('prof_n1_med', 33),
+            parseNum('prof_n1_max', 58)
+        ],
+        a_max_values: [
+            parseNum('prof_a0_min', 0.55),
+            parseNum('prof_a0_max', 0.70)
+        ],
+        mw_values: [
+            parseNum('prof_mw_min', 6.0),
+            parseNum('prof_mw_med', 7.5),
+            parseNum('prof_mw_max', 8.5)
+        ],
+        max_depth: parseNum('prof_max_depth', 20.0),
+        depth_step: parseNum('prof_depth_step', 0.5)
+    };
+
+    if (typeof eel !== 'undefined' && eel.generate_liquefaction_report_plots) {
+        try {
+            eel.generate_liquefaction_report_plots(payload)(function (res) {
+                if (loaderProf) loaderProf.classList.add('hidden');
+                if (loaderTor) loaderTor.classList.add('hidden');
+
+                if (res && res.success && res.plots) {
+                    if (imgProf) {
+                        imgProf.src = res.plots.profile_envelope_png_base64;
+                        imgProf.style.display = 'block';
+                    }
+                    const btnDlProf = document.getElementById('btn-download-profile');
+                    if (btnDlProf) {
+                        btnDlProf.href = res.plots.profile_envelope_png_base64;
+                    }
+
+                    if (imgTor) {
+                        imgTor.src = res.plots.tornado_sensitivity_png_base64;
+                        imgTor.style.display = 'block';
+                    }
+                    const btnDlTor = document.getElementById('btn-download-tornado');
+                    if (btnDlTor) {
+                        btnDlTor.href = res.plots.tornado_sensitivity_png_base64;
+                    }
+
+                    // Render Executive Table
+                    if (tbody && res.executive_table) {
+                        tbody.innerHTML = '';
+                        res.executive_table.forEach(row => {
+                            const tr = document.createElement('tr');
+                            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors";
+                            const badgeBg = row.badge_color === 'emerald'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : (row.badge_color === 'blue'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300');
+                            tr.innerHTML = `
+                                <td class="py-2.5 px-3 font-bold text-gray-900 dark:text-white">${row.category}</td>
+                                <td class="py-2.5 px-3 font-mono text-gray-600 dark:text-gray-300 text-[11px]">${row.inputs}</td>
+                                <td class="py-2.5 px-3 text-gray-600 dark:text-gray-400">${row.purpose}</td>
+                                <td class="py-2.5 px-3 text-center font-extrabold text-sm">${row.min_fs != null ? row.min_fs.toFixed(3) : '--'}</td>
+                                <td class="py-2.5 px-3 text-center">
+                                    <span class="px-2 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider ${badgeBg}">
+                                        ${row.status}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-3 text-gray-600 dark:text-gray-300 text-[11px] leading-relaxed">${row.justification}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+
+                    // Technical Note Text
+                    if (txtNote && res.technical_note_text) {
+                        txtNote.value = res.technical_note_text;
+                    }
+                } else {
+                    alert("Erro ao gerar figuras de relatório: " + (res?.error || "Falha desconhecida"));
+                }
+            });
+        } catch (err) {
+            console.error("Erro ao chamar generate_liquefaction_report_plots:", err);
+            if (loaderProf) loaderProf.classList.add('hidden');
+            if (loaderTor) loaderTor.classList.add('hidden');
+        }
+    } else {
+        alert("O backend Python/Eel não está disponível no momento para geração gráfica em 300 DPI.");
+    }
+}
+
+function closeExecutiveReportModal() {
+    const modal = document.getElementById('modal-executive-report');
+    if (modal) modal.classList.add('hidden');
+}
+
+function copyTechnicalNoteText() {
+    const txtNote = document.getElementById('txt-technical-note');
+    const btn = document.getElementById('btn-copy-tech-note');
+    if (!txtNote) return;
+    txtNote.select();
+    navigator.clipboard.writeText(txtNote.value).then(() => {
+        if (btn) {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span>✅</span> Copiado!';
+            setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+    }).catch(() => {
+        document.execCommand('copy');
+        if (btn) {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span>✅</span> Copiado!';
+            setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+    });
+}
+
+// ----------------------------------------------------
+// TAB 1 INLINE CHART TOGGLE & TAB 3 SENSITIVITY CONTROLLERS
+// ----------------------------------------------------
+
+function toggleProfileChartMode(mode) {
+    const btnChart = document.getElementById('btn-chart-view-chartjs');
+    const btnEnv = document.getElementById('btn-chart-view-envelope');
+    const boxChart = document.getElementById('container-chartjs');
+    const boxEnv = document.getElementById('container-envelope');
+    const imgInline = document.getElementById('img-profile-envelope-inline');
+
+    const activeBtnClass = "px-2.5 py-1 rounded-md bg-white dark:bg-gray-800 shadow-xs text-blue-600 dark:text-blue-400 font-bold transition-all";
+    const inactiveBtnClass = "px-2.5 py-1 rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all";
+
+    if (mode === 'chartjs') {
+        if (btnChart) btnChart.className = activeBtnClass;
+        if (btnEnv) btnEnv.className = inactiveBtnClass;
+        if (boxChart) boxChart.classList.remove('hidden');
+        if (boxEnv) boxEnv.classList.add('hidden');
+    } else {
+        if (btnEnv) btnEnv.className = activeBtnClass;
+        if (btnChart) btnChart.className = inactiveBtnClass;
+        if (boxChart) boxChart.classList.add('hidden');
+        if (boxEnv) boxEnv.classList.remove('hidden');
+
+        if (imgInline && (!imgInline.src || imgInline.src === window.location.href)) {
+            const payload = {
+                water_depth: parseNum('prof_na', 3.5),
+                soil_gamma: parseNum('prof_gamma', 19.0),
+                fines_content_fc: parseNum('prof_fc', 10.0),
+                n1_values: [parseNum('prof_n1_min', 27), parseNum('prof_n1_med', 33), parseNum('prof_n1_max', 58)],
+                a_max_values: [parseNum('prof_a0_min', 0.55), parseNum('prof_a0_max', 0.70)],
+                mw_values: [parseNum('prof_mw_min', 6.0), parseNum('prof_mw_med', 7.5), parseNum('prof_mw_max', 8.5)],
+                max_depth: parseNum('prof_max_depth', 20.0),
+                depth_step: parseNum('prof_depth_step', 0.5)
+            };
+            if (typeof eel !== 'undefined' && eel.generate_liquefaction_report_plots) {
+                eel.generate_liquefaction_report_plots(payload)(function(res) {
+                    if (res && res.success && res.plots) {
+                        imgInline.src = res.plots.profile_envelope_png_base64;
+                    }
+                });
+            }
+        }
+    }
+}
+
+async function triggerSensitivityCalculation() {
+    const loaderProf = document.getElementById('tab-loader-profile');
+    const loaderTor = document.getElementById('tab-loader-tornado');
+    const imgProf = document.getElementById('tab-img-profile-envelope');
+    const imgTor = document.getElementById('tab-img-tornado-sensitivity');
+    const tbody = document.getElementById('tab-executive-table-body');
+    const txtNote = document.getElementById('tab-txt-technical-note');
+    const statRatio = document.getElementById('tab-stat-ratio');
+    const statDeltaN1 = document.getElementById('tab-stat-delta-n1');
+    const statDeltaA0 = document.getElementById('tab-stat-delta-a0');
+
+    if (loaderProf) loaderProf.classList.remove('hidden');
+    if (loaderTor) loaderTor.classList.remove('hidden');
+    if (imgProf) imgProf.style.opacity = '0.3';
+    if (imgTor) imgTor.style.opacity = '0.3';
+
+    const payload = {
+        water_depth: parseNum('prof_na', 3.5),
+        soil_gamma: parseNum('prof_gamma', 19.0),
+        fines_content_fc: parseNum('prof_fc', 10.0),
+        n1_values: [
+            parseNum('prof_n1_min', 27),
+            parseNum('prof_n1_med', 33),
+            parseNum('prof_n1_max', 58)
+        ],
+        a_max_values: [
+            parseNum('prof_a0_min', 0.55),
+            parseNum('prof_a0_max', 0.70)
+        ],
+        mw_values: [
+            parseNum('prof_mw_min', 6.0),
+            parseNum('prof_mw_med', 7.5),
+            parseNum('prof_mw_max', 8.5)
+        ],
+        max_depth: parseNum('prof_max_depth', 20.0),
+        depth_step: parseNum('prof_depth_step', 0.5)
+    };
+
+    if (typeof eel !== 'undefined' && eel.generate_liquefaction_report_plots) {
+        try {
+            eel.generate_liquefaction_report_plots(payload)(function (res) {
+                if (loaderProf) loaderProf.classList.add('hidden');
+                if (loaderTor) loaderTor.classList.add('hidden');
+                if (imgProf) imgProf.style.opacity = '1.0';
+                if (imgTor) imgTor.style.opacity = '1.0';
+
+                if (res && res.success && res.plots) {
+                    if (imgProf) {
+                        imgProf.src = res.plots.profile_envelope_png_base64;
+                    }
+                    const btnDlProf = document.getElementById('tab-btn-download-profile');
+                    if (btnDlProf) {
+                        btnDlProf.href = res.plots.profile_envelope_png_base64;
+                    }
+
+                    // Also keep inline image in Aba 1 updated
+                    const imgInline = document.getElementById('img-profile-envelope-inline');
+                    if (imgInline) {
+                        imgInline.src = res.plots.profile_envelope_png_base64;
+                    }
+
+                    if (imgTor) {
+                        imgTor.src = res.plots.tornado_sensitivity_png_base64;
+                    }
+                    const btnDlTor = document.getElementById('tab-btn-download-tornado');
+                    if (btnDlTor) {
+                        btnDlTor.href = res.plots.tornado_sensitivity_png_base64;
+                    }
+
+                    // Stat cards
+                    if (res.combinatorial_summary) {
+                        if (statRatio) statRatio.innerText = `${res.combinatorial_summary.sensitivity_ratio}x`;
+                        if (statDeltaN1) statDeltaN1.innerText = `ΔFS = ${res.combinatorial_summary.delta_n1.toFixed(3)}`;
+                        if (statDeltaA0) statDeltaA0.innerText = `ΔFS = ${res.combinatorial_summary.delta_amax.toFixed(3)}`;
+                    }
+
+                    // Executive Table
+                    if (tbody && res.executive_table) {
+                        tbody.innerHTML = '';
+                        res.executive_table.forEach(row => {
+                            const tr = document.createElement('tr');
+                            tr.className = "hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors";
+                            const badgeBg = row.badge_color === 'emerald'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : (row.badge_color === 'blue'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
+                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300');
+                            tr.innerHTML = `
+                                <td class="py-3 px-4 font-bold text-gray-900 dark:text-white">${row.category}</td>
+                                <td class="py-3 px-4 font-mono text-gray-600 dark:text-gray-300 text-xs">${row.inputs}</td>
+                                <td class="py-3 px-4 text-gray-600 dark:text-gray-400">${row.purpose}</td>
+                                <td class="py-3 px-4 text-center font-black text-base">${row.min_fs != null ? row.min_fs.toFixed(3) : '--'}</td>
+                                <td class="py-3 px-4 text-center">
+                                    <span class="px-2.5 py-1 rounded-full font-bold text-xs uppercase tracking-wider ${badgeBg}">
+                                        ${row.status}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-gray-600 dark:text-gray-300 text-xs leading-relaxed">${row.justification}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+
+                    // Technical Note Text
+                    if (txtNote && res.technical_note_text) {
+                        txtNote.value = res.technical_note_text;
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Erro ao carregar dados de sensibilidade:", err);
+            if (loaderProf) loaderProf.classList.add('hidden');
+            if (loaderTor) loaderTor.classList.add('hidden');
+        }
+    }
+}
+
+function copyTechnicalNoteTextTab() {
+    const txtNote = document.getElementById('tab-txt-technical-note');
+    const btn = document.getElementById('tab-btn-copy-tech-note');
+    if (!txtNote) return;
+    txtNote.select();
+    navigator.clipboard.writeText(txtNote.value).then(() => {
+        if (btn) {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span>✅</span> Copiado!';
+            setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+    }).catch(() => {
+        document.execCommand('copy');
+        if (btn) {
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span>✅</span> Copiado!';
+            setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+    });
 }

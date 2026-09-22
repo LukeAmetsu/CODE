@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shed Header Beam Max Span Calc</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/tailwind.min.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="styles.min.css" />
   </head>
 
-  <body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200">
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+  <body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200 min-h-screen flex flex-col">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
       <div id="header-placeholder" style="min-height: 110px"></div>
 
       <main>
@@ -42,29 +42,29 @@
                 Beam Details
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1">Shape Type</label>
-                <select id="shape_type" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                <label class="eng-label">Shape Type</label>
+                <select id="shape_type" class="eng-input">
                   <option value="W" selected>W - Wide Flange</option>
                   <option value="HSS">HSS - Hollow Structural Sec</option>
                   <option value="S">S - American Standard</option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1">Section</label>
-                <select id="section" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                <label class="eng-label">Section</label>
+                <select id="section" class="eng-input">
                   <option value="">Loading...</option>
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1">Steel Yield (Fy)</label>
+                <label class="eng-label">Steel Yield (Fy)</label>
                 <div class="flex gap-2">
-                  <input type="number" id="fy" value="50" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                  <input type="number" id="fy" value="50" class="eng-input" />
                   <span class="flex items-center text-sm text-gray-500">ksi</span>
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1">Design Method</label>
-                <select id="design_method" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                <label class="eng-label">Design Method</label>
+                <select id="design_method" class="eng-input">
                   <option value="ASD" selected>ASD</option>
                   <option value="LRFD">LRFD</option>
                 </select>
@@ -76,17 +76,17 @@
                 Loading & Limits
               </h3>
               <div>
-                <label class="block text-sm font-medium mb-1">Vertical Load</label>
+                <label class="eng-label">Vertical Load</label>
                 <div class="flex gap-2">
-                  <input type="number" step="0.1" id="load_plf" value="300" class="w-full font-bold text-blue-700 dark:text-blue-300 p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                  <input type="number" step="0.1" id="load_plf" value="300" class="eng-select text-blue-700 dark:text-blue-300" />
                   <span class="flex items-center text-sm text-gray-500">plf</span>
                 </div>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1">Deflection Limit</label>
+                <label class="eng-label">Deflection Limit</label>
                 <div class="flex gap-2 items-center">
                   <span class="text-gray-500">L /</span>
-                  <input type="number" id="defl_limit" value="240" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                  <input type="number" id="defl_limit" value="240" class="eng-input" />
                 </div>
               </div>
             </div>
@@ -103,23 +103,23 @@
 
               <div id="brace_inputs" class="grid grid-cols-2 gap-4 mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800">
                 <div>
-                  <label class="block text-xs font-semibold text-purple-800 dark:text-purple-300 mb-1">Beam Elevation</label>
+                  <label class="eng-label text-purple-800 dark:text-purple-300">Beam Elevation</label>
                   <div class="flex gap-2">
-                    <input type="number" step="0.1" id="beam_height" value="16" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.1" id="beam_height" value="16" class="eng-select">
                     <span class="flex items-center text-xs text-gray-500">ft</span>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-purple-800 dark:text-purple-300 mb-1">Column Brace Conn. Height</label>
+                  <label class="eng-label text-purple-800 dark:text-purple-300">Column Brace Conn. Height</label>
                   <div class="flex gap-2">
-                    <input type="number" step="0.1" id="brace_height" value="8" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="0.1" id="brace_height" value="8" class="eng-select">
                     <span class="flex items-center text-xs text-gray-500">ft</span>
                   </div>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-purple-800 dark:text-purple-300 mb-1">Brace Angle (from vertically down)</label>
+                  <label class="eng-label text-purple-800 dark:text-purple-300">Brace Angle (from vertically down)</label>
                   <div class="flex gap-2">
-                    <input type="number" step="1" id="brace_angle" value="45" class="w-full p-1 text-sm border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <input type="number" step="1" id="brace_angle" value="45" class="eng-select">
                     <span class="flex items-center text-xs text-gray-500">°</span>
                   </div>
                 </div>
@@ -149,9 +149,9 @@
                <!-- Graphic Output -->
                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg">
                    <h3 class="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200 border-b pb-2">Graphical Output</h3>
-                   <div class="w-full border border-gray-200 dark:border-gray-600 rounded bg-white flex justify-center items-center overflow-hidden" style="min-height: 400px;">
-                       <canvas id="shedCanvas" width="500" height="400"></canvas>
-                   </div>
+                    <div class="relative w-full border border-gray-200 dark:border-gray-700 rounded bg-slate-900 flex justify-center items-center overflow-hidden" style="min-height: 400px;">
+                        <canvas id="shedCanvas" width="500" height="400" class="eng-cad-canvas max-w-full"></canvas>
+                    </div>
                </div>
                
                <!-- Metrics -->

@@ -4463,6 +4463,7 @@ function renderResults(results, rawInputs) {
 
 // --- Initialization ---
 const inputIds = [
+  "design_standard",
   "design_method",
   "jurisdiction",
   "global_fos",

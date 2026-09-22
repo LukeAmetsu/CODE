@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="engineering_hub">Engineering Calculator Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Central de Engenharia Estrutural & Geotécnica</title>
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         // Lógica de Tema Imediata para evitar o "flash"
         (function () {
@@ -41,382 +41,1273 @@
             }
         });
     </script>
+    <style>
+        .standard-hero-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+        }
+        .standard-hero-card:hover {
+            transform: translateY(-4px);
+        }
+        .standard-hero-card.selected {
+            box-shadow: 0 0 0 2px var(--color-accent), 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        .app-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.3s ease;
+        }
+        .app-card:hover {
+            transform: translateY(-4px);
+        }
+        .badge-discipline {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+        }
+        .badge-norm {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.2rem 0.55rem;
+            border-radius: 0.375rem;
+        }
+    </style>
 </head>
 
-<body>
+<body class="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] antialiased transition-colors duration-300 flex flex-col">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <!-- Header Injection Placeholder -->
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
-        <main>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                <!-- US Codes Section -->
-                <div class="flex flex-col">
-                    <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6"
-                        data-i18n="us_codes">US Codes</h2>
-                    <div class="flex-grow grid grid-auto-rows-fr gap-y-9" id="us-codes-container">
-                        <!-- ASCE Loads Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="asce_loads">ASCE Loads</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="asce_desc">Calculate
-                                wind, snow, and rain loads according to ASCE 7 standards. Generate load combinations for
-                                structural design.</p>
-                            <a href="../asce/wind.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_load_calcs">Go to Load Calcs</a>
-                        </div>
+        <main class="space-y-10">
 
-                        <!-- AISC Steel Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="aisc_steel">AISC Steel Design</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="aisc_desc">Check
-                                steel members and connections based on the AISC Steel Construction Manual. Includes
-                                member checks, base plates, and splices.</p>
-                            <a href="../aisc/steel check.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_steel_design">Go to Steel Design</a>
-                        </div>
+            <!-- Hero Section / Introdução -->
+            <section class="relative overflow-hidden rounded-2xl border border-[var(--color-border-primary)] bg-gradient-to-br from-blue-50 via-indigo-50/40 to-slate-50 dark:from-slate-900/90 dark:via-slate-800/80 dark:to-slate-900/90 p-6 md:p-10 shadow-sm">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 mb-4">
+                        <span>⚡</span>
+                        <span>Plataforma Integrada de Engenharia</span>
+                    </div>
+                    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3">
+                        Central de Dimensionamento Estrutural & Geotécnico
+                    </h1>
+                    <p class="text-base md:text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+                        Selecione o referencial normativo abaixo para filtrar as calculadoras e aplicativos de dimensionamento, verificação estrutural e modelagem geotécnica.
+                    </p>
+                </div>
 
-                        <!-- AISC Base Plate Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="base_plate">Base Plate</h3>
+                <!-- CARDS DE SELEÇÃO INICIAL ENTRE US E BR -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                    
+                    <!-- OPÇÃO 1: NORMAS BRASILEIRAS (NBR & GEOTECNIA) -->
+                    <div id="hero-card-br" onclick="selectStandard('br', true)"
+                        class="standard-hero-card rounded-2xl p-6 md:p-7 border-2 border-emerald-500/40 dark:border-emerald-500/30 bg-white/95 dark:bg-slate-800/95 shadow-md hover:shadow-xl hover:border-emerald-500 transition-all flex flex-col justify-between group cursor-pointer">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-4xl shadow-sm rounded-lg select-none">🇧🇷</span>
+                                    <div>
+                                        <h2 class="text-xl font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                            Normas Brasileiras & Geotecnia
+                                        </h2>
+                                        <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                            ABNT NBR • Modelagem Geotécnica RS2 FEA 2D
+                                        </span>
+                                    </div>
+                                </div>
+                                <span id="hero-count-br" class="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-xs font-extrabold px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-800 shadow-xs">
+                                    16 Módulos
+                                </span>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="base_plate_desc">
-                                Design and check column base plates and anchor bolts for combined axial load and biaxial
-                                bending according to AISC Design Guide 1.</p>
-                            <a href="../aisc/base plate.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_steel_design">Go to Steel Design</a>
-                        </div>
 
-                        <!-- AISC Splice Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="splice">
-                                    Splice</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="splice_desc">Design
-                                and check bolted flange plate and web plate splices for wide-flange members under moment
-                                and shear.</p>
-                            <a href="../aisc/splice.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_steel_design">Go to Steel Design</a>
-                        </div>
-
-                        <!-- AISC Beam-Column Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Beam-Column
-                                    Connection</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">Design
-                                and check shear and moment connections (single plate, flange plates) for beam-to-column
-                                joints.</p>
-                            <a href="../aisc/beam_column.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Go
-                                to Connection Design</a>
-                        </div>
-
-                        <!-- Weld Group Calculator Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Weld Group
-                                    Calculator</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">Calculate the properties and
-                                maximum stress of a 3D weld group based on input coordinates using the elastic method.
+                            <p class="text-sm text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+                                Dimensionamento conforme normas ABNT (NBR 6118 Concreto, NBR 8800 Aço, NBR 8681 Ações, NBR 6122 Fundações) e geotecnia avançada (RS2 Elementos Finitos 2D, Muros de Arrimo, Estacas Aoki-Velloso, Liquefação e Radiers Estaqueados).
                             </p>
-                            <a href="weld_group.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Go
-                                to Weld Group Calcs</a>
-                        </div>
 
-
-                        <!-- NDS Wood Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="nds_wood">NDS Wood</h3>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">NBR 6118 (Concreto)</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">NBR 8800 (Aço)</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">RS2 FEA 2D</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">Aoki-Velloso & Décourt</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">Muros & Estacas</span>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nds_desc">Design and
-                                check wood members for bending, shear, and compression according to the National Design
-                                Specification for Wood Construction.</p>
-                            <a href="../nds/nds wood design.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_wood_design">Go to Wood Design</a>
                         </div>
-                        <!-- Beam Selector Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="beam_selector">Beam Selector</h3>
+
+                        <button type="button" onclick="event.stopPropagation(); selectStandard('br', true);" class="w-full mt-auto py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all group-hover:shadow-emerald-500/25 group-hover:shadow-md">
+                            <span>Acessar Módulos Brasileiros (NBR)</span>
+                            <span class="group-hover:translate-x-1 transition-transform">→</span>
+                        </button>
+                    </div>
+
+                    <!-- OPÇÃO 2: NORMAS AMERICANAS (US CODES) -->
+                    <div id="hero-card-us" onclick="selectStandard('us', true)"
+                        class="standard-hero-card rounded-2xl p-6 md:p-7 border-2 border-blue-500/40 dark:border-blue-500/30 bg-white/95 dark:bg-slate-800/95 shadow-md hover:shadow-xl hover:border-blue-500 transition-all flex flex-col justify-between group cursor-pointer">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-4xl shadow-sm rounded-lg select-none">🇺🇸</span>
+                                    <div>
+                                        <h2 class="text-xl font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            Normas Americanas (US Codes)
+                                        </h2>
+                                        <span class="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                            AISC • ASCE 7 • NDS • AWS
+                                        </span>
+                                    </div>
+                                </div>
+                                <span id="hero-count-us" class="bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 text-xs font-extrabold px-3 py-1 rounded-full border border-blue-300 dark:border-blue-800 shadow-xs">
+                                    15 Módulos
+                                </span>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="beam_selector_desc">
-                                Select optimal steel beams based on load and span requirements using AISC standards.</p>
-                            <a href="beam selector.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_beam_selector">Go to Beam Selector</a>
-                        </div>
 
-                        <!-- Shed Matrix Generator Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Shed Matrix
-                                    Generator</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-300 mb-5 leading-relaxed">
+                                Verificação e dimensionamento segundo os manuais AISC 360 (Aço, Placas de Base, Emendas Splice, Viga-Pilar), cargas ambientais ASCE 7 (Vento, Neve, Chuva, Combinações), Madeira NDS e Soldas AWS.
+                            </p>
+
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">AISC 360 (Steel)</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">ASCE 7 (Loads)</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">Base Plates & Splices</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">NDS Wood</span>
+                                <span class="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1 rounded-md">Soldas 3D</span>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Generate header beam sizing matrices and evaluate pipe leg capacities for full sidewalk
-                                shed spans.</p>
-                            <a href="shed_matrix.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Generate
-                                Matrices</a>
                         </div>
 
-                        <!-- Angle Support Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="angle_support">Angle Support</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="angle_support_desc">
-                                Design and check steel angle supports for various loading conditions.</p>
-                            <a href="angle_support.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_angle_support">Go to Angle Support</a>
+                        <button type="button" onclick="event.stopPropagation(); selectStandard('us', true);" class="w-full mt-auto py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all group-hover:shadow-blue-500/25 group-hover:shadow-md">
+                            <span>Acessar Módulos Americanos (US)</span>
+                            <span class="group-hover:translate-x-1 transition-transform">→</span>
+                        </button>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- BARRA DE CONTROLE E NAVEGAÇÃO ENTRE OS APPS -->
+            <section id="catalog-section" class="scroll-mt-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border-primary)]">
+                    
+                    <!-- TABS / BOTOES DE FILTRO POR ÁREAS DE ENGENHARIA & NORMAS -->
+                    <div class="flex flex-wrap items-center gap-1.5" role="tablist">
+                        <button id="tab-btn-all" onclick="setHubFilter('all', 'all', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-indigo-500/30 bg-indigo-600 text-white">
+                            <span>🌐 Todos</span>
+                            <span id="badge-count-all" class="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">30</span>
+                        </button>
+
+                        <button id="tab-btn-geotech" onclick="setHubFilter('discipline', 'geotech', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🌋 Geotecnia</span>
+                            <span id="badge-count-geotech" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">8</span>
+                        </button>
+
+                        <button id="tab-btn-concrete" onclick="setHubFilter('discipline', 'concrete', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🧱 Concreto</span>
+                            <span id="badge-count-concrete" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">5</span>
+                        </button>
+
+                        <button id="tab-btn-steel" onclick="setHubFilter('discipline', 'steel', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🔩 Metálicas</span>
+                            <span id="badge-count-steel" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">7</span>
+                        </button>
+
+                        <button id="tab-btn-analysis_loads" onclick="setHubFilter('discipline', 'analysis_loads', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🏛️ Análise & Cargas</span>
+                            <span id="badge-count-analysis_loads" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">8</span>
+                        </button>
+
+                        <button id="tab-btn-timber" onclick="setHubFilter('discipline', 'timber', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🌲 Madeira</span>
+                            <span id="badge-count-timber" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">1</span>
+                        </button>
+
+                        <div class="h-5 w-px bg-gray-300 dark:bg-gray-700 mx-1 hidden sm:block"></div>
+
+                        <button id="tab-btn-br" onclick="setHubFilter('standard', 'br', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🇧🇷 NBR</span>
+                            <span id="badge-count-br" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">16</span>
+                        </button>
+
+                        <button id="tab-btn-us" onclick="setHubFilter('standard', 'us', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>🇺🇸 US</span>
+                            <span id="badge-count-us" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">15</span>
+                        </button>
+                    </div>
+
+                    <!-- BUSCA RÁPIDA DE APLICATIVOS -->
+                    <div class="relative w-full md:w-80">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
                         </div>
-
-
-
-
-                        <!-- Interactive Shear Model Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Interactive Shear
-                                    Model</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Real-time customizable scatter plot of the shear databases using mathematical
-                                optimizations.</p>
-                            <a href="interactive_shear.html"
-                                class="mt-auto bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-700 text-center transition-colors self-start">Open
-                                Simulator</a>
-                        </div>
+                        <input type="text" id="app-search-input" oninput="filterApps()"
+                            placeholder="Buscar módulo (ex: viga, estaca, vento, aço)..."
+                            class="w-full pl-10 pr-9 py-2 rounded-xl text-sm border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400">
+                        <button id="clear-search-btn" onclick="clearSearch()" style="display: none;"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            ✕
+                        </button>
                     </div>
                 </div>
 
-                <!-- Brazilian Codes (NBR) Section -->
-                <div class="flex flex-col">
-                    <h2 class="text-2xl font-bold border-b-2 border-[var(--color-border-primary)] pb-2 mb-6"
-                        data-i18n="brazilian_codes">Brazilian Codes (NBR)</h2>
-                    <div class="flex-grow grid grid-auto-rows-fr gap-y-9" id="nbr-codes-container">
-                        <!-- RS2 Geotechnical 2D FEM Card -->
-                        <div class="form-section flex flex-col group border-2 border-blue-500/40 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
-                                RS2 / Phase2 FEM
-                            </div>
-                            <div class="flex items-center mb-3">
+                <!-- INDICADOR DE STATUS DA LISTA -->
+                <div class="flex items-center justify-between text-xs text-[var(--color-text-secondary)] mt-4 mb-6">
+                    <span id="status-indicator-text">Exibindo 16 módulos de Normas Brasileiras (NBR & Geotecnia)</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Backend Python Ativo & Conectado
+                    </span>
+                </div>
+
+                <!-- GRID DE APLICATIVOS / CALCULADORAS -->
+                <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    <!-- ======================================================== -->
+                    <!-- MÓDULOS BRASILEIROS (NBR & GEOTECNIA)                    -->
+                    <!-- ======================================================== -->
+
+                    <!-- 1. RS2 Geotecnia 2D FEM -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-blue-500/40 hover:border-blue-500 relative overflow-hidden"
+                        data-standard="br" data-tags="geotecnia fea elementos finitos rs2 phase2 solo rocha escavacao ssr estabilidade talude">
+                        <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            FEA 2D AVANÇADO
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
                                 <span class="text-2xl">🌋</span>
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
-                                    RS2 - Geotecnia por Elementos Finitos 2D
-                                </h3>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        RS2 - Geotecnia por Elementos Finitos 2D
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">Rocscience RS2 Sim</span>
+                                </div>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Software completo similar ao Rocscience RS2 (Phase2). Análise elasto-plástica (Mohr-Coulomb), malhador 2D automático (Delaunay), Fator de Segurança via Redução de Resistência ao Cisalhamento (SSR), escavações profundas, túneis, fundações e lençol freático com mapas de contorno e estado de plastificação.
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Análise elasto-plástica (Mohr-Coulomb), malhador Delaunay automático, Fator de Segurança por SSR, escavações em múltiplos passos, túneis, fundações e lençol freático com mapas de contorno de plastificação.
                             </p>
-                            <a href="rs2_fem.html"
-                                class="mt-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
-                                Abrir RS2 Geotechnical FEA
-                            </a>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Geotecnia</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Elementos Finitos</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">SSR Fator Segurança</span>
+                            </div>
                         </div>
+                        <a href="rs2_fem.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Abrir RS2 Geotechnical FEA</span>
+                            <span>→</span>
+                        </a>
+                    </div>
 
-                        <!-- Retaining Wall Stability Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">Estabilidade de Muro
-                                    de Arrimo</h3>
+                    <!-- 2. Muro de Arrimo -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-emerald-500/60 relative"
+                        data-standard="br" data-tags="muro arrimo geotecnia gravidade flexao deslizamento tombamento capacidade carga nbr 11682 solo empuxo">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🧱</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Estabilidade de Muro de Arrimo
+                                    </h3>
+                                    <span class="badge-norm bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">NBR 11682 / Geotecnia</span>
+                                </div>
                             </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Análise de estabilidade geotécnica de muros de arrimo (tombamento, deslizamento,
-                                capacidade de carga e excentricidade) com múltiplas geometrias, dente de chave, água,
-                                sobrecargas e representação gráfica 2D.</p>
-                            <a href="retaining_wall.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start">Calcular
-                                Muro de Arrimo</a>
-                        </div>
-
-                        <!-- Aoki-Velloso Piles & Foundation Stiffness Card -->
-                        <div class="form-section flex flex-col group border-2 border-emerald-500/40 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
-                                Geotecnia / Estacas
-                            </div>
-                            <div class="flex items-center mb-3">
-                                <span class="text-2xl">🏗️</span>
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
-                                    Aoki-Velloso - Estacas & Rigidez de Fundação
-                                </h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Cálculo de capacidade de carga de estacas pelo método Aoki-Velloso (1975) (atrito lateral Rl e ponta Rp), molas estáticas verticais/horizontais (Kz, Kh), rigidezes dinâmicas e amortecimento crítico (Dgz, Dgxy) de grupos de fundação.
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Análise geotécnica completa de estabilidade externa e interna (tombamento, deslizamento, capacidade de carga da fundação e excentricidade) com dente de chave, água, sobrecargas e vista 2D interativa.
                             </p>
-                            <a href="aoki_velloso.html"
-                                class="mt-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
-                                Calcular Estacas (Aoki-Velloso)
-                            </a>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Geotecnia</span>
+                                <span class="badge-discipline bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">Contenções</span>
+                            </div>
                         </div>
+                        <a href="retaining_wall.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Muro de Arrimo</span>
+                            <span>→</span>
+                        </a>
+                    </div>
 
-                        <!-- Soil Liquefaction Triggering Analysis Card -->
-                        <div class="form-section flex flex-col group border-2 border-amber-500/40 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-amber-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
-                                NCEER / Youd & Idriss
+                    <!-- 3. Fundações Geotécnicas (Molas & Capacidade Aoki-Velloso + Décourt-Quaresma) -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-emerald-500/40 hover:border-emerald-500 relative overflow-hidden"
+                        data-standard="br" data-tags="aoki velloso decourt quaresma estaca fundacao capacidade carga atrito lateral ponta rigidez mola estatica dinamica amortecimento spt">
+                        <div class="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            NBR 6122:2019
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🌱</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Molas de Estacas: Aoki-Velloso & Décourt-Quaresma
+                                    </h3>
+                                    <span class="badge-norm bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">Aoki (1975) & Décourt (1996)</span>
+                                </div>
                             </div>
-                            <div class="flex items-center mb-3">
-                                <span class="text-2xl">🌊</span>
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
-                                    Análise de Liquefação de Solos
-                                </h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Avaliação de suscetibilidade e gatilho de liquefação sísmica (método simplificado NCEER / Youd & Idriss / Idriss & Boulanger) por perfil contínuo de profundidade e por camadas reais de sondagem SPT, com determinação de FS, CSR, CRR e zonas críticas.
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Avaliação geotécnica comparativa de estacas isoladas e grupos via SPT. Geração de molas verticais, horizontais e impedâncias dinâmicas com exportação para elementos estruturais.
                             </p>
-                            <a href="liquefaction.html"
-                                class="mt-auto bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
-                                Analisar Liquefação Sísmica
-                            </a>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">Aoki-Velloso</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Décourt-Quaresma</span>
+                                <span class="badge-discipline bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">Molas Estruturais (Kz, Kx)</span>
+                            </div>
                         </div>
+                        <a href="aoki_velloso.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Molas de Estacas (Aoki & Décourt)</span>
+                            <span>→</span>
+                        </a>
+                    </div>
 
-                        <!-- Piled Raft Foundation Card (Transbordo & Heavy Rigging) -->
-                        <div class="form-section flex flex-col group border-2 border-indigo-500/40 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
-                                NBR 6118 / NBR 6122
+                    <!-- 3b. Fundações Rasas: Sapatas Rígidas & Molas Winkler -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-blue-500/40 hover:border-blue-500 relative overflow-hidden"
+                        data-standard="br" data-tags="sapata rasa fundacao mola winkler ks tensao solo nucleo central tombamento deslizamento nbr 6118 nbr 6122 armadura flexao cisalhamento puncao">
+                        <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            NBR 6118 & NBR 6122
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">📐</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Fundações Rasas: Sapatas Rígidas & Molas de Solo
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">Winkler ks + NBR 6118</span>
+                                </div>
                             </div>
-                            <div class="flex items-center mb-3">
-                                <span class="text-2xl">🏗️</span>
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
-                                    Radier Estaqueado (Transbordo & Rigging)
-                                </h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Interação solo-estrutura com molas elásticas discretas de estacas, descarte de camada colapsível superficial, carretas hidráulicas SPMT e cargas pesadas concentradas, verificação de punção (NBR 6118) com studs e controle de fadiga ELS-W.
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Dimensionamento geotécnico e estrutural de sapatas com molas de área de solo de Winkler ($k_s, K_z, K_\theta$). Verificação de tensões nos 4 cantos, descolamento (Zonas 1-5), tombamento, deslizamento por atrito e armadura flexural e punção NBR 6118.
                             </p>
-                            <a href="piled_raft.html"
-                                class="mt-auto bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
-                                Calcular Radier Estaqueado
-                            </a>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Sapatas Rígidas</span>
+                                <span class="badge-discipline bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">Molas Winkler</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Estabilidade & Armaduras</span>
+                            </div>
                         </div>
+                        <a href="shallow_foundation.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Dimensionar Sapatas (Molas & NBR 6118)</span>
+                            <span>→</span>
+                        </a>
+                    </div>
 
-                        <!-- Piled Gantry Beam Card (Viga de Coroamento Estaqueada) -->
-                        <div class="form-section flex flex-col group border-2 border-cyan-500/40 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 bg-cyan-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-bl">
-                                Trem-Tipo / Envoltórias
+                    <!-- 3c. Fundações Profundas Estruturais (Bloco Blévot, Radier e Viga Estaqueada) -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-indigo-500/40 hover:border-indigo-500 relative overflow-hidden"
+                        data-standard="br" data-tags="fundacao profunda bloco coroamento blevot radier estaqueado viga trem tipo estacas bielas tirante nbr 6118 nbr 6122">
+                        <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            SUÍTE ESTRUTURAL
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🧱</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Fundações Profundas Estruturais (Bloco, Radier, Viga)
+                                    </h3>
+                                    <span class="badge-norm bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Blévot + MEF + Trem-Tipo</span>
+                                </div>
                             </div>
-                            <div class="flex items-center mb-3">
-                                <span class="text-2xl">🛤️</span>
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3">
-                                    Viga Estaqueada sob Trem-Tipo (Pórtico)
-                                </h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow">
-                                Viga contínua sobre estacas elásticas discretas sujeita ao trem-tipo de pórtico rolante (148,42 tf com coeficiente dinâmico e frenagem). Envoltórias de momento fletor e cortante, dimensionamento NBR 6118 e estudo de otimização de vãos.
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Suíte unificada de elementos estruturais sobre estacas: Bloco de Coroamento (Método de Blévot & Frémy, 1 a 6 estacas), Radier Estaqueado MEF e Viga Estaqueada sob Trem-Tipo, com importação direta de molas.
                             </p>
-                            <a href="piled_beam.html"
-                                class="mt-auto bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-all self-start shadow-sm">
-                                Calcular Viga sob Trem-Tipo
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">Bloco Blévot</span>
+                                <span class="badge-discipline bg-cyan-100 dark:bg-cyan-900/50 text-cyan-700 dark:text-cyan-300">Radier Estaqueado</span>
+                                <span class="badge-discipline bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300">Viga sob Trem-Tipo</span>
+                            </div>
+                        </div>
+                        <div class="mt-auto flex gap-2">
+                            <a href="deep_foundations.html?tab=pilecap" class="flex-1 py-2.5 px-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-1.5">
+                                <span>🧱</span> Bloco Blévot
                             </a>
-                        </div>
-                        <!-- NBR Combinations Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="nbr_combos">NBR Load Combinations</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_combos_desc">
-                                Generate ultimate (ELU) and serviceability (ELS) load combinations based on NBR 8681 and
-                                NBR 6118.</p>
-                            <a href="../nbr/comb nbr 6118.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_nbr_combos">Go to NBR Combos</a>
-                        </div>
-                        <!-- NBR 6118 Concrete Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="nbr_concrete">NBR 6118 Concrete Beam</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_concrete_desc">
-                                Check reinforced concrete beams for flexure and shear according to Brazilian standard
-                                NBR 6118.</p>
-                            <a href="../nbr/nbr 6118 concreto.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_concrete_checker">Go to Concrete Checker</a>
-                        </div>
-                        <!-- NBR 6118 Prestressed Beam Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="nbr_prestressed">NBR 6118 Prestressed Beam</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow"
-                                data-i18n="nbr_prestressed_desc">Analyze prestressed concrete beams, including detailed
-                                calculations for prestressing losses over time.</p>
-                            <a href="../nbr/viga_protendida.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_prestressed_beam">Go to Prestressed Beam</a>
-                        </div>
-                        <!-- NBR 8800 Steel Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="nbr_steel">NBR 8800 Steel Structures</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="nbr_steel_desc">
-                                Check steel members for combined axial force and bending according to Brazilian standard
-                                NBR 8800.</p>
-                            <a href="../nbr/nbr 8080 estruturas de aço.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_steel_checker">Go to Steel Checker</a>
-                        </div>
-                        <!-- PCALC Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3" data-i18n="pcalc">
-                                    PCALC</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="pcalc_desc">Calcular
-                                a capacidade de carga axial de um pilar de concreto armado de acordo com a NBR 6118.</p>
-                            <a href="../nbr/PCALC.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_pcalc">Go to PCALC</a>
-                        </div>
-
-                        <!-- M-N Interaction Diagram Card -->
-                        <div class="form-section flex flex-col group">
-                            <div class="flex items-center mb-3">
-                                <h3 class="text-xl font-bold text-[var(--color-text-primary)] ml-3"
-                                    data-i18n="mn_diagram">
-                                    M-N Interaction Diagram</h3>
-                            </div>
-                            <p class="text-[var(--color-text-secondary)] mb-6 flex-grow" data-i18n="mn_desc">
-                                Generate the N-M interaction diagram for reinforced concrete sections (Rectangular, T,
-                                I) according to NBR 6118.</p>
-                            <a href="../nbr/M-N.html"
-                                class="mt-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 text-center transition-colors self-start"
-                                data-i18n="go_to_mn">Go to M-N Diagram</a>
+                            <a href="piled_raft.html" class="flex-1 py-2.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-1.5">
+                                <span>🏗️</span> Radier
+                            </a>
+                            <a href="piled_beam.html" class="flex-1 py-2.5 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-1.5">
+                                <span>🛤️</span> Viga Est.
+                            </a>
                         </div>
                     </div>
+
+                    <!-- 4. Liquefação de Solos -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-amber-500/40 hover:border-amber-500 relative overflow-hidden"
+                        data-standard="br" data-tags="liquefacao sismica solos sismo terremoto csr crr nceer youd idriss boulanger spt areia">
+                        <div class="absolute top-0 right-0 bg-amber-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            NCEER / YOUD & IDRISS
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🌊</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Análise de Liquefação Sísmica de Solos
+                                    </h3>
+                                    <span class="badge-norm bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">NCEER / Idriss & Boulanger</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Avaliação de gatilho de liquefação por perfil contínuo de profundidade e por camadas reais de sondagem SPT. Cálculo detalhado de CSR, CRR, fatores de segurança e mapeamento de zonas suscetíveis.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Geotecnia Sísmica</span>
+                                <span class="badge-discipline bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">Sondagens SPT</span>
+                            </div>
+                        </div>
+                        <a href="liquefaction.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Analisar Liquefação Sísmica</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 7. Gerador de Combinações de Ações -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-emerald-500/60"
+                        data-standard="br us" data-tags="combinacoes combinador cargas elu els equ geo nbr 8681 nbr 6118 nbr 6122 eurocode asce permanente acidental vento sobrecarga coeficientes tombamento deslizamento">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">⚖️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Gerador de Combinações de Ações
+                                    </h3>
+                                    <span class="badge-norm bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">NBR 8681 / 6118 / 6122 • Eurocode • ASCE</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Geração automatizada de combinações de esforços para estruturas e fundações (ELU, ELS, EQU tombamento, GEO-SLI deslizamento e GEO-STR capacidade de carga). Suporte a regras lógicas XOR/AND e envoltórias extremas.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Estrutural & Geotécnica</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">ELU & ELS</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">EQU & GEO</span>
+                            </div>
+                        </div>
+                        <a href="../nbr/comb nbr 6118.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Gerar Combinações</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 7B. Cargas nas Bases & Combinações Triaxiais (MIETC) -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-emerald-500/50 hover:border-emerald-500 relative overflow-hidden"
+                        data-standard="br us" data-tags="combinacoes bases mietc cargas verticais horizontais x y triaxial fundacoes sapatas estacas nbr 8681 nbr 6118 nbr 6122 envoltorias excel importacao">
+                        <div class="absolute top-0 right-0 bg-gradient-to-l from-emerald-600 via-teal-600 to-blue-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-xs">
+                            MULTI-BASES • TRIAXIAL V, X, Y
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🏛️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Cargas nas Bases & Combinações (MIETC)
+                                    </h3>
+                                    <span class="badge-norm bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">NBR 8681 / 6118 / 6122 • Multi-Bases</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Importação direta de planilhas de cargas nas bases (ex: <span class="font-semibold text-emerald-600 dark:text-emerald-400">Cópia de Cargas nas bases MIETC.xlsx</span>). Geração simultânea em lote das combinações ponderadas normativas em <strong>V, X e Y</strong>, extraindo envoltórias de compressão máxima (<span class="font-bold text-blue-600 dark:text-blue-400">V_máx</span>), alívio (<span class="font-bold text-amber-600 dark:text-amber-400">V_mín</span>) e cisalhamento (<span class="font-bold text-purple-600 dark:text-purple-400">H_res,máx</span>) com esforços concomitantes para fundações rasas e profundas.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">Triaxial: V, X, Y & H_res</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Importação Excel (.xlsx)</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Envoltórias Críticas</span>
+                            </div>
+                        </div>
+                        <a href="../nbr/comb_bases_mietc.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Combinar Cargas nas Bases</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 8. PCalc — Pilares & Seções de Concreto Armado (NBR • ACI • EC2) -->
+                    <div data-discipline="concrete" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-emerald-500/40 hover:border-emerald-500 relative overflow-hidden group"
+                        data-standard="br us" data-tags="pcalc pilares pilar coluna secao secoes viga vigas concreto armado flexao cortante armadura longitudinal estribo nbr 6118 aci 318 aci318-22 eurocode ec2 en 1992 dominios whitney bielas flexocompressao obliqua segunda ordem esbeltez interacao mn diagrama curvas envoltoria 3d">
+                        <div class="absolute top-0 right-0 bg-gradient-to-l from-emerald-600 via-teal-600 to-blue-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-xs">
+                            PILARES & SEÇÕES • MULTI-NORMA
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🏛️📐</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                        PCalc — Pilares & Seções de Concreto
+                                    </h3>
+                                    <span class="badge-norm bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">NBR 6118 • ACI 318-22 • EC2</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Aplicativo unificado de concreto armado: dimensionamento e verificação de pilares sob flexo-compressão oblíqua (esbeltez, 2ª ordem local e superfície 3D de interação N-Mx-My) e seções transversais / vigas (flexão composta M-N, cortante V e envoltória 2D) sob NBR 6118, ACI 318-22 e Eurocode 2.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">🏛️ Pilares (3D)</span>
+                                <span class="badge-discipline bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300">📐 Seções & Vigas</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">NBR • ACI • EC2</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Interação M-N</span>
+                            </div>
+                        </div>
+                        <div class="mt-auto flex flex-col gap-2">
+                            <a href="../nbr/PCALC.html" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 group-hover:shadow-md">
+                                <span>Abrir PCalc Unificado</span>
+                                <span>→</span>
+                            </a>
+                            <div class="grid grid-cols-2 gap-2">
+                                <a href="../nbr/PCALC.html?mode=column" class="py-1.5 px-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-center text-[11px] font-semibold transition-colors flex items-center justify-center gap-1" title="Abrir diretamente no modo Pilares (Superfície 3D)">
+                                    <span>🏛️ Pilares (3D)</span>
+                                </a>
+                                <a href="../nbr/PCALC.html?mode=section" class="py-1.5 px-2 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-center text-[11px] font-semibold transition-colors flex items-center justify-center gap-1" title="Abrir diretamente no modo Seções e Vigas (M-N-V)">
+                                    <span>📐 Seções / Vigas</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 9. Viga Protendida NBR 6118 -->
+                    <div data-discipline="concrete" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-emerald-500/60"
+                        data-standard="br" data-tags="viga protendida concreto protendido cordoalha perda imediata progressiva nbr 6118 els f els d tensao">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">⚡</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Viga Protendida NBR 6118
+                                    </h3>
+                                    <span class="badge-norm bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">NBR 6118 Protensão</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Análise de vigas de concreto protendido com cálculo rigoroso de perdas imediatas (atrito, ancoragem) e diferidas no tempo (fluência e retração do concreto, relaxação do aço).
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Concreto Protendido</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Perdas Temporais</span>
+                            </div>
+                        </div>
+                        <a href="../nbr/viga_protendida.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Analisar Viga Protendida</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 10. Estruturas de Aço (NBR 8800 & AISC 360) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-blue-500/40 hover:border-blue-500 relative overflow-hidden group"
+                        data-standard="br us" data-tags="nbr 8800 aisc 360 aco estrutura metalica viga pilar flt flambagem lateral torcao tracao compressao flexao gerdau wide flange lrfd asd steel check">
+                        <div class="absolute top-0 right-0 bg-gradient-to-l from-blue-600 to-emerald-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-xs">
+                            NBR 8800 + AISC 360
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔩</span>
+                                <div>
+                                    <h3 class="text-base font-bold text-[var(--color-text-primary)] leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        Estruturas de Aço (NBR 8800 & AISC 360)
+                                    </h3>
+                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                        <span class="badge-norm bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">ABNT NBR 8800</span>
+                                        <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AISC 360-16</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Módulo unificado de verificação de perfis estruturais de aço (laminados e soldados Gerdau e AISC v16.0) para tração, compressão, flexão, FLM, FLA, FLT e equação de interação com chaveamento instantâneo de norma e unidades.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Estruturas Metálicas</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">LRFD & ASD</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">NBR 8800</span>
+                            </div>
+                        </div>
+                        <a href="steel_structures.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 group-hover:shadow-md">
+                            <span>Abrir Dimensionamento de Aço (NBR/AISC)</span>
+                            <span class="group-hover:translate-x-1 transition-transform">→</span>
+                        </a>
+                    </div>
+
+
+                    <!-- 13. Método de Bielas e Tirantes (STM) -->
+                    <div data-discipline="concrete" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-emerald-500/60"
+                        data-standard="br" data-tags="bielas tirantes stm strut and tie trelica consolo sapata viga parede regiao d nbr aci">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔺</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Método de Bielas e Tirantes (STM)
+                                    </h3>
+                                    <span class="badge-norm bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">Strut-and-Tie Model</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Modelagem e dimensionamento de treliças ideais para regiões de descontinuidade estrutural (Regiões D): consolos curtos, sapatas rígidas, nós de pórtico e aberturas em vigas.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Regiões D</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Bielas & Tirantes</span>
+                            </div>
+                        </div>
+                        <a href="STM_UI.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Abrir Módulo STM</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+
+
+                    <!-- 15. Pórtico Plano 2D ("Ftool Web") -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-indigo-500/60"
+                        data-standard="br" data-tags="portico plano 2d ftool analise matricial rigidez direta trelica rotula mola diagrama n v m deformada">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🏛️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Pórtico Plano 2D ("Ftool Web")
+                                    </h3>
+                                    <span class="badge-norm bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Análise Estrutural 2D</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Análise matricial de pórticos e treliças planas com nós arbitrários, barras rotuladas, apoios elásticos, cargas nodais e distribuídas, e diagramas contínuos de N, V, M e deformada.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Estrutural</span>
+                                <span class="badge-discipline bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">Método da Rigidez</span>
+                            </div>
+                        </div>
+                        <a href="frame_2d.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Abrir Pórtico Plano 2D</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 16. Vigas Contínuas de Concreto com Envoltórias -->
+                    <div data-discipline="concrete" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-emerald-500/60"
+                        data-standard="br" data-tags="viga continua envoltoria nbr 6118 concreto armado alternancia cargas redistribuicao plastico fissuracao flecha">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">📏</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Vigas Contínuas de Concreto Armado
+                                    </h3>
+                                    <span class="badge-norm bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">NBR 6118 Envoltórias</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Resolução de múltiplos vãos com envoltórias de momento e cortante sob alternância de sobrecargas móveis (item 11.8.2.4), redistribuição plástica (δ ≥ 0.75) e detalhamento de armaduras.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Concreto Armado</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">Envoltória & Rebar</span>
+                            </div>
+                        </div>
+                        <a href="continuous_beam.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Vigas Contínuas</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 17. Conexão Viga-Pilar & Ligações Metálicas (NBR 8800 / AISC 360) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-blue-500/40 hover:border-blue-500 relative overflow-hidden group"
+                        data-standard="br us" data-tags="conexao viga pilar ligacao metalica beam column nbr 8800 cbca aisc 360 chapa topo dupla cantoneira shear tab momento placa base alavanca 3d end plate fin plate">
+                        <div class="absolute top-0 right-0 bg-gradient-to-l from-blue-600 to-emerald-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-xs">
+                            NBR 8800 + AISC 360
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔗</span>
+                                <div>
+                                    <h3 class="text-base font-bold text-[var(--color-text-primary)] leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        Conexão Viga-Pilar & Ligações Metálicas
+                                    </h3>
+                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                        <span class="badge-norm bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">ABNT NBR 8800</span>
+                                        <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AISC 360-16</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Dimensionamento unificado de ligações viga-coluna, nós de pórtico e bases de pilares para momento e cortante (chapa flexível, dupla cantoneira, shear tab, chapa estendida com alavanca e placa de base) com detalhe 2D e renderização 3D.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Ligações Metálicas</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">2D CBCA + 3D AISC</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">NBR 8800</span>
+                            </div>
+                        </div>
+                        <a href="steel_connections.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 group-hover:shadow-md">
+                            <span>Dimensionar Ligações (NBR & AISC)</span>
+                            <span class="group-hover:translate-x-1 transition-transform">→</span>
+                        </a>
+                    </div>
+
+
+                    <!-- ======================================================== -->
+                    <!-- MÓDULOS AMERICANOS (US CODES / AISC / ASCE / NDS)        -->
+                    <!-- ======================================================== -->
+
+                    <!-- 1. ASCE Cargas de Vento -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="vento wind asce 7 cargas mwfrs cc velocidade pressao rajada exposicao telhado parede">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">💨</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Cargas de Vento - ASCE 7
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">ASCE 7-10 / 7-16</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Cálculo de pressões de vento para o sistema estrutural principal (MWFRS) e componentes e revestimentos (C&C), com categorias de exposição B/C/D e fatores topográficos.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Cargas de Vento</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">ASCE 7 MWFRS</span>
+                            </div>
+                        </div>
+                        <a href="../asce/wind.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Cargas de Vento</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 2. ASCE Cargas de Neve -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="neve snow asce 7 sobrecarga drifts acumulo telhado plano inclinado calha">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">❄️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Cargas de Neve - ASCE 7
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">ASCE 7 Snow</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Avaliação de sobrecargas de neve em coberturas planas, inclinadas e curvas, incluindo acúmulos por derivação de vento (snow drifts) e calhas de transição.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Cargas de Neve</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Snow Drifts</span>
+                            </div>
+                        </div>
+                        <a href="../asce/snow.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Cargas de Neve</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 3. ASCE Cargas de Chuva -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="chuva rain asce 7 empocamento ponding drenagem cobertura calha instabilidade">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🌧️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Cargas de Chuva - ASCE 7
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">ASCE 7 Rain</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Determinação da carga de chuva e análise de suscetibilidade à instabilidade por empoçamento progressivo de água (ponding instability) em telhados planos.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Cargas Hidráulicas</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Ponding Loads</span>
+                            </div>
+                        </div>
+                        <a href="../asce/rain.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Cargas de Chuva</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 4. ASCE Combinações de Cargas -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="combinacoes asce 7 lrfd asd cargas ibc dead live wind snow rain">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">📊</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Combinações de Cargas - ASCE 7
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">LRFD & ASD</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Geração sistemática de combinações básicas de carregamento segundo o método dos fatores de carga e resistência (LRFD) e tensões admissíveis (ASD).
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Combinações</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">LRFD / ASD</span>
+                            </div>
+                        </div>
+                        <a href="../asce/combos.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Gerar Combinações ASCE</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 6. AISC Placa de Base (Base Plate) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="base plate placa de base aisc design guide 1 chumbador anchor bolt pressao concreto tracao alavanca">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔩</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Placa de Base - AISC Design Guide 1
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AISC DG1</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Dimensionamento de chapa de base e chumbadores sob carga axial e momentos fletores biaxiais, com verificação de tensões no pedestal de concreto e espessura necessária da chapa.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Conexões Metálicas</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Base Plates</span>
+                            </div>
+                        </div>
+                        <a href="../aisc/base plate.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Placa de Base</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 7. AISC Emenda de Viga (Splice) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="splice emenda parafuso parafuso mesa alma aisc bloco cisalhamento block shear rasgamento ruptura escoamento">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔗</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Emenda de Viga (Splice) - AISC
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AISC 360 Splice</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Projeto e verificação de emendas de vigas W parafusadas em mesa e alma sob momento e cortante, checando cisalhamento dos parafusos, esmagamento, cisalhamento de bloco e ruptura líquida.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Conexões Parafusadas</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Block Shear</span>
+                            </div>
+                        </div>
+                        <a href="../aisc/splice.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Emenda de Viga</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 9. Grupo de Soldas 3D (Weld Group) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="solda weld group cordao filete penetracao aws d1.1 aisc tensao elastica torsao momento cortante">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔥</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Grupo de Soldas 3D (Weld Group)
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AWS D1.1 / AISC</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Propriedades geométricas elásticas e tensões resultantes máximas em grupos arbitrários de cordões de solda tridimensionais sob forças axiais, cortantes e momentos.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Soldagem Estrutural</span>
+                                <span class="badge-discipline bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">Método Elástico 3D</span>
+                            </div>
+                        </div>
+                        <a href="weld_group.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Grupo de Soldas</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 10. Madeira NDS (Wood Design) -->
+                    <div data-discipline="timber" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="madeira nds wood timber flexao cisalhamento compressao glulam vigas pilares">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🪵</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Dimensionamento em Madeira - NDS
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">NDS 2018 / Timber</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Dimensionamento e verificação de peças de madeira maciça serrada e laminada colada (glulam) sob flexão, cisalhamento e compressão axial com coeficientes NDS.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Madeira</span>
+                                <span class="badge-discipline bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">NDS Timber</span>
+                            </div>
+                        </div>
+                        <a href="../nds/nds wood design.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Dimensionar Madeira NDS</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 11. AISC Seletor de Perfis (Beam Selector) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="beam selector seletor perfil aisc viga mais leve otimizacao w shape tabela 3-10 momento lb flecha">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🎯</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Seletor de Perfis AISC (Beam Selector)
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AISC Tabela 3-10</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Encontra automaticamente os perfis W mais leves da base AISC v16.0 atendendo aos critérios de momento fletor requerido, comprimento destravado (Lb) e flecha admissível.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Otimização</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">AISC v16 Database</span>
+                            </div>
+                        </div>
+                        <a href="beam selector.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Abrir Beam Selector</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 12. Suporte de Cantoneira (Angle Support) -->
+                    <div data-discipline="steel" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="angle support cantoneira suporte parede alvenaria chumbadores ancoragem tracao cortante">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">📐</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Suporte de Cantoneira (Angle Support)
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">AISC / Fixações</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Dimensionamento de cantoneiras metálicas de apoio de vigas de piso em paredes de alvenaria ou concreto com análise de interação linear cortante/tração nos chumbadores.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Suportes</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Chumbadores</span>
+                            </div>
+                        </div>
+                        <a href="angle_support.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Angle Support</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 13. Matriz de Galpões e Andaimes (Shed Matrix) -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="shed matrix galpao andaime sidewalk shed escoramento tubo viga matriz aisc osha">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🏗️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Gerador de Matriz de Galpões (Shed Matrix)
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">Sidewalk Sheds</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Geração de tabelas paramétricas de pré-dimensionamento de vigas de transição e capacidade de pernas de tubo de aço para estruturas provisórias de proteção de pedestres.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Andaimes</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Tabelas Paramétricas</span>
+                            </div>
+                        </div>
+                        <a href="shed_matrix.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Gerar Matriz de Galpões</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 14. Vão Máximo de Galpão (Shed Span) -->
+                    <div data-discipline="analysis_loads" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-blue-500/60"
+                        data-standard="us" data-tags="shed span vao maximo galpao andaime madeira aco nyc code">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">📐</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Vão Máximo de Galpão (Shed Span)
+                                    </h3>
+                                    <span class="badge-norm bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">NYC Building Code</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Avaliação rápida do vão máximo admissível para vigas de madeira e perfis metálicos sujeitos a cargas de serviço de andaimes e galpões de calçada.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Andaimes</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Vãos Admissíveis</span>
+                            </div>
+                        </div>
+                        <a href="shed_span.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Calcular Vão de Galpão</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 15. Modelo Interativo de Cisalhamento (LOWESS) -->
+                    <div data-discipline="concrete" class="app-card form-section !mb-0 flex flex-col justify-between border border-[var(--color-border-primary)] hover:border-purple-500/60"
+                        data-standard="us" data-tags="cisalhamento lowess shear model dispersao regressao scipy otimizacao nelder mead aci ec2">
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🔬</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Modelo Interativo de Cisalhamento
+                                    </h3>
+                                    <span class="badge-norm bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">Pesquisa & Calibração</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Explorador de bancos de dados experimentais de cisalhamento com regressão não-paramétrica LOWESS e otimização SciPy Nelder-Mead de equações empíricas.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Pesquisa Científica</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">LOWESS & SciPy</span>
+                            </div>
+                        </div>
+                        <a href="interactive_shear.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Abrir Simulador de Cisalhamento</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
                 </div>
-            </div>
+
+                <!-- MENSAGEM QUANDO A BUSCA NÃO ENCONTRAR RESULTADOS -->
+                <div id="no-results-msg" style="display: none;" class="text-center py-16 px-4">
+                    <div class="text-4xl mb-3">🔍</div>
+                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] mb-1">Nenhum módulo encontrado</h3>
+                    <p class="text-sm text-[var(--color-text-secondary)] max-w-md mx-auto mb-4">
+                        Não encontramos calculadoras correspondentes ao termo buscado. Tente pesquisar por termos como "viga", "estaca", "vento", "aço" ou "concreto".
+                    </p>
+                    <button onclick="clearSearch()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors">
+                        Limpar Busca
+                    </button>
+                </div>
+
+            </section>
         </main>
 
-        <div id="footer-placeholder"></div>
+        <!-- Footer Injection Placeholder -->
+        <div id="footer-placeholder" class="mt-12"></div>
     </div>
+
+    <!-- SCRIPT DE FILTRAGEM POR ÁREAS DE ENGENHARIA, NORMAS E BUSCA -->
+    <script>
+        let currentFilterType = 'all'; // 'all', 'discipline', 'standard'
+        let currentFilterVal = 'all';
+
+        function updateBadgeCounters() {
+            const cards = Array.from(document.querySelectorAll('.app-card'));
+            const totalCount = cards.length;
+            
+            let countGeotech = 0;
+            let countConcrete = 0;
+            let countSteel = 0;
+            let countAnalysis = 0;
+            let countTimber = 0;
+            let countBR = 0;
+            let countUS = 0;
+
+            cards.forEach(card => {
+                const disc = card.getAttribute('data-discipline') || '';
+                const std = card.getAttribute('data-standard') || '';
+                const stdList = std.split(' ');
+
+                if (disc === 'geotech') countGeotech++;
+                else if (disc === 'concrete') countConcrete++;
+                else if (disc === 'steel') countSteel++;
+                else if (disc === 'analysis_loads') countAnalysis++;
+                else if (disc === 'timber') countTimber++;
+
+                if (stdList.includes('br')) countBR++;
+                if (stdList.includes('us')) countUS++;
+            });
+
+            const setBadge = (id, count) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = count;
+            };
+
+            setBadge('badge-count-all', totalCount);
+            setBadge('badge-count-geotech', countGeotech);
+            setBadge('badge-count-concrete', countConcrete);
+            setBadge('badge-count-steel', countSteel);
+            setBadge('badge-count-analysis_loads', countAnalysis);
+            setBadge('badge-count-timber', countTimber);
+            setBadge('badge-count-br', countBR);
+            setBadge('badge-count-us', countUS);
+
+            setBadge('hero-count-br', `${countBR} Módulos`);
+            setBadge('hero-count-us', `${countUS} Módulos`);
+        }
+
+        function setHubFilter(type, val, shouldScroll = false) {
+            currentFilterType = type;
+            currentFilterVal = val;
+            localStorage.setItem('hub_filter_type', type);
+            localStorage.setItem('hub_filter_val', val);
+
+            const allTabBtns = document.querySelectorAll('.tab-filter-btn');
+            allTabBtns.forEach(btn => {
+                btn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]";
+            });
+
+            const heroBR = document.getElementById('hero-card-br');
+            const heroUS = document.getElementById('hero-card-us');
+            if (heroBR) heroBR.classList.remove('selected', 'ring-4', 'ring-emerald-500/40');
+            if (heroUS) heroUS.classList.remove('selected', 'ring-4', 'ring-blue-500/40');
+
+            const activeBtn = document.getElementById(`tab-btn-${val}`);
+            if (activeBtn) {
+                if (val === 'geotech') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-emerald-500/30 bg-emerald-600 text-white shadow-emerald-600/20";
+                } else if (val === 'concrete') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-teal-500/30 bg-teal-600 text-white shadow-teal-600/20";
+                } else if (val === 'steel') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-blue-500/30 bg-blue-600 text-white shadow-blue-600/20";
+                } else if (val === 'analysis_loads') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-purple-500/30 bg-purple-600 text-white shadow-purple-600/20";
+                } else if (val === 'timber') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-amber-500/30 bg-amber-600 text-white shadow-amber-600/20";
+                } else if (val === 'br') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-emerald-500/30 bg-emerald-600 text-white shadow-emerald-600/20";
+                    if (heroBR) heroBR.classList.add('selected', 'ring-4', 'ring-emerald-500/40');
+                } else if (val === 'us') {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-blue-500/30 bg-blue-600 text-white shadow-blue-600/20";
+                    if (heroUS) heroUS.classList.add('selected', 'ring-4', 'ring-blue-500/40');
+                } else {
+                    activeBtn.className = "tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm border border-indigo-500/30 bg-indigo-600 text-white shadow-indigo-600/20";
+                }
+            }
+
+            filterApps();
+
+            if (shouldScroll) {
+                const catalog = document.getElementById('catalog-section');
+                if (catalog) {
+                    catalog.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+
+        function selectStandard(std, shouldScroll = true) {
+            // Toggles back to 'all' if clicked again on currently active standard
+            if (currentFilterType === 'standard' && currentFilterVal === std) {
+                setHubFilter('all', 'all', shouldScroll);
+            } else {
+                setHubFilter('standard', std, shouldScroll);
+            }
+        }
+
+        function filterApps() {
+            const query = (document.getElementById('app-search-input').value || '').trim().toLowerCase();
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) clearBtn.style.display = query.length > 0 ? 'flex' : 'none';
+
+            const cards = document.querySelectorAll('.app-card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const standard = card.getAttribute('data-standard') || '';
+                const discipline = card.getAttribute('data-discipline') || '';
+                const tags = (card.getAttribute('data-tags') || '').toLowerCase();
+                const textContent = card.innerText.toLowerCase();
+
+                let matchesFilter = true;
+                if (currentFilterType === 'discipline') {
+                    matchesFilter = (discipline === currentFilterVal);
+                } else if (currentFilterType === 'standard') {
+                    matchesFilter = (standard === currentFilterVal) || (standard && standard.split(' ').includes(currentFilterVal));
+                }
+
+                const matchesQuery = !query || tags.includes(query) || textContent.includes(query);
+
+                if (matchesFilter && matchesQuery) {
+                    card.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Atualizar indicador de status
+            const statusText = document.getElementById('status-indicator-text');
+            const noResults = document.getElementById('no-results-msg');
+
+            const labels = {
+                all: 'Todos os Módulos',
+                geotech: 'Geotecnia & Fundações',
+                concrete: 'Concreto Estrutural',
+                steel: 'Estruturas Metálicas & Ligações',
+                analysis_loads: 'Análise Estrutural & Cargas',
+                timber: 'Estruturas de Madeira',
+                br: 'Normas Brasileiras (NBR & Geotecnia)',
+                us: 'Normas Americanas (AISC / ASCE / NDS)'
+            };
+
+            const activeLabel = labels[currentFilterVal] || 'Módulos Filtrados';
+
+            if (visibleCount === 0) {
+                if (noResults) noResults.style.display = 'block';
+                if (statusText) statusText.textContent = `Nenhum módulo encontrado para ${activeLabel}`;
+            } else {
+                if (noResults) noResults.style.display = 'none';
+                if (statusText) {
+                    if (query) {
+                        statusText.textContent = `Exibindo ${visibleCount} módulos encontrados para "${query}" (${activeLabel})`;
+                    } else {
+                        statusText.textContent = `Exibindo ${visibleCount} módulos de ${activeLabel}`;
+                    }
+                }
+            }
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('app-search-input');
+            if (input) {
+                input.value = '';
+                filterApps();
+                input.focus();
+            }
+        }
+
+        // Inicialização ao carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            updateBadgeCounters();
+            const savedType = localStorage.getItem('hub_filter_type') || 'all';
+            const savedVal = localStorage.getItem('hub_filter_val') || 'all';
+            setHubFilter(savedType, savedVal, false);
+        });
+    </script>
 </body>
 
 </html>

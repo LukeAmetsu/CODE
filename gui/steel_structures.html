@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dimensionamento de Estruturas de Aço (NBR 8800 & AISC 360)</title>
+
+    <script src="../js/tailwind.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="../styles.min.css">
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="../aisc/database.js" defer></script>
+    <script src="../aisc/steel_math.js" defer></script>
+    <script src="steel_structures.js" defer></script>
+
+    <style>
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .std-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
+    <div class="container mx-auto p-4 md:p-6 max-w-7xl flex-grow flex flex-col">
+        <div id="header-placeholder" style="min-height: 90px;"></div>
+
+        <main class="mt-4 flex-grow flex flex-col">
+            <!-- Executive Header Section -->
+            <div
+                class="mb-5 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="header-badge-norm"
+                            class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                            NBR 8800:2008 & AISC 360-16/22
+                        </span>
+                        <span
+                            class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                            Perfis Laminados & Soldados
+                        </span>
+                    </div>
+                    <h1
+                        class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                        <span class="text-3xl">🔩</span>
+                        Dimensionamento de Estruturas de Aço
+                    </h1>
+                    <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Módulo integrado para verificação de perfis estruturais de aço sob tração, compressão, flexão
+                        reta/oblíqua, flambagem local (FLM/FLA), flambagem lateral com torção (FLT) e interação $N + M_x
+                        + M_y$.
+                    </p>
+                </div>
+
+                <!-- NORMA / STANDARD SWITCHER BUTTONS -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                    <div
+                        class="flex items-center bg-gray-200 dark:bg-gray-800 p-1.5 rounded-xl border border-gray-300 dark:border-gray-700 self-start sm:self-auto">
+                        <button type="button" id="btn-switch-nbr" onclick="setStandard('nbr')"
+                            class="std-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5">
+                            <span>🇧🇷</span> NBR 8800
+                        </button>
+                        <button type="button" id="btn-switch-aisc" onclick="setStandard('aisc')"
+                            class="std-btn px-3.5 py-1.5 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1.5">
+                            <span>🇺🇸</span> AISC 360
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="saveSteelJSON()"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1">
+                            <span>💾</span> Salvar
+                        </button>
+                        <button type="button" onclick="document.getElementById('steel-file-input').click()"
+                            class="bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1">
+                            <span>📂</span> Abrir
+                        </button>
+                        <input type="file" id="steel-file-input" class="hidden" accept=".json"
+                            onchange="loadSteelJSON(event)">
+                        <button type="button" onclick="exportReportPDF()"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1">
+                            <span>📄</span> PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main 2-Column Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Inputs & Catalog (5 Cols) -->
+                <div class="lg:col-span-5 space-y-5">
+                    <!-- Standard & Design Controls -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <h2
+                            class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <span class="flex items-center gap-2"><span>⚙️</span> Parâmetros de Projeto</span>
+                            <span id="design-std-tag"
+                                class="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded">ABNT
+                                NBR 8800:2008</span>
+                        </h2>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="method-container">
+                                <label for="design-method" class="eng-label">Método de Cálculo</label>
+                                <select id="design-method" onchange="triggerCalculation()" class="eng-input">
+                                    <option value="ELU" selected>ELU (NBR 8800: γa1=1.10)</option>
+                                    <option value="LRFD">LRFD (AISC 360: φ=0.90)</option>
+                                    <option value="ASD">ASD (AISC 360: Ω=1.67)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="unit-system" class="eng-label">Sistema de Unidades</label>
+                                <select id="unit-system" onchange="handleUnitChange(this.value)" class="eng-input">
+                                    <option value="metric" selected>Métrico (kN, mm, MPa)</option>
+                                    <option value="imperial">Imperial (kips, in, ksi)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="steel-grade" class="eng-label">Aço Estrutural</label>
+                                <select id="steel-grade" onchange="handleSteelGradeChange(this.value)"
+                                    class="eng-input">
+                                    <option value="ASTM A572 Gr50" selected>ASTM A572 Gr 50 (fy=345 MPa)</option>
+                                    <option value="ASTM A36">ASTM A36 (fy=250 MPa)</option>
+                                    <option value="ASTM A992">ASTM A992 (fy=345 MPa)</option>
+                                    <option value="USIMINAS USI-SAC 350">USI-SAC 350 (fy=350 MPa)</option>
+                                    <option value="custom">Personalizado (Manual)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="input-fy" class="eng-label">Tensão Escoamento (<span
+                                        class="unit-fy-label">f<sub>y</sub></span>)</label>
+                                <div class="relative">
+                                    <input type="number" id="input-fy" value="345" step="5"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                    <span
+                                        class="unit-stress absolute right-2 top-1.5 text-[11px] text-gray-400">MPa</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Catalog Selection -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <div
+                            class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <h2
+                                class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                <span>📐</span> Catálogo & Perfil Selecionado
+                            </h2>
+                            <span
+                                class="text-xs text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline"
+                                onclick="setCustomSection()">Definir Manual</span>
+                        </div>
+
+                        <div class="space-y-3">
+                            <!-- NBR Gerdau Selector -->
+                            <div id="gerdau-selector-container">
+                                <label for="gerdau-select" class="eng-label">Perfis I Gerdau (W / HP Açominas)</label>
+                                <select id="gerdau-select" onchange="loadGerdauProfile(this.value)"
+                                    class="eng-select text-blue-700 dark:text-blue-300">
+                                    <optgroup label="Série W 610 / W 530">
+                                        <option value="W 610 x 101.0">W 610 x 101.0</option>
+                                        <option value="W 530 x 82.0" selected>W 530 x 82.0</option>
+                                        <option value="W 530 x 66.0">W 530 x 66.0</option>
+                                    </optgroup>
+                                    <optgroup label="Série W 460 / W 410">
+                                        <option value="W 460 x 52.0">W 460 x 52.0</option>
+                                        <option value="W 410 x 53.0">W 410 x 53.0</option>
+                                        <option value="W 410 x 38.8">W 410 x 38.8</option>
+                                    </optgroup>
+                                    <optgroup label="Série W 360 / W 310">
+                                        <option value="W 360 x 44.0">W 360 x 44.0</option>
+                                        <option value="W 310 x 38.7">W 310 x 38.7</option>
+                                        <option value="W 310 x 28.3">W 310 x 28.3</option>
+                                    </optgroup>
+                                    <optgroup label="Série W 250 / W 200 / W 150">
+                                        <option value="W 250 x 32.7">W 250 x 32.7</option>
+                                        <option value="W 200 x 22.5">W 200 x 22.5</option>
+                                        <option value="W 150 x 18.0">W 150 x 18.0</option>
+                                        <option value="W 150 x 13.0">W 150 x 13.0</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <!-- AISC Shape Selector -->
+                            <div id="aisc-selector-container" class="hidden">
+                                <label for="aisc-shape-select" class="eng-label">Biblioteca AISC v16.0 (W, HSS, C,
+                                    L)</label>
+                                <select id="aisc-shape-select" onchange="loadAiscShape(this.value)"
+                                    class="eng-select text-blue-700 dark:text-blue-300">
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+
+                            <!-- Dimension Inputs Grid -->
+                            <div
+                                class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <div>
+                                    <label for="dim-d" class="eng-label">Altura (d)</label>
+                                    <input type="number" id="dim-d" value="528" step="any"
+                                        oninput="handleDimensionChange()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-bf" class="eng-label">Largura Mesa (bf)</label>
+                                    <input type="number" id="dim-bf" value="209" step="any"
+                                        oninput="handleDimensionChange()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-tf" class="eng-label">Esp. Mesa (tf)</label>
+                                    <input type="number" id="dim-tf" value="13.3" step="any"
+                                        oninput="handleDimensionChange()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-tw" class="eng-label">Esp. Alma (tw)</label>
+                                    <input type="number" id="dim-tw" value="8.9" step="any"
+                                        oninput="handleDimensionChange()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-ag" class="eng-label">Área (Ag)</label>
+                                    <input type="number" id="dim-ag" value="10500" step="any"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-zx" class="eng-label">Zx</label>
+                                    <input type="number" id="dim-zx" value="2060000" step="any"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-rx" class="eng-label">rx</label>
+                                    <input type="number" id="dim-rx" value="213" step="any"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                </div>
+                                <div>
+                                    <label for="dim-ry" class="eng-label">ry</label>
+                                    <input type="number" id="dim-ry" value="43.8" step="any"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Esforços Solicitantes & Contenção -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <h2
+                            class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <span>⚖️</span> Esforços Solicitantes & Estabilidade
+                        </h2>
+
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label for="load-nsd" class="eng-label">
+                                    Força Normal (<span id="label-nsd">N<sub>Sd</sub></span>)
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="load-nsd" value="500" step="10"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                    <span
+                                        class="unit-force absolute right-2 top-1.5 text-[11px] text-gray-400">kN</span>
+                                </div>
+                                <span class="text-[10px] text-gray-400">Positivo = Compressão, Negativo = Tração</span>
+                            </div>
+                            <div>
+                                <label for="load-msdx" class="eng-label">
+                                    Momento Fletor X (<span id="label-msdx">M<sub>Sd,x</sub></span>)
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="load-msdx" value="220" step="5"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                    <span
+                                        class="unit-moment absolute right-2 top-1.5 text-[11px] text-gray-400">kN·m</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="stab-lb" class="eng-label">Vão sem Contenção (L<sub>b</sub>)</label>
+                                <div class="relative">
+                                    <input type="number" id="stab-lb" value="5.0" step="0.2"
+                                        oninput="triggerCalculation()" class="eng-input">
+                                    <span
+                                        class="unit-length absolute right-1.5 top-1 text-[10px] text-gray-400">m</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="stab-cb" class="eng-label">Fator Momento (C<sub>b</sub>)</label>
+                                <input type="number" id="stab-cb" value="1.0" min="1.0" max="3.0" step="0.05"
+                                    oninput="triggerCalculation()" class="eng-input">
+                            </div>
+                            <div>
+                                <label for="stab-k" class="eng-label">Compr. Efetivo (K)</label>
+                                <input type="number" id="stab-k" value="1.0" min="0.5" max="3.0" step="0.1"
+                                    oninput="triggerCalculation()" class="eng-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Analytics, Canvas & Report (7 Cols) -->
+                <div class="lg:col-span-7 space-y-5">
+                    <!-- Status Banner -->
+                    <div id="status-banner"
+                        class="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span id="status-icon" class="text-3xl">✅</span>
+                            <div>
+                                <h3 id="status-title"
+                                    class="text-base font-bold text-emerald-800 dark:text-emerald-300">
+                                    PERFIL CONFORME
+                                </h3>
+                                <p id="status-subtitle" class="text-xs text-emerald-700 dark:text-emerald-400">
+                                    Todas as verificações de compacidade, flambagem axial e lateral com torção (FLT)
+                                    atendem aos limites normativos.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="status-badge"
+                                class="inline-block bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                Taxa: 68.2%
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards Grid (4 Cards) -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Interação N +
+                                M</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-inter-val"
+                                    class="text-lg font-bold text-gray-900 dark:text-white">68.2%</span>
+                                <span id="kpi-inter-badge" class="text-xs font-semibold text-emerald-600">OK</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div id="kpi-inter-bar" class="bg-emerald-500 h-full rounded-full"
+                                    style="width: 68.2%;"></div>
+                            </div>
+                            <span class="text-[10px] text-gray-400 mt-1 block">Limite &le; 1.000</span>
+                        </div>
+
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Compressão
+                                Axial</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-comp-val"
+                                    class="text-lg font-bold text-gray-900 dark:text-white">28.4%</span>
+                                <span id="kpi-comp-factor" class="text-xs font-semibold text-blue-600">&chi;=0.61</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div id="kpi-comp-bar" class="bg-blue-500 h-full rounded-full" style="width: 28.4%;">
+                                </div>
+                            </div>
+                            <span id="kpi-comp-detail" class="text-[10px] text-gray-400 mt-1 block">500 / 1760 kN</span>
+                        </div>
+
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Flexão & FLT</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-flex-val"
+                                    class="text-lg font-bold text-gray-900 dark:text-white">45.8%</span>
+                                <span id="kpi-flt-regime"
+                                    class="text-xs font-semibold text-purple-600">Inelástico</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div id="kpi-flex-bar" class="bg-purple-500 h-full rounded-full" style="width: 45.8%;">
+                                </div>
+                            </div>
+                            <span id="kpi-flex-detail" class="text-[10px] text-gray-400 mt-1 block">220 / 480
+                                kN·m</span>
+                        </div>
+
+                        <div
+                            class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Esbeltez Máxima
+                                (&lambda;)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="kpi-slenderness-val"
+                                    class="text-lg font-bold text-gray-900 dark:text-white">114.2</span>
+                                <span id="kpi-slenderness-badge" class="text-xs font-semibold text-emerald-600">&le; 200
+                                    (OK)</span>
+                            </div>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div id="kpi-slenderness-bar" class="bg-emerald-500 h-full rounded-full"
+                                    style="width: 57%;"></div>
+                            </div>
+                            <span class="text-[10px] text-gray-400 mt-1 block">Eixo fraco (Y-Y) governa</span>
+                        </div>
+                    </div>
+
+                    <!-- 2D Cross-Section Drawing Canvas -->
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <div
+                            class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">
+                            <h2
+                                class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                <span>📐</span> Geometria da Seção & Eixos Principais
+                            </h2>
+                            <span id="canvas-profile-name"
+                                class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">W 530 x 82.0</span>
+                        </div>
+                        <div
+                            class="relative w-full h-64 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center">
+                            <canvas id="steelCanvas" width="600" height="250" class="eng-cad-canvas max-w-full max-h-full"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Verification Table / Report -->
+                    <div id="steel-report-container"
+                        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+                        <!-- Dynamic Report Table -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="footer-placeholder" class="mt-8"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'steel',
+                    pageTitle: 'steel_structures',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

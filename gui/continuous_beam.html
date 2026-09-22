@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vigas Contínuas de Concreto Armado (NBR 6118) - Envoltórias & Detalhamento</title>
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="continuous_beam.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'continuous-beam',
+                    pageTitle: 'continuous_beam',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-6">
+            <!-- Header Section -->
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+                        <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        Vigas Contínuas de Concreto Armado (NBR 6118)
+                    </h1>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Cálculo automático de envoltórias de esforço com alternância de cargas móveis (NBR 6118 item 11.8.2.4), redistribuição plástica (δ ≥ 0.75), detalhamento de armaduras longitudinais e estribos, ELS (abertura de fissuras wk e flechas diferidas), e quantitativo de materiais.
+                    </p>
+                </div>
+
+                <!-- Presets -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="loadBeamPreset('3_spans_typical')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        📐 Viga Contínua 3 Vãos (Edifício Típico)
+                    </button>
+                    <button type="button" onclick="loadBeamPreset('2_spans_heavy')" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        🏗️ Viga 2 Vãos com Carga Elevada
+                    </button>
+                    <button type="button" onclick="loadBeamPreset('4_spans_bridge')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-3 rounded-lg text-xs transition-colors shadow-sm">
+                        🌉 Viga 4 Vãos
+                    </button>
+                </div>
+            </div>
+
+            <!-- Workspace Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left Column: Global Parameters & Spans Editor (5 cols) -->
+                <div class="lg:col-span-5 space-y-6">
+                    
+                    <!-- Global Materials & Standard Parameters -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <h2 class="text-base font-bold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
+                            <span>⚙️</span> Parâmetros Globais da Viga (NBR 6118)
+                        </h2>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <label class="eng-label">Classe do Concreto (fck)</label>
+                                <select id="beam-fck" onchange="triggerBeamCalculation()" class="eng-input">
+                                    <option value="25">C25 (fck = 25 MPa)</option>
+                                    <option value="30" selected>C30 (fck = 30 MPa)</option>
+                                    <option value="35">C35 (fck = 35 MPa)</option>
+                                    <option value="40">C40 (fck = 40 MPa)</option>
+                                    <option value="50">C50 (fck = 50 MPa)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="eng-label">Cobridor d' (cm)</label>
+                                <input type="number" id="beam-dprime" value="4.0" step="0.5" min="2.0" oninput="triggerBeamCalculation()" class="eng-input">
+                            </div>
+                            <div>
+                                <label class="eng-label">Classe de Agressividade (CAA)</label>
+                                <select id="beam-caa" onchange="triggerBeamCalculation()" class="eng-input">
+                                    <option value="II" selected>CAA II - Urbana (wk,lim = 0.3mm)</option>
+                                    <option value="III">CAA III - Marinha/Ind. (wk,lim = 0.2mm)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="eng-label">Redistribuição nos Apoios (δ)</label>
+                                <select id="beam-delta" onchange="triggerBeamCalculation()" class="eng-input">
+                                    <option value="1.0">Sem redistribuição (δ = 1.0)</option>
+                                    <option value="0.90" selected>10% Redistribuição (δ = 0.90)</option>
+                                    <option value="0.85">15% Redistribuição (δ = 0.85)</option>
+                                    <option value="0.75">Limite NBR 6118 (δ = 0.75)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spans Table Editor -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+                            <h2 class="text-base font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>📏</span> Vãos da Viga (<span id="count-spans">3</span>)
+                            </h2>
+                            <button type="button" onclick="addSpanRow()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-1 px-3 rounded-md transition-colors">
+                                + Adicionar Vão
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase">
+                                    <tr>
+                                        <th class="p-2">Vão</th>
+                                        <th class="p-2">Vão L (m)</th>
+                                        <th class="p-2">Largura bw (cm)</th>
+                                        <th class="p-2">Altura h (cm)</th>
+                                        <th class="p-2">Carga Perm. g (kN/m)</th>
+                                        <th class="p-2">Sobrecarga q (kN/m)</th>
+                                        <th class="p-2 text-center">Excluir</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-spans" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Bill of Materials (Takeoff) Card -->
+                    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-5 rounded-xl border border-emerald-200 dark:border-emerald-900 shadow-sm">
+                        <div class="flex items-center justify-between mb-3 border-b border-emerald-200 dark:border-emerald-800 pb-2">
+                            <h3 class="text-sm font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+                                <span>📊</span> Quantitativo de Materiais da Viga
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 text-center">
+                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
+                                <div class="text-[11px] text-gray-500">Volume Concreto</div>
+                                <div id="res-bom-vol" class="text-base font-extrabold text-emerald-600 my-0.5">-</div>
+                                <div class="text-[10px] text-gray-400">m³</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
+                                <div class="text-[11px] text-gray-500">Área de Formas</div>
+                                <div id="res-bom-forms" class="text-base font-extrabold text-teal-600 my-0.5">-</div>
+                                <div class="text-[10px] text-gray-400">m²</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
+                                <div class="text-[11px] text-gray-500">Aço CA-50 Estimado</div>
+                                <div id="res-bom-steel" class="text-base font-extrabold text-indigo-600 my-0.5">-</div>
+                                <div class="text-[10px] text-gray-400">kg</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: 2D Envelope Visualizer & Reinforcement Detailing (7 cols) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- 2D Canvas: Moment & Shear Envelopes -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
+                            <h3 class="text-base font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>📈</span> Envoltória de Momentos Fletores (Md,max & Md,min) [kNm]
+                            </h3>
+                            <div class="flex items-center gap-4 text-xs font-semibold">
+                                <span class="flex items-center gap-1 text-blue-600">
+                                    <span class="w-3 h-3 bg-blue-500 rounded-xs inline-block"></span> Vão (Positivo)
+                                </span>
+                                <span class="flex items-center gap-1 text-rose-600">
+                                    <span class="w-3 h-3 bg-rose-500 rounded-xs inline-block"></span> Apoio (Negativo)
+                                </span>
+                            </div>
+                        </div>
+                        <canvas id="beam-envelope-canvas" width="840" height="420" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"></canvas>
+                        <p class="text-[11px] text-gray-400 mt-2 text-center">
+                            * Convenção brasileira: momentos positivos tracionam as fibras inferiores (desenhados para baixo).
+                        </p>
+                    </div>
+
+                    <!-- Reinforcement Detailing Table (Armaduras Longitudinais & Estribos) -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <h3 class="text-base font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                            <span>🔩</span> Detalhamento das Armaduras por Vão (NBR 6118)
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase">
+                                    <tr>
+                                        <th class="p-2.5">Região / Vão</th>
+                                        <th class="p-2.5">Momento Md</th>
+                                        <th class="p-2.5">As Necessária</th>
+                                        <th class="p-2.5">Armação Comercial</th>
+                                        <th class="p-2.5">Estribos (Cortante)</th>
+                                        <th class="p-2.5">Fissuração (wk)</th>
+                                        <th class="p-2.5">Flecha Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-rebar-results" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+
+        <div id="footer-placeholder"></div>
+    </div>
+
+</body>
+
+</html>

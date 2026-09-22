@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viga de Coroamento Estaqueada sob Trem-Tipo (NBR 6118 / NBR 6122)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <script>
         (function () {
             if (localStorage.getItem('theme') === 'dark' ||
@@ -43,34 +43,49 @@
     </script>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-sans antialiased">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
         <div id="header-placeholder" style="min-height: 110px;"></div>
 
         <main class="mt-6">
+            <!-- Master Tabs Navigation (Deep Foundations Suite) -->
+            <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 mb-6 pb-2 overflow-x-auto">
+                <a href="deep_foundations.html" class="suite-tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5 whitespace-nowrap">
+                    <span>🧱</span> Bloco de Coroamento (Blévot)
+                </a>
+                <a href="piled_raft.html" class="suite-tab-btn px-4 py-2 rounded-xl text-xs font-semibold transition-all border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-1.5 whitespace-nowrap">
+                    <span>🏗️</span> Radier Estaqueado (MEF)
+                </a>
+                <a href="piled_beam.html" class="suite-tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all border border-indigo-600 bg-indigo-600 text-white flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+                    <span>🚂</span> Viga Estaqueada (Trem-Tipo)
+                </a>
+            </div>
+
             <!-- Header Section -->
-            <div class="mb-8 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div class="flex items-center gap-3">
-                        <span class="text-3xl">🛤️</span>
-                        <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
-                            Viga Estaqueada sob Trem-Tipo Móvel (Trilho de Pórtico)
-                        </h1>
+                        <span class="text-3xl p-2 bg-cyan-100 dark:bg-cyan-900/50 rounded-xl shadow-xs">🛤️</span>
+                        <div>
+                            <h1 class="text-2xl md:text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+                                Viga Estaqueada sob Trem-Tipo Móvel (Trilho de Pórtico)
+                            </h1>
+                            <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-0.5 font-medium">
+                                NBR 6118:2023 & NBR 6122:2019 • Solver matricial de viga contínua sobre molas elásticas, envoltórias de esforços, armadura de pele e quantitativos.
+                            </p>
+                        </div>
                     </div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Cálculo de vigas sobre apoios elásticos discretos (estacas Kz e Kx), envoltória de esforços, NBR 6118, NBR 6122 e otimização de vãos.
-                    </p>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <a href="aoki_velloso.html" class="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-sm font-semibold rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors flex items-center gap-1.5" title="Calcular ou atualizar molas Kz, Kx e capacidades via Aoki-Velloso">
-                        <span>⚡</span> Importar Molas Aoki-Velloso
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="aoki_velloso.html" class="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-lg border border-indigo-200 dark:border-indigo-800 transition-all flex items-center gap-1.5 shadow-xs" title="Importar molas Kz, Kx e capacidades calculadas no Aoki-Velloso">
+                        <span>⚡</span> Importar Molas Aoki
                     </a>
-                    <button onclick="resetDefaults()" class="px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-semibold rounded-lg transition-colors">
+                    <button type="button" onclick="resetDefaults()" class="px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-xs font-bold rounded-lg transition-colors">
                         Restaurar Padrão
                     </button>
-                    <button onclick="triggerCalculation()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
-                        <span>⚡</span> Recalcular
+                    <button type="button" onclick="triggerCalculation()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all flex items-center gap-1.5">
+                        <span>🔄</span> Recalcular
                     </button>
                 </div>
             </div>
@@ -84,17 +99,36 @@
                 <button type="button" onclick="document.getElementById('aoki-import-banner').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 font-bold px-1">✕</button>
             </div>
 
+            <!-- Crane Gantry Presets Toolbar -->
+            <div class="mb-6 bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs flex flex-wrap items-center gap-2">
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-2 flex items-center gap-1">
+                    <span>🚂</span> Presets de Trem-Tipo:
+                </span>
+                <button type="button" onclick="applyGantryPreset('consag_150')" class="px-2.5 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold rounded-md transition-all border border-blue-200 dark:border-blue-700">
+                    Pórtico 150 tf (CONSAG - 4 Rodas)
+                </button>
+                <button type="button" onclick="applyGantryPreset('industrial_80')" class="px-2.5 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-cyan-100 dark:hover:bg-cyan-900/40 text-gray-700 dark:text-gray-200 hover:text-cyan-700 dark:hover:text-cyan-300 text-xs font-bold rounded-md transition-all border border-gray-200 dark:border-gray-600">
+                    Pórtico Industrial 80 tf (2 Rodas)
+                </button>
+                <button type="button" onclick="applyGantryPreset('heavylift_300')" class="px-2.5 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-gray-700 dark:text-gray-200 hover:text-amber-700 dark:hover:text-amber-300 text-xs font-bold rounded-md transition-all border border-gray-200 dark:border-gray-600">
+                    Pórtico Heavy Lift 300 tf (8 Rodas)
+                </button>
+                <button type="button" onclick="applyGantryPreset('tb450')" class="px-2.5 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-300 text-xs font-bold rounded-md transition-all border border-gray-200 dark:border-gray-600">
+                    Trem-Tipo TB-450 Rodoviário
+                </button>
+            </div>
+
             <!-- Top Executive Summary Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <!-- Card 1: Momento Máximo Positivo (Vão) -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                         <span>Momento Positivo Vão (M+)</span>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">NBR 6118</span>
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">NBR 6118</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
-                        <span id="card-m-pos" class="text-2xl font-black text-gray-900 dark:text-white">-</span>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">kN·m</span>
+                        <span id="card-m-pos" class="text-2xl font-black text-gray-900 dark:text-white font-mono">-</span>
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">kN·m</span>
                     </div>
                     <div id="card-as-inf" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         As inferior: -
@@ -102,29 +136,29 @@
                 </div>
 
                 <!-- Card 2: Momento Máximo Negativo (Apoios) -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 transition-all">
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                         <span>Momento Negativo Apoio (M-)</span>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">Sobre Estacas</span>
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">Sobre Estacas</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
-                        <span id="card-m-neg" class="text-2xl font-black text-gray-900 dark:text-white">-</span>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">kN·m</span>
+                        <span id="card-m-neg" class="text-2xl font-black text-gray-900 dark:text-white font-mono">-</span>
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">kN·m</span>
                     </div>
                     <div id="card-as-sup" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         As superior: -
                     </div>
                 </div>
 
-                <!-- Card 3: Esforço Cortante Máximo -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">
+                <!-- Card 3: Cortante Máximo & Estribos -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all">
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                         <span>Cortante Máximo (V_max)</span>
-                        <span id="badge-shear-status" class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Biela OK</span>
+                        <span id="badge-shear-status" class="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Biela OK</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
-                        <span id="card-v-max" class="text-2xl font-black text-gray-900 dark:text-white">-</span>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">kN</span>
+                        <span id="card-v-max" class="text-2xl font-black text-gray-900 dark:text-white font-mono">-</span>
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">kN</span>
                     </div>
                     <div id="card-stirrups" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Estribos: -
@@ -132,14 +166,14 @@
                 </div>
 
                 <!-- Card 4: Reação Máxima na Estaca -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase">
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-600 transition-all">
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                         <span>Reação Máx Estaca</span>
-                        <span id="badge-pile-beam-status" class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">OK</span>
+                        <span id="badge-pile-beam-status" class="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">OK</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
-                        <span id="card-pile-r-max" class="text-2xl font-black text-gray-900 dark:text-white">-</span>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">tf / estaca</span>
+                        <span id="card-pile-r-max" class="text-2xl font-black text-gray-900 dark:text-white font-mono">-</span>
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">tf / estaca</span>
                     </div>
                     <div id="card-pile-adm" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         R_adm: -
@@ -154,95 +188,136 @@
                     <form id="piled-beam-form" onsubmit="event.preventDefault();">
                         <!-- Panel 1: Geometria da Viga de Coroamento -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 mb-6">
-                            <h2 class="text-lg font-bold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
+                            <h2 class="text-base font-bold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
                                 <span>📐</span> Geometria da Viga de Coroamento (Trilho)
                             </h2>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="grid grid-cols-2 gap-4 text-xs">
                                 <div>
-                                    <label class="block font-medium mb-1">Comprimento Viga (m)</label>
-                                    <input type="number" id="beam_length" value="24.0" step="1.0" min="6" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold">
+                                    <label class="eng-label">Comprimento Viga (m)</label>
+                                    <input type="number" id="beam_length" value="24.0" step="1.0" min="6" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Vão entre Estacas (m)</label>
-                                    <input type="number" id="pile_spacing" value="3.0" step="0.25" min="1.5" max="6.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-blue-600 dark:text-blue-400" title="Distância entre eixos de estacas">
+                                    <label class="eng-label">Vão entre Estacas (m)</label>
+                                    <input type="number" id="pile_spacing" value="3.0" step="0.25" min="1.5" max="6.0" class="eng-input font-mono text-blue-600 dark:text-blue-400" title="Distância entre eixos de estacas">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Largura bw (m)</label>
-                                    <input type="number" id="beam_width" value="0.80" step="0.05" min="0.3" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Largura bw (m)</label>
+                                    <input type="number" id="beam_width" value="0.80" step="0.05" min="0.3" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Altura h (m)</label>
-                                    <input type="number" id="beam_height" value="1.20" step="0.05" min="0.4" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold">
+                                    <label class="eng-label">Altura h (m)</label>
+                                    <input type="number" id="beam_height" value="1.20" step="0.05" min="0.4" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">fck Concreto (MPa)</label>
-                                    <input type="number" id="fck" value="35.0" step="5" min="20" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">fck Concreto (MPa)</label>
+                                    <input type="number" id="fck" value="35.0" step="5" min="20" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Balanço Inicial (m)</label>
-                                    <input type="number" id="cantilever_left" value="1.50" step="0.25" min="0.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Balanço Inicial (m)</label>
+                                    <input type="number" id="cantilever_left" value="1.50" step="0.25" min="0.5" class="eng-input font-mono">
+                                </div>
+                                <div>
+                                    <label class="eng-label">Bitola Longitudinal (mm)</label>
+                                    <select id="bar_diam" class="eng-select">
+                                        <option value="20.0">Ø 20.0 mm</option>
+                                        <option value="25.0" selected>Ø 25.0 mm</option>
+                                        <option value="32.0">Ø 32.0 mm</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="eng-label">Cobrimento c (mm)</label>
+                                    <input type="number" id="cover" value="50.0" step="5" min="30" class="eng-input font-mono">
                                 </div>
                             </div>
                         </div>
 
                         <!-- Panel 2: Trem-Tipo do Pórtico (Carga Móvel) -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 mb-6">
-                            <h2 class="text-lg font-bold text-amber-600 dark:text-amber-400 mb-4 flex items-center gap-2">
+                            <h2 class="text-base font-bold text-amber-600 dark:text-amber-400 mb-4 flex items-center gap-2">
                                 <span>🚂</span> Trem-Tipo do Pórtico (Carga Móvel)
                             </h2>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="grid grid-cols-2 gap-4 text-xs">
                                 <div>
-                                    <label class="block font-medium mb-1">Carga da Perna (tf)</label>
-                                    <input type="number" id="gantry_load_tf" value="148.42" step="5" min="20" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-amber-600 dark:text-amber-400" title="Carga estática de serviço da perna do pórtico">
+                                    <label class="eng-label">Carga da Perna (tf)</label>
+                                    <input type="number" id="gantry_load_tf" value="148.42" step="5" min="20" class="eng-input font-mono text-amber-600 dark:text-amber-400" title="Carga de serviço da perna do pórtico">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Majorador Dinâmico (φ_din)</label>
-                                    <input type="number" id="dynamic_factor" value="1.25" step="0.05" min="1.0" max="2.0" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold">
+                                    <label class="eng-label">Impacto Dinâmico (φ)</label>
+                                    <input type="number" id="dynamic_factor" value="1.25" step="0.05" min="1.0" max="2.0" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Número de Rodas (Truque)</label>
-                                    <select id="num_wheels" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold">
+                                    <label class="eng-label">Nº de Rodas no Truque</label>
+                                    <select id="num_wheels" class="eng-select">
                                         <option value="2">2 Rodas</option>
                                         <option value="4" selected>4 Rodas (Bogie Duplo)</option>
                                         <option value="8">8 Rodas</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Espaçamento Rodas (m)</label>
-                                    <input type="number" id="wheel_spacing" value="1.40" step="0.1" min="0.8" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Espaçamento Rodas (m)</label>
+                                    <input type="number" id="wheel_spacing" value="1.40" step="0.1" min="0.8" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Força Frenagem (%)</label>
-                                    <input type="number" id="braking_ratio" value="0.15" step="0.05" min="0.05" max="0.30" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2" title="Fração horizontal de frenagem longitudinal/transversal (padrão 15%)">
+                                    <label class="eng-label">Frenagem Long. (%)</label>
+                                    <input type="number" id="braking_ratio" value="0.15" step="0.05" min="0.05" max="0.30" class="eng-input font-mono" title="Fração horizontal de frenagem (15%)">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Cobrimento c (mm)</label>
-                                    <input type="number" id="cover" value="50.0" step="5" min="30" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Choque Transversal (%)</label>
+                                    <input type="number" id="transverse_ratio" value="0.10" step="0.05" min="0.0" max="0.25" class="eng-input font-mono" title="Força guia lateral de trilho (10%)">
+                                </div>
+                                <div>
+                                    <label class="eng-label">Excentricidade Trilho (m)</label>
+                                    <input type="number" id="rail_eccentricity" value="0.05" step="0.01" min="0.0" max="0.20" class="eng-input font-mono" title="Desalinhamento do eixo do trilho em relação à alma">
                                 </div>
                             </div>
                         </div>
 
                         <!-- Panel 3: Estacas & Apoios Elásticos (NBR 6122) -->
-                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                            <h2 class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 mb-6">
+                            <h2 class="text-base font-bold text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
                                 <span>🏗️</span> Estacas de Apoio & Rigidez Elástica (NBR 6122)
                             </h2>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="grid grid-cols-2 gap-4 text-xs">
                                 <div>
-                                    <label class="block font-medium mb-1">Capacidade R_adm (kN)</label>
-                                    <input type="number" id="pile_capacity_adm" value="1600.0" step="50" min="200" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold">
+                                    <label class="eng-label">Capacidade R_adm (kN)</label>
+                                    <input type="number" id="pile_capacity_adm" value="1600.0" step="50" min="200" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Mola Vertical Kz (kN/m)</label>
-                                    <input type="number" id="pile_spring_kz" value="180000.0" step="10000" min="10000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Mola Vertical Kz (kN/m)</label>
+                                    <input type="number" id="pile_spring_kz" value="180000.0" step="10000" min="10000" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Diâmetro Estaca (m)</label>
-                                    <input type="number" id="pile_diameter" value="0.80" step="0.1" min="0.4" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Diâmetro Estaca (m)</label>
+                                    <input type="number" id="pile_diameter" value="0.80" step="0.1" min="0.4" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="block font-medium mb-1">Mola Horizontal Kx (kN/m)</label>
-                                    <input type="number" id="pile_spring_kx" value="40000.0" step="5000" min="5000" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2">
+                                    <label class="eng-label">Mola Horizontal Kx (kN/m)</label>
+                                    <input type="number" id="pile_spring_kx" value="40000.0" step="5000" min="5000" class="eng-input font-mono">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 4: Parâmetros Orçamentários (R$) -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                            <h2 class="text-base font-bold text-purple-600 dark:text-purple-400 mb-4 flex items-center gap-2">
+                                <span>💰</span> Custos Unitários para Orçamento Paramétrico (R$)
+                            </h2>
+                            <div class="grid grid-cols-2 gap-4 text-xs">
+                                <div>
+                                    <label class="eng-label">Concreto (R$/m³)</label>
+                                    <input type="number" id="unit_cost_concrete" value="550.0" step="25" min="200" class="eng-input font-mono">
+                                </div>
+                                <div>
+                                    <label class="eng-label">Aço CA-50 (R$/kg)</label>
+                                    <input type="number" id="unit_cost_steel" value="12.50" step="0.5" min="5" class="eng-input font-mono">
+                                </div>
+                                <div>
+                                    <label class="eng-label">Formas (R$/m²)</label>
+                                    <input type="number" id="unit_cost_formwork" value="85.0" step="5" min="30" class="eng-input font-mono">
+                                </div>
+                                <div>
+                                    <label class="eng-label">Perfuração (R$/m)</label>
+                                    <input type="number" id="unit_cost_drilling" value="180.0" step="10" min="50" class="eng-input font-mono">
                                 </div>
                             </div>
                         </div>
@@ -251,43 +326,162 @@
 
                 <!-- Right Column: Interactive Canvas & Analysis (7 cols) -->
                 <div class="lg:col-span-7 space-y-6">
-                    <!-- Interactive Canvas Box with Slider -->
+                    <!-- Canvas Box with View Tabs and Slider -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                <span>🎢</span> Caminhamento do Trem-Tipo & Envoltórias de Esforços
-                            </h3>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                            <!-- View Tabs -->
+                            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <button type="button" id="tab-beam-long" onclick="switchBeamViewMode('longitudinal')" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs">
+                                    Corte Longitudinal
+                                </button>
+                                <button type="button" id="tab-beam-cross" onclick="switchBeamViewMode('cross_section')" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                                    Seção Transversal
+                                </button>
+                                <button type="button" id="tab-beam-diag" onclick="switchBeamViewMode('diagrams')" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                                    Envoltórias M(x) & V(x)
+                                </button>
+                            </div>
+
+                            <!-- Layer Toggles -->
                             <div class="flex items-center gap-3 text-xs">
-                                <label class="flex items-center gap-1 cursor-pointer">
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-cyan-600 dark:text-cyan-400">
+                                    <input type="checkbox" id="toggle-active-moment" checked onchange="drawCanvas()" class="rounded text-cyan-500">
+                                    <span>Momento Carga Móvel M(x)</span>
+                                </label>
+                                <label class="flex items-center gap-1 cursor-pointer font-medium text-gray-600 dark:text-gray-300">
                                     <input type="checkbox" id="toggle-envelope-moment" checked onchange="drawCanvas()" class="rounded text-blue-600">
                                     <span>Envoltória M(x)</span>
                                 </label>
-                                <label class="flex items-center gap-1 cursor-pointer">
-                                    <input type="checkbox" id="toggle-envelope-shear" onchange="drawCanvas()" class="rounded text-amber-600">
-                                    <span>Envoltória V(x)</span>
+                                <label class="flex items-center gap-1 cursor-pointer font-medium text-gray-600 dark:text-gray-300">
+                                    <input type="checkbox" id="toggle-envelope-shear" checked onchange="drawCanvas()" class="rounded text-amber-600">
+                                    <span>Cortante V(x)</span>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Moving Load Slider -->
-                        <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 mb-3 flex items-center gap-4 text-xs">
-                            <span class="font-bold whitespace-nowrap text-gray-700 dark:text-gray-300">Posição do Pórtico:</span>
-                            <input type="range" id="gantry_slider" min="0" max="24" step="0.2" value="12" oninput="updateGantryPosition(this.value)" class="w-full accent-blue-600 cursor-pointer">
-                            <span id="gantry-pos-val" class="font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-sm">12.0 m</span>
+                        <!-- Moving Load Slider & Controls -->
+                        <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 mb-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs">
+                            <div class="flex items-center gap-2 whitespace-nowrap">
+                                <button type="button" id="btn-play-beam" onclick="toggleBeamAnimation()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md transition-colors flex items-center gap-1">
+                                    <span id="beam-play-icon">▶</span> <span id="beam-play-text">Animar Pórtico</span>
+                                </button>
+                                <button type="button" onclick="jumpToGantryCase('midspan')" class="px-2 py-1 bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 text-blue-800 dark:text-blue-200 font-bold rounded-md transition-colors" title="Posicionar pórtico no meio do vão (M+ crítico)">
+                                    Meio Vão (M+)
+                                </button>
+                                <button type="button" onclick="jumpToGantryCase('support')" class="px-2 py-1 bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-200 text-purple-800 dark:text-purple-200 font-bold rounded-md transition-colors" title="Posicionar pórtico sobre uma estaca (M- crítico)">
+                                    Sobre Estaca (M-)
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2 w-full">
+                                <span class="font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">Posição Pórtico:</span>
+                                <input type="range" id="gantry_slider" min="0" max="24" step="0.2" value="12" oninput="updateGantryPosition(this.value)" class="w-full accent-blue-600 cursor-pointer">
+                                <span id="gantry-pos-val" class="font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-sm min-w-[50px] text-right">12.0 m</span>
+                            </div>
                         </div>
 
-                        <div class="w-full overflow-hidden bg-slate-900 rounded-lg p-2 border border-slate-700 flex justify-center items-center">
-                            <canvas id="beamCanvas" width="700" height="460" class="max-w-full block"></canvas>
+                        <!-- Canvas Box -->
+                        <div class="w-full overflow-hidden bg-slate-950 rounded-lg p-2 border border-slate-800 flex justify-center items-center relative">
+                            <canvas id="beamCanvas" width="700" height="460" class="eng-cad-canvas max-w-full block"></canvas>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mt-2 px-1">
+                            <span id="beam-info-tag">Envoltória Contínua FEA</span>
+                            <span>Apoios elásticos discretos Kz & Kx</span>
+                        </div>
+                    </div>
+
+                    <!-- Planilha Executiva de Quantitativos de Obra (Terraplenagem e Estrutura) -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 border-b border-gray-100 dark:border-gray-700 pb-2">
+                            <h3 class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                <span>📦</span> Planilha de Quantitativos de Obra (Terraplenagem e Estrutura)
+                            </h3>
+                            <div class="flex items-center gap-2">
+                                <span id="beam-qty-esc-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-mono">
+                                    Escavação Total: - m³
+                                </span>
+                                <span id="beam-qty-conc-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-mono">
+                                    Concreto: - m³
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 dark:bg-gray-700/60 font-bold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
+                                        <th class="p-2 w-12 text-center">Item</th>
+                                        <th class="p-2">Descrição do Serviço / Material</th>
+                                        <th class="p-2 text-center w-24">Unidade</th>
+                                        <th class="p-2 text-right w-36">Quantidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="beam-quantities-tbody">
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-blue-600">01</td>
+                                        <td class="p-2 font-medium">Escavação de tubulão/estaca</td>
+                                        <td class="p-2 text-center font-mono">m³</td>
+                                        <td id="beam-qty-esc-estaca" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-blue-600">02</td>
+                                        <td class="p-2 font-medium">Escavação mecanizada</td>
+                                        <td class="p-2 text-center font-mono">m³</td>
+                                        <td id="beam-qty-esc-mec" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-amber-600">03</td>
+                                        <td class="p-2 font-medium">Reaterro</td>
+                                        <td class="p-2 text-center font-mono">m³</td>
+                                        <td id="beam-qty-reaterro" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-rose-600">04</td>
+                                        <td class="p-2 font-medium">Bota-fora</td>
+                                        <td class="p-2 text-center font-mono">m³</td>
+                                        <td id="beam-qty-botafora" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-emerald-600">05</td>
+                                        <td id="beam-qty-conc-desc" class="p-2 font-medium">Concreto fck 35MPa</td>
+                                        <td class="p-2 text-center font-mono">m³</td>
+                                        <td id="beam-qty-conc-estrutural" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-emerald-600">06</td>
+                                        <td class="p-2 font-medium">Concreto fck 10MPa</td>
+                                        <td class="p-2 text-center font-mono">m³</td>
+                                        <td id="beam-qty-conc-magro" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-purple-600">07</td>
+                                        <td class="p-2 font-medium">Forma</td>
+                                        <td class="p-2 text-center font-mono">m²</td>
+                                        <td id="beam-qty-forma" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="p-2 text-center font-bold text-cyan-600">08</td>
+                                        <td class="p-2 font-medium">Chumbador J24-1</td>
+                                        <td class="p-2 text-center font-mono">un</td>
+                                        <td id="beam-qty-chumbador" class="p-2 text-right font-mono font-bold text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="bg-gray-50/70 dark:bg-gray-700/30">
+                                        <td class="p-2 text-center font-bold text-indigo-600">09</td>
+                                        <td class="p-2 font-bold">Aço CA50</td>
+                                        <td class="p-2 text-center font-mono">kg</td>
+                                        <td id="beam-qty-aco" class="p-2 text-right font-mono font-black text-indigo-600 dark:text-indigo-400">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
                     <!-- Span Optimization Study Table -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                        <h3 class="font-bold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                        <h3 class="font-bold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
                             <span>🎯</span> Estudo de Otimização do Vão entre Estacas
                         </h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                            Demonstra a sensibilidade entre espaçamento de estacas, momentos fletores e quantitativo total de perfuração.
+                            Demonstra a sensibilidade entre espaçamento de estacas, momentos fletores e quantitativo total de aço e perfuração.
                         </p>
                         <div class="overflow-x-auto">
                             <table id="span-optimization-table" class="w-full text-xs text-left border-collapse">
@@ -295,10 +489,10 @@
                                     <tr class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold border-b border-gray-200 dark:border-gray-600">
                                         <th class="p-2">Vão (m)</th>
                                         <th class="p-2">Nº Estacas</th>
-                                        <th class="p-2">Perfuração (m)</th>
+                                        <th class="p-2">Perfuração</th>
                                         <th class="p-2 text-right">M+ máx (kN·m)</th>
                                         <th class="p-2 text-right">M- máx (kN·m)</th>
-                                        <th class="p-2 text-right">R máx (kN)</th>
+                                        <th class="p-2 text-right">R máx (tf)</th>
                                         <th class="p-2 text-right">As inf (cm²)</th>
                                     </tr>
                                 </thead>
@@ -316,14 +510,14 @@
                         </h3>
 
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left border-collapse">
+                            <table class="w-full text-xs md:text-sm text-left border-collapse">
                                 <tbody>
-                                    <tr class="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
-                                        <td colspan="2" class="pt-3 pb-1.5 px-2 rounded">📐 Dimensionamento da Viga (NBR 6118)</td>
+                                    <tr class="bg-gray-50 dark:bg-gray-700/60 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
+                                        <td colspan="2" class="pt-2.5 pb-1.5 px-2 rounded">📐 Dimensionamento da Viga (NBR 6118)</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Cálculo Positivo (M_sd+)</td>
-                                        <td id="res-m-sd-pos" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td id="res-m-sd-pos" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura Longitudinal Inferior (Vão)</td>
@@ -331,31 +525,35 @@
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Cálculo Negativo (M_sd-)</td>
-                                        <td id="res-m-sd-neg" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td id="res-m-sd-neg" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura Longitudinal Superior (Apoio)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura Longitudinal Superior (Apoios)</td>
                                         <td id="res-detail-sup" class="py-2 px-2 font-bold text-right text-purple-600 dark:text-purple-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Cortante de Cálculo (V_sd) vs VRd2</td>
-                                        <td id="res-v-sd" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura de Pele Lateral (h &ge; 60 cm)</td>
+                                        <td id="res-skin-rebar" class="py-2 px-2 font-bold text-right text-teal-600 dark:text-teal-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura Transversal (Estribos)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Cortante de Cálculo (V_sd) vs VRd2</td>
+                                        <td id="res-v-sd" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-100 dark:border-gray-700">
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura Transversal (Estribos Fechados)</td>
                                         <td id="res-stirrups-desc" class="py-2 px-2 font-bold text-right text-emerald-600 dark:text-emerald-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Abertura de Fissuras ELS-W (Fadiga)</td>
-                                        <td id="res-crack-beam" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td id="res-crack-beam" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
 
-                                    <tr class="bg-gray-50 dark:bg-gray-700 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
-                                        <td colspan="2" class="pt-3 pb-1.5 px-2 rounded">📍 Verificação das Estacas (NBR 6122)</td>
+                                    <tr class="bg-gray-50 dark:bg-gray-700/60 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">
+                                        <td colspan="2" class="pt-2.5 pb-1.5 px-2 rounded">📍 Verificação das Estacas (NBR 6122)</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Compressão Máxima vs R_adm</td>
-                                        <td id="res-pile-comp" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td id="res-pile-comp" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Verificação de Arrancamento / Tração</td>
@@ -363,11 +561,11 @@
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Esforço de Frenagem por Estaca (H)</td>
-                                        <td id="res-pile-h" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td id="res-pile-h" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
                                         <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Frenagem no Topo do Fuste</td>
-                                        <td id="res-pile-m-head" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
+                                        <td id="res-pile-m-head" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                 </tbody>
                             </table>

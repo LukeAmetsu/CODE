@@ -6,12 +6,13 @@
     "rain": "Rain",
     "combinations": "Combinations",
     "steel_check": "Steel Check",
+    "steel_structures": "Steel Structures",
     "base_plate": "Base Plate",
     "splice": "Splice",
     "aci_concrete": "ACI Concrete",
     "nds_wood": "NDS Wood",
     "nbr_brazil": "NBR (Brazil)",
-    "concrete_beam": "Concrete Beam",
+    "concrete_beam": "Concrete Section (M-N-V)",
     "prestressed_beam": "Prestressed Beam",
     "steel": "Steel",
     "wood": "Wood",
@@ -136,7 +137,7 @@
     "lateral_loads_seismic": "Lateral Loads (Seismic)",
     "seismic_load_e": "Seismic Load (E)",
     "run_load_combinations": "Run Load Combinations",
-    "pcalc": "PCALC",
+    "pcalc": "PCalc (Columns & Sections)",
     "mn_diagram": "M-N Interaction Diagram",
     "geometry_spacing_checks_title": "Geometry & Spacing Checks"
 }
