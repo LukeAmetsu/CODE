@@ -223,7 +223,14 @@ function updateUIResults(res) {
         document.getElementById('res-Ka').innerText = ep.Ka != null ? ep.Ka.toFixed(4) : '-';
     }
     document.getElementById('res-base-B').innerText = `${geo.base_width_B.toFixed(2)} m`;
-    document.getElementById('res-P-h').innerText = `${ep.total_P_h.toFixed(1)} kN/m`;
+    const phEl = document.getElementById('res-P-h');
+    if (phEl) {
+        phEl.innerText = `${ep.total_P_h.toFixed(1)} kN/m`;
+        if (res.component_thrusts) {
+            const ct = res.component_thrusts;
+            phEl.title = `Parcelas (Ref. Excel): Solo = ${ct.P_h_soil} kN/m | Sobrecarga = ${ct.P_h_surcharge} kN/m | Água = ${ct.P_h_water} kN/m | Passivo = ${ct.P_passive} kN/m`;
+        }
+    }
     if (document.getElementById('res-P-v')) {
         document.getElementById('res-P-v').innerText = ep.total_P_v != null ? `${ep.total_P_v.toFixed(1)} kN/m` : '0.0 kN/m';
     }

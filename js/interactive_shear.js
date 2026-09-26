@@ -33,6 +33,47 @@ let currentFilteredRows = [];
 let cachedStaticDatasets = [];
 let cachedOtherCurves = {};
 let cachedOverallMaxX = 1000;
+let chartSeriesVisibilityState = {};
+
+function getDatasetStableKey(dataset) {
+    if (!dataset) return '';
+    if (dataset._codeKey) return dataset._codeKey;
+    if (dataset.label) {
+        return dataset.label.replace(/\s*\([^)]*\)/g, '').trim();
+    }
+    return '';
+}
+
+function setDatasetVisibilityState(dataset, isVisible) {
+    if (!dataset) return;
+    const codeKey = dataset._codeKey;
+    if (codeKey) {
+        chartSeriesVisibilityState[codeKey] = isVisible;
+    }
+    if (dataset.label) {
+        const cleanLabel = dataset.label.replace(/\s*\([^)]*\)/g, '').trim();
+        if (cleanLabel) {
+            chartSeriesVisibilityState[cleanLabel] = isVisible;
+        }
+    }
+}
+
+function getDatasetVisibilityState(dataset) {
+    if (!dataset) return true;
+    if (dataset._codeKey && Object.prototype.hasOwnProperty.call(chartSeriesVisibilityState, dataset._codeKey)) {
+        return chartSeriesVisibilityState[dataset._codeKey];
+    }
+    if (dataset.label) {
+        const cleanLabel = dataset.label.replace(/\s*\([^)]*\)/g, '').trim();
+        if (cleanLabel && Object.prototype.hasOwnProperty.call(chartSeriesVisibilityState, cleanLabel)) {
+            return chartSeriesVisibilityState[cleanLabel];
+        }
+    }
+    if (typeof dataset.hidden === 'boolean') {
+        return !dataset.hidden;
+    }
+    return true;
+}
 
 // Color Palettes for Live Empirical Model (Default: RS2 Electric Cyan)
 const LIVE_MODEL_PALETTES = {
@@ -144,12 +185,15 @@ function showSavedIndicator() {
 // Persist Session State to localStorage (Request 1)
 function saveSessionState() {
     try {
+        const dynPanel = document.getElementById('dynamicFilterPanel');
         const state = {
             params: {},
             targetSafety: 1.0,
             currentVarKey: currentVarKey,
             currentSubsetKey: currentSubsetKey,
             selectedCodes: [],
+            dynamicFilters: { ...dynamicFilters },
+            isDynamicPanelOpen: !!(dynPanel && !dynPanel.classList.contains('hidden')),
             timestamp: Date.now()
         };
 
@@ -179,6 +223,8 @@ function saveSessionState() {
 
         const critEl = document.querySelector('input[name="optCriterion"]:checked');
         if (critEl) state.optCriterion = critEl.value;
+
+        state.chartSeriesVisibility = { ...chartSeriesVisibilityState };
 
         localStorage.setItem(SHEAR_SESSION_STORAGE_KEY, JSON.stringify(state));
         showSavedIndicator();
@@ -256,6 +302,23 @@ function loadSessionState() {
             setOptimizationCriterion(state.optCriterion);
         }
 
+        // Restore chart series visibility
+        if (state.chartSeriesVisibility && typeof state.chartSeriesVisibility === 'object') {
+            chartSeriesVisibilityState = { ...state.chartSeriesVisibility };
+        }
+
+        // Restore dynamic custom filters
+        if (state.dynamicFilters && typeof state.dynamicFilters === 'object') {
+            dynamicFilters = { ...dynamicFilters, ...state.dynamicFilters };
+            dynamicFilters.enabled = hasActiveDynamicFilters();
+            syncDynamicFilterUIFromState();
+        }
+
+        // Restore dynamic panel state
+        if (state.isDynamicPanelOpen) {
+            toggleDynamicFilterPanel(true);
+        }
+
         return true;
     } catch (e) {
         console.warn("Could not load session state:", e);
@@ -268,6 +331,7 @@ function resetToDefaults() {
     if (!confirm(msg)) return;
 
     localStorage.removeItem(SHEAR_SESSION_STORAGE_KEY);
+    chartSeriesVisibilityState = {};
 
     const defaults = {
         C: 0.22,
@@ -307,6 +371,7 @@ function resetToDefaults() {
         cb.checked = (cb.value === 'LIVE_MODEL');
     });
 
+    clearDynamicFilterInputsOnly();
     updateSlidersUI();
     updateFilteredRows();
     updateMath();
@@ -448,8 +513,12 @@ function updateExternalLegend(datasets) {
             const nextVis = !currentVis;
             dbChart.setDatasetVisibility(index, nextVis);
 
+            setDatasetVisibilityState(dataset, nextVis);
+            dataset.hidden = !nextVis;
+
             dbChart.update('none');
             updateExternalLegend(dbChart.data.datasets);
+            triggerAutoSave();
         });
 
         container.appendChild(badge);
@@ -522,9 +591,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         
+        initDynamicFilterListeners();
+        syncDynamicFilterUIFromState();
+
+        const btnToggleDyn = document.getElementById('btnToggleDynamicFilter');
+        if (btnToggleDyn) {
+            btnToggleDyn.addEventListener('click', () => toggleDynamicFilterPanel());
+        }
+
         const subsetSelect = document.getElementById('subsetSelect');
         if (subsetSelect) {
             subsetSelect.addEventListener('change', () => {
+                if (subsetSelect.value === 'dynamic_custom') {
+                    toggleDynamicFilterPanel(true);
+                } else {
+                    if (dynamicFilters.enabled) {
+                        clearDynamicFilterInputsOnly();
+                    }
+                }
                 updateFilteredRows();
                 updateMath();
                 updateDatabaseChart();
@@ -605,13 +689,281 @@ function preprocessData(rows) {
     }
 }
 
+// -------------------------------------------------------------
+// Dynamic Subset Filtering System
+// -------------------------------------------------------------
+let dynamicFilters = {
+    enabled: false,
+    d_min: null,
+    d_max: null,
+    ratio_type: 'bwd', // 'bwd' (bw / d) or 'dbw' (d / bw)
+    ratio_min: null,
+    ratio_max: null,
+    ad_min: null,
+    ad_max: null,
+    rho_min: null,
+    rho_max: null,
+    fck_min: null,
+    fck_max: null,
+    bw_min: null,
+    bw_max: null
+};
+
+function hasActiveDynamicFilters() {
+    return (
+        dynamicFilters.d_min !== null || dynamicFilters.d_max !== null ||
+        dynamicFilters.ratio_min !== null || dynamicFilters.ratio_max !== null ||
+        dynamicFilters.ad_min !== null || dynamicFilters.ad_max !== null ||
+        dynamicFilters.rho_min !== null || dynamicFilters.rho_max !== null ||
+        dynamicFilters.fck_min !== null || dynamicFilters.fck_max !== null ||
+        dynamicFilters.bw_min !== null || dynamicFilters.bw_max !== null
+    );
+}
+
+function countActiveDynamicFilterFields() {
+    let count = 0;
+    if (dynamicFilters.d_min !== null || dynamicFilters.d_max !== null) count++;
+    if (dynamicFilters.ratio_min !== null || dynamicFilters.ratio_max !== null) count++;
+    if (dynamicFilters.ad_min !== null || dynamicFilters.ad_max !== null) count++;
+    if (dynamicFilters.rho_min !== null || dynamicFilters.rho_max !== null) count++;
+    if (dynamicFilters.fck_min !== null || dynamicFilters.fck_max !== null) count++;
+    if (dynamicFilters.bw_min !== null || dynamicFilters.bw_max !== null) count++;
+    return count;
+}
+
+function toggleDynamicFilterPanel(forceState) {
+    const panel = document.getElementById('dynamicFilterPanel');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    const newState = (forceState !== undefined) ? forceState : isHidden;
+    if (newState) {
+        panel.classList.remove('hidden');
+    } else {
+        panel.classList.add('hidden');
+    }
+
+    const btn = document.getElementById('btnToggleDynamicFilter');
+    if (btn) {
+        if (newState) {
+            btn.classList.add('bg-cyan-500/20', 'text-cyan-300');
+        } else {
+            btn.classList.remove('bg-cyan-500/20', 'text-cyan-300');
+        }
+    }
+}
+
+function readDynamicFilterInputs() {
+    const parseOrNull = (id) => {
+        const el = document.getElementById(id);
+        if (!el || el.value === '' || isNaN(parseFloat(el.value))) return null;
+        return parseFloat(el.value);
+    };
+
+    dynamicFilters.d_min = parseOrNull('dyn_d_min');
+    dynamicFilters.d_max = parseOrNull('dyn_d_max');
+
+    const ratioTypeEl = document.getElementById('dyn_ratio_type');
+    dynamicFilters.ratio_type = ratioTypeEl ? ratioTypeEl.value : 'bwd';
+    dynamicFilters.ratio_min = parseOrNull('dyn_bwd_min');
+    dynamicFilters.ratio_max = parseOrNull('dyn_bwd_max');
+
+    dynamicFilters.ad_min = parseOrNull('dyn_ad_min');
+    dynamicFilters.ad_max = parseOrNull('dyn_ad_max');
+
+    dynamicFilters.rho_min = parseOrNull('dyn_rho_min');
+    dynamicFilters.rho_max = parseOrNull('dyn_rho_max');
+
+    dynamicFilters.fck_min = parseOrNull('dyn_fck_min');
+    dynamicFilters.fck_max = parseOrNull('dyn_fck_max');
+
+    dynamicFilters.bw_min = parseOrNull('dyn_bw_min');
+    dynamicFilters.bw_max = parseOrNull('dyn_bw_max');
+
+    dynamicFilters.enabled = hasActiveDynamicFilters();
+}
+
+function syncDynamicFilterUIFromState() {
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = (val !== null && val !== undefined) ? val : '';
+    };
+
+    setVal('dyn_d_min', dynamicFilters.d_min);
+    setVal('dyn_d_max', dynamicFilters.d_max);
+
+    const ratioTypeEl = document.getElementById('dyn_ratio_type');
+    if (ratioTypeEl && dynamicFilters.ratio_type) {
+        ratioTypeEl.value = dynamicFilters.ratio_type;
+    }
+    setVal('dyn_bwd_min', dynamicFilters.ratio_min);
+    setVal('dyn_bwd_max', dynamicFilters.ratio_max);
+
+    setVal('dyn_ad_min', dynamicFilters.ad_min);
+    setVal('dyn_ad_max', dynamicFilters.ad_max);
+
+    setVal('dyn_rho_min', dynamicFilters.rho_min);
+    setVal('dyn_rho_max', dynamicFilters.rho_max);
+
+    setVal('dyn_fck_min', dynamicFilters.fck_min);
+    setVal('dyn_fck_max', dynamicFilters.fck_max);
+
+    setVal('dyn_bw_min', dynamicFilters.bw_min);
+    setVal('dyn_bw_max', dynamicFilters.bw_max);
+
+    updateDynamicFilterLabels();
+}
+
+function updateDynamicFilterLabels() {
+    const formatRange = (min, max, unit = '') => {
+        if (min === null && max === null) return 'Livre';
+        if (min !== null && max !== null) return `${min} a ${max}${unit ? ' ' + unit : ''}`;
+        if (min !== null) return `≥ ${min}${unit ? ' ' + unit : ''}`;
+        return `≤ ${max}${unit ? ' ' + unit : ''}`;
+    };
+
+    const setText = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = txt;
+    };
+
+    setText('lblDynD', formatRange(dynamicFilters.d_min, dynamicFilters.d_max, 'mm'));
+
+    const ratioLabel = dynamicFilters.ratio_type === 'dbw' ? 'd/bw' : 'bw/d';
+    setText('lblDynBwD', `${ratioLabel}: ${formatRange(dynamicFilters.ratio_min, dynamicFilters.ratio_max)}`);
+
+    setText('lblDynAD', formatRange(dynamicFilters.ad_min, dynamicFilters.ad_max));
+    setText('lblDynRho', formatRange(dynamicFilters.rho_min, dynamicFilters.rho_max, '%'));
+    setText('lblDynFck', formatRange(dynamicFilters.fck_min, dynamicFilters.fck_max, 'MPa'));
+    setText('lblDynBw', formatRange(dynamicFilters.bw_min, dynamicFilters.bw_max, 'mm'));
+
+    const count = countActiveDynamicFilterFields();
+    const countBadge = document.getElementById('badgeDynamicFilterCount');
+    if (countBadge) {
+        if (count > 0) {
+            countBadge.innerText = `${count}`;
+            countBadge.classList.remove('hidden');
+        } else {
+            countBadge.classList.add('hidden');
+        }
+    }
+}
+
+function onDynamicFilterInputChange() {
+    readDynamicFilterInputs();
+    updateDynamicFilterLabels();
+
+    const subsetEl = document.getElementById('subsetSelect');
+    if (dynamicFilters.enabled) {
+        if (subsetEl) subsetEl.value = 'dynamic_custom';
+        currentSubsetKey = 'dynamic_custom';
+    } else {
+        if (subsetEl && subsetEl.value === 'dynamic_custom') {
+            subsetEl.value = 'ALL DATA';
+            currentSubsetKey = 'ALL DATA';
+        }
+    }
+
+    updateFilteredRows();
+    updateMath();
+    updateDatabaseChart();
+    triggerAutoSave();
+}
+
+function setDynPreset(field, minVal, maxVal, extraType) {
+    if (field === 'd') {
+        dynamicFilters.d_min = minVal;
+        dynamicFilters.d_max = maxVal;
+    } else if (field === 'bwd') {
+        if (extraType) dynamicFilters.ratio_type = extraType;
+        dynamicFilters.ratio_min = minVal;
+        dynamicFilters.ratio_max = maxVal;
+    } else if (field === 'ad') {
+        dynamicFilters.ad_min = minVal;
+        dynamicFilters.ad_max = maxVal;
+    } else if (field === 'rho') {
+        dynamicFilters.rho_min = minVal;
+        dynamicFilters.rho_max = maxVal;
+    } else if (field === 'fck') {
+        dynamicFilters.fck_min = minVal;
+        dynamicFilters.fck_max = maxVal;
+    } else if (field === 'bw') {
+        dynamicFilters.bw_min = minVal;
+        dynamicFilters.bw_max = maxVal;
+    }
+
+    dynamicFilters.enabled = hasActiveDynamicFilters();
+    syncDynamicFilterUIFromState();
+    onDynamicFilterInputChange();
+}
+
+function resetDynamicFilters() {
+    dynamicFilters = {
+        enabled: false,
+        d_min: null,
+        d_max: null,
+        ratio_type: 'bwd',
+        ratio_min: null,
+        ratio_max: null,
+        ad_min: null,
+        ad_max: null,
+        rho_min: null,
+        rho_max: null,
+        fck_min: null,
+        fck_max: null,
+        bw_min: null,
+        bw_max: null
+    };
+
+    syncDynamicFilterUIFromState();
+    const subsetEl = document.getElementById('subsetSelect');
+    if (subsetEl) subsetEl.value = 'ALL DATA';
+    currentSubsetKey = 'ALL DATA';
+
+    updateFilteredRows();
+    updateMath();
+    updateDatabaseChart();
+    triggerAutoSave();
+}
+
+function clearDynamicFilterInputsOnly() {
+    dynamicFilters = {
+        enabled: false,
+        d_min: null,
+        d_max: null,
+        ratio_type: 'bwd',
+        ratio_min: null,
+        ratio_max: null,
+        ad_min: null,
+        ad_max: null,
+        rho_min: null,
+        rho_max: null,
+        fck_min: null,
+        fck_max: null,
+        bw_min: null,
+        bw_max: null
+    };
+    syncDynamicFilterUIFromState();
+}
+
+function initDynamicFilterListeners() {
+    const dynInputIds = [
+        'dyn_d_min', 'dyn_d_max', 'dyn_ratio_type', 'dyn_bwd_min', 'dyn_bwd_max',
+        'dyn_ad_min', 'dyn_ad_max', 'dyn_rho_min', 'dyn_rho_max',
+        'dyn_fck_min', 'dyn_fck_max', 'dyn_bw_min', 'dyn_bw_max'
+    ];
+
+    dynInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', onDynamicFilterInputChange);
+            el.addEventListener('change', onDynamicFilterInputChange);
+        }
+    });
+}
+
 function isRowInSubset(row, subsetKey) {
     if (!row) return false;
     if (row._valid !== undefined && !row._valid) return false;
-
-    if (!subsetKey || subsetKey === 'ALL DATA' || subsetKey === 'all' || subsetKey === '') {
-        return row._valid !== undefined ? row._valid : true;
-    }
 
     const bd = row._d !== undefined ? row._d : parseFloat(row['d (mm)']);
     const bbw = row._bw !== undefined ? row._bw : parseFloat(row['bw (mm)'] ?? row['b (mm)']);
@@ -620,7 +972,40 @@ function isRowInSubset(row, subsetKey) {
     const ba_d = row._ad !== undefined ? row._ad : parseFloat(row['a_d']);
     const bddg = row._ddg !== undefined ? row._ddg : (parseFloat(row['d_dg']) || 32.0);
     const bwd = row._bwd !== undefined ? row._bwd : (bd > 0 && bbw > 0 ? bbw / bd : 0);
+    const dbw = (bd > 0 && bbw > 0) ? (bd / bbw) : 0;
     const isSlab = row._isSlab !== undefined ? row._isSlab : (row['B>2D'] === true || row['B>2D'] == 1 || bwd >= 2.0);
+
+    // Dynamic custom filtering
+    if (subsetKey === 'dynamic_custom' || dynamicFilters.enabled) {
+        if (dynamicFilters.d_min !== null && bd < dynamicFilters.d_min) return false;
+        if (dynamicFilters.d_max !== null && bd > dynamicFilters.d_max) return false;
+
+        if (dynamicFilters.ratio_type === 'dbw') {
+            if (dynamicFilters.ratio_min !== null && dbw < dynamicFilters.ratio_min) return false;
+            if (dynamicFilters.ratio_max !== null && dbw > dynamicFilters.ratio_max) return false;
+        } else {
+            if (dynamicFilters.ratio_min !== null && bwd < dynamicFilters.ratio_min) return false;
+            if (dynamicFilters.ratio_max !== null && bwd > dynamicFilters.ratio_max) return false;
+        }
+
+        if (dynamicFilters.ad_min !== null && ba_d < dynamicFilters.ad_min) return false;
+        if (dynamicFilters.ad_max !== null && ba_d > dynamicFilters.ad_max) return false;
+
+        if (dynamicFilters.rho_min !== null && (rho * 100.0) < dynamicFilters.rho_min) return false;
+        if (dynamicFilters.rho_max !== null && (rho * 100.0) > dynamicFilters.rho_max) return false;
+
+        if (dynamicFilters.fck_min !== null && bfck < dynamicFilters.fck_min) return false;
+        if (dynamicFilters.fck_max !== null && bfck > dynamicFilters.fck_max) return false;
+
+        if (dynamicFilters.bw_min !== null && bbw < dynamicFilters.bw_min) return false;
+        if (dynamicFilters.bw_max !== null && bbw > dynamicFilters.bw_max) return false;
+
+        if (subsetKey === 'dynamic_custom') return true;
+    }
+
+    if (!subsetKey || subsetKey === 'ALL DATA' || subsetKey === 'all' || subsetKey === '') {
+        return row._valid !== undefined ? row._valid : true;
+    }
 
     // Slabs subsets
     if (subsetKey === 'slabs_slender_600') {
@@ -716,10 +1101,35 @@ function updateActiveSubsetBadge() {
     if (!badge) return;
     const subsetEl = document.getElementById('subsetSelect');
     const opt = subsetEl && subsetEl.selectedIndex >= 0 ? subsetEl.options[subsetEl.selectedIndex] : null;
-    const cleanText = opt ? opt.text.split('(')[0].trim() : (currentSubsetKey || 'ALL DATA');
+    const isDynamic = (currentSubsetKey === 'dynamic_custom' || dynamicFilters.enabled);
     const count = currentFilteredRows ? currentFilteredRows.length : 0;
-    badge.innerText = `${cleanText} (${count})`;
-    badge.title = `Otimização Nelder-Mead e Calibração de C serão executadas sobre estas ${count} amostras`;
+    const total = rawData ? rawData.length : 1877;
+    const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '100';
+
+    if (isDynamic) {
+        badge.innerText = `⚙️ Dinâmico (${count})`;
+        const formatRangeTxt = (min, max) => (min !== null && max !== null) ? `${min}-${max}` : (min !== null ? `≥${min}` : `≤${max}`);
+        let parts = [];
+        if (dynamicFilters.d_min !== null || dynamicFilters.d_max !== null) parts.push(`d: ${formatRangeTxt(dynamicFilters.d_min, dynamicFilters.d_max)}mm`);
+        if (dynamicFilters.ratio_min !== null || dynamicFilters.ratio_max !== null) {
+            const rType = dynamicFilters.ratio_type === 'dbw' ? 'd/bw' : 'bw/d';
+            parts.push(`${rType}: ${formatRangeTxt(dynamicFilters.ratio_min, dynamicFilters.ratio_max)}`);
+        }
+        if (dynamicFilters.ad_min !== null || dynamicFilters.ad_max !== null) parts.push(`a/d: ${formatRangeTxt(dynamicFilters.ad_min, dynamicFilters.ad_max)}`);
+        if (dynamicFilters.rho_min !== null || dynamicFilters.rho_max !== null) parts.push(`ρ: ${formatRangeTxt(dynamicFilters.rho_min, dynamicFilters.rho_max)}%`);
+        if (dynamicFilters.fck_min !== null || dynamicFilters.fck_max !== null) parts.push(`fck: ${formatRangeTxt(dynamicFilters.fck_min, dynamicFilters.fck_max)}MPa`);
+        if (dynamicFilters.bw_min !== null || dynamicFilters.bw_max !== null) parts.push(`bw: ${formatRangeTxt(dynamicFilters.bw_min, dynamicFilters.bw_max)}mm`);
+        badge.title = `Filtro Dinâmico: ${parts.length > 0 ? parts.join(' | ') : 'Todos'} (${count} de ${total} amostras - ${pct}%)`;
+    } else {
+        const cleanText = opt ? opt.text.split('(')[0].trim() : (currentSubsetKey || 'ALL DATA');
+        badge.innerText = `${cleanText} (${count})`;
+        badge.title = `Otimização Nelder-Mead e Calibração de C serão executadas sobre estas ${count} amostras (${pct}% do total)`;
+    }
+
+    const dynCountEl = document.getElementById('dynamicFilterActiveCount');
+    if (dynCountEl) {
+        dynCountEl.innerText = `${count} / ${total} (${pct}%)`;
+    }
 }
 
 let baselineParams = null;
@@ -1329,10 +1739,12 @@ async function optimizeEquation() {
     const subsetEl = document.getElementById('subsetSelect');
     const subsetKey = subsetEl ? subsetEl.value : (currentSubsetKey || 'ALL DATA');
     const subsetOpt = subsetEl && subsetEl.selectedIndex >= 0 ? subsetEl.options[subsetEl.selectedIndex] : null;
-    const subsetLabel = subsetOpt ? subsetOpt.text.split('(')[0].trim() : subsetKey;
+    const isDynamic = (subsetKey === 'dynamic_custom' || dynamicFilters.enabled);
+    const subsetLabel = isDynamic ? 'Recorte Dinâmico' : (subsetOpt ? subsetOpt.text.split('(')[0].trim() : subsetKey);
+    const subsetPayload = isDynamic ? { ...dynamicFilters } : subsetKey;
 
     try {
-        const best = await eel.run_scipy_optimization(targetSafety, lockedMap, currentVals, criterion, subsetKey)();
+        const best = await eel.run_scipy_optimization(targetSafety, lockedMap, currentVals, criterion, subsetPayload)();
         if (best && best.error) {
             alert("Optimization failed: " + best.error);
         } else if (best) {
@@ -1387,7 +1799,9 @@ async function calibrateConstantC() {
     const subsetEl = document.getElementById('subsetSelect');
     const subsetKey = subsetEl ? subsetEl.value : (currentSubsetKey || 'ALL DATA');
     const subsetOpt = subsetEl && subsetEl.selectedIndex >= 0 ? subsetEl.options[subsetEl.selectedIndex] : null;
-    const subsetLabel = subsetOpt ? subsetOpt.text.split('(')[0].trim() : subsetKey;
+    const isDynamic = (subsetKey === 'dynamic_custom' || dynamicFilters.enabled);
+    const subsetLabel = isDynamic ? 'Recorte Dinâmico' : (subsetOpt ? subsetOpt.text.split('(')[0].trim() : subsetKey);
+    const subsetPayload = isDynamic ? { ...dynamicFilters } : subsetKey;
 
     const btn = document.getElementById('btnCalibrateC');
     const originalText = btn ? btn.innerHTML : '';
@@ -1398,7 +1812,7 @@ async function calibrateConstantC() {
 
     try {
         if (window.eel && eel.calibrate_shear_constant_c) {
-            const res = await eel.calibrate_shear_constant_c(targetSafety, currentVals, subsetKey)();
+            const res = await eel.calibrate_shear_constant_c(targetSafety, currentVals, subsetPayload)();
             if (res && res.C) {
                 params.C.val = parseFloat(res.C.toFixed(3));
                 const s = document.getElementById('slider_C');
@@ -2458,7 +2872,7 @@ async function updateDatabaseChart() {
                     : `${displayName} (${t('elements_label', 'Elementos')})`;
 
                 newDatasets.push({
-                    _codeKey: codeKey === 'LIVE_MODEL' ? 'LIVE_MODEL_SCATTER' : (codeKey === 'BASELINE_MODEL' ? 'BASELINE_MODEL_SCATTER' : codeKey),
+                    _codeKey: codeKey === 'LIVE_MODEL' ? 'LIVE_MODEL_SCATTER' : (codeKey === 'BASELINE_MODEL' ? 'BASELINE_MODEL_SCATTER' : `${codeKey}_SCATTER`),
                     label: scatterLabel,
                     data: plotPoints,
                     type: 'scatter',
@@ -2475,6 +2889,7 @@ async function updateDatabaseChart() {
                 if (selectedCbs.length === 1) {
                     let perc = calculateBins(plotPoints, 10);
                     newDatasets.push({
+                        _codeKey: 'BIN_10TH',
                         label: t('bin_10th_line', 'Percentil 10% (Bin)'),
                         data: perc.p10,
                         type: 'line',
@@ -2487,6 +2902,7 @@ async function updateDatabaseChart() {
                         order: 3
                     });
                     newDatasets.push({
+                        _codeKey: 'BIN_5TH',
                         label: t('bin_5th_line', 'Percentil 5% (Bin)'),
                         data: perc.p05,
                         type: 'line',
@@ -2499,6 +2915,7 @@ async function updateDatabaseChart() {
                         order: 2
                     });
                     newDatasets.push({
+                        _codeKey: 'BIN_MEAN',
                         label: t('bin_mean_line', 'Média (Bin)'),
                         data: perc.pMean,
                         type: 'line',
@@ -2576,7 +2993,18 @@ async function updateDatabaseChart() {
             }
         }
 
+        for (let i = 0; i < newDatasets.length; i++) {
+            const isVis = getDatasetVisibilityState(newDatasets[i]);
+            newDatasets[i].hidden = !isVis;
+        }
+
         dbChart.data.datasets = newDatasets;
+
+        for (let i = 0; i < newDatasets.length; i++) {
+            const isVis = getDatasetVisibilityState(newDatasets[i]);
+            dbChart.setDatasetVisibility(i, isVis);
+        }
+
         dbChart.options.scales.x.title.text = varLabel;
         dbChart.options.scales.y.title.text = selectedCbs.length === 1 
             ? (selectedCbs[0].parentElement ? selectedCbs[0].parentElement.querySelector('span').innerText.trim() : '') + ' (V_test / V_calc)'
@@ -2692,5 +3120,9 @@ window.openFactorsModal = openFactorsModal;
 window.closeFactorsModal = closeFactorsModal;
 window.toggleFactorDetails = toggleFactorDetails;
 window.updateLiveModelFlatnessUI = updateLiveModelFlatnessUI;
+window.toggleDynamicFilterPanel = toggleDynamicFilterPanel;
+window.setDynPreset = setDynPreset;
+window.resetDynamicFilters = resetDynamicFilters;
+window.onDynamicFilterInputChange = onDynamicFilterInputChange;
 
 

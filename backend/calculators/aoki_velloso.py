@@ -904,68 +904,182 @@ def calculate_aoki_velloso(inputs: Dict[str, Any]) -> Dict[str, Any]:
         delta_rad = math.radians(delta_deg)
         beta_rad = math.radians(beta_deg)
 
+        cos_phi = math.cos(phi_rad)
+        sin_phi = math.sin(phi_rad)
+        sin_d = math.sin(delta_rad)
+        sin_b = math.sin(beta_rad)
+        cos_d = math.cos(delta_rad)
+        cos_b = math.cos(beta_rad)
+
         # Rankine
         Ka_rank = math.tan(math.pi / 4.0 - phi_rad / 2.0) ** 2
         Kp_rank = math.tan(math.pi / 4.0 + phi_rad / 2.0) ** 2
 
-        # Coulomb ativo (parede vertical α=90°)
+        # Coulomb ativo (parede vertical com dorso a 90°)
         try:
-            num_ca = math.sin(phi_rad + math.pi / 2.0 - phi_rad)  # = sin(90°) = 1 para parede vertical
-            # Fórmula Coulomb ativo generalizada (parede vertical, β qualquer)
-            sin_phi = math.sin(phi_rad)
-            sin_d = math.sin(delta_rad)
-            sin_b = math.sin(beta_rad)
-            cos_d = math.cos(delta_rad)
-            cos_b = math.cos(beta_rad)
-
-            denom_coulomb_a = (1.0 + math.sqrt((sin_phi + sin_d) * (sin_phi - sin_b) / (cos_d * cos_b))) ** 2
-            if denom_coulomb_a > 1e-9:
-                Ka_coul = sin_phi ** 2 / (1.0 * denom_coulomb_a * cos_d)
+            val_a = (sin_phi + sin_d) * (sin_phi - sin_b) / (cos_d * cos_b)
+            if val_a >= 0:
+                denom_coulomb_a = (1.0 + math.sqrt(val_a)) ** 2
+                if denom_coulomb_a > 1e-9 and cos_d > 1e-9:
+                    Ka_coul = (cos_phi ** 2) / (cos_d * denom_coulomb_a)
+                else:
+                    Ka_coul = Ka_rank
             else:
                 Ka_coul = Ka_rank
         except Exception:
             Ka_coul = Ka_rank
 
-        # Coulomb passivo (parede vertical)
+        # Coulomb passivo (parede vertical com dorso a 90°)
         try:
-            denom_coulomb_p = (1.0 - math.sqrt((sin_phi + sin_d) * (sin_phi + sin_b) / (cos_d * cos_b))) ** 2
-            if denom_coulomb_p > 1e-9 and abs(denom_coulomb_p) > 1e-9:
-                Kp_coul = sin_phi ** 2 / (1.0 * denom_coulomb_p * cos_d)
+            val_p = (sin_phi + sin_d) * (sin_phi + sin_b) / (cos_d * cos_b)
+            if val_p >= 0:
+                term_sqrt_p = math.sqrt(val_p)
+                denom_coulomb_p = (1.0 - term_sqrt_p) ** 2
+                if denom_coulomb_p > 1e-9 and cos_d > 1e-9 and term_sqrt_p < 1.0:
+                    Kp_coul = (cos_phi ** 2) / (cos_d * denom_coulomb_p)
+                else:
+                    Kp_coul = Kp_rank
             else:
                 Kp_coul = Kp_rank
         except Exception:
             Kp_coul = Kp_rank
 
-        # Diagrama de tensões: pontos a cada 0.25m de 0 a H_wall
+        # Diagrama de tensões discretizado a cada 0.25m de 0 a H_wall
         n_pts = max(21, int(H_wall / 0.25) + 2)
-        stress_diagram = []
+        stress_diagram_active = []
+        stress_diagram_passive = []
+        stress_diagram_combined = []
+
+        # Integração trapezoidal para cálculo preciso da resultante e ponto de aplicação
+        area_a_rank = 0.0
+        area_a_coul = 0.0
+        area_p_rank = 0.0
+        area_p_coul = 0.0
+        moment_a_rank = 0.0
+        moment_a_coul = 0.0
+        moment_p_rank = 0.0
+        moment_p_coul = 0.0
+
+        prev_z = 0.0
+        prev_sa_rank = 0.0
+        prev_sa_coul = 0.0
+        prev_sp_rank = 2.0 * c_kPa * math.sqrt(Kp_rank)
+        prev_sp_coul = 0.0
+
         for i in range(n_pts):
             z_pt = H_wall * i / (n_pts - 1)
             sv = gamma_kN_m3 * z_pt
+
             # Rankine
-            sa_rank = Ka_rank * sv - 2.0 * c_kPa * math.sqrt(Ka_rank)
+            sa_rank = max(0.0, Ka_rank * sv - 2.0 * c_kPa * math.sqrt(Ka_rank))
             sp_rank = Kp_rank * sv + 2.0 * c_kPa * math.sqrt(Kp_rank)
-            # Coulomb
-            sa_coul = Ka_coul * sv
+
+            # Coulomb (sem coesão na formulação padrão)
+            sa_coul = max(0.0, Ka_coul * sv)
             sp_coul = Kp_coul * sv
-            stress_diagram.append({
+
+            # Integração trapezoidal em relação à base do muro (braço = H_wall - z_pt)
+            if i > 0:
+                dz_i = z_pt - prev_z
+                z_mid = (z_pt + prev_z) / 2.0
+                lever_arm = H_wall - z_mid
+
+                # Ativo Rankine
+                dEa_r = 0.5 * (sa_rank + prev_sa_rank) * dz_i
+                area_a_rank += dEa_r
+                moment_a_rank += dEa_r * lever_arm
+
+                # Ativo Coulomb
+                dEa_c = 0.5 * (sa_coul + prev_sa_coul) * dz_i
+                area_a_coul += dEa_c
+                moment_a_coul += dEa_c * lever_arm
+
+                # Passivo Rankine
+                dEp_r = 0.5 * (sp_rank + prev_sp_rank) * dz_i
+                area_p_rank += dEp_r
+                moment_p_rank += dEp_r * lever_arm
+
+                # Passivo Coulomb
+                dEp_c = 0.5 * (sp_coul + prev_sp_coul) * dz_i
+                area_p_coul += dEp_c
+                moment_p_coul += dEp_c * lever_arm
+
+            prev_z = z_pt
+            prev_sa_rank = sa_rank
+            prev_sa_coul = sa_coul
+            prev_sp_rank = sp_rank
+            prev_sp_coul = sp_coul
+
+            # Item ativo
+            stress_diagram_active.append({
                 "z": round(z_pt, 3),
                 "sigma_v": round(sv, 2),
-                "sigma_a_rankine": round(max(0.0, sa_rank), 2),
+                "sigma_a_rankine": round(sa_rank, 2),
+                "sigma_a_coulomb": round(sa_coul, 2),
+            })
+
+            # Item passivo
+            stress_diagram_passive.append({
+                "z": round(z_pt, 3),
+                "sigma_v": round(sv, 2),
                 "sigma_p_rankine": round(sp_rank, 2),
-                "sigma_a_coulomb": round(max(0.0, sa_coul), 2),
                 "sigma_p_coulomb": round(sp_coul, 2),
             })
 
-        # Resultantes
-        Ea_rank = 0.5 * Ka_rank * gamma_kN_m3 * H_wall ** 2 - 2.0 * c_kPa * math.sqrt(Ka_rank) * H_wall
-        Ep_rank = 0.5 * Kp_rank * gamma_kN_m3 * H_wall ** 2 + 2.0 * c_kPa * math.sqrt(Kp_rank) * H_wall
-        Ea_coul = 0.5 * Ka_coul * gamma_kN_m3 * H_wall ** 2
-        Ep_coul = 0.5 * Kp_coul * gamma_kN_m3 * H_wall ** 2
+            # Item combinado para retrocompatibilidade
+            stress_diagram_combined.append({
+                "z": round(z_pt, 3),
+                "sigma_v": round(sv, 2),
+                "sigma_a_rankine": round(sa_rank, 2),
+                "sigma_p_rankine": round(sp_rank, 2),
+                "sigma_a_coulomb": round(sa_coul, 2),
+                "sigma_p_coulomb": round(sp_coul, 2),
+            })
 
-        # Ponto de aplicação (centroide do diagrama triangular = H/3 da base)
-        ya_rank = H_wall / 3.0
-        yp_rank = H_wall / 3.0
+        # Braços de alavanca a partir da base (m)
+        ya_rank = (moment_a_rank / area_a_rank) if area_a_rank > 1e-6 else (H_wall / 3.0)
+        ya_coul = (moment_a_coul / area_a_coul) if area_a_coul > 1e-6 else (H_wall / 3.0)
+        yp_rank = (moment_p_rank / area_p_rank) if area_p_rank > 1e-6 else (H_wall / 3.0)
+        yp_coul = (moment_p_coul / area_p_coul) if area_p_coul > 1e-6 else (H_wall / 3.0)
+
+        # Momentos de tombamento e resistente em relação à base do muro (kNm/m)
+        Mot_rank = area_a_rank * ya_rank
+        Mot_coul = area_a_coul * ya_coul
+        Mr_rank = area_p_rank * yp_rank
+        Mr_coul = area_p_coul * yp_coul
+
+        # Estrutura modular separada para Empuxo Ativo e Passivo
+        active_results = {
+            "Ka_rankine": round(Ka_rank, 4),
+            "Ka_coulomb": round(Ka_coul, 4),
+            "Ea_rankine_kN_m": round(area_a_rank, 2),
+            "Ea_rankine_tf_m": round(area_a_rank / 9.80665, 2),
+            "Ea_coulomb_kN_m": round(area_a_coul, 2),
+            "Ea_coulomb_tf_m": round(area_a_coul / 9.80665, 2),
+            "ya_rankine_m": round(ya_rank, 3),
+            "ya_coulomb_m": round(ya_coul, 3),
+            "Mot_rankine_kNm_m": round(Mot_rank, 2),
+            "Mot_coulomb_kNm_m": round(Mot_coul, 2),
+            "max_sigma_a_rankine_kPa": round(stress_diagram_active[-1]["sigma_a_rankine"], 2) if stress_diagram_active else 0.0,
+            "max_sigma_a_coulomb_kPa": round(stress_diagram_active[-1]["sigma_a_coulomb"], 2) if stress_diagram_active else 0.0,
+            "stress_diagram": stress_diagram_active,
+        }
+
+        passive_results = {
+            "Kp_rankine": round(Kp_rank, 4),
+            "Kp_coulomb": round(Kp_coul, 4),
+            "Ep_rankine_kN_m": round(area_p_rank, 2),
+            "Ep_rankine_tf_m": round(area_p_rank / 9.80665, 2),
+            "Ep_coulomb_kN_m": round(area_p_coul, 2),
+            "Ep_coulomb_tf_m": round(area_p_coul / 9.80665, 2),
+            "yp_rankine_m": round(yp_rank, 3),
+            "yp_coulomb_m": round(yp_coul, 3),
+            "Mr_rankine_kNm_m": round(Mr_rank, 2),
+            "Mr_coulomb_kNm_m": round(Mr_coul, 2),
+            "max_sigma_p_rankine_kPa": round(stress_diagram_passive[-1]["sigma_p_rankine"], 2) if stress_diagram_passive else 0.0,
+            "max_sigma_p_coulomb_kPa": round(stress_diagram_passive[-1]["sigma_p_coulomb"], 2) if stress_diagram_passive else 0.0,
+            "stress_diagram": stress_diagram_passive,
+        }
 
         earth_pressure = {
             "inferred": "phi_deg" not in ep_opts,
@@ -975,21 +1089,21 @@ def calculate_aoki_velloso(inputs: Dict[str, Any]) -> Dict[str, Any]:
             "delta_deg": delta_deg,
             "beta_deg": beta_deg,
             "H_m": H_wall,
-            # Coeficientes
+            # Seções totalmente separadas
+            "active": active_results,
+            "passive": passive_results,
+            # Campos retrocompatíveis para o código existente
             "Ka_rankine": round(Ka_rank, 4),
             "Kp_rankine": round(Kp_rank, 4),
             "Ka_coulomb": round(Ka_coul, 4),
             "Kp_coulomb": round(Kp_coul, 4),
-            # Resultantes (kN/m de muro)
-            "Ea_rankine_kN_m": round(max(0.0, Ea_rank), 2),
-            "Ep_rankine_kN_m": round(Ep_rank, 2),
-            "Ea_coulomb_kN_m": round(max(0.0, Ea_coul), 2),
-            "Ep_coulomb_kN_m": round(Ep_coul, 2),
-            # Ponto de aplicação
-            "ya_rankine_m": round(ya_rank, 3),   # da base do muro
+            "Ea_rankine_kN_m": round(area_a_rank, 2),
+            "Ep_rankine_kN_m": round(area_p_rank, 2),
+            "Ea_coulomb_kN_m": round(area_a_coul, 2),
+            "Ep_coulomb_kN_m": round(area_p_coul, 2),
+            "ya_rankine_m": round(ya_rank, 3),
             "yp_rankine_m": round(yp_rank, 3),
-            # Diagrama
-            "stress_diagram": stress_diagram,
+            "stress_diagram": stress_diagram_combined,
         }
 
         return {

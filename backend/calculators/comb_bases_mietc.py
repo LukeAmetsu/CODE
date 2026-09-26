@@ -9,6 +9,8 @@ import os
 import sys
 import io
 import math
+import itertools
+import re
 import openpyxl
 from typing import Dict, List, Any, Optional, Tuple
 
@@ -55,8 +57,16 @@ MIETC_ACTION_PROPS = {
         'asce': {'factor_lrfd': 1.60, 'factor_asd': 1.00}
     },
     'TCP': {
-        'name': 'Talha / Ponte em Vazio (TCP)',
-        'category': 'crane',
+        'name': 'Partida / Transitório / Talha Vazio (TCP)',
+        'category': 'conveyor_crane',
+        'isVariable': True,
+        'nbr': {'gamma_q': 1.20, 'psi0': 0.70, 'psi1': 0.60, 'psi2': 0.20},
+        'ec': {'gamma_Q': 1.50, 'psi0': 0.70, 'psi1': 0.50, 'psi2': 0.20},
+        'asce': {'factor_lrfd': 1.40, 'factor_asd': 1.00}
+    },
+    'TCO': {
+        'name': 'Tensão de Operação da Correia (TCO)',
+        'category': 'conveyor_crane',
         'isVariable': True,
         'nbr': {'gamma_q': 1.40, 'psi0': 0.70, 'psi1': 0.60, 'psi2': 0.40},
         'ec': {'gamma_Q': 1.50, 'psi0': 0.70, 'psi1': 0.50, 'psi2': 0.30},
@@ -98,16 +108,19 @@ MIETC_ACTION_PROPS = {
 
 # Regras lógicas padrão para ações das planilhas MIETC
 DEFAULT_ACTION_RULES: Dict[str, Dict[str, Any]] = {
-    'CVX+': {'group': 'Vento', 'requires': '', 'type': 'Vento (W)'},
-    'CVY+': {'group': 'Vento', 'requires': '', 'type': 'Vento (W)'},
+    'CVX+': {'group': 'Vento', 'requires': '', 'excludes': 'TCP', 'type': 'Vento (W)'},
+    'CVY+': {'group': 'Vento', 'requires': '', 'excludes': 'TCP', 'type': 'Vento (W)'},
     'TCQ': {'group': 'Talha', 'requires': '', 'type': 'Ponte Rolante / Guindaste (Q)'},
-    'TCP': {'group': 'Talha', 'requires': '', 'type': 'Ponte Rolante / Guindaste (Q)'},
+    'TCP': {'group': 'Operação/Partida', 'requires': '', 'excludes': 'TCO, TCQ, CVX+, CVY+, Vento', 'type': 'Partida / Transitório (TCP)'},
+    'TCO': {'group': 'Operação/Partida', 'requires': '', 'excludes': 'TCP', 'type': 'Operação / Correia (TCO)'},
 }
 
 LOAD_CATALOG_TYPES: Dict[str, Dict[str, Any]] = {
     'Peso Próprio (PP)': {'isVariable': False, 'nbr': {'gamma_g_unfav': 1.35, 'gamma_g_fav': 1.00}},
     'Permanente (G)': {'isVariable': False, 'nbr': {'gamma_g_unfav': 1.35, 'gamma_g_fav': 1.00}},
     'Equipamentos Fixos': {'isVariable': False, 'nbr': {'gamma_g_unfav': 1.35, 'gamma_g_fav': 1.00}},
+    'Operação / Correia (TCO)': {'isVariable': True, 'nbr': {'gamma_q': 1.40, 'psi0': 0.70, 'psi1': 0.60, 'psi2': 0.40}},
+    'Partida / Transitório (TCP)': {'isVariable': True, 'nbr': {'gamma_q': 1.20, 'psi0': 0.70, 'psi1': 0.60, 'psi2': 0.20}},
     'Solo Seco (Empuxo)': {'isVariable': False, 'nbr': {'gamma_g_unfav': 1.40, 'gamma_g_fav': 1.00}},
     'Solo Saturado (Empuxo)': {'isVariable': False, 'nbr': {'gamma_g_unfav': 1.40, 'gamma_g_fav': 1.00}},
     'Pressão Hidrostática / Água': {'isVariable': True, 'nbr': {'gamma_q': 1.40, 'psi0': 0.60, 'psi1': 0.50, 'psi2': 0.30}},
@@ -143,6 +156,100 @@ def _fmt_action_token(name: str) -> str:
     return s
 
 
+def _split_rule_tokens(val: Any) -> List[str]:
+    """Extrai lista de tokens limpos em minúsculas a partir de string, lista ou tupla."""
+    if not val:
+        return []
+    if isinstance(val, (list, tuple, set)):
+        tokens = []
+        for x in val:
+            tokens.extend(_split_rule_tokens(x))
+        return tokens
+    s = str(val).strip()
+    if not s:
+        return []
+    import re
+    raw = [t.strip().lower() for t in re.split(r'[,;/|]+', s) if t.strip()]
+    return raw
+
+
+def _are_actions_mutually_exclusive(
+    act1: str,
+    act2: str,
+    action_rules: Dict[str, Any]
+) -> bool:
+    """
+    Determina se duas ações act1 e act2 são mutuamente incompatíveis/exclusivas:
+    1. Mesma ação (act1 == act2) não é incompatível consigo mesma.
+    2. Compartilham mesmo grupo XOR (ex: 'Vento', 'Talha').
+    3. Exclusão explícita (NOT): act1 exclui act2 ou act2 exclui act1 (pelo nome, grupo ou tipo).
+    4. Condição física: Solo Seco vs Água / Pressão Hidrostática.
+    """
+    if act1 == act2:
+        return False
+
+    r1 = action_rules.get(act1, {})
+    r2 = action_rules.get(act2, {})
+
+    # 1. Grupos de exclusão mútua (XOR)
+    g1_tokens = set(_split_rule_tokens(r1.get('group', '')))
+    g2_tokens = set(_split_rule_tokens(r2.get('group', '')))
+    if g1_tokens and g2_tokens and (g1_tokens & g2_tokens):
+        return True
+
+    # 2. Exclusões explícitas (campo 'excludes' ou 'incompatible_with')
+    def _check_directional_exclusion(source_act: str, source_rule: Dict[str, Any], target_act: str, target_rule: Dict[str, Any]) -> bool:
+        ex_tokens = _split_rule_tokens(source_rule.get('excludes') or source_rule.get('incompatible_with') or '')
+        if not ex_tokens:
+            return False
+
+        target_name = target_act.lower().strip()
+        target_name_clean = target_name.replace('(', '').replace(')', '').replace('+', '').replace('-', '').strip()
+        target_groups = set(_split_rule_tokens(target_rule.get('group', '')))
+        target_type = (target_rule.get('type') or '').lower()
+
+        for token in ex_tokens:
+            token_clean = token.replace('(', '').replace(')', '').replace('+', '').replace('-', '').strip()
+            # Casa com nome exato da ação (ex: 'tcp', 'cvx+', 'cvx')
+            if token == target_name or (token_clean and token_clean == target_name_clean):
+                return True
+            # Casa com grupo da ação alvo (ex: 'vento', 'talha')
+            if token in target_groups:
+                return True
+            # Casa se token estiver contido no tipo da ação alvo (ex: 'vento' casa com 'Vento (W)')
+            if token in target_type:
+                return True
+            # Casa com partida / operação / vento
+            if token in ['partida', 'tcp'] and ('partida' in target_name or target_name == 'tcp' or 'partida' in target_type):
+                return True
+            if token in ['operacao', 'operação', 'tco'] and ('operação' in target_name or 'operacao' in target_name or target_name == 'tco' or 'operação' in target_type):
+                return True
+            if token in ['vento', 'wind'] and ('vento' in target_name or target_name.startswith('cv') or 'vento' in target_type):
+                return True
+        return False
+
+    if _check_directional_exclusion(act1, r1, act2, r2):
+        return True
+    if _check_directional_exclusion(act2, r2, act1, r1):
+        return True
+
+    # 3. Condição Física: Solo Seco vs Água
+    a1_low = act1.lower()
+    a2_low = act2.lower()
+    t1_low = (r1.get('type') or '').lower()
+    t2_low = (r2.get('type') or '').lower()
+
+    is_seco_1 = 'seco' in a1_low or 'seco' in t1_low
+    is_seco_2 = 'seco' in a2_low or 'seco' in t2_low
+    is_agua_1 = any(k in a1_low or k in t1_low for k in ['água', 'agua', 'hidrostática', 'hidrostatica'])
+    is_agua_2 = any(k in a2_low or k in t2_low for k in ['água', 'agua', 'hidrostática', 'hidrostatica'])
+
+    if (is_seco_1 and is_agua_2) or (is_seco_2 and is_agua_1):
+        return True
+
+    return False
+
+
 def _generate_companion_sets(
     p_item: str,
     var_items: List[str],
@@ -151,25 +258,22 @@ def _generate_companion_sets(
     """
     Gera conjuntos válidos de ações acompanhantes para uma ação principal p_item,
     respeitando:
-    1. Exclusão Mútua (XOR): ações com o mesmo grupo não atuam juntas.
-       Para outros grupos, seleciona-se no máximo 1 ação por combinação.
+    1. Exclusão Mútua (XOR e NOT): ações incompatíveis nunca atuam juntas.
     2. Coexistência Obrigatória (AND): se uma ação requer R, ela só entra se R estiver no conjunto.
     3. Condição Física: 'Solo Seco' e 'Água' são mutuamente incompatíveis.
     """
     import itertools
 
     p_rule = action_rules.get(p_item, {})
-    p_group = (p_rule.get('group') or '').strip()
     p_req = (p_rule.get('requires') or '').strip()
 
-    # Candidatas a acompanhantes (excluindo p_item e ações com o mesmo grupo de p_item)
+    # Candidatas a acompanhantes (excluindo p_item e ações incompatíveis com p_item)
     cand_items = []
     for it in var_items:
         if it == p_item:
             continue
-        it_grp = (action_rules.get(it, {}).get('group') or '').strip()
-        if p_group and it_grp and it_grp.lower() == p_group.lower():
-            continue  # Excluído pelo grupo XOR da ação principal
+        if _are_actions_mutually_exclusive(p_item, it, action_rules):
+            continue  # Excluído por grupo XOR ou regra direta de exclusão (NOT)
         cand_items.append(it)
 
     # Separar por grupos XOR e independentes
@@ -203,7 +307,7 @@ def _generate_companion_sets(
             if it_choice is not None:
                 comps.append(it_choice)
 
-        active_set = set([p_item] + comps)
+        active_set = [p_item] + comps
 
         # Se a principal requer algo e esse algo não está presente
         if p_req and p_req not in active_set:
@@ -219,11 +323,13 @@ def _generate_companion_sets(
         if not valid:
             continue
 
-        # Incompatibilidade física Solo Seco x Água
-        names_lower = [x.lower() for x in active_set]
-        has_seco = any('seco' in x for x in names_lower)
-        has_agua = any('água' in x or 'agua' in x or 'hidrostática' in x for x in names_lower)
-        if has_seco and has_agua:
+        # Verificar incompatibilidade entre quaisquer pares no active_set
+        has_incompatibility = False
+        for c1, c2 in itertools.combinations(active_set, 2):
+            if _are_actions_mutually_exclusive(c1, c2, action_rules):
+                has_incompatibility = True
+                break
+        if has_incompatibility:
             continue
 
         valid_sets.append(comps)
@@ -242,6 +348,7 @@ def _generate_valid_permanent_sets(
     Gera conjuntos de ações permanentes mutuamente compatíveis:
     - Permanentes independentes entram em todos os conjuntos.
     - Permanentes com grupo exclusivo (XOR) ramificam (no máximo 1 por conjunto).
+    - Exclusões mútuas entre permanentes são respeitadas.
     """
     import itertools
     indep_perms = []
@@ -267,6 +374,8 @@ def _generate_valid_permanent_sets(
     perm_sets = []
     for choice in cartesian:
         pset = list(indep_perms) + list(choice)
+        if any(_are_actions_mutually_exclusive(a, b, action_rules) for a, b in itertools.combinations(pset, 2)):
+            continue
         perm_sets.append(pset)
 
     return perm_sets or [indep_perms]
@@ -322,17 +431,22 @@ def parse_mietc_workbook(wb_path: str) -> Dict[str, Any]:
     bases cadastradas e seus vetores característicos nas direções V, X e Y.
     """
     import io
-    if not os.path.exists(wb_path):
-        raise FileNotFoundError(f"Arquivo não encontrado: {wb_path}")
-
-    try:
+    if hasattr(wb_path, 'read'):
         wb = openpyxl.load_workbook(wb_path, data_only=True)
-    except PermissionError:
-        raw_bytes = _read_file_bytes_shared(wb_path)
-        wb = openpyxl.load_workbook(io.BytesIO(raw_bytes), data_only=True)
+        filename = getattr(wb_path, 'name', 'Planilha_MIETC.xlsx')
+    else:
+        if not os.path.exists(wb_path):
+            raise FileNotFoundError(f"Arquivo não encontrado: {wb_path}")
+
+        try:
+            wb = openpyxl.load_workbook(wb_path, data_only=True)
+        except PermissionError:
+            raw_bytes = _read_file_bytes_shared(wb_path)
+            wb = openpyxl.load_workbook(io.BytesIO(raw_bytes), data_only=True)
+        filename = os.path.basename(wb_path)
 
     result = {
-        'filename': os.path.basename(wb_path),
+        'filename': filename,
         'sheets': {},
         'sheet_names': []
     }
@@ -343,13 +457,69 @@ def parse_mietc_workbook(wb_path: str) -> Dict[str, Any]:
             if ws.max_row < 2 or ws.max_column < 4:
                 continue
 
-            # Cabeçalho da linha 1
-            headers = [ws.cell(1, c).value for c in range(1, ws.max_column + 1)]
+            # Localizar linha de cabeçalho das ações (Grupo / Item / Direção)
+            header_row = None
+            for r_chk in range(1, min(12, ws.max_row + 1)):
+                row_vals = [str(ws.cell(r_chk, c).value or '').strip().lower() for c in range(1, min(6, ws.max_column + 1))]
+                if any('item' in v for v in row_vals) and any('dire' in v for v in row_vals):
+                    header_row = r_chk
+                    break
+
+            if header_row is None:
+                # Não é aba de carregamento com colunas Item e Direção (ex: 'Lista de bases')
+                continue
+
+            # Localizar a linha que define o nome das bases (entre linha 1 e header_row)
+            base_row = None
+            # 1. Prioridade máxima: linha com label "BASE" ou "BASES" na coluna 1 ou 2
+            for r in range(1, header_row + 1):
+                c1_txt = str(ws.cell(r, 1).value or '').strip().upper()
+                c2_txt = str(ws.cell(r, 2).value or '').strip().upper()
+                if c1_txt in ['BASE', 'BASES', 'NOME DA BASE', 'ELEMENTO'] or c2_txt in ['BASE', 'BASES']:
+                    base_row = r
+                    break
+
+            # 2. Se não houver label explícito, seleciona a linha com maior densidade de nomes de base válidos
+            if base_row is None:
+                best_r = None
+                max_names = 0
+                for r in range(1, header_row + 1):
+                    c1_txt = str(ws.cell(r, 1).value or '').strip().lower()
+                    if 'dist' in c1_txt or 'extremo' in c1_txt:
+                        continue
+                    count = 0
+                    for c in range(4, min(ws.max_column + 1, 40)):
+                        val = ws.cell(r, c).value
+                        if val is not None:
+                            val_str = str(val).strip()
+                            if val_str and val_str not in ['-', '–', '.', 'None']:
+                                try:
+                                    float(val_str.replace(',', '.'))
+                                except ValueError:
+                                    count += 1
+                    if count > max_names:
+                        max_names = count
+                        best_r = r
+                base_row = best_r or 1
+
             base_cols: List[Tuple[str, int]] = []
             for col_idx in range(4, ws.max_column + 1):
-                bname = ws.cell(1, col_idx).value
-                if bname:
-                    base_cols.append((str(bname).strip(), col_idx))
+                val = ws.cell(base_row, col_idx).value
+                bname = str(val).strip() if val is not None else None
+                # Se vazio ou hífen, tenta linha acima (no caso de células mescladas)
+                if not bname or bname in ['-', '–', '.']:
+                    for r_up in range(1, base_row):
+                        v_up = ws.cell(r_up, col_idx).value
+                        if v_up is not None:
+                            v_up_str = str(v_up).strip()
+                            if v_up_str and v_up_str not in ['-', '–', '.']:
+                                try:
+                                    float(v_up_str.replace(',', '.'))
+                                except ValueError:
+                                    bname = v_up_str
+                                    break
+                if bname and bname not in ['-', '–', '.']:
+                    base_cols.append((bname, col_idx))
 
             if not base_cols:
                 continue
@@ -360,7 +530,7 @@ def parse_mietc_workbook(wb_path: str) -> Dict[str, Any]:
             }
             action_catalog_list = []
 
-            for r in range(2, ws.max_row + 1):
+            for r in range(header_row + 1, ws.max_row + 1):
                 grupo = ws.cell(r, 1).value
                 item = ws.cell(r, 2).value
                 direcao = ws.cell(r, 3).value
@@ -369,8 +539,17 @@ def parse_mietc_workbook(wb_path: str) -> Dict[str, Any]:
                     continue
 
                 item_key = str(item).strip()
-                dir_key = str(direcao).strip().upper()
-                if dir_key not in ['V', 'X', 'Y']:
+                dir_raw = str(direcao).strip()
+                dir_upper = dir_raw.upper()
+                if dir_upper in ['V', 'VERT', 'VERTICAL']:
+                    dir_key = 'V'
+                elif dir_upper in ['M', 'MV', 'M_VERT', 'MOMENTO', 'MOMENTO VERTICAL', 'M_V', 'M_VERTICAL']:
+                    dir_key = 'M'
+                elif dir_upper in ['X', 'HORIZ_X', 'HORIZONTAL X', 'HX']:
+                    dir_key = 'X'
+                elif dir_upper in ['Y', 'HORIZ_Y', 'HORIZONTAL Y', 'HY']:
+                    dir_key = 'Y'
+                else:
                     continue
 
                 row_info = {
@@ -391,7 +570,7 @@ def parse_mietc_workbook(wb_path: str) -> Dict[str, Any]:
                             float_val = 0.0
 
                     if item_key not in bases_data[bname]:
-                        bases_data[bname][item_key] = {'V': 0.0, 'X': 0.0, 'Y': 0.0}
+                        bases_data[bname][item_key] = {'V': 0.0, 'M': 0.0, 'X': 0.0, 'Y': 0.0}
 
                     bases_data[bname][item_key][dir_key] = float_val
 
@@ -429,23 +608,39 @@ def calculate_single_base_combinations(
 
     # 0. Mesclar cargas customizadas se fornecidas
     base_loads_work: Dict[str, Dict[str, float]] = {k: dict(v) for k, v in base_loads.items()}
+    for k in base_loads_work:
+        base_loads_work[k].setdefault('V', 0.0)
+        base_loads_work[k].setdefault('M', 0.0)
+        base_loads_work[k].setdefault('X', 0.0)
+        base_loads_work[k].setdefault('Y', 0.0)
+
     if opts.get('custom_loads'):
         for cl in opts['custom_loads']:
             c_name = (cl.get('name') or '').strip()
             if not c_name:
                 continue
             c_val = float(cl.get('value', 0.0))
-            c_dir = (cl.get('direction') or 'V').upper()
-            if c_dir not in ['V', 'X', 'Y']:
+            c_dir = (cl.get('direction') or 'V').strip().upper()
+            if c_dir in ['M', 'MV', 'M_VERT']:
+                c_dir = 'M'
+            elif c_dir in ['X', 'HX']:
+                c_dir = 'X'
+            elif c_dir in ['Y', 'HY']:
+                c_dir = 'Y'
+            else:
                 c_dir = 'V'
             if c_name not in base_loads_work:
-                base_loads_work[c_name] = {'V': 0.0, 'X': 0.0, 'Y': 0.0}
+                base_loads_work[c_name] = {'V': 0.0, 'M': 0.0, 'X': 0.0, 'Y': 0.0}
             base_loads_work[c_name][c_dir] = c_val
 
     # 1. Mesclar regras lógicas
     action_rules = dict(DEFAULT_ACTION_RULES)
     if opts.get('action_rules'):
-        action_rules.update(opts['action_rules'])
+        for k, v in opts['action_rules'].items():
+            if k not in action_rules:
+                action_rules[k] = dict(v)
+            else:
+                action_rules[k].update(v)
 
     if opts.get('custom_loads'):
         for cl in opts['custom_loads']:
@@ -455,17 +650,17 @@ def calculate_single_base_combinations(
             if c_name not in action_rules:
                 action_rules[c_name] = {
                     'group': (cl.get('group') or '').strip(),
+                    'excludes': (cl.get('excludes') or '').strip(),
                     'requires': (cl.get('requires') or '').strip(),
                     'type': (cl.get('type') or '').strip(),
-                    'is_variable': cl.get('is_variable')
+                    'is_variable': cl.get('is_variable'),
+                    'can_zero': cl.get('can_zero'),
+                    'gamma': cl.get('gamma')
                 }
             else:
-                if not action_rules[c_name].get('group') and cl.get('group'):
-                    action_rules[c_name]['group'] = cl['group']
-                if not action_rules[c_name].get('requires') and cl.get('requires'):
-                    action_rules[c_name]['requires'] = cl['requires']
-                if not action_rules[c_name].get('type') and cl.get('type'):
-                    action_rules[c_name]['type'] = cl['type']
+                for f in ['group', 'excludes', 'requires', 'type', 'is_variable', 'can_zero', 'gamma']:
+                    if cl.get(f) is not None:
+                        action_rules[c_name][f] = cl[f]
 
     perm_items = []
     var_items = []
@@ -476,7 +671,7 @@ def calculate_single_base_combinations(
             enable_zero_scenarios = bool(options['enable_zero_load_scenarios'])
 
     for item, comps in base_loads_work.items():
-        has_val = abs(comps.get('V', 0.0)) > 1e-4 or abs(comps.get('X', 0.0)) > 1e-4 or abs(comps.get('Y', 0.0)) > 1e-4
+        has_val = abs(comps.get('V', 0.0)) > 1e-4 or abs(comps.get('M', 0.0)) > 1e-4 or abs(comps.get('X', 0.0)) > 1e-4 or abs(comps.get('Y', 0.0)) > 1e-4
         if not has_val:
             continue
 
@@ -556,6 +751,7 @@ def calculate_single_base_combinations(
                     continue
 
                 v_val = sum(base_loads_work[k]['V'] * f for k, f in var_factors.items() if k in base_loads_work)
+                m_val = sum(base_loads_work[k].get('M', 0.0) * f for k, f in var_factors.items() if k in base_loads_work)
                 x_val = sum(base_loads_work[k]['X'] * f for k, f in var_factors.items() if k in base_loads_work)
                 y_val = sum(base_loads_work[k]['Y'] * f for k, f in var_factors.items() if k in base_loads_work)
                 h_val = math.hypot(x_val, y_val)
@@ -575,6 +771,7 @@ def calculate_single_base_combinations(
                     'formula': " + ".join(f_parts) if f_parts else "0.00",
                     'factors': var_factors,
                     'V': v_val,
+                    'M': m_val,
                     'X': x_val,
                     'Y': y_val,
                     'H_res': h_val,
@@ -591,6 +788,7 @@ def calculate_single_base_combinations(
 
             if any(f > 1e-4 for f in var_factors.values()):
                 v_val = sum(base_loads_work[k]['V'] * f for k, f in var_factors.items() if k in base_loads_work)
+                m_val = sum(base_loads_work[k].get('M', 0.0) * f for k, f in var_factors.items() if k in base_loads_work)
                 x_val = sum(base_loads_work[k]['X'] * f for k, f in var_factors.items() if k in base_loads_work)
                 y_val = sum(base_loads_work[k]['Y'] * f for k, f in var_factors.items() if k in base_loads_work)
                 h_val = math.hypot(x_val, y_val)
@@ -609,6 +807,7 @@ def calculate_single_base_combinations(
                     'formula': " + ".join(f_parts) if f_parts else "0.00",
                     'factors': var_factors,
                     'V': v_val,
+                    'M': m_val,
                     'X': x_val,
                     'Y': y_val,
                     'H_res': h_val,
@@ -671,13 +870,22 @@ def calculate_single_base_combinations(
 
             for perm_type in ['desfavoravel', 'favoravel']:
                 _is_fav = (perm_type == 'favoravel')
-                if _geo_mode:
-                    # γ_g geotécnico diferenciado por tipo de ação (NBR 6122)
-                    factors_perm = {p: (_g_fav if _is_fav else _geo_gf(p, False)) for p in pset}
-                else:
-                    gf_uniform = _g_fav if _is_fav else _g_unfav
-                    factors_perm = {p: gf_uniform for p in pset}
+                factors_perm = {}
+                for p in pset:
+                    p_r = action_rules.get(p, {})
+                    if _is_fav:
+                        factors_perm[p] = _g_fav
+                    elif p_r.get('gamma') is not None or p_r.get('gamma_g') is not None:
+                        try:
+                            factors_perm[p] = float(p_r.get('gamma') or p_r.get('gamma_g'))
+                        except (ValueError, TypeError):
+                            factors_perm[p] = _g_unfav
+                    elif _geo_mode:
+                        factors_perm[p] = _geo_gf(p, False)
+                    else:
+                        factors_perm[p] = _g_unfav
                 val_v = sum(base_loads_work[p]['V'] * factors_perm[p] for p in pset)
+                val_m = sum(base_loads_work[p].get('M', 0.0) * factors_perm[p] for p in pset)
                 val_x = sum(base_loads_work[p]['X'] * factors_perm[p] for p in pset)
                 val_y = sum(base_loads_work[p]['Y'] * factors_perm[p] for p in pset)
                 h_res = math.hypot(val_x, val_y)
@@ -695,6 +903,7 @@ def calculate_single_base_combinations(
                     'formula': formula_perm,
                     'factors': factors_perm,
                     'V': val_v,
+                    'M': val_m,
                     'X': val_x,
                     'Y': val_y,
                     'H_res': h_res
@@ -705,7 +914,7 @@ def calculate_single_base_combinations(
             p_rule = action_rules.get(p_item, {})
             r_type = p_rule.get('type', '')
             p_meta = LOAD_CATALOG_TYPES.get(r_type) or MIETC_ACTION_PROPS.get(p_item, {})
-            p_gamma = p_meta.get('nbr', {}).get('gamma_q', 1.40)
+            p_gamma = float(p_rule.get('gamma') or p_rule.get('gamma_q') or p_meta.get('nbr', {}).get('gamma_q', 1.40))
 
             comp_sets = _generate_companion_sets(p_item, var_items, action_rules)
 
@@ -713,57 +922,52 @@ def calculate_single_base_combinations(
                 all_var_names = [p_item] + companions
 
                 for pset_idx, pset in enumerate(perm_sets):
-                    # Verificar se todas as dependências de pset estão satisfeitas
+                    # Verificar se todas as dependências estão satisfeitas
                     all_active_names = pset + all_var_names
                     req_missing = False
-                    for p in pset:
-                        p_req = (action_rules.get(p, {}).get('requires') or '').strip()
+                    for act_chk in all_active_names:
+                        p_req = (action_rules.get(act_chk, {}).get('requires') or '').strip()
                         if p_req and p_req not in all_active_names:
                             req_missing = True
                             break
                     if req_missing:
                         continue
 
-                    # Verificar colisão XOR entre permanentes do conjunto e as variáveis
-                    conflict_xor = False
-                    for p in pset:
-                        p_g = (action_rules.get(p, {}).get('group') or '').strip()
-                        if p_g:
-                            for v in all_var_names:
-                                v_g = (action_rules.get(v, {}).get('group') or '').strip()
-                                if v_g and v_g.lower() == p_g.lower():
-                                    conflict_xor = True
-                                    break
-                        if conflict_xor:
-                            break
-                    if conflict_xor:
-                        continue
-
-                    # Verificar incompatibilidade física Solo Seco x Água
-                    names_all = [x.lower() for x in pset + all_var_names]
-                    if any('seco' in x for x in names_all) and any('água' in x or 'agua' in x or 'hidrostática' in x for x in names_all):
+                    # Verificar exclusões mútuas (grupos XOR, excludes seletivo e condições físicas)
+                    if any(_are_actions_mutually_exclusive(a, b, action_rules) for a, b in itertools.combinations(all_active_names, 2)):
                         continue
 
                     for perm_type in ['desfavoravel', 'favoravel']:
                         _is_fav = (perm_type == 'favoravel')
-                        if _geo_mode:
-                            # γ_g geotécnico diferenciado por tipo de ação (NBR 6122)
-                            factors_perm = {p: (_g_fav if _is_fav else _geo_gf(p, False)) for p in pset}
-                        else:
-                            gf_uniform = _g_fav if _is_fav else _g_unfav
-                            factors_perm = {p: gf_uniform for p in pset}
+                        factors_perm = {}
+                        for p in pset:
+                            p_r = action_rules.get(p, {})
+                            if _is_fav:
+                                factors_perm[p] = _g_fav
+                            elif p_r.get('gamma') is not None or p_r.get('gamma_g') is not None:
+                                try:
+                                    factors_perm[p] = float(p_r.get('gamma') or p_r.get('gamma_g'))
+                                except (ValueError, TypeError):
+                                    factors_perm[p] = _g_unfav
+                            elif _geo_mode:
+                                factors_perm[p] = _geo_gf(p, False)
+                            else:
+                                factors_perm[p] = _g_unfav
 
                         gf_display = factors_perm[pset[0]] if pset and len(set(factors_perm.values())) == 1 else None
-                        formula_g_str = (
-                            f"{gf_display:.2f}G"
-                            if gf_display is not None
-                            else ' + '.join(f"{factors_perm[p]:.2f}{_fmt_action_token(p)}" for p in pset)
-                        )
-                        formula_parts = [formula_g_str, f"{p_gamma:.2f}{_fmt_action_token(p_item)}"]
+                        if gf_display is not None and len(pset) > 1:
+                            formula_g_str = f"{gf_display:.2f}·({' + '.join(_fmt_action_token(p) for p in pset)})"
+                        elif gf_display is not None and len(pset) == 1:
+                            formula_g_str = f"{gf_display:.2f}{_fmt_action_token(pset[0])}"
+                        else:
+                            formula_g_str = ' + '.join(f"{factors_perm[p]:.2f}{_fmt_action_token(p)}" for p in pset)
+
+                        formula_parts = [p for p in [formula_g_str, f"{p_gamma:.2f}{_fmt_action_token(p_item)}"] if p]
                         factors_dict = dict(factors_perm)
                         factors_dict[p_item] = p_gamma
 
                         val_v = sum(base_loads_work[p]['V'] * factors_perm[p] for p in pset) + base_loads_work[p_item]['V'] * p_gamma
+                        val_m = sum(base_loads_work[p].get('M', 0.0) * factors_perm[p] for p in pset) + base_loads_work[p_item].get('M', 0.0) * p_gamma
                         val_x = sum(base_loads_work[p]['X'] * factors_perm[p] for p in pset) + base_loads_work[p_item]['X'] * p_gamma
                         val_y = sum(base_loads_work[p]['Y'] * factors_perm[p] for p in pset) + base_loads_work[p_item]['Y'] * p_gamma
 
@@ -771,15 +975,15 @@ def calculate_single_base_combinations(
                             s_rule = action_rules.get(s_item, {})
                             s_type = s_rule.get('type', '')
                             s_meta = LOAD_CATALOG_TYPES.get(s_type) or MIETC_ACTION_PROPS.get(s_item, {})
-                            s_gamma = s_meta.get('nbr', {}).get('gamma_q', 1.40)
-                            # Coeficiente de combinação parametrizado: ψ₀ (Normal) ou ψ₁ (Especial)
-                            s_psi = s_meta.get('nbr', {}).get(_psi_key, _psi_default)
+                            s_gamma = float(s_rule.get('gamma') or s_rule.get('gamma_q') or s_meta.get('nbr', {}).get('gamma_q', 1.40))
+                            s_psi = float(s_rule.get(_psi_key) if s_rule.get(_psi_key) is not None else s_meta.get('nbr', {}).get(_psi_key, _psi_default))
                             coeff = s_gamma * s_psi
 
                             factors_dict[s_item] = coeff
                             formula_parts.append(f"{coeff:.2f}{_fmt_action_token(s_item)}")
 
                             val_v += base_loads_work[s_item]['V'] * coeff
+                            val_m += base_loads_work[s_item].get('M', 0.0) * coeff
                             val_x += base_loads_work[s_item]['X'] * coeff
                             val_y += base_loads_work[s_item]['Y'] * coeff
 
@@ -797,6 +1001,7 @@ def calculate_single_base_combinations(
                             'formula': " + ".join(formula_parts),
                             'factors': factors_dict,
                             'V': val_v,
+                            'M': val_m,
                             'X': val_x,
                             'Y': val_y,
                             'H_res': h_res
@@ -817,6 +1022,7 @@ def calculate_single_base_combinations(
                 continue
 
             val_v = sum(base_loads_work[p]['V'] for p in pset)
+            val_m = sum(base_loads_work[p].get('M', 0.0) for p in pset)
             val_x = sum(base_loads_work[p]['X'] for p in pset)
             val_y = sum(base_loads_work[p]['Y'] for p in pset)
             pset_desc = f" [{', '.join(pset)}]" if len(perm_sets) > 1 else ""
@@ -827,6 +1033,7 @@ def calculate_single_base_combinations(
                 'formula': f"1.00 × ({' + '.join(_fmt_action_token(p) for p in pset) if pset else 'Permanentes'})",
                 'factors': {p: 1.0 for p in pset},
                 'V': val_v,
+                'M': val_m,
                 'X': val_x,
                 'Y': val_y,
                 'H_res': math.hypot(val_x, val_y)
@@ -839,41 +1046,28 @@ def calculate_single_base_combinations(
                 all_var_names = [p_item] + companions
 
                 for pset_idx, pset in enumerate(perm_sets):
-                    # Verificar se todas as dependências de pset estão satisfeitas
+                    # Verificar se todas as dependências estão satisfeitas
                     all_active_names = pset + all_var_names
                     req_missing = False
-                    for p in pset:
-                        p_req = (action_rules.get(p, {}).get('requires') or '').strip()
+                    for act_chk in all_active_names:
+                        p_req = (action_rules.get(act_chk, {}).get('requires') or '').strip()
                         if p_req and p_req not in all_active_names:
                             req_missing = True
                             break
                     if req_missing:
                         continue
 
-                    # Verificar colisão XOR entre permanentes do conjunto e as variáveis
-                    conflict_xor = False
-                    for p in pset:
-                        p_g = (action_rules.get(p, {}).get('group') or '').strip()
-                        if p_g:
-                            for v in all_var_names:
-                                v_g = (action_rules.get(v, {}).get('group') or '').strip()
-                                if v_g and v_g.lower() == p_g.lower():
-                                    conflict_xor = True
-                                    break
-                        if conflict_xor:
-                            break
-                    if conflict_xor:
+                    # Verificar exclusões mútuas e incompatibilidades
+                    if any(_are_actions_mutually_exclusive(a, b, action_rules) for a, b in itertools.combinations(all_active_names, 2)):
                         continue
 
-                    names_all = [x.lower() for x in pset + all_var_names]
-                    if any('seco' in x for x in names_all) and any('água' in x or 'agua' in x or 'hidrostática' in x for x in names_all):
-                        continue
-
-                    formula_parts = ["1.0G", f"1.0{_fmt_action_token(p_item)}"]
+                    g_str = f"1.00·({' + '.join(_fmt_action_token(p) for p in pset)})" if len(pset) > 1 else (f"1.00{_fmt_action_token(pset[0])}" if len(pset) == 1 else "")
+                    formula_parts = [p for p in [g_str, f"1.00{_fmt_action_token(p_item)}"] if p]
                     factors_dict = {p: 1.0 for p in pset}
                     factors_dict[p_item] = 1.0
 
                     val_v = sum(base_loads_work[p]['V'] for p in pset) + base_loads_work[p_item]['V']
+                    val_m = sum(base_loads_work[p].get('M', 0.0) for p in pset) + base_loads_work[p_item].get('M', 0.0)
                     val_x = sum(base_loads_work[p]['X'] for p in pset) + base_loads_work[p_item]['X']
                     val_y = sum(base_loads_work[p]['Y'] for p in pset) + base_loads_work[p_item]['Y']
 
@@ -881,10 +1075,11 @@ def calculate_single_base_combinations(
                         s_rule = action_rules.get(s_item, {})
                         s_type = s_rule.get('type', '')
                         s_meta = LOAD_CATALOG_TYPES.get(s_type) or MIETC_ACTION_PROPS.get(s_item, {})
-                        s_psi0 = s_meta.get('nbr', {}).get('psi0', 0.70)
+                        s_psi0 = float(s_rule.get('psi0') if s_rule.get('psi0') is not None else s_meta.get('nbr', {}).get('psi0', 0.70))
                         factors_dict[s_item] = s_psi0
                         formula_parts.append(f"{s_psi0:.2f}{_fmt_action_token(s_item)}")
                         val_v += base_loads_work[s_item]['V'] * s_psi0
+                        val_m += base_loads_work[s_item].get('M', 0.0) * s_psi0
                         val_x += base_loads_work[s_item]['X'] * s_psi0
                         val_y += base_loads_work[s_item]['Y'] * s_psi0
 
@@ -897,6 +1092,7 @@ def calculate_single_base_combinations(
                         'formula': " + ".join(formula_parts),
                         'factors': factors_dict,
                         'V': val_v,
+                        'M': val_m,
                         'X': val_x,
                         'Y': val_y,
                         'H_res': math.hypot(val_x, val_y)
@@ -907,28 +1103,24 @@ def calculate_single_base_combinations(
         comp_sets_qp = _generate_companion_sets(var_items[0], var_items, action_rules) if var_items else [[]]
         for qp_idx, qp_vars in enumerate(comp_sets_qp):
             for pset_idx, pset in enumerate(perm_sets):
-                # Verificar colisão XOR
-                conflict_xor = False
-                for p in pset:
-                    p_g = (action_rules.get(p, {}).get('group') or '').strip()
-                    if p_g:
-                        for v in qp_vars:
-                            v_g = (action_rules.get(v, {}).get('group') or '').strip()
-                            if v_g and v_g.lower() == p_g.lower():
-                                conflict_xor = True
-                                break
-                    if conflict_xor:
+                names_all = pset + qp_vars
+                req_missing = False
+                for act_chk in names_all:
+                    r_req = (action_rules.get(act_chk, {}).get('requires') or '').strip()
+                    if r_req and r_req not in names_all:
+                        req_missing = True
                         break
-                if conflict_xor:
+                if req_missing:
                     continue
 
-                names_all = [x.lower() for x in pset + qp_vars]
-                if any('seco' in x for x in names_all) and any('água' in x or 'agua' in x or 'hidrostática' in x for x in names_all):
+                if any(_are_actions_mutually_exclusive(a, b, action_rules) for a, b in itertools.combinations(names_all, 2)):
                     continue
 
                 factors_dict = {p: 1.0 for p in pset}
-                formula_parts = ["1.0G"]
+                g_str = f"1.00·({' + '.join(_fmt_action_token(p) for p in pset)})" if len(pset) > 1 else (f"1.00{_fmt_action_token(pset[0])}" if len(pset) == 1 else "")
+                formula_parts = [g_str] if g_str else []
                 val_v = sum(base_loads_work[p]['V'] for p in pset)
+                val_m = sum(base_loads_work[p].get('M', 0.0) for p in pset)
                 val_x = sum(base_loads_work[p]['X'] for p in pset)
                 val_y = sum(base_loads_work[p]['Y'] for p in pset)
 
@@ -936,11 +1128,12 @@ def calculate_single_base_combinations(
                     v_rule = action_rules.get(v_item, {})
                     v_type = v_rule.get('type', '')
                     v_meta = LOAD_CATALOG_TYPES.get(v_type) or MIETC_ACTION_PROPS.get(v_item, {})
-                    psi2 = v_meta.get('nbr', {}).get('psi2', 0.30)
+                    psi2 = float(v_rule.get('psi2') if v_rule.get('psi2') is not None else v_meta.get('nbr', {}).get('psi2', 0.30))
                     if psi2 > 0:
                         factors_dict[v_item] = psi2
                         formula_parts.append(f"{psi2:.2f}{_fmt_action_token(v_item)}")
                         val_v += base_loads_work[v_item]['V'] * psi2
+                        val_m += base_loads_work[v_item].get('M', 0.0) * psi2
                         val_x += base_loads_work[v_item]['X'] * psi2
                         val_y += base_loads_work[v_item]['Y'] * psi2
 
@@ -952,6 +1145,7 @@ def calculate_single_base_combinations(
                     'formula': " + ".join(formula_parts),
                     'factors': factors_dict,
                     'V': val_v,
+                    'M': val_m,
                     'X': val_x,
                     'Y': val_y,
                     'H_res': math.hypot(val_x, val_y)
@@ -985,26 +1179,27 @@ def calculate_single_base_combinations(
                         # Verificar dependências
                         all_active_names = pset + all_var_names
                         req_missing = False
-                        for p in pset:
-                            p_req = (action_rules.get(p, {}).get('requires') or '').strip()
+                        for act_chk in all_active_names:
+                            p_req = (action_rules.get(act_chk, {}).get('requires') or '').strip()
                             if p_req and p_req not in all_active_names:
                                 req_missing = True
                                 break
                         if req_missing:
                             continue
 
-                        # Verificar incompatibilidade física Solo Seco x Água
-                        names_all = [x.lower() for x in pset + all_var_names]
-                        if any('seco' in x for x in names_all) and any('água' in x or 'agua' in x or 'hidrostática' in x for x in names_all):
+                        # Verificar exclusões mútuas e incompatibilidades
+                        if any(_are_actions_mutually_exclusive(a, b, action_rules) for a, b in itertools.combinations(all_active_names, 2)):
                             continue
 
                         # Permanentes com γ_g = 1.0 (NBR 8681 combinação excepcional)
                         g_excep = 1.00
-                        formula_parts = [f"1.00G", f"1.00{_fmt_action_token(ae_item)}"]
+                        g_str = f"1.00·({' + '.join(_fmt_action_token(p) for p in pset)})" if len(pset) > 1 else (f"1.00{_fmt_action_token(pset[0])}" if len(pset) == 1 else "")
+                        formula_parts = [p for p in [g_str, f"1.00{_fmt_action_token(ae_item)}"] if p]
                         factors_dict = {p: g_excep for p in pset}
                         factors_dict[ae_item] = 1.00
 
                         val_v = sum(base_loads_work[p]['V'] * g_excep for p in pset) + base_loads_work[ae_item]['V']
+                        val_m = sum(base_loads_work[p].get('M', 0.0) * g_excep for p in pset) + base_loads_work[ae_item].get('M', 0.0)
                         val_x = sum(base_loads_work[p]['X'] * g_excep for p in pset) + base_loads_work[ae_item]['X']
                         val_y = sum(base_loads_work[p]['Y'] * g_excep for p in pset) + base_loads_work[ae_item]['Y']
 
@@ -1012,13 +1207,14 @@ def calculate_single_base_combinations(
                             s_rule = action_rules.get(s_item, {})
                             s_type = s_rule.get('type', '')
                             s_meta = LOAD_CATALOG_TYPES.get(s_type) or MIETC_ACTION_PROPS.get(s_item, {})
-                            s_gamma = s_meta.get('nbr', {}).get('gamma_q', 1.40)
-                            s_psi1 = s_meta.get('nbr', {}).get('psi1', 0.50)
+                            s_gamma = float(s_rule.get('gamma') or s_rule.get('gamma_q') or s_meta.get('nbr', {}).get('gamma_q', 1.40))
+                            s_psi1 = float(s_rule.get('psi1') if s_rule.get('psi1') is not None else s_meta.get('nbr', {}).get('psi1', 0.50))
                             coeff = s_gamma * s_psi1
 
                             factors_dict[s_item] = coeff
                             formula_parts.append(f"{coeff:.2f}{_fmt_action_token(s_item)}")
                             val_v += base_loads_work[s_item]['V'] * coeff
+                            val_m += base_loads_work[s_item].get('M', 0.0) * coeff
                             val_x += base_loads_work[s_item]['X'] * coeff
                             val_y += base_loads_work[s_item]['Y'] * coeff
 
@@ -1035,6 +1231,7 @@ def calculate_single_base_combinations(
                             'formula': " + ".join(formula_parts),
                             'factors': factors_dict,
                             'V': val_v,
+                            'M': val_m,
                             'X': val_x,
                             'Y': val_y,
                             'H_res': h_res
@@ -1051,6 +1248,8 @@ def calculate_single_base_combinations(
     x_abs_max_comb = None
     y_abs_max = -float('inf')
     y_abs_max_comb = None
+    m_abs_max = -float('inf')
+    m_abs_max_comb = None
 
     for c in combos_list:
         if c['V'] > v_max:
@@ -1068,16 +1267,20 @@ def calculate_single_base_combinations(
         if abs(c['Y']) > y_abs_max:
             y_abs_max = abs(c['Y'])
             y_abs_max_comb = c
+        if abs(c.get('M', 0.0)) > m_abs_max:
+            m_abs_max = abs(c.get('M', 0.0))
+            m_abs_max_comb = c
 
     return {
         'base_name': base_name,
         'combinations_count': len(combos_list),
         'combinations': combos_list,
         'envelopes': {
-            # 1. Picos Globais (Vmax, Xmax, Ymax, Hmax)
+            # 1. Picos Globais (Vmax, Mmax, Xmax, Ymax, Hmax)
             'peaks': {
                 'V_max': v_max if v_max != -float('inf') else 0.0,
                 'V_min': v_min if v_min != float('inf') else 0.0,
+                'M_max': m_abs_max if m_abs_max != -float('inf') else 0.0,
                 'X_max': x_abs_max if x_abs_max != -float('inf') else 0.0,
                 'Y_max': y_abs_max if y_abs_max != -float('inf') else 0.0,
                 'H_max': h_max if h_max != -float('inf') else 0.0
@@ -1087,6 +1290,7 @@ def calculate_single_base_combinations(
                 'value': v_max if v_max != -float('inf') else 0.0,
                 'combination': v_max_comb['title'] if v_max_comb else '--',
                 'formula': v_max_comb['formula'] if v_max_comb else '--',
+                'concomitant_M': v_max_comb.get('M', 0.0) if v_max_comb else 0.0,
                 'concomitant_X': v_max_comb['X'] if v_max_comb else 0.0,
                 'concomitant_Y': v_max_comb['Y'] if v_max_comb else 0.0,
                 'concomitant_H': v_max_comb['H_res'] if v_max_comb else 0.0
@@ -1096,9 +1300,21 @@ def calculate_single_base_combinations(
                 'value': v_min if v_min != float('inf') else 0.0,
                 'combination': v_min_comb['title'] if v_min_comb else '--',
                 'formula': v_min_comb['formula'] if v_min_comb else '--',
+                'concomitant_M': v_min_comb.get('M', 0.0) if v_min_comb else 0.0,
                 'concomitant_X': v_min_comb['X'] if v_min_comb else 0.0,
                 'concomitant_Y': v_min_comb['Y'] if v_min_comb else 0.0,
                 'concomitant_H': v_min_comb['H_res'] if v_min_comb else 0.0
+            },
+            # 3.5 M max e concomitantes
+            'M_max': {
+                'value': m_abs_max if m_abs_max != -float('inf') else 0.0,
+                'real_value': m_abs_max_comb.get('M', 0.0) if m_abs_max_comb else 0.0,
+                'combination': m_abs_max_comb['title'] if m_abs_max_comb else '--',
+                'formula': m_abs_max_comb['formula'] if m_abs_max_comb else '--',
+                'concomitant_V': m_abs_max_comb['V'] if m_abs_max_comb else 0.0,
+                'concomitant_X': m_abs_max_comb['X'] if m_abs_max_comb else 0.0,
+                'concomitant_Y': m_abs_max_comb['Y'] if m_abs_max_comb else 0.0,
+                'concomitant_H': m_abs_max_comb['H_res'] if m_abs_max_comb else 0.0
             },
             # 4. X max e concomitantes
             'X_max': {
@@ -1107,6 +1323,7 @@ def calculate_single_base_combinations(
                 'combination': x_abs_max_comb['title'] if x_abs_max_comb else '--',
                 'formula': x_abs_max_comb['formula'] if x_abs_max_comb else '--',
                 'concomitant_V': x_abs_max_comb['V'] if x_abs_max_comb else 0.0,
+                'concomitant_M': x_abs_max_comb.get('M', 0.0) if x_abs_max_comb else 0.0,
                 'concomitant_Y': x_abs_max_comb['Y'] if x_abs_max_comb else 0.0,
                 'concomitant_H': x_abs_max_comb['H_res'] if x_abs_max_comb else 0.0
             },
@@ -1117,6 +1334,7 @@ def calculate_single_base_combinations(
                 'combination': y_abs_max_comb['title'] if y_abs_max_comb else '--',
                 'formula': y_abs_max_comb['formula'] if y_abs_max_comb else '--',
                 'concomitant_V': y_abs_max_comb['V'] if y_abs_max_comb else 0.0,
+                'concomitant_M': y_abs_max_comb.get('M', 0.0) if y_abs_max_comb else 0.0,
                 'concomitant_X': y_abs_max_comb['X'] if y_abs_max_comb else 0.0,
                 'concomitant_H': y_abs_max_comb['H_res'] if y_abs_max_comb else 0.0
             },
@@ -1126,6 +1344,7 @@ def calculate_single_base_combinations(
                 'combination': h_max_comb['title'] if h_max_comb else '--',
                 'formula': h_max_comb['formula'] if h_max_comb else '--',
                 'concomitant_V': h_max_comb['V'] if h_max_comb else 0.0,
+                'concomitant_M': h_max_comb.get('M', 0.0) if h_max_comb else 0.0,
                 'concomitant_X': h_max_comb['X'] if h_max_comb else 0.0,
                 'concomitant_Y': h_max_comb['Y'] if h_max_comb else 0.0
             }
@@ -1264,6 +1483,8 @@ def calculate_combined_footing_envelopes(
     global_v_max_footing = None
     global_v_min = float('inf')
     global_v_min_footing = None
+    global_m_max = -float('inf')
+    global_m_max_footing = None
     global_h_max = -float('inf')
     global_h_max_footing = None
 
@@ -1285,6 +1506,7 @@ def calculate_combined_footing_envelopes(
             ref_c = combos0[c_idx]
 
             v_tot = 0.0
+            m_tot = 0.0
             x_tot = 0.0
             y_tot = 0.0
             breakdown: Dict[str, Dict[str, float]] = {}
@@ -1294,19 +1516,22 @@ def calculate_combined_footing_envelopes(
                 if c_idx < len(b_combos):
                     cb = b_combos[c_idx]
                 else:
-                    cb = {'V': 0.0, 'X': 0.0, 'Y': 0.0, 'H_res': 0.0}
+                    cb = {'V': 0.0, 'M': 0.0, 'X': 0.0, 'Y': 0.0, 'H_res': 0.0}
 
                 v_b = float(cb.get('V', 0.0))
+                m_b = float(cb.get('M', 0.0))
                 x_b = float(cb.get('X', 0.0))
                 y_b = float(cb.get('Y', 0.0))
                 h_b = float(cb.get('H_res', math.hypot(x_b, y_b)))
 
                 v_tot += v_b
+                m_tot += m_b
                 x_tot += x_b
                 y_tot += y_b
 
                 breakdown[b] = {
                     'V': round(v_b, 2),
+                    'M': round(m_b, 2),
                     'X': round(x_b, 2),
                     'Y': round(y_b, 2),
                     'H_res': round(h_b, 2)
@@ -1322,6 +1547,7 @@ def calculate_combined_footing_envelopes(
                 'formula': ref_c.get('formula', '--'),
                 'factors': ref_c.get('factors', {}),
                 'V': v_tot,
+                'M': m_tot,
                 'X': x_tot,
                 'Y': y_tot,
                 'H_res': h_tot,
@@ -1339,6 +1565,8 @@ def calculate_combined_footing_envelopes(
         x_abs_max_comb = None
         y_abs_max = -float('inf')
         y_abs_max_comb = None
+        m_abs_max = -float('inf')
+        m_abs_max_comb = None
 
         for c in combined_combos:
             if c['V'] > v_max:
@@ -1356,6 +1584,9 @@ def calculate_combined_footing_envelopes(
             if abs(c['Y']) > y_abs_max:
                 y_abs_max = abs(c['Y'])
                 y_abs_max_comb = c
+            if abs(c.get('M', 0.0)) > m_abs_max:
+                m_abs_max = abs(c.get('M', 0.0))
+                m_abs_max_comb = c
 
         if v_max > global_v_max:
             global_v_max = v_max
@@ -1363,6 +1594,9 @@ def calculate_combined_footing_envelopes(
         if v_min < global_v_min:
             global_v_min = v_min
             global_v_min_footing = gname
+        if m_abs_max > global_m_max:
+            global_m_max = m_abs_max
+            global_m_max_footing = gname
         if h_max > global_h_max:
             global_h_max = h_max
             global_h_max_footing = gname
@@ -1371,6 +1605,7 @@ def calculate_combined_footing_envelopes(
             'peaks': {
                 'V_max': v_max if v_max != -float('inf') else 0.0,
                 'V_min': v_min if v_min != float('inf') else 0.0,
+                'M_max': m_abs_max if m_abs_max != -float('inf') else 0.0,
                 'X_max': x_abs_max if x_abs_max != -float('inf') else 0.0,
                 'Y_max': y_abs_max if y_abs_max != -float('inf') else 0.0,
                 'H_max': h_max if h_max != -float('inf') else 0.0
@@ -1379,6 +1614,7 @@ def calculate_combined_footing_envelopes(
                 'value': v_max if v_max != -float('inf') else 0.0,
                 'combination': v_max_comb['title'] if v_max_comb else '--',
                 'formula': v_max_comb['formula'] if v_max_comb else '--',
+                'concomitant_M': v_max_comb.get('M', 0.0) if v_max_comb else 0.0,
                 'concomitant_X': v_max_comb['X'] if v_max_comb else 0.0,
                 'concomitant_Y': v_max_comb['Y'] if v_max_comb else 0.0,
                 'concomitant_H': v_max_comb['H_res'] if v_max_comb else 0.0,
@@ -1388,10 +1624,22 @@ def calculate_combined_footing_envelopes(
                 'value': v_min if v_min != float('inf') else 0.0,
                 'combination': v_min_comb['title'] if v_min_comb else '--',
                 'formula': v_min_comb['formula'] if v_min_comb else '--',
+                'concomitant_M': v_min_comb.get('M', 0.0) if v_min_comb else 0.0,
                 'concomitant_X': v_min_comb['X'] if v_min_comb else 0.0,
                 'concomitant_Y': v_min_comb['Y'] if v_min_comb else 0.0,
                 'concomitant_H': v_min_comb['H_res'] if v_min_comb else 0.0,
                 'base_breakdown': v_min_comb['base_breakdown'] if v_min_comb else {}
+            },
+            'M_max': {
+                'value': m_abs_max if m_abs_max != -float('inf') else 0.0,
+                'real_value': m_abs_max_comb.get('M', 0.0) if m_abs_max_comb else 0.0,
+                'combination': m_abs_max_comb['title'] if m_abs_max_comb else '--',
+                'formula': m_abs_max_comb['formula'] if m_abs_max_comb else '--',
+                'concomitant_V': m_abs_max_comb['V'] if m_abs_max_comb else 0.0,
+                'concomitant_X': m_abs_max_comb['X'] if m_abs_max_comb else 0.0,
+                'concomitant_Y': m_abs_max_comb['Y'] if m_abs_max_comb else 0.0,
+                'concomitant_H': m_abs_max_comb['H_res'] if m_abs_max_comb else 0.0,
+                'base_breakdown': m_abs_max_comb['base_breakdown'] if m_abs_max_comb else {}
             },
             'X_max': {
                 'value': x_abs_max if x_abs_max != -float('inf') else 0.0,
@@ -1399,6 +1647,7 @@ def calculate_combined_footing_envelopes(
                 'combination': x_abs_max_comb['title'] if x_abs_max_comb else '--',
                 'formula': x_abs_max_comb['formula'] if x_abs_max_comb else '--',
                 'concomitant_V': x_abs_max_comb['V'] if x_abs_max_comb else 0.0,
+                'concomitant_M': x_abs_max_comb.get('M', 0.0) if x_abs_max_comb else 0.0,
                 'concomitant_Y': x_abs_max_comb['Y'] if x_abs_max_comb else 0.0,
                 'concomitant_H': x_abs_max_comb['H_res'] if x_abs_max_comb else 0.0,
                 'base_breakdown': x_abs_max_comb['base_breakdown'] if x_abs_max_comb else {}
@@ -1409,6 +1658,7 @@ def calculate_combined_footing_envelopes(
                 'combination': y_abs_max_comb['title'] if y_abs_max_comb else '--',
                 'formula': y_abs_max_comb['formula'] if y_abs_max_comb else '--',
                 'concomitant_V': y_abs_max_comb['V'] if y_abs_max_comb else 0.0,
+                'concomitant_M': y_abs_max_comb.get('M', 0.0) if y_abs_max_comb else 0.0,
                 'concomitant_X': y_abs_max_comb['X'] if y_abs_max_comb else 0.0,
                 'concomitant_H': y_abs_max_comb['H_res'] if y_abs_max_comb else 0.0,
                 'base_breakdown': y_abs_max_comb['base_breakdown'] if y_abs_max_comb else {}
@@ -1418,6 +1668,7 @@ def calculate_combined_footing_envelopes(
                 'combination': h_max_comb['title'] if h_max_comb else '--',
                 'formula': h_max_comb['formula'] if h_max_comb else '--',
                 'concomitant_V': h_max_comb['V'] if h_max_comb else 0.0,
+                'concomitant_M': h_max_comb.get('M', 0.0) if h_max_comb else 0.0,
                 'concomitant_X': h_max_comb['X'] if h_max_comb else 0.0,
                 'concomitant_Y': h_max_comb['Y'] if h_max_comb else 0.0,
                 'base_breakdown': h_max_comb['base_breakdown'] if h_max_comb else {}
@@ -1442,6 +1693,7 @@ def calculate_combined_footing_envelopes(
             'member_bases': valid_bases,
             'is_combined': True,
             'peak_V': round(v_max, 2),
+            'peak_M': round(m_abs_max, 2) if m_abs_max != -float('inf') else 0.0,
             'peak_X': round(x_abs_max, 2),
             'peak_Y': round(y_abs_max, 2),
             'peak_H': round(h_max, 2),
@@ -1449,6 +1701,7 @@ def calculate_combined_footing_envelopes(
             'V_max': round(v_max, 2),
             'V_max_comb': envelopes['V_max']['combination'],
             'V_max_formula': envelopes['V_max']['formula'],
+            'V_max_M': round(envelopes['V_max']['concomitant_M'], 2),
             'V_max_X': round(envelopes['V_max']['concomitant_X'], 2),
             'V_max_Y': round(envelopes['V_max']['concomitant_Y'], 2),
             'V_max_H': round(envelopes['V_max']['concomitant_H'], 2),
@@ -1457,16 +1710,28 @@ def calculate_combined_footing_envelopes(
             'V_min': round(v_min, 2),
             'V_min_comb': envelopes['V_min']['combination'],
             'V_min_formula': envelopes['V_min']['formula'],
+            'V_min_M': round(envelopes['V_min']['concomitant_M'], 2),
             'V_min_X': round(envelopes['V_min']['concomitant_X'], 2),
             'V_min_Y': round(envelopes['V_min']['concomitant_Y'], 2),
             'V_min_H': round(envelopes['V_min']['concomitant_H'], 2),
             'V_min_breakdown': envelopes['V_min']['base_breakdown'],
+
+            'M_max': round(m_abs_max, 2) if m_abs_max != -float('inf') else 0.0,
+            'M_max_real': round(envelopes['M_max'].get('real_value', m_abs_max), 2),
+            'M_max_comb': envelopes['M_max']['combination'],
+            'M_max_formula': envelopes['M_max']['formula'],
+            'M_max_V': round(envelopes['M_max']['concomitant_V'], 2),
+            'M_max_X': round(envelopes['M_max']['concomitant_X'], 2),
+            'M_max_Y': round(envelopes['M_max']['concomitant_Y'], 2),
+            'M_max_H': round(envelopes['M_max']['concomitant_H'], 2),
+            'M_max_breakdown': envelopes['M_max']['base_breakdown'],
 
             'X_max': round(x_abs_max, 2),
             'X_max_real': round(envelopes['X_max'].get('real_value', x_abs_max), 2),
             'X_max_comb': envelopes['X_max']['combination'],
             'X_max_formula': envelopes['X_max']['formula'],
             'X_max_V': round(envelopes['X_max']['concomitant_V'], 2),
+            'X_max_M': round(envelopes['X_max']['concomitant_M'], 2),
             'X_max_Y': round(envelopes['X_max']['concomitant_Y'], 2),
             'X_max_H': round(envelopes['X_max']['concomitant_H'], 2),
             'X_max_breakdown': envelopes['X_max']['base_breakdown'],
@@ -1476,6 +1741,7 @@ def calculate_combined_footing_envelopes(
             'Y_max_comb': envelopes['Y_max']['combination'],
             'Y_max_formula': envelopes['Y_max']['formula'],
             'Y_max_V': round(envelopes['Y_max']['concomitant_V'], 2),
+            'Y_max_M': round(envelopes['Y_max']['concomitant_M'], 2),
             'Y_max_X': round(envelopes['Y_max']['concomitant_X'], 2),
             'Y_max_H': round(envelopes['Y_max']['concomitant_H'], 2),
             'Y_max_breakdown': envelopes['Y_max']['base_breakdown'],
@@ -1484,6 +1750,7 @@ def calculate_combined_footing_envelopes(
             'H_max_comb': envelopes['H_max']['combination'],
             'H_max_formula': envelopes['H_max']['formula'],
             'H_max_V': round(envelopes['H_max']['concomitant_V'], 2),
+            'H_max_M': round(envelopes['H_max']['concomitant_M'], 2),
             'H_max_X': round(envelopes['H_max']['concomitant_X'], 2),
             'H_max_Y': round(envelopes['H_max']['concomitant_Y'], 2),
             'H_max_breakdown': envelopes['H_max']['base_breakdown']
@@ -1498,9 +1765,161 @@ def calculate_combined_footing_envelopes(
             'V_max_footing': global_v_max_footing or '--',
             'V_min': round(global_v_min, 2) if global_v_min != float('inf') else 0.0,
             'V_min_footing': global_v_min_footing or '--',
+            'M_max': round(global_m_max, 2) if global_m_max != -float('inf') else 0.0,
+            'M_max_footing': global_m_max_footing or '--',
             'H_max': round(global_h_max, 2) if global_h_max != -float('inf') else 0.0,
             'H_max_footing': global_h_max_footing or '--'
         }
+    }
+
+
+def cluster_bases_by_similarity(summary_items: List[Dict[str, Any]], tolerance: float = 0.20) -> Dict[str, Any]:
+    """
+    Agrupa bases ou sapatas por similaridade de esforços para tipificação e dimensionamento.
+    Separa bases com tração/arrancamento relevante (V_min < -0.5 kN) de bases predominantemente comprimidas.
+    Garante que a base líder / envoltória governante do grupo envolva 100% de todas as bases daquela família.
+    """
+    if not summary_items:
+        return {'groups': [], 'total_groups': 0, 'tolerance': tolerance, 'bases_grouped': 0}
+
+    tension_bases = [b for b in summary_items if float(b.get('V_min', 0.0)) < -0.5]
+    comp_bases = [b for b in summary_items if float(b.get('V_min', 0.0)) >= -0.5]
+
+    groups = []
+    grp_counter = 1
+
+    def _cluster_list(items: List[Dict[str, Any]], is_tension: bool = False):
+        nonlocal grp_counter
+        if is_tension:
+            sorted_items = sorted(items, key=lambda x: (abs(float(x.get('V_min', 0.0))), float(x.get('V_max', 0.0)), float(x.get('H_max', 0.0))), reverse=True)
+        else:
+            sorted_items = sorted(items, key=lambda x: (float(x.get('V_max', 0.0)), float(x.get('H_max', 0.0)), float(x.get('M_max', 0.0))), reverse=True)
+
+        unassigned = list(sorted_items)
+        while unassigned:
+            leader = unassigned.pop(0)
+            group_members = [leader]
+
+            v_lead = float(leader.get('V_max', 0.0))
+            vmin_lead = float(leader.get('V_min', 0.0))
+            h_lead = float(leader.get('H_max', 0.0))
+
+            remaining = []
+            for b in unassigned:
+                bv = float(b.get('V_max', 0.0))
+                bvmin = float(b.get('V_min', 0.0))
+                bh = float(b.get('H_max', 0.0))
+
+                diff_v = (v_lead - bv) / max(v_lead, 10.0)
+                diff_h = (h_lead - bh) / max(h_lead, 5.0)
+
+                if is_tension:
+                    diff_t = (abs(vmin_lead) - abs(bvmin)) / max(abs(vmin_lead), 5.0)
+                    can_join = (0 <= diff_t <= tolerance) and (diff_v >= -0.05 and diff_v <= tolerance * 1.5) and (diff_h >= -0.05 and diff_h <= tolerance * 1.5)
+                else:
+                    can_join = (0 <= diff_v <= tolerance) and (diff_h >= -0.08 and diff_h <= tolerance * 1.5)
+
+                if can_join:
+                    group_members.append(b)
+                else:
+                    remaining.append(b)
+
+            unassigned = remaining
+
+            v_max_gov = max(float(m.get('V_max', 0.0)) for m in group_members)
+            v_min_gov = min(float(m.get('V_min', 0.0)) for m in group_members)
+            h_max_gov = max(float(m.get('H_max', 0.0)) for m in group_members)
+            m_max_gov = max(float(m.get('M_max', 0.0)) for m in group_members)
+
+            lead_v_base = next(m for m in group_members if float(m.get('V_max', 0.0)) == v_max_gov)
+            lead_vmin_base = next(m for m in group_members if float(m.get('V_min', 0.0)) == v_min_gov)
+            lead_h_base = next(m for m in group_members if float(m.get('H_max', 0.0)) == h_max_gov)
+            lead_m_base = next((m for m in group_members if float(m.get('M_max', 0.0)) == m_max_gov), lead_v_base)
+
+            prefix = "TIPO T" if is_tension else "TIPO S"
+            group_name = f"{prefix}{grp_counter:02d}"
+            category_label = 'Tração / Arrancamento' if is_tension else 'Compressão Dominante'
+            desc = f"{category_label} (V_máx até {v_max_gov:.1f} kN, H até {h_max_gov:.1f} kN)"
+
+            members_detail = []
+            for m in group_members:
+                mv = float(m.get('V_max', 0.0))
+                mh = float(m.get('H_max', 0.0))
+                rv = round(mv / max(v_max_gov, 1e-4) * 100, 1)
+                rh = round(mh / max(h_max_gov, 1e-4) * 100, 1)
+                members_detail.append({
+                    'base': m['base'],
+                    'V_max': mv,
+                    'V_min': float(m.get('V_min', 0.0)),
+                    'H_max': mh,
+                    'M_max': float(m.get('M_max', 0.0)),
+                    'ratio_v': rv,
+                    'ratio_h': rh,
+                    'ratio_V': rv,
+                    'ratio_H': rh,
+                    'max_ratio': max(rv, rh),
+                    'is_leader': (m['base'] == leader['base']),
+                    'is_governing': (m['base'] == leader['base'])
+                })
+
+            gov_loads = {
+                'V_max': round(v_max_gov, 2),
+                'V_max_base': lead_v_base['base'],
+                'V_max_comb': lead_v_base.get('V_max_comb', '--'),
+                'V_max_formula': lead_v_base.get('V_max_formula', '--'),
+                'comb_V_max': lead_v_base.get('V_max_formula') or lead_v_base.get('V_max_comb', '--'),
+                'V_min': round(v_min_gov, 2),
+                'V_min_base': lead_vmin_base['base'],
+                'V_min_comb': lead_vmin_base.get('V_min_comb', '--'),
+                'V_min_formula': lead_vmin_base.get('V_min_formula', '--'),
+                'comb_V_min': lead_vmin_base.get('V_min_formula') or lead_vmin_base.get('V_min_comb', '--'),
+                'H_max': round(h_max_gov, 2),
+                'H_max_base': lead_h_base['base'],
+                'H_max_comb': lead_h_base.get('H_max_comb', '--'),
+                'H_max_formula': lead_h_base.get('H_max_formula', '--'),
+                'comb_H_max': lead_h_base.get('H_max_formula') or lead_h_base.get('H_max_comb', '--'),
+                'M_max': round(m_max_gov, 2),
+                'M_max_base': lead_m_base['base'],
+                'M_max_comb': lead_m_base.get('M_max_comb', '--'),
+                'M_max_formula': lead_m_base.get('M_max_formula', '--'),
+                'comb_M_max': lead_m_base.get('M_max_formula') or lead_m_base.get('M_max_comb', '--')
+            }
+
+            groups.append({
+                'id': f"sim_grp_{grp_counter}",
+                'name': group_name,
+                'family_id': group_name,
+                'mode': 'TRAÇÃO' if is_tension else 'COMPRESSÃO',
+                'category': category_label,
+                'description': desc,
+                'count': len(group_members),
+                'bases_count': len(group_members),
+                'member_bases': [m['base'] for m in group_members],
+                'bases': [m['base'] for m in group_members],
+                'leader_base': leader['base'],
+                'governing_base': leader['base'],
+                'governing_envelope': gov_loads,
+                'governing_loads': gov_loads,
+                'members_detail': members_detail,
+                'members': members_detail
+            })
+            grp_counter += 1
+
+    _cluster_list(tension_bases, is_tension=True)
+    _cluster_list(comp_bases, is_tension=False)
+
+    tension_count = sum(1 for g in groups if g.get('mode') == 'TRAÇÃO')
+    comp_count = sum(1 for g in groups if g.get('mode') == 'COMPRESSÃO')
+
+    return {
+        'groups': groups,
+        'families': groups,
+        'total_groups': len(groups),
+        'total_families': len(groups),
+        'tension_families': tension_count,
+        'compression_families': comp_count,
+        'tolerance': tolerance,
+        'bases_grouped': len(summary_items)
     }
 
 
@@ -1527,13 +1946,15 @@ def _extract_actions_summary(
                 if c_name not in act_rules:
                     act_rules[c_name] = {
                         'group': (cl.get('group') or '').strip(),
+                        'excludes': (cl.get('excludes') or '').strip(),
                         'requires': (cl.get('requires') or '').strip(),
                         'type': (cl.get('type') or '').strip(),
                         'is_variable': cl.get('is_variable'),
-                        'can_zero': cl.get('can_zero')
+                        'can_zero': cl.get('can_zero'),
+                        'gamma': cl.get('gamma')
                     }
                 else:
-                    for f in ['group', 'requires', 'type', 'is_variable', 'can_zero']:
+                    for f in ['group', 'excludes', 'requires', 'type', 'is_variable', 'can_zero', 'gamma']:
                         if cl.get(f) is not None:
                             act_rules[c_name][f] = cl[f]
 
@@ -1571,7 +1992,7 @@ def _extract_actions_summary(
             else:
                 can_zero = False
 
-        # Coeficientes normativos
+        # Coeficientes normativos (ou customizados pelo usuário)
         gamma_unfav = 1.35 if not is_var else 1.40
         gamma_fav = 1.00 if not is_var else 0.00
         psi0 = 0.70
@@ -1597,9 +2018,32 @@ def _extract_actions_summary(
                 psi1 = base_meta['nbr'].get('psi1', 0.50)
                 psi2 = base_meta['nbr'].get('psi2', 0.30)
 
+        # Sobrescrita por gama customizado informado
+        if rule.get('gamma') is not None or rule.get('gamma_q') is not None or rule.get('gamma_g') is not None:
+            try:
+                gamma_unfav = float(rule.get('gamma') or rule.get('gamma_q') or rule.get('gamma_g'))
+            except (ValueError, TypeError):
+                pass
+        if rule.get('psi0') is not None:
+            try:
+                psi0 = float(rule['psi0'])
+            except (ValueError, TypeError):
+                pass
+        if rule.get('psi1') is not None:
+            try:
+                psi1 = float(rule['psi1'])
+            except (ValueError, TypeError):
+                pass
+        if rule.get('psi2') is not None:
+            try:
+                psi2 = float(rule['psi2'])
+            except (ValueError, TypeError):
+                pass
+
         # Estatísticas nominais
         v_min_val, v_min_b = float('inf'), None
         v_max_val, v_max_b = -float('inf'), None
+        m_max_abs, m_max_b = 0.0, None
         x_max_abs, x_max_b = 0.0, None
         y_max_abs, y_max_b = 0.0, None
         h_max_val, h_max_b = 0.0, None
@@ -1609,11 +2053,12 @@ def _extract_actions_summary(
             b_load = bases_dict.get(b_name, {}).get(act)
             if b_load:
                 v_k = float(b_load.get('V', 0.0))
+                m_k = float(b_load.get('M', 0.0))
                 x_k = float(b_load.get('X', 0.0))
                 y_k = float(b_load.get('Y', 0.0))
                 h_k = math.hypot(x_k, y_k)
 
-                if abs(v_k) > 1e-4 or abs(x_k) > 1e-4 or abs(y_k) > 1e-4:
+                if abs(v_k) > 1e-4 or abs(m_k) > 1e-4 or abs(x_k) > 1e-4 or abs(y_k) > 1e-4:
                     occurrences += 1
                     if v_k < v_min_val:
                         v_min_val = v_k
@@ -1621,6 +2066,9 @@ def _extract_actions_summary(
                     if v_k > v_max_val:
                         v_max_val = v_k
                         v_max_b = b_name
+                    if abs(m_k) > m_max_abs:
+                        m_max_abs = abs(m_k)
+                        m_max_b = b_name
                     if abs(x_k) > x_max_abs:
                         x_max_abs = abs(x_k)
                         x_max_b = b_name
@@ -1637,6 +2085,7 @@ def _extract_actions_summary(
             'description': desc,
             'category': 'Variável (Q)' if is_var else 'Permanente (G)',
             'group': (rule.get('group') or '').strip() or 'Independente',
+            'excludes': (rule.get('excludes') or '').strip() or 'Nenhuma',
             'requires': (rule.get('requires') or '').strip() or 'Nenhum',
             'can_zero': bool(can_zero),
             'gamma_unfav': float(gamma_unfav),
@@ -1649,6 +2098,8 @@ def _extract_actions_summary(
             'V_min_base': v_min_b or '--',
             'V_max': round(v_max_val, 2) if v_max_val != -float('inf') else 0.0,
             'V_max_base': v_max_b or '--',
+            'M_max_abs': round(m_max_abs, 2),
+            'M_max_base': m_max_b or '--',
             'X_max_abs': round(x_max_abs, 2),
             'X_max_base': x_max_b or '--',
             'Y_max_abs': round(y_max_abs, 2),
@@ -1683,6 +2134,8 @@ def batch_calculate_sheet_bases(
     global_v_min_base = None
     global_h_max = -float('inf')
     global_h_max_base = None
+    global_m_max = -float('inf')
+    global_m_max_base = None
 
     for bname in bases_to_process:
         if bname not in bases_dict:
@@ -1697,6 +2150,7 @@ def batch_calculate_sheet_bases(
         hm = env['H_max']['value']
         xm = env['X_max']['value']
         ym = env['Y_max']['value']
+        mm = env.get('M_max', {}).get('value', env.get('peaks', {}).get('M_max', 0.0))
 
         if vm > global_v_max:
             global_v_max = vm
@@ -1707,11 +2161,15 @@ def batch_calculate_sheet_bases(
         if hm > global_h_max:
             global_h_max = hm
             global_h_max_base = bname
+        if mm > global_m_max:
+            global_m_max = mm
+            global_m_max_base = bname
 
         summary_table.append({
             'base': bname,
-            # 1. Picos Globais (Vmax, Xmax, Ymax, Hmax)
+            # 1. Picos Globais (Vmax, Mmax, Xmax, Ymax, Hmax)
             'peak_V': round(vm, 2),
+            'peak_M': round(mm, 2),
             'peak_X': round(xm, 2),
             'peak_Y': round(ym, 2),
             'peak_H': round(hm, 2),
@@ -1720,6 +2178,7 @@ def batch_calculate_sheet_bases(
             'V_max': round(vm, 2),
             'V_max_comb': env['V_max']['combination'],
             'V_max_formula': env['V_max']['formula'],
+            'V_max_M': round(env['V_max'].get('concomitant_M', 0.0), 2),
             'V_max_X': round(env['V_max']['concomitant_X'], 2),
             'V_max_Y': round(env['V_max']['concomitant_Y'], 2),
             'V_max_H': round(env['V_max']['concomitant_H'], 2),
@@ -1728,9 +2187,20 @@ def batch_calculate_sheet_bases(
             'V_min': round(vmin, 2),
             'V_min_comb': env['V_min']['combination'],
             'V_min_formula': env['V_min']['formula'],
+            'V_min_M': round(env['V_min'].get('concomitant_M', 0.0), 2),
             'V_min_X': round(env['V_min']['concomitant_X'], 2),
             'V_min_Y': round(env['V_min']['concomitant_Y'], 2),
             'V_min_H': round(env['V_min']['concomitant_H'], 2),
+
+            # 3.5 M max e concomitantes
+            'M_max': round(mm, 2),
+            'M_max_real': round(env.get('M_max', {}).get('real_value', mm), 2),
+            'M_max_comb': env.get('M_max', {}).get('combination', '--'),
+            'M_max_formula': env.get('M_max', {}).get('formula', '--'),
+            'M_max_V': round(env.get('M_max', {}).get('concomitant_V', 0.0), 2),
+            'M_max_X': round(env.get('M_max', {}).get('concomitant_X', 0.0), 2),
+            'M_max_Y': round(env.get('M_max', {}).get('concomitant_Y', 0.0), 2),
+            'M_max_H': round(env.get('M_max', {}).get('concomitant_H', 0.0), 2),
 
             # 4. X max e concomitantes
             'X_max': round(xm, 2),
@@ -1738,6 +2208,7 @@ def batch_calculate_sheet_bases(
             'X_max_comb': env['X_max']['combination'],
             'X_max_formula': env['X_max']['formula'],
             'X_max_V': round(env['X_max']['concomitant_V'], 2),
+            'X_max_M': round(env['X_max'].get('concomitant_M', 0.0), 2),
             'X_max_Y': round(env['X_max']['concomitant_Y'], 2),
             'X_max_H': round(env['X_max']['concomitant_H'], 2),
 
@@ -1747,6 +2218,7 @@ def batch_calculate_sheet_bases(
             'Y_max_comb': env['Y_max']['combination'],
             'Y_max_formula': env['Y_max']['formula'],
             'Y_max_V': round(env['Y_max']['concomitant_V'], 2),
+            'Y_max_M': round(env['Y_max'].get('concomitant_M', 0.0), 2),
             'Y_max_X': round(env['Y_max']['concomitant_X'], 2),
             'Y_max_H': round(env['Y_max']['concomitant_H'], 2),
 
@@ -1755,6 +2227,7 @@ def batch_calculate_sheet_bases(
             'H_max_comb': env['H_max']['combination'],
             'H_max_formula': env['H_max']['formula'],
             'H_max_V': round(env['H_max']['concomitant_V'], 2),
+            'H_max_M': round(env['H_max'].get('concomitant_M', 0.0), 2),
             'H_max_X': round(env['H_max']['concomitant_X'], 2),
             'H_max_Y': round(env['H_max']['concomitant_Y'], 2)
         })
@@ -1764,6 +2237,9 @@ def batch_calculate_sheet_bases(
     opts = options or {}
     base_groups = opts.get('base_groups')
     combined_footings = calculate_combined_footing_envelopes(processed_bases, base_groups)
+
+    sim_tol = float(opts.get('similarity_tolerance', 0.20))
+    similarity_clustering = cluster_bases_by_similarity(summary_table, tolerance=sim_tol)
 
     return {
         'sheet_name': sheet_data.get('sheet_name', ''),
@@ -1775,12 +2251,15 @@ def batch_calculate_sheet_bases(
             'V_max_base': global_v_max_base or '--',
             'V_min': round(global_v_min, 2) if global_v_min != float('inf') else 0.0,
             'V_min_base': global_v_min_base or '--',
+            'M_max': round(global_m_max, 2) if global_m_max != -float('inf') else 0.0,
+            'M_max_base': global_m_max_base or '--',
             'H_max': round(global_h_max, 2) if global_h_max != -float('inf') else 0.0,
             'H_max_base': global_h_max_base or '--'
         },
         'summary_table': summary_table,
         'bases_details': processed_bases,
         'combined_footings': combined_footings,
+        'similarity_clustering': similarity_clustering,
         'actions_summary': actions_summary,
         'bases_nominal_loads': bases_nominal,
         'options': options or {}
@@ -1815,11 +2294,30 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
     mono_bold = Font(name="Consolas", size=9, bold=True)
     amber_font = Font(name="Arial", size=9, bold=True, color="92400E")
 
+    # Bordas nítidas para garantir máxima legibilidade em qualquer monitor
     thin_border = Border(
-        left=Side(style='thin', color='CBD5E1'),
-        right=Side(style='thin', color='CBD5E1'),
-        top=Side(style='thin', color='CBD5E1'),
-        bottom=Side(style='thin', color='CBD5E1')
+        left=Side(style='thin', color='94A3B8'),
+        right=Side(style='thin', color='94A3B8'),
+        top=Side(style='thin', color='94A3B8'),
+        bottom=Side(style='thin', color='94A3B8')
+    )
+    group_right_border = Border(
+        left=Side(style='thin', color='94A3B8'),
+        right=Side(style='medium', color='334155'),
+        top=Side(style='thin', color='94A3B8'),
+        bottom=Side(style='thin', color='94A3B8')
+    )
+    header_border = Border(
+        left=Side(style='thin', color='475569'),
+        right=Side(style='thin', color='475569'),
+        top=Side(style='medium', color='0F172A'),
+        bottom=Side(style='medium', color='0F172A')
+    )
+    header_group_right_border = Border(
+        left=Side(style='thin', color='475569'),
+        right=Side(style='medium', color='E2E8F0'),
+        top=Side(style='medium', color='0F172A'),
+        bottom=Side(style='medium', color='0F172A')
     )
 
     sheet_name = results_data.get('sheet_name', '')
@@ -1885,14 +2383,15 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
 
     headers_tab1 = [
         "#", "Ação (Sigla)", "Denominação da Carga", "Natureza", "Grupo Exclusivo (XOR)",
-        "Requisito Físico (AND)", "Pode Zerar (Alívio Crítico)", "γ_f Desf.", "γ_f Fav.",
+        "Requisito Físico (AND)", "Pode Zerar (Alívio Crítico)", "Exclusões (NOT)", "γ_f Desf.", "γ_f Fav.",
         "ψ₀ (Combinação)", "ψ₁ (Frequente)", "ψ₂ (Quase-Perm.)", "Bases Ativas"
     ]
     for col_idx, h in enumerate(headers_tab1, start=1):
         cell = ws_cargas.cell(row_cargas, col_idx, h)
         cell.fill = header_fill
         cell.font = header_font
-        cell.alignment = Alignment(horizontal="center" if col_idx in [1, 2, 4, 5, 6, 7, 13] else ("left" if col_idx == 3 else "right"), vertical="center", wrap_text=True)
+        cell.border = header_border
+        cell.alignment = Alignment(horizontal="center" if col_idx in [1, 2, 4, 5, 6, 7, 8, 14] else ("left" if col_idx == 3 else "right"), vertical="center", wrap_text=True)
 
     row_cargas += 1
     for idx, act in enumerate(actions_summary, start=1):
@@ -1928,15 +2427,19 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
         else:
             cell_zero.font = data_font
 
+        ws_cargas.cell(row_cargas, 8, act.get('excludes', 'Nenhuma')).alignment = Alignment(horizontal="center")
+        ws_cargas.cell(row_cargas, 8).font = data_font
+        ws_cargas.cell(row_cargas, 8).border = thin_border
+
         # Coeficientes
-        for c_idx, val in enumerate([act['gamma_unfav'], act['gamma_fav'], act['psi0'], act['psi1'], act['psi2']], start=8):
+        for c_idx, val in enumerate([act['gamma_unfav'], act['gamma_fav'], act['psi0'], act['psi1'], act['psi2']], start=9):
             cell = ws_cargas.cell(row_cargas, c_idx, val)
             cell.font = mono_font
             cell.number_format = '0.00'
             cell.alignment = Alignment(horizontal="right")
             cell.border = thin_border
 
-        cell_occ = ws_cargas.cell(row_cargas, 13, f"{act['occurrences']} / {total_bases}")
+        cell_occ = ws_cargas.cell(row_cargas, 14, f"{act['occurrences']} / {total_bases}")
         cell_occ.alignment = Alignment(horizontal="center")
         cell_occ.font = mono_font
         cell_occ.border = thin_border
@@ -1957,6 +2460,7 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
         cell = ws_cargas.cell(row_cargas, col_idx, h)
         cell.fill = section_fill
         cell.font = header_font
+        cell.border = header_border
         cell.alignment = Alignment(horizontal="center" if col_idx in [1, 4, 6, 8, 10, 12] else ("left" if col_idx == 2 else "right"), vertical="center", wrap_text=True)
 
     row_cargas += 1
@@ -2033,17 +2537,18 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
     # --- Tabela 3: Matriz de Cargas Nominais por Base ---
     if bases_nominal:
         row_cargas += 2
-        ws_cargas.cell(row_cargas, 1, "3. MATRIZ DE CARGAS CARACTERÍSTICAS NOMINAIS (V_k, X_k, Y_k) POR BASE").font = Font(name="Arial", size=10, bold=True, color="0F172A")
+        ws_cargas.cell(row_cargas, 1, "3. MATRIZ DE CARGAS CARACTERÍSTICAS NOMINAIS (V_k, M_k, X_k, Y_k) POR BASE").font = Font(name="Arial", size=10, bold=True, color="0F172A")
         row_cargas += 1
 
         headers_tab3 = ["Base"]
         for act in actions_summary:
-            headers_tab3.extend([f"{act['name']} V_k (kN)", f"{act['name']} X_k (kN)", f"{act['name']} Y_k (kN)"])
+            headers_tab3.extend([f"{act['name']} V_k (kN)", f"{act['name']} M_k (kNm)", f"{act['name']} X_k (kN)", f"{act['name']} Y_k (kN)"])
 
         for col_idx, h in enumerate(headers_tab3, start=1):
             cell = ws_cargas.cell(row_cargas, col_idx, h)
             cell.fill = header_fill
             cell.font = header_font
+            cell.border = header_border
             cell.alignment = Alignment(horizontal="center" if col_idx == 1 else "right", vertical="center", wrap_text=True)
 
         row_cargas += 1
@@ -2056,10 +2561,11 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
             for act in actions_summary:
                 b_action_load = bases_nominal[b_name].get(act['name'], {})
                 vk = float(b_action_load.get('V', 0.0))
+                mk = float(b_action_load.get('M', 0.0))
                 xk = float(b_action_load.get('X', 0.0))
                 yk = float(b_action_load.get('Y', 0.0))
 
-                for val in [vk, xk, yk]:
+                for val in [vk, mk, xk, yk]:
                     cell = ws_cargas.cell(row_cargas, c_off, val)
                     cell.font = mono_font
                     cell.number_format = '0.00'
@@ -2098,67 +2604,103 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
     ws_sum.views.sheetView[0].showGridLines = True
 
     ws_sum.cell(1, 1, f"RELATÓRIO DE ENVOLTÓRIAS DE CARGAS NAS BASES - {sheet_name}").font = Font(name="Arial", size=12, bold=True, color="0F172A")
-    ws_sum.cell(2, 1, f"Norma: {standard} • Método: {method} • Unidades: Força em kN").font = Font(name="Arial", size=9, italic=True, color="64748B")
+    ws_sum.cell(2, 1, f"Norma: {standard} • Método: {method} • Unidades: Força em kN, Momento em kNm").font = Font(name="Arial", size=9, italic=True, color="64748B")
 
     headers_sum = [
         "Base",
-        # 1. Picos Globais
-        "1. V Máx Pico (kN)", "1. |X| Máx Pico (kN)", "1. |Y| Máx Pico (kN)", "1. H Máx Pico (kN)",
-        # 2. V max e concomitantes
-        "2. V Máx (kN)", "2. X Concom. (kN)", "2. Y Concom. (kN)", "2. H Concom. (kN)", "2. Comb. Crítica V_máx",
-        # 3. V min e concomitantes
-        "3. V Mín (kN)", "3. X Concom. (kN)", "3. Y Concom. (kN)", "3. H Concom. (kN)", "3. Comb. Crítica V_mín",
-        # 4. X max e concomitantes
-        "4. |X| Máx (kN)", "4. V Concom. (kN)", "4. Y Concom. (kN)", "4. H Concom. (kN)", "4. Comb. Crítica X_máx",
-        # 5. Y max e concomitantes
-        "5. |Y| Máx (kN)", "5. V Concom. (kN)", "5. X Concom. (kN)", "5. H Concom. (kN)", "5. Comb. Crítica Y_máx",
-        # 6. H max e concomitantes
-        "6. H Máx (kN)", "6. V Concom. (kN)", "6. X Concom. (kN)", "6. Y Concom. (kN)", "6. Comb. Crítica H_máx"
+        # 1. Picos Globais (cols 2-6)
+        "1. V Máx Pico (kN)", "1. |M| Máx Pico (kNm)", "1. |X| Máx Pico (kN)", "1. |Y| Máx Pico (kN)", "1. H Máx Pico (kN)",
+        # 2. V max e concomitantes (cols 7-12)
+        "2. V Máx (kN)", "2. M Concom. (kNm)", "2. X Concom. (kN)", "2. Y Concom. (kN)", "2. H Concom. (kN)", "2. Comb. Crítica V_máx",
+        # 3. V min e concomitantes (cols 13-18)
+        "3. V Mín (kN)", "3. M Concom. (kNm)", "3. X Concom. (kN)", "3. Y Concom. (kN)", "3. H Concom. (kN)", "3. Comb. Crítica V_mín",
+        # 4. X max e concomitantes (cols 19-24)
+        "4. |X| Máx (kN)", "4. V Concom. (kN)", "4. M Concom. (kNm)", "4. Y Concom. (kN)", "4. H Concom. (kN)", "4. Comb. Crítica X_máx",
+        # 5. Y max e concomitantes (cols 25-30)
+        "5. |Y| Máx (kN)", "5. V Concom. (kN)", "5. M Concom. (kNm)", "5. X Concom. (kN)", "5. H Concom. (kN)", "5. Comb. Crítica Y_máx",
+        # 6. H max e concomitantes (cols 31-36)
+        "6. H Máx (kN)", "6. V Concom. (kN)", "6. M Concom. (kNm)", "6. X Concom. (kN)", "6. Y Concom. (kN)", "6. Comb. Crítica H_máx"
     ]
 
     for col_idx, h in enumerate(headers_sum, start=1):
         cell = ws_sum.cell(4, col_idx, h)
         cell.fill = header_fill
         cell.font = header_font
+        is_group_end = col_idx in [1, 6, 12, 18, 24, 30, 36]
+        cell.border = header_group_right_border if is_group_end else header_border
         cell.alignment = Alignment(horizontal="center" if col_idx == 1 else "right", vertical="center", wrap_text=True)
 
     row_curr = 5
     for item in results_data.get('summary_table', []):
         ws_sum.cell(row_curr, 1, item['base']).font = bold_font
         ws_sum.cell(row_curr, 1).alignment = Alignment(horizontal="center")
-        ws_sum.cell(row_curr, 1).border = thin_border
+        ws_sum.cell(row_curr, 1).border = group_right_border
 
         vals = [
-            # 1. Picos Globais
-            item.get('peak_V', item['V_max']), item.get('peak_X', item['X_max']), item.get('peak_Y', item['Y_max']), item.get('peak_H', item['H_max']),
-            # 2. V max e concomitantes
-            item['V_max'], item['V_max_X'], item['V_max_Y'], item.get('V_max_H', 0.0), item['V_max_comb'],
-            # 3. V min e concomitantes
-            item['V_min'], item['V_min_X'], item['V_min_Y'], item.get('V_min_H', 0.0), item['V_min_comb'],
-            # 4. X max e concomitantes
-            item['X_max'], item.get('X_max_V', 0.0), item.get('X_max_Y', 0.0), item.get('X_max_H', 0.0), item.get('X_max_comb', '--'),
-            # 5. Y max e concomitantes
-            item['Y_max'], item.get('Y_max_V', 0.0), item.get('Y_max_X', 0.0), item.get('Y_max_H', 0.0), item.get('Y_max_comb', '--'),
-            # 6. H max e concomitantes
-            item['H_max'], item.get('H_max_V', 0.0), item.get('H_max_X', 0.0), item.get('H_max_Y', 0.0), item['H_max_comb']
+            # 1. Picos Globais (cols 2-6)
+            item.get('peak_V', item['V_max']),
+            item.get('peak_M', item.get('M_max', 0.0)),
+            item.get('peak_X', item['X_max']),
+            item.get('peak_Y', item['Y_max']),
+            item.get('peak_H', item['H_max']),
+            # 2. V max e concomitantes (cols 7-12)
+            item['V_max'],
+            item.get('V_max_M', 0.0),
+            item['V_max_X'],
+            item['V_max_Y'],
+            item.get('V_max_H', 0.0),
+            item.get('V_max_formula') or item.get('V_max_comb', '--'),
+            # 3. V min e concomitantes (cols 13-18)
+            item['V_min'],
+            item.get('V_min_M', 0.0),
+            item['V_min_X'],
+            item['V_min_Y'],
+            item.get('V_min_H', 0.0),
+            item.get('V_min_formula') or item.get('V_min_comb', '--'),
+            # 4. X max e concomitantes (cols 19-24)
+            item['X_max'],
+            item.get('X_max_V', 0.0),
+            item.get('X_max_M', 0.0),
+            item.get('X_max_Y', 0.0),
+            item.get('X_max_H', 0.0),
+            item.get('X_max_formula') or item.get('X_max_comb', '--'),
+            # 5. Y max e concomitantes (cols 25-30)
+            item['Y_max'],
+            item.get('Y_max_V', 0.0),
+            item.get('Y_max_M', 0.0),
+            item.get('Y_max_X', 0.0),
+            item.get('Y_max_H', 0.0),
+            item.get('Y_max_formula') or item.get('Y_max_comb', '--'),
+            # 6. H max e concomitantes (cols 31-36)
+            item['H_max'],
+            item.get('H_max_V', 0.0),
+            item.get('H_max_M', 0.0),
+            item.get('H_max_X', 0.0),
+            item.get('H_max_Y', 0.0),
+            item.get('H_max_formula') or item.get('H_max_comb', '--')
         ]
 
         for c_offset, v in enumerate(vals, start=2):
             cell = ws_sum.cell(row_curr, c_offset, v)
-            cell.border = thin_border
+            is_group_end = c_offset in [6, 12, 18, 24, 30, 36]
+            cell.border = group_right_border if is_group_end else thin_border
             if isinstance(v, (int, float)):
                 cell.font = mono_font
                 cell.number_format = '0.00'
                 cell.alignment = Alignment(horizontal="right")
             else:
-                cell.font = data_font
+                cell.font = mono_font if c_offset in [12, 18, 24, 30, 36] else data_font
                 cell.alignment = Alignment(horizontal="left")
         row_curr += 1
 
     for col in ws_sum.columns:
         max_len = max(len(str(cell.value or '')) for cell in col)
         col_letter = get_column_letter(col[0].column)
-        ws_sum.column_dimensions[col_letter].width = max(11, min(max_len + 3, 35))
+        col_num = col[0].column
+        if col_num in [12, 18, 24, 30, 36]:
+            ws_sum.column_dimensions[col_letter].width = max(38, min(max_len + 3, 75))
+        else:
+            ws_sum.column_dimensions[col_letter].width = max(11, min(max_len + 3, 30))
 
     # =========================================================================
     # 2.5 Aba 'Sapatas_Conjuntas' (Envoltórias e Decomposição de Bases Agrupadas)
@@ -2172,28 +2714,30 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
         ws_comb.cell(1, 1, "ENVOLTÓRIAS CRÍTICAS DE SAPATAS CONJUNTAS (BASES AGRUPADAS NA MESMA FUNDAÇÃO)").font = Font(name="Arial", size=12, bold=True, color="0F172A")
         ws_comb.cell(2, 1, f"Estrutura / Aba: {sheet_name} • Norma: {standard} • Método: {method} • Soma algébrica dos esforços (V, X, Y) em cada combinação simultânea").font = Font(name="Arial", size=9, italic=True, color="475569")
 
-        ws_comb.cell(4, 1, "1. ENVOLTÓRIAS DE PROJETO DAS SAPATAS CONJUNTAS (kN)").font = Font(name="Arial", size=10, bold=True, color="0F172A")
+        ws_comb.cell(4, 1, "1. ENVOLTÓRIAS DE PROJETO DAS SAPATAS CONJUNTAS (kN, kNm)").font = Font(name="Arial", size=10, bold=True, color="0F172A")
 
         headers_comb = [
             "Sapata (Conjunto)", "Bases Integrantes",
-            # 1. Picos Globais
-            "1. V Máx Pico (kN)", "1. |X| Máx Pico (kN)", "1. |Y| Máx Pico (kN)", "1. H Máx Pico (kN)",
-            # 2. V max e concomitantes
-            "2. V Máx (kN)", "2. X Concom. (kN)", "2. Y Concom. (kN)", "2. H Concom. (kN)", "2. Comb. Crítica V_máx",
-            # 3. V min e concomitantes
-            "3. V Mín (kN)", "3. X Concom. (kN)", "3. Y Concom. (kN)", "3. H Concom. (kN)", "3. Comb. Crítica V_mín",
-            # 4. X max e concomitantes
-            "4. |X| Máx (kN)", "4. V Concom. (kN)", "4. Y Concom. (kN)", "4. H Concom. (kN)", "4. Comb. Crítica X_máx",
-            # 5. Y max e concomitantes
-            "5. |Y| Máx (kN)", "5. V Concom. (kN)", "5. X Concom. (kN)", "5. H Concom. (kN)", "5. Comb. Crítica Y_máx",
-            # 6. H max e concomitantes
-            "6. H Máx (kN)", "6. V Concom. (kN)", "6. X Concom. (kN)", "6. Y Concom. (kN)", "6. Comb. Crítica H_máx"
+            # 1. Picos Globais (cols 3-7)
+            "1. V Máx Pico (kN)", "1. |M| Máx Pico (kNm)", "1. |X| Máx Pico (kN)", "1. |Y| Máx Pico (kN)", "1. H Máx Pico (kN)",
+            # 2. V max e concomitantes (cols 8-13)
+            "2. V Máx (kN)", "2. M Concom. (kNm)", "2. X Concom. (kN)", "2. Y Concom. (kN)", "2. H Concom. (kN)", "2. Comb. Crítica V_máx",
+            # 3. V min e concomitantes (cols 14-19)
+            "3. V Mín (kN)", "3. M Concom. (kNm)", "3. X Concom. (kN)", "3. Y Concom. (kN)", "3. H Concom. (kN)", "3. Comb. Crítica V_mín",
+            # 4. X max e concomitantes (cols 20-25)
+            "4. |X| Máx (kN)", "4. V Concom. (kN)", "4. M Concom. (kNm)", "4. Y Concom. (kN)", "4. H Concom. (kN)", "4. Comb. Crítica X_máx",
+            # 5. Y max e concomitantes (cols 26-31)
+            "5. |Y| Máx (kN)", "5. V Concom. (kN)", "5. M Concom. (kNm)", "5. X Concom. (kN)", "5. H Concom. (kN)", "5. Comb. Crítica Y_máx",
+            # 6. H max e concomitantes (cols 32-37)
+            "6. H Máx (kN)", "6. V Concom. (kN)", "6. M Concom. (kNm)", "6. X Concom. (kN)", "6. Y Concom. (kN)", "6. Comb. Crítica H_máx"
         ]
 
         for col_idx, h in enumerate(headers_comb, start=1):
             cell = ws_comb.cell(5, col_idx, h)
             cell.fill = header_fill
             cell.font = header_font
+            is_group_end = col_idx in [1, 2, 7, 13, 19, 25, 31, 37]
+            cell.border = header_group_right_border if is_group_end else header_border
             cell.alignment = Alignment(horizontal="center" if col_idx <= 2 else "right", vertical="center", wrap_text=True)
 
         row_comb = 6
@@ -2205,55 +2749,86 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
             bases_str = " + ".join(item.get('member_bases', []))
             ws_comb.cell(row_comb, 2, bases_str).font = bold_font
             ws_comb.cell(row_comb, 2).alignment = Alignment(horizontal="center")
-            ws_comb.cell(row_comb, 2).border = thin_border
+            ws_comb.cell(row_comb, 2).border = group_right_border
 
             vals = [
-                item.get('peak_V', item['V_max']), item.get('peak_X', item['X_max']), item.get('peak_Y', item['Y_max']), item.get('peak_H', item['H_max']),
-                item['V_max'], item['V_max_X'], item['V_max_Y'], item.get('V_max_H', 0.0), item['V_max_comb'],
-                item['V_min'], item['V_min_X'], item['V_min_Y'], item.get('V_min_H', 0.0), item['V_min_comb'],
-                item['X_max'], item.get('X_max_V', 0.0), item.get('X_max_Y', 0.0), item.get('X_max_H', 0.0), item.get('X_max_comb', '--'),
-                item['Y_max'], item.get('Y_max_V', 0.0), item.get('Y_max_X', 0.0), item.get('Y_max_H', 0.0), item.get('Y_max_comb', '--'),
-                item['H_max'], item.get('H_max_V', 0.0), item.get('H_max_X', 0.0), item.get('H_max_Y', 0.0), item['H_max_comb']
+                item.get('peak_V', item['V_max']),
+                item.get('peak_M', item.get('M_max', 0.0)),
+                item.get('peak_X', item['X_max']),
+                item.get('peak_Y', item['Y_max']),
+                item.get('peak_H', item['H_max']),
+                item['V_max'],
+                item.get('V_max_M', 0.0),
+                item['V_max_X'],
+                item['V_max_Y'],
+                item.get('V_max_H', 0.0),
+                item.get('V_max_formula') or item.get('V_max_comb', '--'),
+                item['V_min'],
+                item.get('V_min_M', 0.0),
+                item['V_min_X'],
+                item['V_min_Y'],
+                item.get('V_min_H', 0.0),
+                item.get('V_min_formula') or item.get('V_min_comb', '--'),
+                item['X_max'],
+                item.get('X_max_V', 0.0),
+                item.get('X_max_M', 0.0),
+                item.get('X_max_Y', 0.0),
+                item.get('X_max_H', 0.0),
+                item.get('X_max_formula') or item.get('X_max_comb', '--'),
+                item['Y_max'],
+                item.get('Y_max_V', 0.0),
+                item.get('Y_max_M', 0.0),
+                item.get('Y_max_X', 0.0),
+                item.get('Y_max_H', 0.0),
+                item.get('Y_max_formula') or item.get('Y_max_comb', '--'),
+                item['H_max'],
+                item.get('H_max_V', 0.0),
+                item.get('H_max_M', 0.0),
+                item.get('H_max_X', 0.0),
+                item.get('H_max_Y', 0.0),
+                item.get('H_max_formula') or item.get('H_max_comb', '--')
             ]
             for c_offset, v in enumerate(vals, start=3):
                 cell = ws_comb.cell(row_comb, c_offset, v)
-                cell.border = thin_border
+                is_group_end = c_offset in [7, 13, 19, 25, 31, 37]
+                cell.border = group_right_border if is_group_end else thin_border
                 if isinstance(v, (int, float)):
                     cell.font = mono_font
                     cell.number_format = '0.00'
                     cell.alignment = Alignment(horizontal="right")
                 else:
-                    cell.font = data_font
+                    cell.font = mono_font if c_offset in [13, 19, 25, 31, 37] else data_font
                     cell.alignment = Alignment(horizontal="left")
             row_comb += 1
 
         # Tabela 2: Detalhamento por Montante / Base
         row_comb += 2
         ws_comb.cell(row_comb, 1, "2. DETALHAMENTO DAS CONTRIBUIÇÕES INDIVIDUAIS DE CADA BASE NAS COMBINAÇÕES GOVERNANTES").font = Font(name="Arial", size=10, bold=True, color="0F172A")
-        ws_comb.cell(row_comb + 1, 1, "Discriminação da parcela de esforços (V, X, Y) que cada montante transmite à sapata conjunta na combinação crítica de cada envoltória.").font = Font(name="Arial", size=9, italic=True, color="475569")
+        ws_comb.cell(row_comb + 1, 1, "Discriminação da parcela de esforços (V, M, X, Y) que cada montante transmite à sapata conjunta na combinação crítica de cada envoltória.").font = Font(name="Arial", size=9, italic=True, color="475569")
         row_comb += 3
 
         headers_decomp = [
             "Sapata (Conjunto)", "Caso de Envoltória Crítica", "Elemento / Montante",
-            "Combinação Crítica Governante", "Vertical V (kN)", "Horizontal X (kN)", "Horizontal Y (kN)", "Resultante H (kN)"
+            "Combinação Crítica Governante", "Vertical V (kN)", "Momento M (kNm)", "Horizontal X (kN)", "Horizontal Y (kN)", "Resultante H (kN)"
         ]
         for col_idx, h in enumerate(headers_decomp, start=1):
             cell = ws_comb.cell(row_comb, col_idx, h)
             cell.fill = header_fill
             cell.font = header_font
+            cell.border = header_border
             cell.alignment = Alignment(horizontal="center" if col_idx <= 3 else ("left" if col_idx == 4 else "right"), vertical="center")
 
         row_comb += 1
         decomp_cases = [
-            ('V_max', '2. V Máximo (Compressão Total)', 'V_max_comb', 'V_max_breakdown', 'V_max', 'V_max_X', 'V_max_Y', 'V_max_H'),
-            ('V_min', '3. V Mínimo (Alívio/Tração Total)', 'V_min_comb', 'V_min_breakdown', 'V_min', 'V_min_X', 'V_min_Y', 'V_min_H'),
-            ('H_max', '6. H Resultante Máximo', 'H_max_comb', 'H_max_breakdown', 'H_max_V', 'H_max_X', 'H_max_Y', 'H_max')
+            ('V_max', '2. V Máximo (Compressão Total)', 'V_max_comb', 'V_max_breakdown', 'V_max', 'V_max_M', 'V_max_X', 'V_max_Y', 'V_max_H'),
+            ('V_min', '3. V Mínimo (Alívio/Tração Total)', 'V_min_comb', 'V_min_breakdown', 'V_min', 'V_min_M', 'V_min_X', 'V_min_Y', 'V_min_H'),
+            ('H_max', '6. H Resultante Máximo', 'H_max_comb', 'H_max_breakdown', 'H_max_V', 'H_max_M', 'H_max_X', 'H_max_Y', 'H_max')
         ]
 
         for item in combined_summary:
             s_name = item['base']
-            for c_id, c_label, c_comb_key, c_bk_key, v_k, x_k, y_k, h_k in decomp_cases:
-                comb_title = item.get(c_comb_key, '--')
+            for c_id, c_label, c_comb_key, c_bk_key, v_k, m_k, x_k, y_k, h_k in decomp_cases:
+                comb_title = item.get(c_comb_key.replace('_comb', '_formula')) or item.get(c_comb_key, '--')
                 bk_dict = item.get(c_bk_key, {})
 
                 # Linha TOTAL DA SAPATA
@@ -2268,10 +2843,10 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
                 ws_comb.cell(row_comb, 3).border = thin_border
                 ws_comb.cell(row_comb, 3).fill = accent_fill
 
-                ws_comb.cell(row_comb, 4, comb_title).font = data_font
+                ws_comb.cell(row_comb, 4, comb_title).font = mono_font
                 ws_comb.cell(row_comb, 4).border = thin_border
 
-                tot_vals = [item.get(v_k, 0.0), item.get(x_k, 0.0), item.get(y_k, 0.0), item.get(h_k, 0.0)]
+                tot_vals = [item.get(v_k, 0.0), item.get(m_k, 0.0), item.get(x_k, 0.0), item.get(y_k, 0.0), item.get(h_k, 0.0)]
                 for c_off, tv in enumerate(tot_vals, start=5):
                     cell = ws_comb.cell(row_comb, c_off, tv)
                     cell.font = mono_bold
@@ -2297,7 +2872,7 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
                     ws_comb.cell(row_comb, 4, "(mesma combinação acima)").font = data_font
                     ws_comb.cell(row_comb, 4).border = thin_border
 
-                    b_vals = [mb_loads.get('V', 0.0), mb_loads.get('X', 0.0), mb_loads.get('Y', 0.0), mb_loads.get('H_res', 0.0)]
+                    b_vals = [mb_loads.get('V', 0.0), mb_loads.get('M', 0.0), mb_loads.get('X', 0.0), mb_loads.get('Y', 0.0), mb_loads.get('H_res', 0.0)]
                     for c_off, bv in enumerate(b_vals, start=5):
                         cell = ws_comb.cell(row_comb, c_off, bv)
                         cell.font = mono_font
@@ -2309,7 +2884,217 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
         for col in ws_comb.columns:
             max_len = max(len(str(cell.value or '')) for cell in col)
             col_letter = get_column_letter(col[0].column)
-            ws_comb.column_dimensions[col_letter].width = max(11, min(max_len + 3, 38))
+            col_num = col[0].column
+            if col_num in [13, 19, 25, 31, 37]:
+                ws_comb.column_dimensions[col_letter].width = max(38, min(max_len + 3, 75))
+            else:
+                ws_comb.column_dimensions[col_letter].width = max(11, min(max_len + 3, 38))
+
+    # =========================================================================
+    # 2.8 Aba 'Similaridade_Dimensionamento' (Tipificação de Sapatas)
+    # =========================================================================
+    sim_data = results_data.get('similarity_clustering', {})
+    if not sim_data or not sim_data.get('groups'):
+        sim_data = cluster_bases_by_similarity(results_data.get('summary_table', []), tolerance=0.20)
+
+    if sim_data and sim_data.get('groups'):
+        ws_sim = wb.create_sheet(title="Similaridade_Dimensionamento")
+        ws_sim.views.sheetView[0].showGridLines = True
+
+        ws_sim.cell(1, 1, "TIPIFICAÇÃO DE FUNDAÇÕES POR SIMILARIDADE DE CARGAS PARA DIMENSIONAMENTO").font = Font(name="Arial", size=12, bold=True, color="0F172A")
+        ws_sim.cell(2, 1, f"Estrutura / Aba: {sheet_name} • Norma: {standard} • Método: {method} • Total de Bases: {total_bases} • Total de Famílias Típicas: {sim_data['total_groups']} • Tolerância: {int(sim_data['tolerance']*100)}%").font = Font(name="Arial", size=9, italic=True, color="475569")
+        ws_sim.cell(3, 1, "Agrupamento de bases em famílias típicas. Cada grupo adota a envoltória governante (maiores solicitações), permitindo dimensionar 1 sapata típica por família.").font = Font(name="Arial", size=8.5, italic=True, color="64748B")
+
+        # Tabela 1: Resumo das Famílias Típicas
+        row_sim = 5
+        ws_sim.cell(row_sim, 1, "1. SÍNTESE DAS FAMÍLIAS TÍPICAS E ENVOLTÓRIAS GOVERNANTES DE PROJETO").font = Font(name="Arial", size=10, bold=True, color="0F172A")
+        row_sim += 1
+
+        headers_sim_tab1 = [
+            "Tipo / Família", "Regime / Categoria", "Qtd. Bases", "Bases Integrantes",
+            "V_máx Gov. (kN)", "Base Crítica V_máx", "Combinação Crítica V_máx",
+            "V_mín Gov. (kN)", "Base Crítica V_mín", "Combinação Crítica V_mín",
+            "H_máx Gov. (kN)", "Base Crítica H_máx", "Combinação Crítica H_máx",
+            "|M|_máx Gov. (kNm)", "Base Crítica M"
+        ]
+
+        for col_idx, h in enumerate(headers_sim_tab1, start=1):
+            cell = ws_sim.cell(row_sim, col_idx, h)
+            cell.fill = header_fill
+            cell.font = header_font
+            is_end = col_idx in [1, 2, 3, 4, 7, 10, 13, 15]
+            cell.border = header_group_right_border if is_end else header_border
+            cell.alignment = Alignment(horizontal="center" if col_idx in [1, 2, 3, 6, 9, 12, 15] else ("left" if col_idx in [4, 7, 10, 13] else "right"), vertical="center", wrap_text=True)
+
+        row_sim += 1
+        for grp in sim_data['groups']:
+            gov = grp['governing_envelope']
+            ws_sim.cell(row_sim, 1, grp['name']).font = bold_font
+            ws_sim.cell(row_sim, 1).alignment = Alignment(horizontal="center")
+            ws_sim.cell(row_sim, 1).border = group_right_border
+
+            ws_sim.cell(row_sim, 2, grp['category']).font = data_font
+            ws_sim.cell(row_sim, 2).alignment = Alignment(horizontal="center")
+            ws_sim.cell(row_sim, 2).border = group_right_border
+
+            ws_sim.cell(row_sim, 3, grp['count']).font = bold_font
+            ws_sim.cell(row_sim, 3).alignment = Alignment(horizontal="center")
+            ws_sim.cell(row_sim, 3).border = group_right_border
+
+            bases_compact = ", ".join(grp['member_bases'])
+            ws_sim.cell(row_sim, 4, bases_compact).font = data_font
+            ws_sim.cell(row_sim, 4).border = group_right_border
+
+            # V_max
+            c_v = ws_sim.cell(row_sim, 5, gov['V_max'])
+            c_v.font = mono_bold
+            c_v.number_format = '0.00'
+            c_v.alignment = Alignment(horizontal="right")
+            c_v.border = thin_border
+
+            c_vb = ws_sim.cell(row_sim, 6, gov['V_max_base'])
+            c_vb.font = bold_font
+            c_vb.alignment = Alignment(horizontal="center")
+            c_vb.border = thin_border
+
+            c_vc = ws_sim.cell(row_sim, 7, gov.get('V_max_formula') or gov.get('V_max_comb', '--'))
+            c_vc.font = mono_font
+            c_vc.alignment = Alignment(horizontal="left")
+            c_vc.border = group_right_border
+
+            # V_min
+            c_vmin = ws_sim.cell(row_sim, 8, gov['V_min'])
+            c_vmin.font = mono_bold
+            c_vmin.number_format = '0.00'
+            c_vmin.alignment = Alignment(horizontal="right")
+            c_vmin.border = thin_border
+
+            c_vminb = ws_sim.cell(row_sim, 9, gov['V_min_base'])
+            c_vminb.font = bold_font
+            c_vminb.alignment = Alignment(horizontal="center")
+            c_vminb.border = thin_border
+
+            c_vminc = ws_sim.cell(row_sim, 10, gov.get('V_min_formula') or gov.get('V_min_comb', '--'))
+            c_vminc.font = mono_font
+            c_vminc.alignment = Alignment(horizontal="left")
+            c_vminc.border = group_right_border
+
+            # H_max
+            c_h = ws_sim.cell(row_sim, 11, gov['H_max'])
+            c_h.font = mono_bold
+            c_h.number_format = '0.00'
+            c_h.alignment = Alignment(horizontal="right")
+            c_h.border = thin_border
+
+            c_hb = ws_sim.cell(row_sim, 12, gov['H_max_base'])
+            c_hb.font = bold_font
+            c_hb.alignment = Alignment(horizontal="center")
+            c_hb.border = thin_border
+
+            c_hc = ws_sim.cell(row_sim, 13, gov.get('H_max_formula') or gov.get('H_max_comb', '--'))
+            c_hc.font = mono_font
+            c_hc.alignment = Alignment(horizontal="left")
+            c_hc.border = group_right_border
+
+            # M_max
+            c_m = ws_sim.cell(row_sim, 14, gov['M_max'])
+            c_m.font = mono_font
+            c_m.number_format = '0.00'
+            c_m.alignment = Alignment(horizontal="right")
+            c_m.border = thin_border
+
+            c_mb = ws_sim.cell(row_sim, 15, gov['M_max_base'])
+            c_mb.font = data_font
+            c_mb.alignment = Alignment(horizontal="center")
+            c_mb.border = group_right_border
+
+            row_sim += 1
+
+        # Tabela 2: Relação Individual de Todas as Bases por Família
+        row_sim += 2
+        ws_sim.cell(row_sim, 1, "2. RELAÇÃO NOMINAL DE TODAS AS BASES E TAXA DE APROVEITAMENTO EM RELAÇÃO À FAMÍLIA").font = Font(name="Arial", size=10, bold=True, color="0F172A")
+        row_sim += 1
+
+        headers_sim_tab2 = [
+            "Tipo / Família", "Base", "Papel na Família",
+            "V_máx (kN)", "% em Relação ao Tipo",
+            "V_mín (kN)",
+            "H_máx (kN)", "% em Relação ao Tipo",
+            "|M| (kNm)"
+        ]
+
+        for col_idx, h in enumerate(headers_sim_tab2, start=1):
+            cell = ws_sim.cell(row_sim, col_idx, h)
+            cell.fill = section_fill
+            cell.font = header_font
+            cell.border = header_border
+            cell.alignment = Alignment(horizontal="center" if col_idx in [1, 2, 3] else "right", vertical="center", wrap_text=True)
+
+        row_sim += 1
+        for grp in sim_data['groups']:
+            for mb in grp['members_detail']:
+                ws_sim.cell(row_sim, 1, grp['name']).font = bold_font
+                ws_sim.cell(row_sim, 1).alignment = Alignment(horizontal="center")
+                ws_sim.cell(row_sim, 1).border = thin_border
+
+                ws_sim.cell(row_sim, 2, mb['base']).font = bold_font
+                ws_sim.cell(row_sim, 2).alignment = Alignment(horizontal="center")
+                ws_sim.cell(row_sim, 2).border = thin_border
+
+                is_gov = mb['is_leader']
+                role_label = "★ GOVERNANTE" if is_gov else "Atendida"
+                c_role = ws_sim.cell(row_sim, 3, role_label)
+                c_role.alignment = Alignment(horizontal="center")
+                c_role.border = thin_border
+                c_role.font = bold_font if is_gov else data_font
+                if is_gov:
+                    c_role.fill = amber_fill
+                    c_role.font = amber_font
+
+                c_v = ws_sim.cell(row_sim, 4, mb['V_max'])
+                c_v.font = mono_font
+                c_v.number_format = '0.00'
+                c_v.alignment = Alignment(horizontal="right")
+                c_v.border = thin_border
+
+                c_rv = ws_sim.cell(row_sim, 5, f"{mb['ratio_v']:.1f}%")
+                c_rv.font = mono_bold if is_gov else mono_font
+                c_rv.alignment = Alignment(horizontal="right")
+                c_rv.border = thin_border
+
+                c_vmin = ws_sim.cell(row_sim, 6, mb['V_min'])
+                c_vmin.font = mono_font
+                c_vmin.number_format = '0.00'
+                c_vmin.alignment = Alignment(horizontal="right")
+                c_vmin.border = thin_border
+
+                c_h = ws_sim.cell(row_sim, 7, mb['H_max'])
+                c_h.font = mono_font
+                c_h.number_format = '0.00'
+                c_h.alignment = Alignment(horizontal="right")
+                c_h.border = thin_border
+
+                c_rh = ws_sim.cell(row_sim, 8, f"{mb['ratio_h']:.1f}%")
+                c_rh.font = mono_bold if is_gov else mono_font
+                c_rh.alignment = Alignment(horizontal="right")
+                c_rh.border = thin_border
+
+                c_m = ws_sim.cell(row_sim, 9, mb['M_max'])
+                c_m.font = mono_font
+                c_m.number_format = '0.00'
+                c_m.alignment = Alignment(horizontal="right")
+                c_m.border = thin_border
+
+                row_sim += 1
+
+        for col in ws_sim.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = get_column_letter(col[0].column)
+            col_num = col[0].column
+            if col_num in [4, 7, 10, 13]:
+                ws_sim.column_dimensions[col_letter].width = max(35, min(max_len + 3, 70))
+            else:
+                ws_sim.column_dimensions[col_letter].width = max(11, min(max_len + 3, 30))
 
     # =========================================================================
     # 3. Aba 'Todas_Combinações' (Listagem Exaustiva)
@@ -2319,13 +3104,14 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
 
     headers_all = [
         "Base", "Estado Limite", "Identificação da Combinação", "Fórmula Analítica Ponderada",
-        "Vertical V (kN)", "Horizontal X (kN)", "Horizontal Y (kN)", "Resultante H (kN)"
+        "Vertical V (kN)", "Momento M (kNm)", "Horizontal X (kN)", "Horizontal Y (kN)", "Resultante H (kN)"
     ]
 
     for col_idx, h in enumerate(headers_all, start=1):
         cell = ws_all.cell(1, col_idx, h)
         cell.fill = header_fill
         cell.font = header_font
+        cell.border = header_border
         cell.alignment = Alignment(horizontal="center" if col_idx <= 2 else ("left" if col_idx in [3, 4] else "right"), vertical="center")
 
     row_curr = 2
@@ -2346,7 +3132,7 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
             ws_all.cell(row_curr, 4, c.get('formula', '')).font = mono_font
             ws_all.cell(row_curr, 4).border = thin_border
 
-            for c_idx, k in enumerate(['V', 'X', 'Y', 'H_res'], start=5):
+            for c_idx, k in enumerate(['V', 'M', 'X', 'Y', 'H_res'], start=5):
                 cell = ws_all.cell(row_curr, c_idx, round(c.get(k, 0.0), 2))
                 cell.font = mono_font
                 cell.number_format = '0.00'
@@ -2358,7 +3144,7 @@ def export_mietc_results_to_excel(results_data: Dict[str, Any], output_path: str
     for col in ws_all.columns:
         max_len = max(len(str(cell.value or '')) for cell in col)
         col_letter = get_column_letter(col[0].column)
-        ws_all.column_dimensions[col_letter].width = max(11, min(max_len + 3, 45))
+        ws_all.column_dimensions[col_letter].width = max(11, min(max_len + 3, 55))
 
     wb.save(output_path)
     wb.close()

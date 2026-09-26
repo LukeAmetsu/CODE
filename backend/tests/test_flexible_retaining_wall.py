@@ -78,6 +78,61 @@ class TestFlexibleRetainingWall(unittest.TestCase):
         self.assertGreater(res['hydraulic_check']['delta_h'], 0.0)
         self.assertGreater(res['hydraulic_check']['fs_piping'], 0.5)
 
+    def test_excel_strap_preset_and_springs(self):
+        """Verifies STRAP spreadsheet reference preset from Empuxos_Atualizados_Interfaces.xlsx."""
+        inputs = {
+            'preset': 'strap_excel',
+            'support_type': 'cantilever',
+            'H': 2.5,
+            'total_length': 12.0,
+            'length_mode': 'manual',
+            'zw_retained': 2.5,
+            'zw_passive': 2.5,
+            'q_surcharge': 30.0,
+            'pile_width': 1.0
+        }
+        res = calculate_flexible_wall(inputs)
+        self.assertEqual(res['status'], 'success')
+        
+        # Verify springs table
+        self.assertIn('springs_table', res)
+        springs = res['springs_table']
+        self.assertGreater(len(springs), 20)
+        
+        first_node = springs[0]
+        self.assertEqual(first_node['z'], 0.0)
+        self.assertEqual(first_node['K_mola_kN'], 0.0) # No passive spring above excavation
+        
+        bottom_node = springs[-1]
+        self.assertEqual(bottom_node['z'], 12.0)
+        self.assertGreater(bottom_node['K_mola_kN'], 0.0)
+        self.assertGreater(bottom_node['Fmax_kN'], 0.0)
+        self.assertGreater(bottom_node['x2_mm'], 0.0)
+        
+        # Verify global cantilever equilibrium
+        self.assertIn('global_cantilever_equilibrium', res)
+        eq = res['global_cantilever_equilibrium']
+        self.assertGreater(eq['fs_sliding'], 1.5)
+        self.assertGreater(eq['fs_overturning'], 1.5)
+        self.assertEqual(eq['status_sliding'], 'OK (Seguro)')
+        self.assertEqual(eq['status_overturning'], 'OK (Seguro)')
+        
+        # Verify STRAP export text
+        self.assertIn('strap_export', res)
+        self.assertIn('Fa_Solo', res['strap_export'])
+        self.assertIn('K_mola', res['strap_export'])
+
+    def test_geotechnical_correlations(self):
+        """Tests geotechnical relations: E = alpha * N_SPT * 100, K0 = 1 - sin(phi), nu, Bulk, Shear."""
+        from backend.calculators.flexible_retaining_wall import calc_geotechnical_correlations
+        corr = calc_geotechnical_correlations(phi_deg=30.0, nspt=10.0, alpha=2.0)
+        self.assertAlmostEqual(corr['K0'], 0.5, places=2)
+        self.assertAlmostEqual(corr['nu'], 0.333, places=2)
+        self.assertAlmostEqual(corr['E_tf_m2'], 2000.0, places=1)
+        self.assertAlmostEqual(corr['E_kPa'], 20000.0, places=1)
+        self.assertAlmostEqual(corr['Ka'], 0.333, places=2)
+        self.assertAlmostEqual(corr['Kp'], 3.0, places=2)
+
 
 if __name__ == '__main__':
     unittest.main()

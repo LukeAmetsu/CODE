@@ -9,6 +9,10 @@ Supports:
 """
 
 import math
+from backend.calculators.flexible_retaining_wall import (
+    SOIL_CATALOG_EXCEL,
+    calc_geotechnical_correlations
+)
 
 def calculate_retaining_wall(inputs: dict) -> dict:
     """
@@ -112,6 +116,25 @@ def calculate_retaining_wall(inputs: dict) -> dict:
         h_slope = heel_length * math.tan(beta_rad)
         total_height_stem = stem_height + base_thick
         H_total = total_height_stem + h_slope
+
+        # Geotechnical Correlations from Empuxos_Atualizados_Interfaces.xlsx
+        backfill_spt = float(inputs.get('spt_soil', inputs.get('soil_spt', 10.0)))
+        backfill_alpha = float(inputs.get('alpha_soil', 2.0))
+        backfill_corr = calc_geotechnical_correlations(
+            phi_soil_deg,
+            nspt=backfill_spt,
+            alpha=backfill_alpha,
+            kh_val=inputs.get('kh_soil')
+        )
+
+        found_spt = float(inputs.get('base_spt', inputs.get('spt_found', 15.0)))
+        found_alpha = float(inputs.get('alpha_found', 2.0))
+        found_corr = calc_geotechnical_correlations(
+            phi_found_deg,
+            nspt=found_spt,
+            alpha=found_alpha,
+            kh_val=inputs.get('kh_found')
+        )
         
         # 3. Earth Pressure Coefficients
         if theory == 'coulomb':
@@ -459,7 +482,35 @@ def calculate_retaining_wall(inputs: dict) -> dict:
                 "P_passive_calc": round(P_passive_calc, 2),
                 "P_passive_used": round(P_passive, 2),
                 "use_passive": use_passive,
-                "tension_crack_zc": round(z_c, 2)
+                "tension_crack_zc": round(z_c, 2),
+                "component_thrusts": {
+                    "soil": {
+                        "P_h_kN": round(P_h_soil, 2),
+                        "P_h_tf": round(P_h_soil / 10.0, 2),
+                        "P_v_kN": round(P_v_soil, 2),
+                        "P_v_tf": round(P_v_soil / 10.0, 2),
+                        "arm_y": round(arm_soil, 2)
+                    },
+                    "surcharge": {
+                        "P_h_kN": round(P_h_sur, 2),
+                        "P_h_tf": round(P_h_sur / 10.0, 2),
+                        "P_v_kN": round(P_v_sur, 2),
+                        "P_v_tf": round(P_v_sur / 10.0, 2),
+                        "arm_y": round(arm_sur, 2)
+                    },
+                    "water": {
+                        "P_h_kN": round(P_h_water, 2),
+                        "P_h_tf": round(P_h_water / 10.0, 2),
+                        "P_v_kN": 0.0,
+                        "P_v_tf": 0.0,
+                        "arm_y": round(arm_water, 2)
+                    },
+                    "passive": {
+                        "P_p_kN": round(P_passive, 2),
+                        "P_p_tf": round(P_passive / 10.0, 2),
+                        "arm_y": round(arm_passive, 2)
+                    }
+                }
             },
             "weights": [
                 {"name": w[0], "weight": round(w[1], 2), "arm_x": round(w[2], 2)}
@@ -492,8 +543,27 @@ def calculate_retaining_wall(inputs: dict) -> dict:
                 "q_adm": round(q_adm, 2),
                 "fs_bearing": round(fs_bearing, 3),
                 "fs_bearing_target": fs_br_target,
-                "status_bearing": status_bearing
+                "status_bearing": status_bearing,
+                "global_cantilever_equilibrium": {
+                    "total_Fa_kN": round(total_Ph, 2),
+                    "total_Fa_tf": round(total_Ph / 10.0, 2),
+                    "total_Fp_kN": round(total_R_sliding, 2),
+                    "total_Fp_tf": round(total_R_sliding / 10.0, 2),
+                    "M_tom_base_kNm": round(M_overturning, 2),
+                    "M_tom_base_tfm": round(M_overturning / 10.0, 2),
+                    "M_res_base_kNm": round(total_M_res, 2),
+                    "M_res_base_tfm": round(total_M_res / 10.0, 2),
+                    "fs_sliding": round(fs_sliding, 3),
+                    "status_sliding": "OK (Seguro)" if fs_sliding > 1.5 else ("Limítrofe" if fs_sliding > 1.0 else "FALHA (Sem Equilíbrio)"),
+                    "fs_overturning": round(fs_overturning, 3),
+                    "status_overturning": "OK (Seguro)" if fs_overturning > 1.5 else ("Limítrofe" if fs_overturning > 1.0 else "FALHA (Sem Equilíbrio)")
+                }
             },
+            "geotechnical_correlations": {
+                "backfill": backfill_corr,
+                "foundation": found_corr
+            },
+            "soil_catalog_excel": SOIL_CATALOG_EXCEL,
             "structural": {
                 "V_stem_base_kN": round(V_stem_base, 2),
                 "M_stem_base_kNm": round(M_stem_base, 2),

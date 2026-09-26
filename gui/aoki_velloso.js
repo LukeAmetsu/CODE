@@ -41,6 +41,8 @@ let chartNsptInstance = null;
 let chartCapacityInstance = null;
 let chartSpringsInstance = null;
 let chartEarthPressureInstance = null;
+let chartEarthPressureActiveInstance = null;
+let chartEarthPressurePassiveInstance = null;
 let latestCalculatedSprings = null;
 let latestResult = null;
 let activeTab = 'comparison';
@@ -825,23 +827,41 @@ function updateCharts(res) {
                 }
             }
         });
+
+        // Renderizar também a tabela de molas por metro
+        renderSpringsTable(spm);
     }
 
-    // ── Chart 4: Empuxo Ativo e Passivo (Rankine + Coulomb) ───────────────────
-    const ctx4 = document.getElementById('chartEarthPressure')?.getContext('2d');
-    if (ctx4 && res.earth_pressure && res.earth_pressure.stress_diagram) {
-        if (chartEarthPressureInstance) chartEarthPressureInstance.destroy();
-        updateEarthPressureKPIs(res.earth_pressure);
-        const diag = res.earth_pressure.stress_diagram;
-        chartEarthPressureInstance = new Chart(ctx4, {
+    // ── Chart 4A: Empuxo ATIVO Separado (Rankine + Coulomb) ───────────────────
+    const ctx4A = document.getElementById('chartEarthPressureActive')?.getContext('2d');
+    const actData = res.earth_pressure?.active;
+    if (ctx4A && actData && actData.stress_diagram) {
+        if (chartEarthPressureActiveInstance) chartEarthPressureActiveInstance.destroy();
+        const diagA = actData.stress_diagram;
+        chartEarthPressureActiveInstance = new Chart(ctx4A, {
             type: 'line',
             data: {
-                labels: diag.map(d => d.z),
+                labels: diagA.map(d => d.z),
                 datasets: [
-                    { label: 'σa Rankine (kPa)', data: diag.map(d => d.sigma_a_rankine), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.12)', borderWidth: 2.5, tension: 0.1, pointRadius: 2, fill: 'origin' },
-                    { label: 'σp Rankine (kPa)', data: diag.map(d => d.sigma_p_rankine), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2.5, tension: 0.1, pointRadius: 2, fill: 'origin' },
-                    { label: 'σa Coulomb (kPa)', data: diag.map(d => d.sigma_a_coulomb), borderColor: '#f97316', borderWidth: 1.8, borderDash: [5, 4], tension: 0.1, pointRadius: 2 },
-                    { label: 'σp Coulomb (kPa)', data: diag.map(d => d.sigma_p_coulomb), borderColor: '#06b6d4', borderWidth: 1.8, borderDash: [5, 4], tension: 0.1, pointRadius: 2 }
+                    { 
+                        label: 'σa Rankine (kPa)', 
+                        data: diagA.map(d => d.sigma_a_rankine), 
+                        borderColor: '#e11d48', 
+                        backgroundColor: 'rgba(225, 29, 72, 0.15)', 
+                        borderWidth: 2.5, 
+                        tension: 0.1, 
+                        pointRadius: 2.5, 
+                        fill: 'origin' 
+                    },
+                    { 
+                        label: 'σa Coulomb (kPa)', 
+                        data: diagA.map(d => d.sigma_a_coulomb), 
+                        borderColor: '#ea580c', 
+                        borderWidth: 2.0, 
+                        borderDash: [5, 4], 
+                        tension: 0.1, 
+                        pointRadius: 2.5 
+                    }
                 ]
             },
             options: {
@@ -850,99 +870,331 @@ function updateCharts(res) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { labels: { color: textColor, font: { size: 10 } } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)} kPa`, title: ctx => `Prof: ${ctx[0].label} m` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)} kPa`, title: ctx => `Prof: ${ctx[0].label} m` } }
                 },
                 scales: {
-                    y: { title: { display: true, text: 'Profundidade (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
-                    x: { title: { display: true, text: 'Pressão (kPa)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    y: { title: { display: true, text: 'Profundidade no Muro (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
+                    x: { title: { display: true, text: 'Pressão Ativa σa (kPa)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
                 }
             }
         });
     }
+
+    // ── Chart 4B: Empuxo PASSIVO Separado (Rankine + Coulomb) ──────────────────
+    const ctx4B = document.getElementById('chartEarthPressurePassive')?.getContext('2d');
+    const pasData = res.earth_pressure?.passive;
+    if (ctx4B && pasData && pasData.stress_diagram) {
+        if (chartEarthPressurePassiveInstance) chartEarthPressurePassiveInstance.destroy();
+        const diagP = pasData.stress_diagram;
+        chartEarthPressurePassiveInstance = new Chart(ctx4B, {
+            type: 'line',
+            data: {
+                labels: diagP.map(d => d.z),
+                datasets: [
+                    { 
+                        label: 'σp Rankine (kPa)', 
+                        data: diagP.map(d => d.sigma_p_rankine), 
+                        borderColor: '#0284c7', 
+                        backgroundColor: 'rgba(2, 132, 199, 0.15)', 
+                        borderWidth: 2.5, 
+                        tension: 0.1, 
+                        pointRadius: 2.5, 
+                        fill: 'origin' 
+                    },
+                    { 
+                        label: 'σp Coulomb (kPa)', 
+                        data: diagP.map(d => d.sigma_p_coulomb), 
+                        borderColor: '#0d9488', 
+                        borderWidth: 2.0, 
+                        borderDash: [5, 4], 
+                        tension: 0.1, 
+                        pointRadius: 2.5 
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: textColor, font: { size: 10 } } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)} kPa`, title: ctx => `Prof: ${ctx[0].label} m` } }
+                },
+                scales: {
+                    y: { title: { display: true, text: 'Profundidade no Muro (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
+                    x: { title: { display: true, text: 'Pressão Passiva σp (kPa)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Atualizar KPIs nos cartões independentes de Ativo e Passivo
+    if (res.earth_pressure) {
+        updateEarthPressureKPIs(res.earth_pressure);
+    }
 }
 
 /**
- * Exporta um gráfico Chart.js como PNG de alta resolução (3× DPI).
- * transparent=true → fundo transparente (ideal para Word/PowerPoint)
- * transparent=false → fundo branco
+ * Renderiza a tabela detalhada de molas por metro
  */
-function downloadChartPNG(chartInstance, filename, transparent = true) {
-    if (!chartInstance) { alert('Gráfico não disponível.'); return; }
+function renderSpringsTable(spm) {
+    const tbody = document.getElementById('springs-table-body');
+    if (!tbody || !spm) return;
+    tbody.innerHTML = '';
+
+    spm.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors";
+        tr.innerHTML = `
+            <td class="py-1.5 px-3 font-semibold text-gray-800 dark:text-gray-200">${s.depth.toFixed(1)} m</td>
+            <td class="py-1.5 px-3 text-gray-600 dark:text-gray-400 font-sans truncate max-w-[140px]" title="${s.soil_type}">${s.soil_type}</td>
+            <td class="py-1.5 px-3 text-center text-blue-600 dark:text-blue-400 font-semibold">${s.nspt.toFixed(1)}</td>
+            <td class="py-1.5 px-3 text-right text-gray-600 dark:text-gray-300">${s.G_tf_m2.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</td>
+            <td class="py-1.5 px-3 text-right text-gray-600 dark:text-gray-300">${s.Vs_m_s.toFixed(1)}</td>
+            <td class="py-1.5 px-3 text-right font-bold text-purple-600 dark:text-purple-400">${s.Kz_dyn_kN_m_per_m.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</td>
+            <td class="py-1.5 px-3 text-right font-bold text-amber-600 dark:text-amber-400">${s.Kh_dyn_kN_m_per_m.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</td>
+            <td class="py-1.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400">${s.Kz_static_kN_m_per_m.toLocaleString('pt-BR', {maximumFractionDigits: 1})}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Copia a tabela de molas por metro em formato tabulado para Excel / Word
+ */
+async function copySpringsTableToClipboard() {
+    if (!latestResult || !latestResult.springs_per_meter) {
+        alert("Calcule as fundações primeiro para obter as molas.");
+        return;
+    }
+    const spm = latestResult.springs_per_meter;
+    let text = "Prof_m\tSolo\tN_SPT\tG_tf_m2\tVs_m_s\tKz_dyn_kN_m_per_m\tKh_dyn_kN_m_per_m\tKz_est_kN_m_per_m\n";
+    spm.forEach(s => {
+        text += `${s.depth.toFixed(2)}\t${s.soil_type}\t${s.nspt.toFixed(1)}\t${s.G_tf_m2.toFixed(1)}\t${s.Vs_m_s.toFixed(1)}\t${s.Kz_dyn_kN_m_per_m.toFixed(2)}\t${s.Kh_dyn_kN_m_per_m.toFixed(2)}\t${s.Kz_static_kN_m_per_m.toFixed(2)}\n`;
+    });
+
+    try {
+        await navigator.clipboard.writeText(text);
+        const btn = event?.target?.closest('button');
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span>✅</span> Tabela Copiada p/ Excel/Word!';
+            setTimeout(() => btn.innerHTML = orig, 2000);
+        }
+    } catch (e) {
+        alert("Erro ao copiar tabela: " + e.message);
+    }
+}
+
+function toggleSpringsTableModal() {
+    const el = document.getElementById('springs-table-container');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-indigo-500');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-indigo-500'), 1500);
+    }
+}
+
+/**
+ * Renderiza um gráfico Chart.js em alta resolução (300 DPI equivalente, 3x)
+ * com fundo 100% transparente e paleta contrastante especial para colar no Word.
+ */
+function createHighResChartCanvas(chartInstance, forWord = true) {
+    if (!chartInstance) return null;
     const origCanvas = chartInstance.canvas;
-    const scale = 3; // 3× = ~300 DPI equivalente
-    const w = origCanvas.width * scale;
-    const h = origCanvas.height * scale;
+    const scale = 3.0; // ~300 DPI
+    const w = Math.round(origCanvas.width * scale);
+    const h = Math.round(origCanvas.height * scale);
 
     const offscreen = document.createElement('canvas');
     offscreen.width = w;
     offscreen.height = h;
     const octx = offscreen.getContext('2d');
 
-    if (!transparent) {
-        octx.fillStyle = document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff';
-        octx.fillRect(0, 0, w, h);
-    }
-    // Escala o canvas original para o offscreen em 3×
-    octx.drawImage(origCanvas, 0, 0, w, h);
+    // Clona configuração
+    const origConfig = chartInstance.config;
+    const configCopy = JSON.parse(JSON.stringify({
+        type: origConfig.type,
+        data: origConfig.data,
+        options: origConfig.options
+    }));
 
-    const url = offscreen.toDataURL('image/png');
+    // Se for para Word (folha branca), garantir textos contrastantes
+    const textColor = forWord ? '#0f172a' : (document.documentElement.classList.contains('dark') ? '#94a3b8' : '#334155');
+    const gridColor = forWord ? 'rgba(148, 163, 184, 0.45)' : (document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0');
+
+    if (configCopy.options) {
+        configCopy.options.animation = false;
+        configCopy.options.responsive = false;
+        configCopy.options.maintainAspectRatio = false;
+
+        // Escalar fontes e linhas
+        if (configCopy.options.plugins?.legend?.labels) {
+            configCopy.options.plugins.legend.labels.color = textColor;
+            configCopy.options.plugins.legend.labels.font = { size: 11 * scale, weight: 'bold' };
+        }
+
+        ['x', 'y'].forEach(axis => {
+            if (configCopy.options.scales?.[axis]) {
+                const sc = configCopy.options.scales[axis];
+                if (sc.title) {
+                    sc.title.color = textColor;
+                    sc.title.font = { size: 12 * scale, weight: 'bold' };
+                }
+                if (sc.ticks) {
+                    sc.ticks.color = textColor;
+                    sc.ticks.font = { size: 10 * scale };
+                }
+                if (sc.grid) {
+                    sc.grid.color = gridColor;
+                    sc.grid.lineWidth = 1.0 * scale;
+                }
+            }
+        });
+    }
+
+    // Escalar espessura das linhas das séries e raios de pontos
+    if (configCopy.data?.datasets) {
+        configCopy.data.datasets.forEach(ds => {
+            if (ds.borderWidth) ds.borderWidth = ds.borderWidth * scale;
+            if (ds.pointRadius) ds.pointRadius = ds.pointRadius * scale;
+            if (ds.borderDash) ds.borderDash = ds.borderDash.map(d => d * scale);
+        });
+    }
+
+    // Renderiza instância isolada no offscreen
+    const offChart = new Chart(octx, configCopy);
+    offChart.render();
+    offChart.destroy();
+
+    return offscreen;
+}
+
+/**
+ * Copia um gráfico Chart.js para a área de transferência em 300 DPI com fundo transparente
+ * especialmente calibrado para colar direto no Microsoft Word.
+ */
+async function copyChartForWord(chartInstance, chartTitle = 'Gráfico') {
+    if (!chartInstance) {
+        alert('Gráfico não disponível para cópia.');
+        return;
+    }
+
+    const offscreen = createHighResChartCanvas(chartInstance, true);
+    if (!offscreen) return;
+
+    try {
+        offscreen.toBlob(async (blob) => {
+            if (!blob) {
+                alert('Não foi possível gerar a imagem.');
+                return;
+            }
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            const btn = event?.target?.closest('button');
+            if (btn) {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<span>✅</span> Copiado p/ Word (300 DPI)!';
+                btn.classList.add('ring-2', 'ring-emerald-400');
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.classList.remove('ring-2', 'ring-emerald-400');
+                }, 2200);
+            }
+        }, 'image/png');
+    } catch (e) {
+        console.warn('Clipboard API com ClipboardItem falhou, tentando fallback download:', e);
+        // Fallback: baixar a imagem transparente
+        downloadChartHighRes(chartInstance, `${chartTitle.toLowerCase().replace(/\s+/g, '_')}_300dpi.png`, true);
+        alert(`O navegador bloqueou a cópia direta no clipboard. A imagem de alta resolução com fundo transparente foi baixada automaticamente para você inserir no Word.`);
+    }
+}
+
+/**
+ * Baixa um gráfico Chart.js como PNG de alta resolução (300 DPI, transparente ou com fundo).
+ */
+function downloadChartHighRes(chartInstance, filename = 'grafico_300dpi.png', transparent = true) {
+    if (!chartInstance) {
+        alert('Gráfico não disponível.');
+        return;
+    }
+    const offscreen = createHighResChartCanvas(chartInstance, true);
+    if (!offscreen) return;
+
+    let targetCanvas = offscreen;
+    if (!transparent) {
+        const bgCanvas = document.createElement('canvas');
+        bgCanvas.width = offscreen.width;
+        bgCanvas.height = offscreen.height;
+        const bctx = bgCanvas.getContext('2d');
+        bctx.fillStyle = '#ffffff';
+        bctx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+        bctx.drawImage(offscreen, 0, 0);
+        targetCanvas = bgCanvas;
+    }
+
+    const url = targetCanvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename || 'grafico_aoki.png';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
 }
 
 /**
- * Copia um gráfico Chart.js para a área de transferência como PNG (fundo transparente).
+ * Atualiza os KPIs de empuxo na interface (Ativo e Passivo totalmente separados)
  */
-async function copyChartToClipboard(chartInstance) {
-    if (!chartInstance) { alert('Gráfico não disponível.'); return; }
-    const origCanvas = chartInstance.canvas;
-    const scale = 3;
-    const w = origCanvas.width * scale;
-    const h = origCanvas.height * scale;
-
-    const offscreen = document.createElement('canvas');
-    offscreen.width = w;
-    offscreen.height = h;
-    const octx = offscreen.getContext('2d');
-    octx.drawImage(origCanvas, 0, 0, w, h);
-
-    try {
-        offscreen.toBlob(async (blob) => {
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            const btn = event?.target;
-            if (btn) { const orig = btn.textContent; btn.textContent = '✅ Copiado!'; setTimeout(() => btn.textContent = orig, 1800); }
-        }, 'image/png');
-    } catch (e) {
-        alert('Não foi possível copiar para a área de transferência: ' + e.message);
-    }
-}
-
-/** Atualiza os KPIs de empuxo na interface */
 function updateEarthPressureKPIs(ep) {
     if (!ep) return;
-    const ids = {
-        'ep-phi':        ep.phi_deg?.toFixed(1) + '°' + (ep.inferred ? ' (estimado)' : ''),
-        'ep-gamma':      ep.gamma_kN_m3?.toFixed(1) + ' kN/m³',
-        'ep-c':          ep.c_kPa?.toFixed(1) + ' kPa',
-        'ep-H':          ep.H_m?.toFixed(1) + ' m',
-        'ep-ka-rank':    ep.Ka_rankine?.toFixed(4),
-        'ep-kp-rank':    ep.Kp_rankine?.toFixed(4),
-        'ep-ka-coul':    ep.Ka_coulomb?.toFixed(4),
-        'ep-kp-coul':    ep.Kp_coulomb?.toFixed(4),
-        'ep-ea-rank':    ep.Ea_rankine_kN_m?.toFixed(1) + ' kN/m',
-        'ep-ep-rank':    ep.Ep_rankine_kN_m?.toFixed(1) + ' kN/m',
-        'ep-ea-coul':    ep.Ea_coulomb_kN_m?.toFixed(1) + ' kN/m',
-        'ep-ep-coul':    ep.Ep_coulomb_kN_m?.toFixed(1) + ' kN/m',
-        'ep-ya':         (ep.ya_rankine_m?.toFixed(2) || '--') + ' m da base',
+
+    const act = ep.active || {};
+    const pas = ep.passive || {};
+
+    // 1. Bloco de Empuxo ATIVO
+    const actIds = {
+        'act-ka-rank':     act.Ka_rankine !== undefined ? act.Ka_rankine.toFixed(4) : (ep.Ka_rankine?.toFixed(4) || '--'),
+        'act-ka-coul':     act.Ka_coulomb !== undefined ? act.Ka_coulomb.toFixed(4) : (ep.Ka_coulomb?.toFixed(4) || '--'),
+        'act-ea-rank':     act.Ea_rankine_kN_m !== undefined ? `${act.Ea_rankine_kN_m.toFixed(1)} kN/m` : `${ep.Ea_rankine_kN_m?.toFixed(1) || '--'} kN/m`,
+        'act-ea-rank-tf':  act.Ea_rankine_tf_m !== undefined ? `(${act.Ea_rankine_tf_m.toFixed(1)} tf/m)` : '',
+        'act-ea-coul':     act.Ea_coulomb_kN_m !== undefined ? `${act.Ea_coulomb_kN_m.toFixed(1)} kN/m` : `${ep.Ea_coulomb_kN_m?.toFixed(1) || '--'} kN/m`,
+        'act-ea-coul-tf':  act.Ea_coulomb_tf_m !== undefined ? `(${act.Ea_coulomb_tf_m.toFixed(1)} tf/m)` : '',
+        'act-ya':          act.ya_rankine_m !== undefined ? `${act.ya_rankine_m.toFixed(2)} m` : `${ep.ya_rankine_m?.toFixed(2) || '--'} m`,
+        'act-mot':         act.Mot_rankine_kNm_m !== undefined ? `${act.Mot_rankine_kNm_m.toFixed(1)} kNm/m` : '--',
     };
-    Object.entries(ids).forEach(([id, val]) => {
+    Object.entries(actIds).forEach(([id, val]) => {
         const el = document.getElementById(id);
         if (el) el.textContent = val;
     });
+
+    // 2. Bloco de Empuxo PASSIVO
+    const pasIds = {
+        'pas-kp-rank':     pas.Kp_rankine !== undefined ? pas.Kp_rankine.toFixed(4) : (ep.Kp_rankine?.toFixed(4) || '--'),
+        'pas-kp-coul':     pas.Kp_coulomb !== undefined ? pas.Kp_coulomb.toFixed(4) : (ep.Kp_coulomb?.toFixed(4) || '--'),
+        'pas-ep-rank':     pas.Ep_rankine_kN_m !== undefined ? `${pas.Ep_rankine_kN_m.toFixed(1)} kN/m` : `${ep.Ep_rankine_kN_m?.toFixed(1) || '--'} kN/m`,
+        'pas-ep-rank-tf':  pas.Ep_rankine_tf_m !== undefined ? `(${pas.Ep_rankine_tf_m.toFixed(1)} tf/m)` : '',
+        'pas-ep-coul':     pas.Ep_coulomb_kN_m !== undefined ? `${pas.Ep_coulomb_kN_m.toFixed(1)} kN/m` : `${ep.Ep_coulomb_kN_m?.toFixed(1) || '--'} kN/m`,
+        'pas-ep-coul-tf':  pas.Ep_coulomb_tf_m !== undefined ? `(${pas.Ep_coulomb_tf_m.toFixed(1)} tf/m)` : '',
+        'pas-yp':          pas.yp_rankine_m !== undefined ? `${pas.yp_rankine_m.toFixed(2)} m` : `${ep.yp_rankine_m?.toFixed(2) || '--'} m`,
+        'pas-mr':          pas.Mr_rankine_kNm_m !== undefined ? `${pas.Mr_rankine_kNm_m.toFixed(1)} kNm/m` : '--',
+    };
+    Object.entries(pasIds).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    });
+
+    // 3. Resumo Geotécnico e Relação Ep/Ea
+    const elPhi = document.getElementById('ep-phi-summary');
+    if (elPhi) elPhi.textContent = `${ep.phi_deg?.toFixed(1)}°${ep.inferred ? ' (estimado)' : ''}`;
+    const elGamma = document.getElementById('ep-gamma-summary');
+    if (elGamma) elGamma.textContent = `${ep.gamma_kN_m3?.toFixed(1)} kN/m³`;
+    const elC = document.getElementById('ep-c-summary');
+    if (elC) elC.textContent = `${ep.c_kPa?.toFixed(1)} kPa`;
+
+    const elRatio = document.getElementById('ep-ratio-summary');
+    if (elRatio && act.Ea_rankine_kN_m && act.Ea_rankine_kN_m > 0 && pas.Ep_rankine_kN_m) {
+        const ratio = pas.Ep_rankine_kN_m / act.Ea_rankine_kN_m;
+        elRatio.textContent = `${ratio.toFixed(2)}× (Capacidade Passiva Superior)`;
+    }
 }
 
 function round2(v) {

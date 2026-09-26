@@ -307,9 +307,18 @@
                                 </div>
                                 
                                 <div>
-                                    <label data-i18n="data_subset" class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Recorte de Dados (Subset)</label>
+                                    <div class="flex items-center justify-between mb-0.5">
+                                        <label data-i18n="data_subset" class="block text-[10px] font-bold uppercase tracking-wider text-gray-400">Recorte de Dados (Subset)</label>
+                                        <button type="button" id="btnToggleDynamicFilter" onclick="toggleDynamicFilterPanel()" 
+                                            class="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors px-1.5 py-0.5 rounded hover:bg-cyan-500/10"
+                                            title="Configurar limites numéricos dinâmicos para d, bw/d ou d/bw, a/d, etc.">
+                                            <span>🎚️</span> <span id="lblDynamicFilterToggle">Filtro Dinâmico</span>
+                                            <span id="badgeDynamicFilterCount" class="hidden text-[9px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">0</span>
+                                        </button>
+                                    </div>
                                     <select id="subsetSelect" class="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-md p-1.5 text-xs text-[var(--color-text-primary)] font-semibold cursor-pointer">
                                         <option value="ALL DATA" data-i18n="subset_all">All Data (1877 tests)</option>
+                                        <option value="dynamic_custom" class="text-cyan-400 font-bold bg-cyan-950/40">⚙️ Recorte Dinâmico Personalizado...</option>
                                         <optgroup label="Lajes (Slabs)">
                                              <option value="slabs_slender_600" data-i18n="subset_slabs_slender_600">Slender Slabs (bw/d ≥ 2 and d < 600 mm)</option>
                                              <option value="slabs_slender_400" data-i18n="subset_slabs_slender_400">Slender Slabs (bw/d ≥ 2 and d < 400 mm)</option>
@@ -338,6 +347,146 @@
                                         </optgroup>
                                     </select>
                                 </div>
+                            </div>
+
+                            <!-- Dynamic Subset Filtering Panel (Collapsible) -->
+                            <div id="dynamicFilterPanel" class="hidden bg-[var(--color-bg-primary)] border border-cyan-500/30 rounded-xl p-3 space-y-2.5 shadow-sm transition-all duration-200">
+                                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-primary)] pb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">🎚️</span>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                                                <span>Recorte Dinâmico de Amostras</span>
+                                                <span id="dynamicFilterActiveCount" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">1804 / 1877</span>
+                                            </h4>
+                                            <p class="text-[10px] text-gray-400 mt-0.5">Filtre as amostras simultaneamente por altura útil <strong>d</strong>, relação <strong>bw/d</strong> ou <strong>d/bw</strong>, vão <strong>a/d</strong>, taxa <strong>ρw</strong> e <strong>fck</strong>.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="resetDynamicFilters()" class="text-[11px] px-2.5 py-1 rounded-lg bg-gray-700/60 hover:bg-gray-700 text-gray-300 font-semibold transition-colors flex items-center gap-1 cursor-pointer">
+                                            <span>↺</span> Limpar Filtros
+                                        </button>
+                                        <button type="button" onclick="toggleDynamicFilterPanel(false)" class="text-xs text-gray-400 hover:text-gray-200 p-1 cursor-pointer" title="Recolher painel">
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                    <!-- 1. Altura Útil d (mm) -->
+                                    <div class="bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-primary)] space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-200">Altura Útil d (mm)</span>
+                                            <span id="lblDynD" class="text-[10px] text-cyan-400 font-mono">Livre</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="number" id="dyn_d_min" placeholder="Mín" step="25" min="0" max="3000" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                            <span class="text-gray-400 text-xs">a</span>
+                                            <input type="number" id="dyn_d_max" placeholder="Máx" step="25" min="0" max="3000" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 pt-0.5">
+                                            <button type="button" onclick="setDynPreset('d', null, 400)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">&lt;400 mm</button>
+                                            <button type="button" onclick="setDynPreset('d', null, 600)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">&lt;600 mm</button>
+                                            <button type="button" onclick="setDynPreset('d', 600, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">≥600 mm</button>
+                                            <button type="button" onclick="setDynPreset('d', null, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Limpar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 2. Relação Largura / Altura (bw/d ou d/b) -->
+                                    <div class="bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-primary)] space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-200">Relação Seção Transversal</span>
+                                            <span id="lblDynBwD" class="text-[10px] text-cyan-400 font-mono">Livre</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <select id="dyn_ratio_type" class="bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-[11px] font-bold text-cyan-400 cursor-pointer">
+                                                <option value="bwd">bw / d</option>
+                                                <option value="dbw">d / bw</option>
+                                            </select>
+                                            <input type="number" id="dyn_bwd_min" placeholder="Mín" step="0.2" min="0" max="25" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                            <span class="text-gray-400 text-xs">a</span>
+                                            <input type="number" id="dyn_bwd_max" placeholder="Máx" step="0.2" min="0" max="25" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 pt-0.5">
+                                            <button type="button" onclick="setDynPreset('bwd', 2.0, null, 'bwd')" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Lajes (b/d≥2)</button>
+                                            <button type="button" onclick="setDynPreset('bwd', 5.0, null, 'bwd')" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Lajes Largas (≥5)</button>
+                                            <button type="button" onclick="setDynPreset('bwd', null, 2.0, 'bwd')" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Vigas (b/d&lt;2)</button>
+                                            <button type="button" onclick="setDynPreset('bwd', null, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Limpar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 3. Vão Cisalhante a/d -->
+                                    <div class="bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-primary)] space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-200">Vão Cisalhante (a / d)</span>
+                                            <span id="lblDynAD" class="text-[10px] text-cyan-400 font-mono">Livre</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="number" id="dyn_ad_min" placeholder="Mín" step="0.2" min="0" max="15" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                            <span class="text-gray-400 text-xs">a</span>
+                                            <input type="number" id="dyn_ad_max" placeholder="Máx" step="0.2" min="0" max="15" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 pt-0.5">
+                                            <button type="button" onclick="setDynPreset('ad', 2.5, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Esbelto (≥2.5)</button>
+                                            <button type="button" onclick="setDynPreset('ad', null, 2.5)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Curto / Biela (&lt;2.5)</button>
+                                            <button type="button" onclick="setDynPreset('ad', null, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Limpar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 4. Taxa de Armadura ρw (%) -->
+                                    <div class="bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-primary)] space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-200">Taxa Armadura ρw (%)</span>
+                                            <span id="lblDynRho" class="text-[10px] text-cyan-400 font-mono">Livre</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="number" id="dyn_rho_min" placeholder="Mín" step="0.1" min="0" max="10" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                            <span class="text-gray-400 text-xs">a</span>
+                                            <input type="number" id="dyn_rho_max" placeholder="Máx" step="0.1" min="0" max="10" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 pt-0.5">
+                                            <button type="button" onclick="setDynPreset('rho', null, 0.5)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">&lt;0.5%</button>
+                                            <button type="button" onclick="setDynPreset('rho', null, 1.0)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">&lt;1.0%</button>
+                                            <button type="button" onclick="setDynPreset('rho', 1.5, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">≥1.5%</button>
+                                            <button type="button" onclick="setDynPreset('rho', null, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Limpar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 5. Concreto fck (MPa) -->
+                                    <div class="bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-primary)] space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-200">Concreto fck (MPa)</span>
+                                            <span id="lblDynFck" class="text-[10px] text-cyan-400 font-mono">Livre</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="number" id="dyn_fck_min" placeholder="Mín" step="5" min="0" max="200" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                            <span class="text-gray-400 text-xs">a</span>
+                                            <input type="number" id="dyn_fck_max" placeholder="Máx" step="5" min="0" max="200" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 pt-0.5">
+                                            <button type="button" onclick="setDynPreset('fck', null, 50)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Convencional (≤50)</button>
+                                            <button type="button" onclick="setDynPreset('fck', 50, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Alta Resist. (&gt;50)</button>
+                                            <button type="button" onclick="setDynPreset('fck', null, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Limpar</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- 6. Largura bw (mm) -->
+                                    <div class="bg-[var(--color-bg-secondary)] p-2 rounded-lg border border-[var(--color-border-primary)] space-y-1.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-gray-200">Largura bw (mm)</span>
+                                            <span id="lblDynBw" class="text-[10px] text-cyan-400 font-mono">Livre</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="number" id="dyn_bw_min" placeholder="Mín" step="25" min="0" max="5000" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                            <span class="text-gray-400 text-xs">a</span>
+                                            <input type="number" id="dyn_bw_max" placeholder="Máx" step="25" min="0" max="5000" class="w-1/2 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] rounded px-1.5 py-1 text-xs text-center font-mono">
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 pt-0.5">
+                                            <button type="button" onclick="setDynPreset('bw', null, 300)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">≤300 mm</button>
+                                            <button type="button" onclick="setDynPreset('bw', 300, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">&gt;300 mm</button>
+                                            <button type="button" onclick="setDynPreset('bw', null, null)" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 hover:text-cyan-300 hover:bg-gray-700 border border-gray-700">Limpar</button>
+                                        </div>
+                                    </div>
                             </div>
 
                             <!-- External Legend Bar -->

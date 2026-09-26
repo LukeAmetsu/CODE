@@ -132,6 +132,37 @@ class TestInteractiveShearOptimization(unittest.TestCase):
         self.assertGreater(calib['C'], 0.0)
 
 
+    def test_dynamic_subset_depth_and_aspect_ratio(self):
+        """Test dynamic subset filtering by effective depth d and section ratio bw/d."""
+        dyn_filter = {'d_max': 400.0, 'ratio_type': 'bwd', 'ratio_min': 2.0}
+        data = load_and_clean_data(subset_key=dyn_filter)
+        self.assertNotIn('error', data)
+        self.assertGreater(data['count'], 0)
+        self.assertLess(data['count'], 1804)
+        for d_val in data['d']:
+            self.assertLessEqual(d_val, 400.0)
+
+    def test_dynamic_subset_dbw_ratio(self):
+        """Test dynamic subset filtering using d / bw aspect ratio for deep beams."""
+        dyn_filter = {'ratio_type': 'dbw', 'ratio_min': 3.0}
+        data = load_and_clean_data(subset_key=dyn_filter)
+        self.assertNotIn('error', data)
+        self.assertGreater(data['count'], 0)
+        for bd, bbw in zip(data['d'], data['bw']):
+            self.assertGreaterEqual(bd / bbw, 2.99)
+
+    def test_dynamic_subset_optimization_and_calibration(self):
+        """Test optimization and C calibration strictly targeted on dynamic subset."""
+        dyn_filter = {'d_max': 500.0, 'ratio_type': 'bwd', 'ratio_min': 1.5, 'fck_max': 60.0}
+        calib = calibrate_constant_c(target_safety=1.15, current_vals=None, subset_key=dyn_filter)
+        self.assertAlmostEqual(calib['mean'], 1.15, delta=0.02)
+        self.assertGreater(calib['count'], 0)
+
+        opt = run_optimization(target_safety=1.0, locked={'C': True}, current_vals=None, criterion='cov', subset_key=dyn_filter)
+        self.assertIn('_cov', opt)
+        self.assertEqual(opt['_count'], calib['count'])
+
+
 if __name__ == '__main__':
     unittest.main()
 

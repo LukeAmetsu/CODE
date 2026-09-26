@@ -13,8 +13,9 @@ let currentSort = 'name_asc';
 let currentEnvelopeView = 'all';
 let recalcTimeout = null;
 let configuredFootingGroups = [];
-let activeTableView = 'individual'; // 'individual' ou 'combined'
+let activeTableView = 'individual'; // 'individual', 'combined' ou 'similarity'
 let enableCombinedFootings = true;
+let similarityTolerance = 0.20; // 20% de tolerância padrão para famílias
 
 // Catálogo de Categorias e Ações
 const ACTION_CATEGORIES = {
@@ -31,6 +32,8 @@ const ACTION_CATEGORIES = {
         'Equipamentos Fixos'
     ],
     'Sobrecargas de Uso': [
+        'Operação / Correia (TCO)',
+        'Partida / Transitório (TCP)',
         'Uso Residencial (Q)',
         'Uso Escritório/Loja (Q)',
         'Garagem/Estacionamento (Q)',
@@ -53,11 +56,16 @@ const ACTION_CATEGORIES = {
 };
 
 const INITIAL_PRESET_ROWS = [
-    { name: 'Peso Próprio Muro (PP)', type: 'Peso Próprio (PP)', value: 45.0, group: '', requires: '' },
-    { name: 'Empuxo Solo Seco', type: 'Solo Seco (Empuxo)', value: 35.0, group: 'Solo', requires: '' },
-    { name: 'Empuxo Solo Saturado', type: 'Solo Saturado (Empuxo)', value: 25.0, group: 'Solo', requires: 'Pressão da Água' },
-    { name: 'Pressão da Água', type: 'Pressão Hidrostática / Água', value: 18.0, group: '', requires: '' },
-    { name: 'Sobrecarga Tráfego no Tardoz', type: 'Sobrecarga no Tardoz (Q_solo)', value: 12.0, group: '', requires: '' }
+    { name: 'PP', type: 'Peso Próprio (PP)', value: 100.0, gamma: 1.35, group: '', excludes: '', requires: '', can_zero: false },
+    { name: 'CP', type: 'Permanente (G)', value: 40.0, gamma: 1.40, group: '', excludes: '', requires: '', can_zero: false },
+    { name: 'SCM', type: 'Cobertura / Manutenção (Q)', value: 25.0, gamma: 1.50, group: '', excludes: '', requires: '', can_zero: true },
+    { name: 'SCP', type: 'Uso Residencial (Q)', value: 20.0, gamma: 1.50, group: '', excludes: '', requires: '', can_zero: true },
+    { name: 'TCO', type: 'Operação / Correia (TCO)', value: 15.0, gamma: 1.40, group: 'Operação/Partida', excludes: 'TCP', requires: '', can_zero: true },
+    { name: 'TCP', type: 'Partida / Transitório (TCP)', value: 10.0, gamma: 1.20, group: 'Operação/Partida', excludes: 'TCO, CVX+, CVY+, Vento', requires: '', can_zero: true },
+    { name: 'T', type: 'Temperatura (T)', value: 5.0, gamma: 1.20, group: '', excludes: '', requires: '', can_zero: true },
+    { name: 'CVX+', type: 'Vento (W)', value: 35.0, gamma: 1.40, group: 'Vento', excludes: 'TCP', requires: '', can_zero: false },
+    { name: 'CVY+', type: 'Vento (W)', value: 30.0, gamma: 1.40, group: 'Vento', excludes: 'TCP', requires: '', can_zero: false },
+    { name: 'SCA', type: 'Sobrecarga Acidental (SCA)', value: 18.0, gamma: 1.50, group: '', excludes: '', requires: '', can_zero: true }
 ];
 
 // Inicialização ao carregar a página
@@ -86,6 +94,8 @@ function buildTypeSelectOptions(selectedType) {
         'Pressão Hidrostática / Água': '💧',
         'Subpressão / Uplift': '⬆️',
         'Sobrecarga no Tardoz (Q_solo)': '🚛',
+        'Operação / Correia (TCO)': '⚙️',
+        'Partida / Transitório (TCP)': '⚡',
         'Uso Residencial (Q)': '🛋️',
         'Uso Escritório/Loja (Q)': '🏢',
         'Garagem/Estacionamento (Q)': '🚗',
@@ -122,33 +132,41 @@ function addLoadActionRow(load) {
     if (!container) return;
 
     const row = document.createElement('div');
-    row.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2.5 p-3 bg-white dark:bg-gray-800/90 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xs items-center transition-all hover:border-blue-500/50 dark:hover:border-blue-500/50';
+    row.className = 'grid grid-cols-1 sm:grid-cols-12 gap-2 p-2.5 bg-white dark:bg-gray-800/90 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xs items-center transition-all hover:border-blue-500/50 dark:hover:border-blue-500/50';
 
     const defaultName = load?.name || `Carga ${container.children.length + 1}`;
     const defaultType = load?.type || 'Outras Ações Variáveis (Q)';
     const defaultValue = (load?.value !== undefined && load?.value !== null) ? load.value : 15.0;
+    const defaultGamma = (load?.gamma !== undefined && load?.gamma !== null && load?.gamma !== '') ? load.gamma : '';
     const defaultGroup = load?.group || '';
+    const defaultExcludes = load?.excludes || '';
     const defaultReq = load?.requires || '';
     const defaultCanZero = load?.can_zero !== undefined ? load.can_zero : (load?.name === 'PP' ? false : true);
 
     row.innerHTML = `
-        <div class="sm:col-span-3">
-            <input type="text" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-2 text-xs font-semibold text-gray-900 dark:text-gray-100 load-name focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultName}" placeholder="Identificação da Ação">
+        <div class="sm:col-span-2">
+            <input type="text" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-900 dark:text-gray-100 load-name focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultName}" placeholder="Ação (ex: TCP)">
         </div>
         <div class="sm:col-span-2">
-            <select class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-2 text-xs load-type font-medium cursor-pointer text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <select class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1.5 text-[11px] load-type font-medium cursor-pointer text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 ${buildTypeSelectOptions(defaultType)}
             </select>
         </div>
-        <div class="sm:col-span-2">
-            <input type="number" step="any" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-2 text-xs font-bold text-right load-val text-indigo-600 dark:text-indigo-400 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultValue}" placeholder="Valor (kN)">
-        </div>
-        <div class="sm:col-span-2">
-            <input type="text" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-2 text-xs text-center load-group font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultGroup}" placeholder="Ex: Solo" title="Grupo de Exclusão Mútua (XOR): ações no mesmo grupo nunca atuam juntas.">
+        <div class="sm:col-span-1">
+            <input type="number" step="any" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1.5 text-xs font-bold text-right load-val text-indigo-600 dark:text-indigo-400 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultValue}" placeholder="Valor">
         </div>
         <div class="sm:col-span-1">
-            <select class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-2 text-[11px] load-requires cursor-pointer text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" title="Coexistência Obrigatória (AND): esta ação só atua se a selecionada estiver presente.">
-                <option value="">-- Nenhuma --</option>
+            <input type="number" step="0.05" min="0" max="5" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-1.5 text-xs font-bold text-center load-gamma text-violet-700 dark:text-violet-300 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultGamma}" placeholder="Auto" title="Coeficiente de ponderação γ_f (ex: 1.35, 1.40, 1.20, 1.50). Deixe vazio para usar a norma.">
+        </div>
+        <div class="sm:col-span-1">
+            <input type="text" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-1.5 text-[11px] text-center load-group font-medium text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${defaultGroup}" placeholder="Ex: Vento" title="Grupo de Exclusão Mútua (XOR): ações no mesmo grupo nunca atuam juntas.">
+        </div>
+        <div class="sm:col-span-2">
+            <input type="text" class="w-full bg-gray-50 dark:bg-gray-900 border border-rose-300 dark:border-rose-900/60 rounded-lg px-2 py-1.5 text-[11px] text-rose-700 dark:text-rose-300 font-semibold load-excludes placeholder-rose-300/70 focus:ring-2 focus:ring-rose-500 focus:outline-none" value="${defaultExcludes}" placeholder="Ex: TCP, Vento" title="Exclusão Específica (NOT): ações ou grupos incompatíveis com esta ação (separados por vírgula).">
+        </div>
+        <div class="sm:col-span-1">
+            <select class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-1 py-1.5 text-[11px] load-requires cursor-pointer text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" title="Coexistência Obrigatória (AND): esta ação só atua se a selecionada estiver presente.">
+                <option value="">-- Nenhum --</option>
                 ${defaultReq ? `<option value="${defaultReq}" selected>${defaultReq}</option>` : ''}
             </select>
         </div>
@@ -193,7 +211,9 @@ function addNewLoadActionRow() {
         name: `Sobrecarga Adicional ${(document.querySelectorAll('#loads-container > div').length + 1)}`,
         type: 'Outras Ações Variáveis (Q)',
         value: 10.0,
+        gamma: 1.40,
         group: '',
+        excludes: '',
         requires: ''
     });
     updateCompanionSelects();
@@ -237,6 +257,7 @@ function updateRulesSummary() {
     if (!container) return;
 
     const groups = {};
+    const exclusions = [];
     const companions = [];
     const zeroableList = [];
     let soloSeco = null;
@@ -246,12 +267,16 @@ function updateRulesSummary() {
         const n = r.querySelector('.load-name')?.value?.trim();
         const t = r.querySelector('.load-type')?.value || '';
         const g = r.querySelector('.load-group')?.value?.trim();
+        const excl = r.querySelector('.load-excludes')?.value?.trim();
         const req = r.querySelector('.load-requires')?.value?.trim();
         const canZero = r.querySelector('.load-can-zero')?.checked ?? false;
 
         if (g && n) {
             if (!groups[g]) groups[g] = [];
             groups[g].push(n);
+        }
+        if (excl && n) {
+            exclusions.push({ from: n, excludes: excl });
         }
         if (req && n) {
             companions.push({ from: n, to: req });
@@ -265,27 +290,49 @@ function updateRulesSummary() {
 
     let html = '';
 
-    // 1. Regras de Exclusão (XOR)
+    // 1. Regras de Exclusão por Grupo (XOR)
     Object.keys(groups).forEach(grp => {
         if (groups[grp].length > 1) {
             html += `
                 <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold">
-                    <span>🚫 Exclusão (${grp}):</span> <span class="font-bold">${groups[grp].join(' ⊄ ')}</span> (nunca atuam juntas)
+                    <span>🚫 Exclusão Grupo (${grp}):</span> <span class="font-bold">${groups[grp].join(' ⊄ ')}</span>
                 </div>
             `;
         }
     });
 
-    // 2. Regras de Coexistência (AND)
-    companions.forEach(c => {
+    // 2. Regras de Exclusão Específica Direta (NOT)
+    exclusions.forEach(e => {
         html += `
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
-                <span>🔗 Coexistência Obrigatória:</span> <span class="font-bold">[${c.from}]</span> ⟹ requer <span class="font-bold">[${c.to}]</span> (atuam juntas)
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-semibold">
+                <span>⚡ Exclusão Direta:</span> <span class="font-bold">[${e.from}]</span> ⊄ exclui <span class="font-bold">[${e.excludes}]</span>
             </div>
         `;
     });
 
-    // 3. Ações Zeráveis para Alívio Crítico / Máxima Tração
+    // 2.1 Destaque Especial: Vento Seletivo (Partida vs Outras Ações)
+    const hasWindExcludedFromStarting = exclusions.some(e =>
+        (e.from.toUpperCase().includes('TCP') && (e.excludes.toUpperCase().includes('CV') || e.excludes.toUpperCase().includes('VENTO'))) ||
+        ((e.from.toUpperCase().includes('CV') || e.from.toUpperCase().includes('VENTO')) && e.excludes.toUpperCase().includes('TCP'))
+    );
+    if (hasWindExcludedFromStarting) {
+        html += `
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300 text-xs font-semibold shadow-2xs">
+                <span>💨 Vento Seletivo:</span> Excluído na Partida (TCP), mas <span class="underline font-bold">permitido</span> com Operação (TCO), Material e demais ações.
+            </div>
+        `;
+    }
+
+    // 3. Regras de Coexistência (AND)
+    companions.forEach(c => {
+        html += `
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                <span>🔗 Coexistência Obrigatória:</span> <span class="font-bold">[${c.from}]</span> ⟹ requer <span class="font-bold">[${c.to}]</span>
+            </div>
+        `;
+    });
+
+    // 4. Ações Zeráveis para Alívio Crítico / Máxima Tração
     if (zeroableList.length > 0) {
         html += `
             <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs font-semibold" title="Estas ações serão zeradas em combinações variantes conservadoras para avaliar a máxima tração (arrancamento) e alívio de peso na fundação">
@@ -294,11 +341,11 @@ function updateRulesSummary() {
         `;
     }
 
-    // 4. Condição Física: Solo Seco vs Água
+    // 5. Condição Física: Solo Seco vs Água
     if (soloSeco && agua) {
         html += `
             <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold">
-                <span>💧 Condição Física:</span> <span class="font-bold">[${soloSeco}]</span> desativa automaticamente <span class="font-bold">[${agua}]</span> (nível seco)
+                <span>💧 Condição Física:</span> <span class="font-bold">[${soloSeco}]</span> desativa automaticamente <span class="font-bold">[${agua}]</span>
             </div>
         `;
     }
@@ -346,37 +393,60 @@ function initLoadRulesFromSheet(sheetData) {
 
         let type = 'Outras Ações Variáveis (Q)';
         let group = '';
+        let excludes = '';
         let requires = '';
         let canZero = true;
+        let gamma = '';
 
         if (item === 'PP') {
             type = 'Peso Próprio (PP)';
             canZero = false;
+            gamma = 1.35;
         } else if (item === 'CP') {
             type = 'Permanente (G)';
             canZero = false;
+            gamma = 1.40;
         } else if (item === 'SCM') {
             type = 'Cobertura / Manutenção (Q)';
+            gamma = 1.50;
         } else if (item === 'SCP') {
             type = 'Uso Residencial (Q)';
-        } else if (item === 'TCQ' || item === 'TCP') {
+            gamma = 1.50;
+        } else if (item === 'TCO') {
+            type = 'Operação / Correia (TCO)';
+            group = 'Operação/Partida';
+            excludes = 'TCP';
+            gamma = 1.40;
+        } else if (item === 'TCP') {
+            type = 'Partida / Transitório (TCP)';
+            group = 'Operação/Partida';
+            excludes = 'TCO, CVX+, CVY+, Vento';
+            gamma = 1.20;
+        } else if (item === 'TCQ') {
             type = 'Ponte Rolante / Guindaste (Q)';
             group = 'Talha';
+            gamma = 1.40;
         } else if (item === 'CVX+' || item === 'CVY+') {
             type = 'Vento (W)';
             group = 'Vento';
+            excludes = 'TCP';
             canZero = false; // Vento de tombamento é a ação causadora de tração
-        } else if (item === 'T+' || item === 'T-') {
+            gamma = 1.40;
+        } else if (item === 'T+' || item === 'T-' || item === 'T') {
             type = 'Temperatura (T)';
+            gamma = 1.20;
         } else if (item === 'SCA' || item.includes('SCA') || item.toLowerCase().includes('acidental')) {
             type = 'Sobrecarga Acidental (SCA)';
+            gamma = 1.50;
         }
 
         addLoadActionRow({
             name: item,
             type: type,
             value: Math.round(maxVal * 100) / 100,
+            gamma: gamma,
             group: group,
+            excludes: excludes,
             requires: requires,
             can_zero: canZero
         });
@@ -569,7 +639,7 @@ function renderFootingGroups() {
     const sheetData = currentWorkbookData?.sheets?.[activeSheetName];
     const availableBases = (sheetData?.bases_list || sheetData?.bases_names || []).length > 0
         ? (sheetData.bases_list || sheetData.bases_names)
-        : (currentResults?.summary_table ? currentResults.summary_table.map(r => r.base) : ['BT1', 'BT2', 'BT3', 'BT4', 'BA1', 'BA2']);
+        : (currentResults?.summary_table ? currentResults.summary_table.map(r => r.base) : []);
 
     if (configuredFootingGroups.length === 0) {
         container.innerHTML = `
@@ -684,7 +754,9 @@ function collectRulesAndCustomLoads() {
         const name = r.querySelector('.load-name')?.value?.trim();
         const type = r.querySelector('.load-type')?.value;
         const val = parseFloat(r.querySelector('.load-val')?.value) || 0.0;
+        const gamma = parseFloat(r.querySelector('.load-gamma')?.value) || 1.40;
         const group = r.querySelector('.load-group')?.value?.trim() || '';
+        const excludes = r.querySelector('.load-excludes')?.value?.trim() || '';
         const requires = r.querySelector('.load-requires')?.value?.trim() || '';
         const can_zero = r.querySelector('.load-can-zero')?.checked ?? (name !== 'PP');
 
@@ -692,9 +764,11 @@ function collectRulesAndCustomLoads() {
 
         action_rules[name] = {
             group: group,
+            excludes: excludes,
             requires: requires,
             type: type,
-            can_zero: can_zero
+            can_zero: can_zero,
+            gamma: gamma
         };
 
         if (!sheetActions.has(name)) {
@@ -702,7 +776,9 @@ function collectRulesAndCustomLoads() {
                 name: name,
                 type: type,
                 value: val,
+                gamma: gamma,
                 group: group,
+                excludes: excludes,
                 requires: requires,
                 can_zero: can_zero,
                 direction: 'V'
@@ -828,10 +904,16 @@ function processLoadedWorkbook(data, filename) {
     // Inicializa as regras e ações para a folha selecionada
     initLoadRulesFromSheet(data.sheets[activeSheetName]);
 
-    // Auto-detecta pares de sapatas subsequentes (BT1+BT2, BT3+BT4...) se ainda não houver grupos
+    // Limpa grupos de sapatas anteriores para evitar persistência de bases de outras abas/planilhas
+    configuredFootingGroups = [];
+
+    // Auto-detecta pares de sapatas subsequentes apenas se forem montantes de torre (BT1+BT2, BA1+BA2...)
     const initialBases = data.sheets[activeSheetName]?.bases_list || data.sheets[activeSheetName]?.bases_names || [];
-    if (initialBases.length > 0 && configuredFootingGroups.length === 0) {
+    const hasTowerLegs = initialBases.some(b => /^B[TA]\d+/i.test(b.trim()));
+    if (hasTowerLegs) {
         autoGroupPairs(initialBases);
+    } else {
+        renderFootingGroups();
     }
 
     // Recalcula para a primeira aba
@@ -846,9 +928,13 @@ function onSheetChange() {
     activeSheetName = sheetSelect.value;
     if (currentWorkbookData && activeSheetName && currentWorkbookData.sheets[activeSheetName]) {
         initLoadRulesFromSheet(currentWorkbookData.sheets[activeSheetName]);
+        configuredFootingGroups = [];
         const sBases = currentWorkbookData.sheets[activeSheetName].bases_list || currentWorkbookData.sheets[activeSheetName].bases_names || [];
-        if (sBases.length > 0 && configuredFootingGroups.length === 0) {
+        const hasTowerLegs = sBases.some(b => /^B[TA]\d+/i.test(b.trim()));
+        if (hasTowerLegs) {
             autoGroupPairs(sBases);
+        } else {
+            renderFootingGroups();
         }
     }
     recalculateCombinations();
@@ -894,8 +980,13 @@ function renderResults() {
     if (!currentResults) return;
 
     renderKPIs();
-    renderSummaryTableHead();
-    renderSummaryTable();
+    if (activeTableView === 'similarity') {
+        renderSimilarityView();
+    } else {
+        renderSummaryTableHead();
+        renderSummaryTable();
+    }
+    renderSimilarityView(); // Atualiza contadores, KPIs e tabelas de similaridade em background
     renderRawLoads();
     updateFilterChips();
 }
@@ -965,28 +1056,31 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr class="bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-[11px]">
                 <th rowspan="2" class="py-2.5 px-3 text-center border-r border-gray-200 dark:border-gray-700">${baseColTitle}</th>
-                <th colspan="4" class="py-1.5 px-2 text-center bg-gray-200/70 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-extrabold">1. Picos Globais (kN)</th>
-                <th colspan="5" class="py-1.5 px-2 text-center bg-blue-50 dark:bg-blue-950/40 border-r border-blue-200 dark:border-blue-900/40 text-blue-700 dark:text-blue-300 font-extrabold">2. V Máx & Concomitantes</th>
-                <th colspan="5" class="py-1.5 px-2 text-center bg-amber-50 dark:bg-amber-950/40 border-r border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 font-extrabold">3. V Mín & Concomitantes</th>
-                <th colspan="5" class="py-1.5 px-2 text-center bg-emerald-50 dark:bg-emerald-950/40 border-r border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-extrabold">4. X Máx & Concomitantes</th>
-                <th colspan="5" class="py-1.5 px-2 text-center bg-indigo-50 dark:bg-indigo-950/40 border-r border-indigo-200 dark:border-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-extrabold">5. Y Máx & Concomitantes</th>
-                <th colspan="5" class="py-1.5 px-2 text-center bg-purple-50 dark:bg-purple-950/40 border-r border-purple-200 dark:border-purple-900/40 text-purple-700 dark:text-purple-300 font-extrabold">6. H Máx & Concomitantes</th>
+                <th colspan="5" class="py-1.5 px-2 text-center bg-gray-200/70 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-extrabold">1. Picos Globais (kN, kNm)</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-blue-50 dark:bg-blue-950/40 border-r border-blue-200 dark:border-blue-900/40 text-blue-700 dark:text-blue-300 font-extrabold">2. V Máx & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-amber-50 dark:bg-amber-950/40 border-r border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 font-extrabold">3. V Mín & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-emerald-50 dark:bg-emerald-950/40 border-r border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-extrabold">4. X Máx & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-indigo-50 dark:bg-indigo-950/40 border-r border-indigo-200 dark:border-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-extrabold">5. Y Máx & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-purple-50 dark:bg-purple-950/40 border-r border-purple-200 dark:border-purple-900/40 text-purple-700 dark:text-purple-300 font-extrabold">6. H Máx & Concomitantes</th>
                 <th rowspan="2" class="py-2.5 px-3 text-center">Ações</th>
             </tr>
             <tr class="text-[10px] text-gray-500 dark:text-gray-400">
                 <!-- 1. Picos -->
                 <th class="py-1.5 px-2 text-right">V_pico</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">|M|_pico</th>
                 <th class="py-1.5 px-2 text-right">|X|_pico</th>
                 <th class="py-1.5 px-2 text-right">|Y|_pico</th>
                 <th class="py-1.5 px-2 text-right border-r border-gray-200 dark:border-gray-700">H_pico</th>
                 <!-- 2. V_max -->
                 <th class="py-1.5 px-2 text-right font-bold text-blue-600 dark:text-blue-400">V_máx</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
                 <th class="py-1.5 px-2 text-right">X conc</th>
                 <th class="py-1.5 px-2 text-right">Y conc</th>
                 <th class="py-1.5 px-2 text-right">H conc</th>
                 <th class="py-1.5 px-2 text-left border-r border-blue-200 dark:border-blue-900/40">Combinação</th>
                 <!-- 3. V_min -->
                 <th class="py-1.5 px-2 text-right font-bold text-amber-600 dark:text-amber-400">V_mín</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
                 <th class="py-1.5 px-2 text-right">X conc</th>
                 <th class="py-1.5 px-2 text-right">Y conc</th>
                 <th class="py-1.5 px-2 text-right">H conc</th>
@@ -994,18 +1088,21 @@ function renderSummaryTableHead() {
                 <!-- 4. X_max -->
                 <th class="py-1.5 px-2 text-right font-bold text-emerald-600 dark:text-emerald-400">|X|_máx</th>
                 <th class="py-1.5 px-2 text-right">V conc</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
                 <th class="py-1.5 px-2 text-right">Y conc</th>
                 <th class="py-1.5 px-2 text-right">H conc</th>
                 <th class="py-1.5 px-2 text-left border-r border-emerald-200 dark:border-emerald-900/40">Combinação</th>
                 <!-- 5. Y_max -->
                 <th class="py-1.5 px-2 text-right font-bold text-indigo-600 dark:text-indigo-400">|Y|_máx</th>
                 <th class="py-1.5 px-2 text-right">V conc</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
                 <th class="py-1.5 px-2 text-right">X conc</th>
                 <th class="py-1.5 px-2 text-right">H conc</th>
                 <th class="py-1.5 px-2 text-left border-r border-indigo-200 dark:border-indigo-900/40">Combinação</th>
                 <!-- 6. H_max -->
                 <th class="py-1.5 px-2 text-right font-bold text-purple-600 dark:text-purple-400">H_máx</th>
                 <th class="py-1.5 px-2 text-right">V conc</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
                 <th class="py-1.5 px-2 text-right">X conc</th>
                 <th class="py-1.5 px-2 text-right">Y conc</th>
                 <th class="py-1.5 px-2 text-left border-r border-purple-200 dark:border-purple-900/40">Combinação</th>
@@ -1016,6 +1113,7 @@ function renderSummaryTableHead() {
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
                 <th class="py-3 px-4 text-right text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/20">1. V Máximo Pico (kN)</th>
+                <th class="py-3 px-4 text-right text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20">1. |M| Máximo Pico (kNm)</th>
                 <th class="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20">1. |X| Máximo Pico (kN)</th>
                 <th class="py-3 px-4 text-right text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20">1. |Y| Máximo Pico (kN)</th>
                 <th class="py-3 px-4 text-right text-purple-600 dark:text-purple-400 bg-purple-50/40 dark:bg-purple-950/20">1. H Resultante Máx (kN)</th>
@@ -1027,6 +1125,7 @@ function renderSummaryTableHead() {
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
                 <th class="py-3 px-4 text-right text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/20 font-bold">2. V Máximo (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
                 <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
@@ -1039,6 +1138,7 @@ function renderSummaryTableHead() {
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
                 <th class="py-3 px-4 text-right text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20 font-bold">3. V Mínimo / Alívio (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
                 <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
@@ -1052,6 +1152,7 @@ function renderSummaryTableHead() {
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
                 <th class="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 font-bold">4. |X| Máximo (kN)</th>
                 <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">V Concomitante (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
                 <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
@@ -1064,6 +1165,7 @@ function renderSummaryTableHead() {
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
                 <th class="py-3 px-4 text-right text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20 font-bold">5. |Y| Máximo (kN)</th>
                 <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">V Concomitante (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
                 <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
@@ -1076,6 +1178,7 @@ function renderSummaryTableHead() {
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
                 <th class="py-3 px-4 text-right text-purple-600 dark:text-purple-400 bg-purple-50/40 dark:bg-purple-950/20 font-bold">6. H Resultante Máx (kN)</th>
                 <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">V Concomitante (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
                 <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
                 <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
@@ -1181,44 +1284,50 @@ function renderSummaryTable() {
 
                     <!-- 1. Picos Globais -->
                     <td class="py-2 px-2 text-right mono-num font-semibold text-gray-800 dark:text-gray-200">${formatNumber(it.peak_V ?? it.V_max)}</td>
+                    <td class="py-2 px-2 text-right mono-num font-semibold text-amber-600 dark:text-amber-400">${formatNumber(it.peak_M ?? it.M_max)}</td>
                     <td class="py-2 px-2 text-right mono-num font-semibold text-gray-800 dark:text-gray-200">${formatNumber(it.peak_X ?? it.X_max)}</td>
                     <td class="py-2 px-2 text-right mono-num font-semibold text-gray-800 dark:text-gray-200">${formatNumber(it.peak_Y ?? it.Y_max)}</td>
                     <td class="py-2 px-2 text-right mono-num font-semibold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700/60">${formatNumber(it.peak_H ?? it.H_max)}</td>
 
                     <!-- 2. V Máx & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/10">${formatNumber(it.V_max)}</td>
+                    <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.V_max_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_X)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_Y)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_H)}</td>
-                    <td class="py-2 px-2 text-left text-gray-600 dark:text-gray-300 truncate max-w-[130px] border-r border-blue-200 dark:border-blue-900/40" title="${it.V_max_comb || ''}">${it.V_max_comb || '--'}</td>
+                    <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-blue-200 dark:border-blue-900/40" title="${it.V_max_comb || ''} &#10;Fórmula: ${it.V_max_formula || ''}">${it.V_max_formula || it.V_max_comb || '--'}</td>
 
                     <!-- 3. V Mín & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold bg-amber-50/30 dark:bg-amber-950/10"><span class="${vMinHighlight}">${formatNumber(it.V_min)}</span></td>
+                    <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.V_min_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_X)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_Y)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_H)}</td>
-                    <td class="py-2 px-2 text-left text-gray-600 dark:text-gray-300 truncate max-w-[130px] border-r border-amber-200 dark:border-amber-900/40" title="${it.V_min_comb || ''}">${it.V_min_comb || '--'}</td>
+                    <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-amber-200 dark:border-amber-900/40" title="${it.V_min_comb || ''} &#10;Fórmula: ${it.V_min_formula || ''}">${it.V_min_formula || it.V_min_comb || '--'}</td>
 
                     <!-- 4. X Máx & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">${formatNumber(it.X_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.X_max_V)}</td>
+                    <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.X_max_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.X_max_Y)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.X_max_H)}</td>
-                    <td class="py-2 px-2 text-left text-gray-600 dark:text-gray-300 truncate max-w-[130px] border-r border-emerald-200 dark:border-emerald-900/40" title="${it.X_max_comb || ''}">${it.X_max_comb || '--'}</td>
+                    <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-emerald-200 dark:border-emerald-900/40" title="${it.X_max_comb || ''} &#10;Fórmula: ${it.X_max_formula || ''}">${it.X_max_formula || it.X_max_comb || '--'}</td>
 
                     <!-- 5. Y Máx & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10">${formatNumber(it.Y_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.Y_max_V)}</td>
+                    <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.Y_max_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.Y_max_X)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.Y_max_H)}</td>
-                    <td class="py-2 px-2 text-left text-gray-600 dark:text-gray-300 truncate max-w-[130px] border-r border-indigo-200 dark:border-indigo-900/40" title="${it.Y_max_comb || ''}">${it.Y_max_comb || '--'}</td>
+                    <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-indigo-200 dark:border-indigo-900/40" title="${it.Y_max_comb || ''} &#10;Fórmula: ${it.Y_max_formula || ''}">${it.Y_max_formula || it.Y_max_comb || '--'}</td>
 
                     <!-- 6. H Máx & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-purple-600 dark:text-purple-400 bg-purple-50/30 dark:bg-purple-950/10">${formatNumber(it.H_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.H_max_V)}</td>
+                    <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.H_max_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.H_max_X)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.H_max_Y)}</td>
-                    <td class="py-2 px-2 text-left text-gray-600 dark:text-gray-300 truncate max-w-[130px] border-r border-purple-200 dark:border-purple-900/40" title="${it.H_max_comb || ''}">${it.H_max_comb || '--'}</td>
+                    <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-purple-200 dark:border-purple-900/40" title="${it.H_max_comb || ''} &#10;Fórmula: ${it.H_max_formula || ''}">${it.H_max_formula || it.H_max_comb || '--'}</td>
 
                     <!-- Detalhar -->
                     <td class="py-2.5 px-3 text-center">
@@ -1233,6 +1342,7 @@ function renderSummaryTable() {
                         ${baseColHtml}
                     </td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/10">${formatNumber(it.peak_V ?? it.V_max)}</td>
+                    <td class="py-2.5 px-4 text-right mono-num font-bold text-amber-600 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10">${formatNumber(it.peak_M ?? it.M_max)}</td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">${formatNumber(it.peak_X ?? it.X_max)}</td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10">${formatNumber(it.peak_Y ?? it.Y_max)}</td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-purple-600 dark:text-purple-400 bg-purple-50/30 dark:bg-purple-950/10">${formatNumber(it.peak_H ?? it.H_max)}</td>
@@ -1248,10 +1358,14 @@ function renderSummaryTable() {
                         ${baseColHtml}
                     </td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/10">${formatNumber(it.V_max)}</td>
+                    <td class="py-2.5 px-3 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.V_max_M)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_X)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_Y)}</td>
                     <td class="py-2.5 px-3 text-right mono-num font-bold text-purple-600 dark:text-purple-400">${formatNumber(it.V_max_H)}</td>
-                    <td class="py-2.5 px-4 text-left text-gray-600 dark:text-gray-300 truncate max-w-xs" title="${it.V_max_comb || ''}">${it.V_max_comb || '--'}</td>
+                    <td class="py-2.5 px-4 text-left">
+                        <div class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-sm" title="${it.V_max_formula || ''}">${it.V_max_formula || it.V_max_comb || '--'}</div>
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-sm" title="${it.V_max_comb || ''}">${it.V_max_comb || ''}</div>
+                    </td>
                     <td class="py-2.5 px-3 text-center">
                         ${actionBtnHtml}
                     </td>
@@ -1264,12 +1378,16 @@ function renderSummaryTable() {
                         ${baseColHtml}
                     </td>
                     <td class="py-2.5 px-4 text-right mono-num bg-amber-50/30 dark:bg-amber-950/10"><span class="${vMinHighlight}">${formatNumber(it.V_min)}</span></td>
+                    <td class="py-2.5 px-3 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.V_min_M)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_X)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_Y)}</td>
                     <td class="py-2.5 px-3 text-right mono-num font-bold text-purple-600 dark:text-purple-400">${formatNumber(it.V_min_H)}</td>
-                    <td class="py-2.5 px-4 text-left text-gray-600 dark:text-gray-300 truncate max-w-xs" title="${it.V_min_comb || ''}">
-                        ${it.V_min_comb || '--'}
-                        ${(it.V_min_comb && it.V_min_comb.includes('Zerada')) ? '<span class="ml-1 text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold px-1.5 py-0.2 rounded">Alívio Crítico</span>' : ''}
+                    <td class="py-2.5 px-4 text-left">
+                        <div class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-sm" title="${it.V_min_formula || ''}">
+                            ${it.V_min_formula || it.V_min_comb || '--'}
+                            ${(it.V_min_comb && it.V_min_comb.includes('Zerada')) ? '<span class="ml-1 text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold px-1.5 py-0.2 rounded">Alívio Crítico</span>' : ''}
+                        </div>
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-sm" title="${it.V_min_comb || ''}">${it.V_min_comb || ''}</div>
                     </td>
                     <td class="py-2.5 px-3 text-center">
                         ${actionBtnHtml}
@@ -1284,9 +1402,13 @@ function renderSummaryTable() {
                     </td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">${formatNumber(it.X_max)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-blue-600 dark:text-blue-400">${formatNumber(it.X_max_V)}</td>
+                    <td class="py-2.5 px-3 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.X_max_M)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.X_max_Y)}</td>
                     <td class="py-2.5 px-3 text-right mono-num font-bold text-purple-600 dark:text-purple-400">${formatNumber(it.X_max_H)}</td>
-                    <td class="py-2.5 px-4 text-left text-gray-600 dark:text-gray-300 truncate max-w-xs" title="${it.X_max_comb || ''}">${it.X_max_comb || '--'}</td>
+                    <td class="py-2.5 px-4 text-left">
+                        <div class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-sm" title="${it.X_max_formula || ''}">${it.X_max_formula || it.X_max_comb || '--'}</div>
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-sm" title="${it.X_max_comb || ''}">${it.X_max_comb || ''}</div>
+                    </td>
                     <td class="py-2.5 px-3 text-center">
                         ${actionBtnHtml}
                     </td>
@@ -1300,9 +1422,13 @@ function renderSummaryTable() {
                     </td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10">${formatNumber(it.Y_max)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-blue-600 dark:text-blue-400">${formatNumber(it.Y_max_V)}</td>
+                    <td class="py-2.5 px-3 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.Y_max_M)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.Y_max_X)}</td>
                     <td class="py-2.5 px-3 text-right mono-num font-bold text-purple-600 dark:text-purple-400">${formatNumber(it.Y_max_H)}</td>
-                    <td class="py-2.5 px-4 text-left text-gray-600 dark:text-gray-300 truncate max-w-xs" title="${it.Y_max_comb || ''}">${it.Y_max_comb || '--'}</td>
+                    <td class="py-2.5 px-4 text-left">
+                        <div class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-sm" title="${it.Y_max_formula || ''}">${it.Y_max_formula || it.Y_max_comb || '--'}</div>
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-sm" title="${it.Y_max_comb || ''}">${it.Y_max_comb || ''}</div>
+                    </td>
                     <td class="py-2.5 px-3 text-center">
                         ${actionBtnHtml}
                     </td>
@@ -1316,9 +1442,13 @@ function renderSummaryTable() {
                     </td>
                     <td class="py-2.5 px-4 text-right mono-num font-bold text-purple-600 dark:text-purple-400 bg-purple-50/30 dark:bg-purple-950/10">${formatNumber(it.H_max)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-blue-600 dark:text-blue-400">${formatNumber(it.H_max_V)}</td>
+                    <td class="py-2.5 px-3 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.H_max_M)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.H_max_X)}</td>
                     <td class="py-2.5 px-3 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.H_max_Y)}</td>
-                    <td class="py-2.5 px-4 text-left text-gray-600 dark:text-gray-300 truncate max-w-xs" title="${it.H_max_comb || ''}">${it.H_max_comb || '--'}</td>
+                    <td class="py-2.5 px-4 text-left">
+                        <div class="font-mono text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-sm" title="${it.H_max_formula || ''}">${it.H_max_formula || it.H_max_comb || '--'}</div>
+                        <div class="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-sm" title="${it.H_max_comb || ''}">${it.H_max_comb || ''}</div>
+                    </td>
                     <td class="py-2.5 px-3 text-center">
                         ${actionBtnHtml}
                     </td>
@@ -1331,30 +1461,313 @@ function renderSummaryTable() {
 }
 
 /**
- * Alterna a visualização entre Bases Individuais e Sapatas Conjuntas
+ * Alterna a visualização entre Bases Individuais, Sapatas Conjuntas e Similaridade / Tipificação
  */
 function setMainTableView(view) {
     activeTableView = view;
     const btnIndiv = document.getElementById('tab-view-individual');
     const btnComb = document.getElementById('tab-view-combined');
+    const btnSim = document.getElementById('tab-view-similarity');
     const title = document.getElementById('table-main-title');
     const subtitle = document.getElementById('table-subtitle');
+    const stdContainer = document.getElementById('standard-table-container');
+    const simContainer = document.getElementById('similarity-view-container');
+
+    // Reset de estilos padrão nos botões de aba
+    [btnIndiv, btnComb, btnSim].forEach(btn => {
+        if (btn) {
+            btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer flex items-center gap-1.5';
+        }
+    });
 
     if (view === 'individual') {
         if (btnIndiv) btnIndiv.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-xs cursor-pointer';
-        if (btnComb) btnComb.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer flex items-center gap-1.5';
         if (title) title.innerHTML = `<span>📋</span> Envoltórias por Base Individual (kN)`;
         if (subtitle) subtitle.innerText = 'Cargas máximas e mínimas para cada montante individual com esforços concomitantes.';
-    } else {
+        if (stdContainer) stdContainer.classList.remove('hidden');
+        if (simContainer) simContainer.classList.add('hidden');
+        renderSummaryTableHead();
+        renderSummaryTable();
+    } else if (view === 'combined') {
         if (btnComb) btnComb.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-indigo-600 text-white shadow-xs cursor-pointer flex items-center gap-1.5';
-        if (btnIndiv) btnIndiv.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer';
         if (title) title.innerHTML = `<span>🏛️</span> Envoltórias de Sapatas Conjuntas (kN)`;
         if (subtitle) subtitle.innerText = 'Cargas simultâneas somadas das bases que compõem a mesma sapata (ex: BT1 + BT2) por combinação normativa.';
+        if (stdContainer) stdContainer.classList.remove('hidden');
+        if (simContainer) simContainer.classList.add('hidden');
+        renderSummaryTableHead();
+        renderSummaryTable();
+    } else if (view === 'similarity') {
+        if (btnSim) btnSim.className = 'px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-purple-600 text-white shadow-xs cursor-pointer flex items-center gap-1.5';
+        if (title) title.innerHTML = `<span>🎯</span> Similaridade & Tipificação para Dimensionamento (kN)`;
+        if (subtitle) subtitle.innerText = 'Agrupamento inteligente de bases em famílias típicas por envoltória governante para otimização de fôrmas e armaduras.';
+        if (stdContainer) stdContainer.classList.add('hidden');
+        if (simContainer) simContainer.classList.remove('hidden');
+        renderSimilarityView();
+    }
+}
+
+/**
+ * Disparado pelo slider de tolerância de similaridade
+ */
+function onSimilarityToleranceChange(val) {
+    similarityTolerance = parseFloat(val) / 100.0;
+    updateToleranceButtons();
+    triggerSimilarityClustering();
+}
+
+/**
+ * Define tolerância rápida (10%, 20%, 30%)
+ */
+function setSimilarityTolerance(percent) {
+    const range = document.getElementById('similarity-tolerance-range');
+    const valText = document.getElementById('sim-tol-val');
+    if (range) range.value = percent;
+    if (valText) valText.innerText = percent + '%';
+    similarityTolerance = percent / 100.0;
+    updateToleranceButtons();
+    triggerSimilarityClustering();
+}
+
+/**
+ * Atualiza visual dos botões de tolerância rápida
+ */
+function updateToleranceButtons() {
+    const currPct = Math.round(similarityTolerance * 100);
+    document.querySelectorAll('.sim-tol-btn').forEach(btn => {
+        const text = btn.innerText;
+        if (text.includes(currPct + '%')) {
+            btn.className = 'sim-tol-btn active px-2.5 py-1 rounded-lg font-bold bg-purple-600 text-white shadow-2xs cursor-pointer';
+        } else {
+            btn.className = 'sim-tol-btn px-2.5 py-1 rounded-lg font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-purple-400 text-gray-700 dark:text-gray-300 transition-all cursor-pointer';
+        }
+    });
+}
+
+/**
+ * Re-agrupa as bases por similaridade chamando o backend Eel de forma reativa instantânea
+ */
+async function triggerSimilarityClustering() {
+    if (!currentResults || !currentResults.summary_items) return;
+    try {
+        if (typeof eel !== 'undefined' && eel.mietc_cluster_by_similarity) {
+            const res = await eel.mietc_cluster_by_similarity(currentResults.summary_items, similarityTolerance)();
+            if (res.status === 'success') {
+                currentResults.similarity_clustering = res.data;
+                renderSimilarityView();
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao agrupar por similaridade:', err);
+    }
+}
+
+/**
+ * Renderiza o painel completo de Similaridade e Tipificação (KPIs, Tabela 1 e Tabela 2)
+ */
+function renderSimilarityView() {
+    if (!currentResults) return;
+    const simData = currentResults.similarity_clustering;
+    const badgeCount = document.getElementById('similarity-badge-count');
+    if (!simData) {
+        if (badgeCount) badgeCount.innerText = '0';
+        return;
     }
 
-    renderSummaryTableHead();
-    renderSummaryTable();
+    if (badgeCount) badgeCount.innerText = simData.total_families || 0;
+
+    // Mini KPIs
+    const elTot = document.getElementById('sim-kpi-total-families');
+    const elRed = document.getElementById('sim-kpi-reduction');
+    const elTens = document.getElementById('sim-kpi-tension-families');
+    const elComp = document.getElementById('sim-kpi-compression-families');
+
+    if (elTot) elTot.innerText = simData.total_families;
+    if (elTens) elTens.innerText = simData.tension_families;
+    if (elComp) elComp.innerText = simData.compression_families;
+    if (elRed) {
+        const totalBases = currentResults.total_bases || 1;
+        const redPct = Math.round((1.0 - simData.total_families / totalBases) * 100);
+        elRed.innerText = `${redPct}% de redução em tipos`;
+    }
+
+    // Tabela 1: Síntese das Famílias Típicas e Envoltórias Governantes
+    const famBody = document.getElementById('similarity-families-body');
+    if (famBody) {
+        let famHtml = '';
+        (simData.families || []).forEach(f => {
+            const isTension = f.mode === 'TRAÇÃO';
+            const badgeTypeCls = isTension
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border-amber-300'
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 border-blue-300';
+            const govLoads = f.governing_loads || {};
+            const combVmax = govLoads.comb_V_max || '--';
+            const combVmin = govLoads.comb_V_min || '--';
+            const combHmax = govLoads.comb_H_max || '--';
+
+            // Lista de pílulas das bases integrantes
+            const basesPills = (f.bases || []).map(b => {
+                const isGov = b === f.governing_base;
+                const cls = isGov
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+                return `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] ${cls}">${isGov ? '★ ' : ''}${b}</span>`;
+            }).join(' ');
+
+            famHtml += `
+                <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-700/40 transition-colors">
+                    <td class="py-2.5 px-3">
+                        <div class="flex items-center gap-1.5">
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-extrabold border ${badgeTypeCls}">${f.family_id}</span>
+                            <span class="text-[10px] text-gray-400 uppercase font-semibold">(${f.mode})</span>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-2 text-center font-bold text-gray-800 dark:text-gray-200">${f.bases_count}</td>
+                    <td class="py-2.5 px-3 max-w-xs">
+                        <div class="flex flex-wrap gap-1 items-center max-h-20 overflow-y-auto custom-scrollbar">
+                            ${basesPills}
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                        <span class="font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-lg text-xs border border-emerald-200 dark:border-emerald-800">
+                            ★ ${f.governing_base}
+                        </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                        <span class="font-bold text-blue-600 dark:text-blue-400 block">${formatNumber(govLoads.V_max)}</span>
+                        <span class="text-[9px] text-gray-400 block truncate max-w-[140px] ml-auto" title="${combVmax}">${combVmax}</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                        <span class="font-bold text-amber-600 dark:text-amber-400 block">${formatNumber(govLoads.V_min)}</span>
+                        <span class="text-[9px] text-gray-400 block truncate max-w-[140px] ml-auto" title="${combVmin}">${combVmin}</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                        <span class="font-bold text-purple-600 dark:text-purple-400 block">${formatNumber(govLoads.H_max)}</span>
+                        <span class="text-[9px] text-gray-400 block truncate max-w-[140px] ml-auto" title="${combHmax}">${combHmax}</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                        <button type="button" onclick="openBaseDetailModal('${f.governing_base}')" class="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2.5 rounded-lg transition-all cursor-pointer" title="Ver todas as combinações da base governante">
+                            🔍 Combinações
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        famBody.innerHTML = famHtml || `<tr><td colspan="8" class="py-8 text-center text-gray-400 italic">Nenhuma família gerada.</td></tr>`;
+    }
+
+    // Tabela 2: Relação Nominal de Todas as Bases com Taxa de Solicitação (%)
+    const basesBody = document.getElementById('similarity-bases-body');
+    if (basesBody) {
+        let bHtml = '';
+        (simData.families || []).forEach(f => {
+            const isTension = f.mode === 'TRAÇÃO';
+            const fBadge = isTension
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                : 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300';
+
+            (f.members || []).forEach(m => {
+                const isGov = m.is_governing;
+                const ratio = m.max_ratio ?? 100.0;
+                const condBadge = isGov
+                    ? '<span class="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full text-[10px] border border-emerald-300">★ GOVERNANTE</span>'
+                    : '<span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium px-2 py-0.5 rounded-full text-[10px]">Envelopada</span>';
+
+                // Cor da barra de progresso baseada na taxa de utilização
+                let barColor = 'bg-emerald-500';
+                if (ratio < 70) barColor = 'bg-amber-500';
+                if (ratio < 50) barColor = 'bg-blue-500';
+
+                bHtml += `
+                    <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-700/40 transition-colors ${isGov ? 'bg-emerald-50/30 dark:bg-emerald-950/20 font-bold' : ''}">
+                        <td class="py-2 px-3 font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                            <span>${m.base}</span>
+                        </td>
+                        <td class="py-2 px-3">
+                            <span class="px-2 py-0.5 rounded-md text-[11px] font-extrabold ${fBadge}">${f.family_id}</span>
+                        </td>
+                        <td class="py-2 px-3 text-center">${condBadge}</td>
+                        <td class="py-2 px-3 text-right text-blue-600 dark:text-blue-400">${formatNumber(m.V_max)}</td>
+                        <td class="py-2 px-3 text-right text-amber-600 dark:text-amber-400">${formatNumber(m.V_min)}</td>
+                        <td class="py-2 px-3 text-right text-purple-600 dark:text-purple-400">${formatNumber(m.H_max)}</td>
+                        <td class="py-2 px-3 text-center">
+                            <div class="inline-flex items-center gap-2">
+                                <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                    <div class="${barColor} h-2 rounded-full" style="width: ${Math.min(ratio, 100)}%"></div>
+                                </div>
+                                <span class="text-xs font-bold mono-num w-11 text-right ${isGov ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : 'text-gray-700 dark:text-gray-300'}">${ratio.toFixed(1)}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+        basesBody.innerHTML = bHtml || `<tr><td colspan="7" class="py-8 text-center text-gray-400 italic">Nenhum dado encontrado.</td></tr>`;
+    }
 }
+
+/**
+ * Adota as famílias de similaridade como grupos de Sapatas Conjuntas para cálculo simultâneo
+ */
+function applySimilarityAsFootingGroups() {
+    if (!currentResults || !currentResults.similarity_clustering) {
+        alert('Nenhum agrupamento por similaridade disponível no momento.');
+        return;
+    }
+
+    const families = currentResults.similarity_clustering.families || [];
+    if (families.length === 0) {
+        alert('Nenhuma família identificada.');
+        return;
+    }
+
+    // Configura sapatas conjuntas a partir das famílias que possuem 2 ou mais bases
+    configuredFootingGroups = [];
+    families.forEach(f => {
+        if (f.bases && f.bases.length > 1) {
+            configuredFootingGroups.push({
+                name: `Sapata ${f.family_id}`,
+                bases: [...f.bases]
+            });
+        }
+    });
+
+    renderFootingGroups();
+    setMainTableView('combined');
+    recalculateCombinations();
+
+    alert(`Sucesso! ${configuredFootingGroups.length} sapatas conjuntas geradas a partir das famílias de bases similares.`);
+}
+
+/**
+ * Botão no painel de sapatas conjuntas: Agrupar por Similaridade
+ */
+function autoGroupBySimilarityClick() {
+    applySimilarityAsFootingGroups();
+}
+
+/**
+ * Copia resumo das famílias para a área de transferência em formato TSV
+ */
+function copySimilarityTableToClipboard() {
+    if (!currentResults || !currentResults.similarity_clustering) {
+        alert('Nenhum dado de similaridade para copiar.');
+        return;
+    }
+
+    const families = currentResults.similarity_clustering.families || [];
+    let text = `TIPO\tMODO\tQTD_BASES\tBASES_INTEGRANTES\tBASE_GOVERNANTE\tV_MAX_KN\tV_MIN_KN\tH_RES_KN\tCOMB_VMAX\tCOMB_VMIN\tCOMB_HMAX\n`;
+    families.forEach(f => {
+        const gov = f.governing_loads || {};
+        text += `${f.family_id}\t${f.mode}\t${f.bases_count}\t${f.bases.join(', ')}\t${f.governing_base}\t${gov.V_max}\t${gov.V_min}\t${gov.H_max}\t${gov.comb_V_max || ''}\t${gov.comb_V_min || ''}\t${gov.comb_H_max || ''}\n`;
+    });
+
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Resumo das Famílias Típicas copiado para a área de transferência!');
+    }).catch(err => {
+        alert('Erro ao copiar: ' + err.message);
+    });
+}
+
 
 /**
  * Abre o modal de decomposição da sapata conjunta
@@ -1391,6 +1804,7 @@ function openFootingDecompositionModal(footingName) {
             const combTitle = envObj.combination || '--';
             const bk = envObj.base_breakdown || {};
             const totV = (cDef.key === 'V_max' || cDef.key === 'V_min') ? envObj.value : (envObj.concomitant_V ?? 0.0);
+            const totM = (cDef.key === 'M_max') ? envObj.value : (envObj.concomitant_M ?? 0.0);
             const totX = (cDef.key === 'X_max') ? envObj.value : (envObj.concomitant_X ?? 0.0);
             const totY = (cDef.key === 'Y_max') ? envObj.value : (envObj.concomitant_Y ?? 0.0);
             const totH = (cDef.key === 'H_max') ? envObj.value : (envObj.concomitant_H ?? 0.0);
@@ -1402,6 +1816,7 @@ function openFootingDecompositionModal(footingName) {
                     <td class="py-2 px-3 text-gray-900 dark:text-white uppercase font-extrabold">🏛️ TOTAL SAPATA</td>
                     <td class="py-2 px-3 text-gray-700 dark:text-gray-300 font-normal text-[11px] truncate max-w-xs" title="${combTitle}">${combTitle}</td>
                     <td class="py-2 px-3 text-right ${cDef.color}">${formatNumber(totV)}</td>
+                    <td class="py-2 px-3 text-right text-amber-600 dark:text-amber-400 font-bold">${formatNumber(totM)}</td>
                     <td class="py-2 px-3 text-right">${formatNumber(totX)}</td>
                     <td class="py-2 px-3 text-right">${formatNumber(totY)}</td>
                     <td class="py-2 px-3 text-right text-purple-600 dark:text-purple-400">${formatNumber(totH)}</td>
@@ -1410,7 +1825,7 @@ function openFootingDecompositionModal(footingName) {
 
             // Linhas de cada base integrante
             (footingData.member_bases || []).forEach(bName => {
-                const bLoads = bk[bName] || { V: 0, X: 0, Y: 0, H_res: 0 };
+                const bLoads = bk[bName] || { V: 0, M: 0, X: 0, Y: 0, H_res: 0 };
                 decompHtml += `
                     <tr class="bg-white dark:bg-gray-800/80 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <td class="py-1.5 px-3 text-gray-400 text-[11px] pl-6">↳ Parcela</td>
@@ -1420,6 +1835,7 @@ function openFootingDecompositionModal(footingName) {
                         </td>
                         <td class="py-1.5 px-3 text-gray-400 text-[11px] italic">(mesma combinação acima)</td>
                         <td class="py-1.5 px-3 text-right font-semibold text-blue-600 dark:text-blue-400">${formatNumber(bLoads.V)}</td>
+                        <td class="py-1.5 px-3 text-right text-amber-600 dark:text-amber-400 font-semibold">${formatNumber(bLoads.M)}</td>
                         <td class="py-1.5 px-3 text-right">${formatNumber(bLoads.X)}</td>
                         <td class="py-1.5 px-3 text-right">${formatNumber(bLoads.Y)}</td>
                         <td class="py-1.5 px-3 text-right text-purple-600 dark:text-purple-400">${formatNumber(bLoads.H_res)}</td>
@@ -1443,6 +1859,7 @@ function openFootingDecompositionModal(footingName) {
                     <td class="py-2 px-3 font-semibold text-gray-800 dark:text-gray-200">${c.title}</td>
                     <td class="py-2 px-3 text-gray-500 text-[11px] mono-num">${c.formula || '--'}</td>
                     <td class="py-2 px-3 text-right font-bold text-blue-600 dark:text-blue-400">${formatNumber(c.V)}</td>
+                    <td class="py-2 px-3 text-right text-amber-600 dark:text-amber-400 font-semibold">${formatNumber(c.M)}</td>
                     <td class="py-2 px-3 text-right">${formatNumber(c.X)}</td>
                     <td class="py-2 px-3 text-right">${formatNumber(c.Y)}</td>
                     <td class="py-2 px-3 text-right font-bold text-purple-600 dark:text-purple-400">${formatNumber(c.H_res)}</td>
@@ -1540,10 +1957,12 @@ function openBaseDetailModal(baseName) {
 
     // 1. Picos Globais
     const elPeakV = document.getElementById('m-peak-v');
+    const elPeakM = document.getElementById('m-peak-m');
     const elPeakX = document.getElementById('m-peak-x');
     const elPeakY = document.getElementById('m-peak-y');
     const elPeakH = document.getElementById('m-peak-h');
     if (elPeakV) elPeakV.innerText = `${formatNumber(peaks.V_max ?? env.V_max?.value)} kN`;
+    if (elPeakM) elPeakM.innerText = `${formatNumber(peaks.M_max ?? env.M_max?.value)} kNm`;
     if (elPeakX) elPeakX.innerText = `${formatNumber(peaks.X_max ?? env.X_max?.value)} kN`;
     if (elPeakY) elPeakY.innerText = `${formatNumber(peaks.Y_max ?? env.Y_max?.value)} kN`;
     if (elPeakH) elPeakH.innerText = `${formatNumber(peaks.H_max ?? env.H_max?.value)} kN`;
@@ -1552,31 +1971,31 @@ function openBaseDetailModal(baseName) {
     const elVmax = document.getElementById('modal-env-vmax');
     const elVmaxSub = document.getElementById('modal-env-vmax-sub');
     if (elVmax) elVmax.innerText = `${formatNumber(env.V_max?.value)} kN`;
-    if (elVmaxSub) elVmaxSub.innerText = `X: ${formatNumber(env.V_max?.concomitant_X)} | Y: ${formatNumber(env.V_max?.concomitant_Y)} | H: ${formatNumber(env.V_max?.concomitant_H)}`;
+    if (elVmaxSub) elVmaxSub.innerText = `M: ${formatNumber(env.V_max?.concomitant_M)} | X: ${formatNumber(env.V_max?.concomitant_X)} | Y: ${formatNumber(env.V_max?.concomitant_Y)} | H: ${formatNumber(env.V_max?.concomitant_H)}`;
 
     // 3. V Mín e Concomitantes
     const elVmin = document.getElementById('modal-env-vmin');
     const elVminSub = document.getElementById('modal-env-vmin-sub');
     if (elVmin) elVmin.innerText = `${formatNumber(env.V_min?.value)} kN`;
-    if (elVminSub) elVminSub.innerText = `X: ${formatNumber(env.V_min?.concomitant_X)} | Y: ${formatNumber(env.V_min?.concomitant_Y)} | H: ${formatNumber(env.V_min?.concomitant_H)}`;
+    if (elVminSub) elVminSub.innerText = `M: ${formatNumber(env.V_min?.concomitant_M)} | X: ${formatNumber(env.V_min?.concomitant_X)} | Y: ${formatNumber(env.V_min?.concomitant_Y)} | H: ${formatNumber(env.V_min?.concomitant_H)}`;
 
     // 4. X Máx e Concomitantes
     const elXmax = document.getElementById('modal-env-xmax');
     const elXmaxSub = document.getElementById('modal-env-xmax-sub');
     if (elXmax) elXmax.innerText = `${formatNumber(env.X_max?.value)} kN`;
-    if (elXmaxSub) elXmaxSub.innerText = `V: ${formatNumber(env.X_max?.concomitant_V)} | Y: ${formatNumber(env.X_max?.concomitant_Y)} | H: ${formatNumber(env.X_max?.concomitant_H)}`;
+    if (elXmaxSub) elXmaxSub.innerText = `V: ${formatNumber(env.X_max?.concomitant_V)} | M: ${formatNumber(env.X_max?.concomitant_M)} | Y: ${formatNumber(env.X_max?.concomitant_Y)} | H: ${formatNumber(env.X_max?.concomitant_H)}`;
 
     // 5. Y Máx e Concomitantes
     const elYmax = document.getElementById('modal-env-ymax');
     const elYmaxSub = document.getElementById('modal-env-ymax-sub');
     if (elYmax) elYmax.innerText = `${formatNumber(env.Y_max?.value)} kN`;
-    if (elYmaxSub) elYmaxSub.innerText = `V: ${formatNumber(env.Y_max?.concomitant_V)} | X: ${formatNumber(env.Y_max?.concomitant_X)} | H: ${formatNumber(env.Y_max?.concomitant_H)}`;
+    if (elYmaxSub) elYmaxSub.innerText = `V: ${formatNumber(env.Y_max?.concomitant_V)} | M: ${formatNumber(env.Y_max?.concomitant_M)} | X: ${formatNumber(env.Y_max?.concomitant_X)} | H: ${formatNumber(env.Y_max?.concomitant_H)}`;
 
     // 6. H Máx e Concomitantes
     const elHmax = document.getElementById('modal-env-hmax');
     const elHmaxSub = document.getElementById('modal-env-hmax-sub');
     if (elHmax) elHmax.innerText = `${formatNumber(env.H_max?.value)} kN`;
-    if (elHmaxSub) elHmaxSub.innerText = `V: ${formatNumber(env.H_max?.concomitant_V)} | X: ${formatNumber(env.H_max?.concomitant_X)} | Y: ${formatNumber(env.H_max?.concomitant_Y)}`;
+    if (elHmaxSub) elHmaxSub.innerText = `V: ${formatNumber(env.H_max?.concomitant_V)} | M: ${formatNumber(env.H_max?.concomitant_M)} | X: ${formatNumber(env.H_max?.concomitant_X)} | Y: ${formatNumber(env.H_max?.concomitant_Y)}`;
 
     let html = '';
     const combos = bdata.combinations || [];
@@ -1615,6 +2034,9 @@ function openBaseDetailModal(baseName) {
                 </td>
                 <td class="py-2.5 px-3 text-right mono-num font-bold ${c.V >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'}">
                     ${formatNumber(c.V)}
+                </td>
+                <td class="py-2.5 px-3 text-right mono-num font-semibold text-amber-600 dark:text-amber-400">
+                    ${formatNumber(c.M)}
                 </td>
                 <td class="py-2.5 px-3 text-right mono-num text-gray-700 dark:text-gray-300">
                     ${formatNumber(c.X)}
@@ -1799,6 +2221,7 @@ function exportToWord() {
                 <strong>Envoltórias Globais Críticas:</strong><br>
                 • Compressão Máxima (V_máx): <strong>${formatNumber(currentResults.global_kpi.V_max)} kN</strong> (Base: ${currentResults.global_kpi.V_max_base})<br>
                 • Alívio / Tração Mínima (V_mín): <strong>${formatNumber(currentResults.global_kpi.V_min)} kN</strong> (Base: ${currentResults.global_kpi.V_min_base})<br>
+                • Momento Máximo (|M|_máx): <strong>${formatNumber(currentResults.global_kpi.M_max)} kNm</strong> (Base: ${currentResults.global_kpi.M_max_base || '--'})<br>
                 • Resultante Horizontal Máxima (H_máx): <strong>${formatNumber(currentResults.global_kpi.H_max)} kN</strong> (Base: ${currentResults.global_kpi.H_max_base})
             </div>
 
@@ -1808,16 +2231,19 @@ function exportToWord() {
                     <tr>
                         <th>${isCombined ? 'Sapata (Bases)' : 'Base'}</th>
                         <th>V Máx (kN)</th>
+                        <th>M Concom. (kNm)</th>
                         <th>Comb. Crítica V_máx</th>
                         <th>X Concom.</th>
                         <th>Y Concom.</th>
                         <th>V Mín (kN)</th>
+                        <th>M Concom. (kNm)</th>
                         <th>Comb. Crítica V_mín</th>
                         <th>X Concom.</th>
                         <th>Y Concom.</th>
                         <th>H_res Máx (kN)</th>
                         <th>Comb. Crítica H</th>
                         <th>V Concom.</th>
+                        <th>M Concom. (kNm)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1829,16 +2255,19 @@ function exportToWord() {
             <tr>
                 <td style="text-align:center; font-weight:bold;">${baseName}</td>
                 <td class="num" style="color:#2563eb; font-weight:bold;">${formatNumber(it.V_max)}</td>
-                <td>${it.V_max_comb || '--'}</td>
+                <td class="num" style="color:#d97706;">${formatNumber(it.V_max_M)}</td>
+                <td>${it.V_max_formula || it.V_max_comb || '--'}</td>
                 <td class="num">${formatNumber(it.V_max_X)}</td>
                 <td class="num">${formatNumber(it.V_max_Y)}</td>
                 <td class="num" style="color:#d97706; font-weight:bold;">${formatNumber(it.V_min)}</td>
-                <td>${it.V_min_comb || '--'}</td>
+                <td class="num" style="color:#d97706;">${formatNumber(it.V_min_M)}</td>
+                <td>${it.V_min_formula || it.V_min_comb || '--'}</td>
                 <td class="num">${formatNumber(it.V_min_X)}</td>
                 <td class="num">${formatNumber(it.V_min_Y)}</td>
                 <td class="num" style="color:#7c3aed; font-weight:bold;">${formatNumber(it.H_max)}</td>
-                <td>${it.H_max_comb || '--'}</td>
+                <td>${it.H_max_formula || it.H_max_comb || '--'}</td>
                 <td class="num">${formatNumber(it.H_max_V)}</td>
+                <td class="num" style="color:#d97706;">${formatNumber(it.H_max_M)}</td>
             </tr>
         `;
     });
@@ -1878,13 +2307,16 @@ function copySummaryTableToClipboard() {
     }
 
     const colHeader = isCombined ? "Sapata\tBases Integrantes\t" : "Base\t";
-    let tsv = colHeader + "V Máx (kN)\tComb. Crítica V_máx\tX Concom.\tY Concom.\tV Mín (kN)\tComb. Crítica V_mín\tX Concom.\tY Concom.\tH_res Máx (kN)\tComb. Crítica H\tV Concom.\t|X| Máx\t|Y| Máx\n";
+    let tsv = colHeader + "V Máx (kN)\tM Concom. (kNm)\tComb. Crítica V_máx\tX Concom.\tY Concom.\tV Mín (kN)\tM Concom. (kNm)\tComb. Crítica V_mín\tX Concom.\tY Concom.\tH_res Máx (kN)\tComb. Crítica H\tV Concom.\tM Concom. (kNm)\t|M| Máx\t|X| Máx\t|Y| Máx\n";
 
     items.forEach(it => {
+        const vMaxC = it.V_max_formula || it.V_max_comb || '--';
+        const vMinC = it.V_min_formula || it.V_min_comb || '--';
+        const hMaxC = it.H_max_formula || it.H_max_comb || '--';
         if (isCombined) {
-            tsv += `${it.base}\t${(it.member_bases || []).join(' + ')}\t${it.V_max}\t${it.V_max_comb}\t${it.V_max_X}\t${it.V_max_Y}\t${it.V_min}\t${it.V_min_comb}\t${it.V_min_X}\t${it.V_min_Y}\t${it.H_max}\t${it.H_max_comb}\t${it.H_max_V}\t${it.X_max}\t${it.Y_max}\n`;
+            tsv += `${it.base}\t${(it.member_bases || []).join(' + ')}\t${it.V_max}\t${it.V_max_M}\t${vMaxC}\t${it.V_max_X}\t${it.V_max_Y}\t${it.V_min}\t${it.V_min_M}\t${vMinC}\t${it.V_min_X}\t${it.V_min_Y}\t${it.H_max}\t${hMaxC}\t${it.H_max_V}\t${it.H_max_M}\t${it.M_max}\t${it.X_max}\t${it.Y_max}\n`;
         } else {
-            tsv += `${it.base}\t${it.V_max}\t${it.V_max_comb}\t${it.V_max_X}\t${it.V_max_Y}\t${it.V_min}\t${it.V_min_comb}\t${it.V_min_X}\t${it.V_min_Y}\t${it.H_max}\t${it.H_max_comb}\t${it.H_max_V}\t${it.X_max}\t${it.Y_max}\n`;
+            tsv += `${it.base}\t${it.V_max}\t${it.V_max_M}\t${vMaxC}\t${it.V_max_X}\t${it.V_max_Y}\t${it.V_min}\t${it.V_min_M}\t${vMinC}\t${it.V_min_X}\t${it.V_min_Y}\t${it.H_max}\t${hMaxC}\t${it.H_max_V}\t${it.H_max_M}\t${it.M_max}\t${it.X_max}\t${it.Y_max}\n`;
         }
     });
 

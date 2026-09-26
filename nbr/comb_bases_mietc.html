@@ -191,11 +191,13 @@
 
                 <!-- Table Column Header Labels -->
                 <div class="hidden sm:grid grid-cols-12 gap-2 px-2.5 pb-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    <div class="col-span-3">Identificação da Ação</div>
-                    <div class="col-span-2">Origem / Tipo de Ação</div>
-                    <div class="col-span-2 text-right">Valor Caract. (kN)</div>
-                    <div class="col-span-2 text-center" title="Ações com o mesmo nome de grupo nunca atuam juntas em nenhuma combinação (Exclusão Mútua).">Grupo Exclusivo (XOR)</div>
-                    <div class="col-span-1 text-center" title="Esta ação só entrará nas combinações onde a ação selecionada estiver presente (Coexistência Obrigatória).">Requer (AND)</div>
+                    <div class="col-span-2">Identificação</div>
+                    <div class="col-span-2">Origem / Tipo</div>
+                    <div class="col-span-1 text-right">Valor (kN)</div>
+                    <div class="col-span-1 text-center" title="Coeficiente de ponderação da ação γ_f (ex: 1.35, 1.40, 1.20, 1.50). Deixe em branco para o padrão de norma.">γ_f Coef.</div>
+                    <div class="col-span-1 text-center" title="Ações com o mesmo nome de grupo nunca atuam juntas em nenhuma combinação (Exclusão Mútua XOR).">Grupo (XOR)</div>
+                    <div class="col-span-2 text-center" title="Exclusão Específica (NOT): Ações ou grupos incompatíveis com esta ação (ex: TCP para CVX+, ou CVX+, CVY+, TCO para TCP).">Exclui (NOT)</div>
+                    <div class="col-span-1 text-center" title="Esta ação só entrará nas combinações onde a ação selecionada estiver presente (Coexistência Obrigatória AND).">Requer (AND)</div>
                     <div class="col-span-1 text-center" title="Marque para permitir que esta ação seja zerada em combinações variantes conservadoras, avaliando a máxima tração/arrancamento na fundação sem sobrecargas verticais.">Pode Zerar</div>
                     <div class="col-span-1 text-center">Ações</div>
                 </div>
@@ -232,6 +234,9 @@
                         </label>
                         <button type="button" onclick="autoGroupPairsClick()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5" title="Detecta e agrupa automaticamente bases com sufixos subsequentes (BT1+BT2, BT3+BT4...)">
                             <span>⚡</span> Auto-Agrupar Pares (BT1+BT2...)
+                        </button>
+                        <button type="button" onclick="autoGroupBySimilarityClick()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5" title="Agrupa automaticamente bases com carregamentos similares (Vmax, Vmin, Hmax) em sapatas conjuntas">
+                            <span>🎯</span> Agrupar por Similaridade
                         </button>
                         <button type="button" onclick="addNewFootingGroupRow()" class="bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer">
                             + Nova Sapata
@@ -341,6 +346,9 @@
                                 <button type="button" id="tab-view-combined" onclick="setMainTableView('combined')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer flex items-center gap-1.5">
                                     <span>🏛️</span> Sapatas Conjuntas <span id="combined-badge-count" class="bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
                                 </button>
+                                <button type="button" id="tab-view-similarity" onclick="setMainTableView('similarity')" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer flex items-center gap-1.5" title="Agrupa bases por carregamentos similares para facilitar e padronizar o dimensionamento das fundações">
+                                    <span>🎯</span> Similaridade / Tipificação <span id="similarity-badge-count" class="bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+                                </button>
                             </div>
                         </div>
                         <span class="text-xs text-gray-500 dark:text-gray-400 block mt-1" id="table-subtitle">
@@ -352,48 +360,172 @@
                     </span>
                 </div>
 
-                <div class="px-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
-                        <span class="text-gray-500 dark:text-gray-400 font-bold mr-1 flex items-center gap-1">
-                            <span>🎯</span> Envoltórias:
-                        </span>
-                        <button type="button" onclick="setEnvelopeView('all')" id="env-btn-all" class="env-tab-btn active px-2.5 py-1 rounded-lg font-bold bg-emerald-600 text-white shadow-xs cursor-pointer">
-                            🌟 Todas as 6 Envoltórias
-                        </button>
-                        <button type="button" onclick="setEnvelopeView('peaks')" id="env-btn-peaks" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-                            1. Picos Globais (V, X, Y, H)
-                        </button>
-                        <button type="button" onclick="setEnvelopeView('vmax')" id="env-btn-vmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-                            2. V Máx & Concom.
-                        </button>
-                        <button type="button" onclick="setEnvelopeView('vmin')" id="env-btn-vmin" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-                            3. V Mín & Concom.
-                        </button>
-                        <button type="button" onclick="setEnvelopeView('xmax')" id="env-btn-xmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-                            4. X Máx & Concom.
-                        </button>
-                        <button type="button" onclick="setEnvelopeView('ymax')" id="env-btn-ymax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-                            5. Y Máx & Concom.
-                        </button>
-                        <button type="button" onclick="setEnvelopeView('hmax')" id="env-btn-hmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
-                            6. H Máx & Concom.
-                        </button>
+                <!-- Container 1: Tabela Padrão de Envoltórias (Individuais ou Sapatas Conjuntas) -->
+                <div id="standard-table-container">
+                    <div class="px-4 py-2.5 bg-gray-50/80 dark:bg-gray-900/60 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
+                            <span class="text-gray-500 dark:text-gray-400 font-bold mr-1 flex items-center gap-1">
+                                <span>🎯</span> Envoltórias:
+                            </span>
+                            <button type="button" onclick="setEnvelopeView('all')" id="env-btn-all" class="env-tab-btn active px-2.5 py-1 rounded-lg font-bold bg-emerald-600 text-white shadow-xs cursor-pointer">
+                                🌟 Todas as 6 Envoltórias
+                            </button>
+                            <button type="button" onclick="setEnvelopeView('peaks')" id="env-btn-peaks" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                                1. Picos Globais (V, X, Y, H)
+                            </button>
+                            <button type="button" onclick="setEnvelopeView('vmax')" id="env-btn-vmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                                2. V Máx & Concom.
+                            </button>
+                            <button type="button" onclick="setEnvelopeView('vmin')" id="env-btn-vmin" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                                3. V Mín & Concom.
+                            </button>
+                            <button type="button" onclick="setEnvelopeView('xmax')" id="env-btn-xmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                                4. X Máx & Concom.
+                            </button>
+                            <button type="button" onclick="setEnvelopeView('ymax')" id="env-btn-ymax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                                5. Y Máx & Concom.
+                            </button>
+                            <button type="button" onclick="setEnvelopeView('hmax')" id="env-btn-hmax" class="env-tab-btn px-2.5 py-1 rounded-lg font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer">
+                                6. H Máx & Concom.
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left text-xs border-collapse" id="bases-summary-table">
+                            <thead class="bg-gray-50 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 uppercase tracking-wider font-bold" id="summary-table-head">
+                                <!-- Injetado dinamicamente por renderSummaryTableHead() -->
+                            </thead>
+                            <tbody id="summary-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60">
+                                <tr>
+                                    <td colspan="20" class="py-12 text-center text-gray-400 italic">
+                                        Nenhum dado disponível. Carregue a planilha padrão ou selecione um arquivo Excel acima.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left text-xs border-collapse" id="bases-summary-table">
-                        <thead class="bg-gray-50 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 uppercase tracking-wider font-bold" id="summary-table-head">
-                            <!-- Injetado dinamicamente por renderSummaryTableHead() -->
-                        </thead>
-                        <tbody id="summary-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60">
-                            <tr>
-                                <td colspan="20" class="py-12 text-center text-gray-400 italic">
-                                    Nenhum dado disponível. Carregue a planilha padrão ou selecione um arquivo Excel acima.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <!-- Container 2: Visualização de Similaridade / Tipificação para Dimensionamento -->
+                <div id="similarity-view-container" class="hidden">
+                    <!-- Toolbar de Similaridade: Tolerância e Ações -->
+                    <div class="p-3.5 bg-purple-50/70 dark:bg-purple-950/30 border-b border-purple-100 dark:border-purple-900/50 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span class="text-xs font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1">
+                                <span>⚙️</span> Tolerância de Similaridade:
+                            </span>
+                            <div class="inline-flex items-center gap-2 bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-800/70 rounded-xl px-2.5 py-1 shadow-2xs">
+                                <input type="range" id="similarity-tolerance-range" min="5" max="50" step="5" value="20" onchange="onSimilarityToleranceChange(this.value)" oninput="document.getElementById('sim-tol-val').innerText = this.value + '%'" class="w-24 accent-purple-600 cursor-pointer">
+                                <span id="sim-tol-val" class="text-xs font-mono font-bold text-purple-700 dark:text-purple-300 w-10 text-right">20%</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-xs">
+                                <button type="button" onclick="setSimilarityTolerance(10)" class="sim-tol-btn px-2.5 py-1 rounded-lg font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-purple-400 text-gray-700 dark:text-gray-300 transition-all cursor-pointer">10%</button>
+                                <button type="button" onclick="setSimilarityTolerance(20)" class="sim-tol-btn active px-2.5 py-1 rounded-lg font-bold bg-purple-600 text-white shadow-2xs cursor-pointer">20% (Padrão)</button>
+                                <button type="button" onclick="setSimilarityTolerance(30)" class="sim-tol-btn px-2.5 py-1 rounded-lg font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-purple-400 text-gray-700 dark:text-gray-300 transition-all cursor-pointer">30%</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="applySimilarityAsFootingGroups()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-xs transition-colors cursor-pointer flex items-center gap-1.5" title="Converte as famílias agrupadas em Sapatas Conjuntas para cálculo de esforços simultâneos">
+                                <span>🏛️</span> Adotar Famílias como Sapatas Conjuntas
+                            </button>
+                            <button type="button" onclick="copySimilarityTableToClipboard()" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold py-1.5 px-2.5 rounded-xl transition-all cursor-pointer" title="Copiar resumo de tipificação">
+                                📋 Copiar Resumo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mini KPI Cards de Tipificação -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-gray-50/60 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 text-xs">
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xs">
+                            <span class="text-gray-500 dark:text-gray-400 block font-medium">Famílias Típicas Criadas</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="sim-kpi-total-families" class="text-xl font-extrabold text-purple-600 dark:text-purple-400 mono-num">0</span>
+                                <span id="sim-kpi-reduction" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">--</span>
+                            </div>
+                            <span class="text-[11px] text-gray-400 mt-0.5 block">Padronização de fôrmas e armaduras</span>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40 shadow-2xs">
+                            <span class="text-amber-600 dark:text-amber-400 block font-bold">Famílias com Tração / Alívio (V_mín &lt; 0)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="sim-kpi-tension-families" class="text-xl font-extrabold text-amber-600 dark:text-amber-400 mono-num">0</span>
+                                <span class="text-[11px] font-semibold text-amber-700 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full">Exigem ancoragem</span>
+                            </div>
+                            <span class="text-[11px] text-gray-400 mt-0.5 block">Famílias TIPO T01, T02...</span>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-200 dark:border-blue-900/40 shadow-2xs">
+                            <span class="text-blue-600 dark:text-blue-400 block font-bold">Famílias de Compressão Pura (V_mín &ge; 0)</span>
+                            <div class="flex items-baseline justify-between mt-1">
+                                <span id="sim-kpi-compression-families" class="text-xl font-extrabold text-blue-600 dark:text-blue-400 mono-num">0</span>
+                                <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full">Sapatas convencionais</span>
+                            </div>
+                            <span class="text-[11px] text-gray-400 mt-0.5 block">Famílias TIPO S01, S02...</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabela 1: Famílias Típicas e Envoltórias Governantes -->
+                    <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                <span>📐</span> Tabela 1: Síntese das Famílias Típicas (Envoltórias Governantes de Projeto)
+                            </h3>
+                            <span class="text-[11px] text-gray-400">Cada tipo envelopa 100% de suas bases integrantes com a menor folga possível</span>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar border border-gray-200 dark:border-gray-700 rounded-xl">
+                            <table class="w-full text-left text-xs border-collapse" id="similarity-families-table">
+                                <thead class="bg-gray-50 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 uppercase tracking-wider font-bold">
+                                    <tr>
+                                        <th class="py-2.5 px-3">Tipo / Família</th>
+                                        <th class="py-2.5 px-2 text-center">Qtd</th>
+                                        <th class="py-2.5 px-3">Bases Integrantes</th>
+                                        <th class="py-2.5 px-3 text-center">Base Governante</th>
+                                        <th class="py-2.5 px-3 text-right">V_máx Proj (kN)</th>
+                                        <th class="py-2.5 px-3 text-right">V_mín Proj (kN)</th>
+                                        <th class="py-2.5 px-3 text-right">H_res Máx (kN)</th>
+                                        <th class="py-2.5 px-3 text-center">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="similarity-families-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                                    <tr>
+                                        <td colspan="8" class="py-8 text-center text-gray-400 italic">Nenhum agrupamento calculado ainda.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabela 2: Relação Nominal de Bases com Taxa de Solicitação (%) -->
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                <span>📋</span> Tabela 2: Relação Nominal de Todas as Bases e Taxa de Solicitação (%)
+                            </h3>
+                            <span class="text-[11px] text-gray-400">Destaque para a base governante (★ 100%) e eficiência do tipo atribuído</span>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar border border-gray-200 dark:border-gray-700 rounded-xl max-h-96">
+                            <table class="w-full text-left text-xs border-collapse" id="similarity-bases-table">
+                                <thead class="bg-gray-50 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 uppercase tracking-wider font-bold sticky top-0 z-10">
+                                    <tr>
+                                        <th class="py-2.5 px-3">Base</th>
+                                        <th class="py-2.5 px-3">Família Atribuída</th>
+                                        <th class="py-2.5 px-3 text-center">Condição</th>
+                                        <th class="py-2.5 px-3 text-right">V_máx (kN)</th>
+                                        <th class="py-2.5 px-3 text-right">V_mín (kN)</th>
+                                        <th class="py-2.5 px-3 text-right">H_res (kN)</th>
+                                        <th class="py-2.5 px-3 text-center">Taxa Solicitação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="similarity-bases-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono">
+                                    <tr>
+                                        <td colspan="7" class="py-8 text-center text-gray-400 italic">Aguardando dados...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -457,6 +589,7 @@
                     <span class="text-gray-500 dark:text-gray-400 block font-bold text-[10px] uppercase">1. Picos Globais</span>
                     <div id="modal-env-peaks" class="text-[11px] font-bold text-gray-800 dark:text-gray-200 mono-num mt-1 space-y-0.5">
                         <div>V_pico: <span id="m-peak-v">--</span></div>
+                        <div>|M|_pico: <span id="m-peak-m">--</span></div>
                         <div>|X|_pico: <span id="m-peak-x">--</span></div>
                         <div>|Y|_pico: <span id="m-peak-y">--</span></div>
                         <div>H_pico: <span id="m-peak-h">--</span></div>
@@ -503,6 +636,7 @@
                             <th class="py-2.5 px-3">Identificação da Combinação</th>
                             <th class="py-2.5 px-3">Fórmula Ponderada</th>
                             <th class="py-2.5 px-3 text-right text-blue-600 dark:text-blue-400">V (kN)</th>
+                            <th class="py-2.5 px-3 text-right text-amber-600 dark:text-amber-400">M (kNm)</th>
                             <th class="py-2.5 px-3 text-right">X (kN)</th>
                             <th class="py-2.5 px-3 text-right">Y (kN)</th>
                             <th class="py-2.5 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
@@ -557,6 +691,7 @@
                                 <th class="py-2 px-3">Elemento / Montante</th>
                                 <th class="py-2 px-3">Combinação Crítica Governante</th>
                                 <th class="py-2 px-3 text-right text-blue-600 dark:text-blue-400">Vertical V (kN)</th>
+                                <th class="py-2 px-3 text-right text-amber-600 dark:text-amber-400">Momento M (kNm)</th>
                                 <th class="py-2 px-3 text-right">Cisalh. X (kN)</th>
                                 <th class="py-2 px-3 text-right">Cisalh. Y (kN)</th>
                                 <th class="py-2 px-3 text-right text-purple-600 dark:text-purple-400">Resultante H (kN)</th>
@@ -581,6 +716,7 @@
                             <th class="py-2.5 px-3">Identificação da Combinação</th>
                             <th class="py-2.5 px-3">Fórmula Ponderada</th>
                             <th class="py-2.5 px-3 text-right text-blue-600 dark:text-blue-400">V_total (kN)</th>
+                            <th class="py-2.5 px-3 text-right text-amber-600 dark:text-amber-400">M_total (kNm)</th>
                             <th class="py-2.5 px-3 text-right">X_total (kN)</th>
                             <th class="py-2.5 px-3 text-right">Y_total (kN)</th>
                             <th class="py-2.5 px-3 text-right text-purple-600 dark:text-purple-400">H_total (kN)</th>

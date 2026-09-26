@@ -156,5 +156,59 @@ class TestRetainingWall(unittest.TestCase):
         self.assertGreater(st_c["fs_overturning"], st_r["fs_overturning"])
         self.assertGreater(st_c["fs_sliding"], st_r["fs_sliding"])
 
+    def test_retaining_wall_excel_correlations_and_equilibrium(self):
+        """Verifies Excel-based component thrusts, geotechnical correlations, and cantilever equilibrium."""
+        inputs = {
+            "stem_height": 4.0,
+            "stem_top_width": 0.30,
+            "stem_bot_width": 0.50,
+            "toe_length": 0.80,
+            "heel_length": 1.70,
+            "base_thickness": 0.50,
+            "gamma_soil": 18.0,
+            "phi_soil": 30.0,
+            "q_surcharge": 10.0,
+            "water_height": 1.5,
+            "drainage_eff": 0.0,
+            "base_spt": 15.0,
+            "alpha_found": 2.0
+        }
+        res = calculate_retaining_wall(inputs)
+        self.assertTrue(res.get("success"))
+
+        # Component thrusts
+        ep = res["earth_pressures"]
+        self.assertIn("component_thrusts", ep)
+        comp = ep["component_thrusts"]
+        self.assertIn("soil", comp)
+        self.assertIn("surcharge", comp)
+        self.assertIn("water", comp)
+        self.assertGreater(comp["soil"]["P_h_kN"], 0.0)
+        self.assertGreater(comp["surcharge"]["P_h_kN"], 0.0)
+        self.assertGreater(comp["water"]["P_h_kN"], 0.0)
+
+        # Geotechnical correlations
+        self.assertIn("geotechnical_correlations", res)
+        corr = res["geotechnical_correlations"]
+        self.assertIn("backfill", corr)
+        self.assertIn("foundation", corr)
+        found_c = corr["foundation"]
+        self.assertAlmostEqual(found_c["K0"], 0.5, places=2)
+        self.assertAlmostEqual(found_c["nu"], 0.333, places=2)
+        self.assertAlmostEqual(found_c["E_kPa"], 30000.0, places=1) # 2.0 * 15 * 1000
+
+        # Global cantilever equilibrium
+        st = res["stability"]
+        self.assertIn("global_cantilever_equilibrium", st)
+        g_eq = st["global_cantilever_equilibrium"]
+        self.assertGreater(g_eq["fs_sliding"], 0.0)
+        self.assertGreater(g_eq["fs_overturning"], 0.0)
+        self.assertIn(g_eq["status_sliding"], ["OK (Seguro)", "Limítrofe", "FALHA (Sem Equilíbrio)"])
+
+        # Soil catalog
+        self.assertIn("soil_catalog_excel", res)
+        self.assertGreater(len(res["soil_catalog_excel"]), 5)
+
+
 if __name__ == "__main__":
     unittest.main()

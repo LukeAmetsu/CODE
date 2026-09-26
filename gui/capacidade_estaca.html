@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capacidade Geotécnica de Estacas Escavadas - FHWA / Mayne Beta-Method</title>
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="capacidade_estaca.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'capacidade-estaca',
+                    pageTitle: 'capacidade_estaca',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.4);
+            border-radius: 3px;
+        }
+        .soil-badge-areias {
+            background-color: #FEF3C7;
+            color: #92400E;
+            border: 1px solid #FCD34D;
+        }
+        .dark .soil-badge-areias {
+            background-color: rgba(146, 64, 14, 0.25);
+            color: #FCD34D;
+            border-color: rgba(252, 211, 77, 0.3);
+        }
+        .soil-badge-gravas {
+            background-color: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #6EE7B7;
+        }
+        .dark .soil-badge-gravas {
+            background-color: rgba(6, 95, 70, 0.25);
+            color: #6EE7B7;
+            border-color: rgba(110, 231, 183, 0.3);
+        }
+        .soil-badge-finos {
+            background-color: #EDE9FE;
+            color: #5B21B6;
+            border: 1px solid #C4B5FD;
+        }
+        .dark .soil-badge-finos {
+            background-color: rgba(91, 33, 182, 0.25);
+            color: #C4B5FD;
+            border-color: rgba(196, 181, 253, 0.3);
+        }
+        .soil-badge-aterro {
+            background-color: #F1F5F9;
+            color: #334155;
+            border: 1px solid #CBD5E1;
+        }
+        .dark .soil-badge-aterro {
+            background-color: rgba(51, 65, 85, 0.3);
+            color: #CBD5E1;
+            border-color: rgba(203, 213, 225, 0.2);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <!-- Header Injection Placeholder -->
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="mt-4 flex-grow flex flex-col">
+            <!-- Header Section -->
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl p-2.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-2xl shadow-xs">🏗️</span>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h1 class="text-2xl md:text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+                                    Capacidade Geotécnica de Estacas Escavadas
+                                </h1>
+                                <span class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                                    FHWA GEC 010 • Mayne β-Method
+                                </span>
+                                <span class="bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                                    Ref: capacidade estaca.xlsx
+                                </span>
+                            </div>
+                            <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                Análise axial de estacas escavadas de grande diâmetro (48", 54", 60") a partir de sondagens SPT, síntese estatística multi-furos (percentil/moda) e dimensionamento por eixos estruturais com cota de arrasamento.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button type="button" onclick="loadReferenceData()" class="px-3.5 py-2 text-xs font-bold rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all flex items-center gap-1.5 shadow-xs">
+                        <span>📋</span> Carregar Ref. Planilha
+                    </button>
+                    <button type="button" onclick="exportAnalysisToExcel()" class="px-3.5 py-2 text-xs font-bold rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all flex items-center gap-1.5 shadow-xs">
+                        <span>📥</span> Exportar Excel (.xlsx)
+                    </button>
+                    <button type="button" onclick="window.print()" class="px-3.5 py-2 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-all flex items-center gap-1.5 shadow-xs">
+                        <span>🖨️</span> Imprimir / PDF
+                    </button>
+                    <button type="button" onclick="triggerCalculation()" class="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center gap-1.5 shadow-sm">
+                        <span>⚡</span> Recalcular
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top KPI Cards & Quick Factors Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+                <!-- KPI 1: Target Load -->
+                <div class="p-3.5 rounded-2xl border border-blue-200 dark:border-blue-800/60 bg-gradient-to-br from-blue-50/70 to-indigo-50/40 dark:from-blue-950/30 dark:to-indigo-950/20 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                        <span>🎯</span> Carga Alvo
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-1">
+                        <span id="kpi-target-load" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white">21.400</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">kN</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">Fase I de Carregamento</span>
+                </div>
+
+                <!-- KPI 2: Water Table -->
+                <div class="p-3.5 rounded-2xl border border-sky-200 dark:border-sky-800/60 bg-white dark:bg-gray-800/80 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-sky-700 dark:text-sky-300 flex items-center gap-1">
+                        <span>💧</span> Nível d'Água
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-1">
+                        <span id="kpi-water-table" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white">3.00</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">m</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">Lençol Freático (N.A.)</span>
+                </div>
+
+                <!-- KPI 3: Factor of Safety (Global & Differentiated) -->
+                <div class="p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-white dark:bg-gray-800/80 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                        <span class="flex items-center gap-1"><span>🛡️</span> Fator Seg. (FS)</span>
+                        <span id="kpi-fs-mode-badge" class="text-[9px] px-1 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-extrabold">Global + DIF</span>
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-1.5 flex-wrap">
+                        <span id="kpi-fs" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white">2.00</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 font-semibold">(Global)</span>
+                    </div>
+                    <span id="kpi-fs-dif-text" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
+                        DIF: FS<sub>s</sub>=1.50 | FS<sub>p</sub>=3.00
+                    </span>
+                </div>
+
+                <!-- KPI 4: Casing Reduction & FHWA Eq. 10-13 -->
+                <div class="p-3.5 rounded-2xl border border-rose-200 dark:border-rose-800/60 bg-gradient-to-br from-rose-50/70 to-amber-50/40 dark:from-rose-950/30 dark:to-amber-950/20 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-rose-700 dark:text-rose-300 flex items-center justify-between">
+                        <span class="flex items-center gap-1"><span>🔩</span> Camisa & FHWA</span>
+                        <span id="kpi-fhwa-badge" class="text-[9px] px-1 py-0.2 rounded bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 font-extrabold">Eq. 10-13</span>
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-1">
+                        <span id="kpi-casing-reduction" class="text-xl md:text-2xl font-black text-rose-700 dark:text-rose-400">-10%</span>
+                        <span id="kpi-casing-factor" class="text-xs font-bold text-gray-500 dark:text-gray-400">(x0.90)</span>
+                    </div>
+                    <span id="kpi-casing-len-badge" class="text-[10px] text-rose-600 dark:text-rose-400 font-bold block mt-0.5">Estaca inteira</span>
+                    <span id="kpi-fhwa-text" class="text-[9px] text-gray-600 dark:text-gray-400 font-medium block mt-0.5">
+                        β ≤ K<sub>p</sub> tan φ' & 900 psf
+                    </span>
+                </div>
+
+                <!-- KPI 5: Critical Borehole -->
+                <div class="p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-white dark:bg-gray-800/80 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                        <span>⚠️</span> Sondagem Eixos
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-1">
+                        <span id="kpi-critical-sounding" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white">SPT-01</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">Pior caso adotado</span>
+                </div>
+
+                <!-- KPI 6: Statistical Model -->
+                <div class="p-3.5 rounded-2xl border border-purple-200 dark:border-purple-800/60 bg-white dark:bg-gray-800/80 shadow-xs">
+                    <span class="text-[10px] uppercase font-bold tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                        <span>📊</span> Percentil SPT
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-1">
+                        <span id="kpi-percentile" class="text-xl md:text-2xl font-black text-gray-900 dark:text-white">10%</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">Síntese Multi-Furos</span>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 mb-6 pb-2 overflow-x-auto">
+                <button type="button" id="tab-btn-summary" onclick="switchTab('summary')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all border border-blue-600 bg-blue-600 text-white flex items-center gap-1.5 shadow-xs whitespace-nowrap">
+                    <span>📊</span> Visão Geral & Resumo Comparativo
+                </button>
+                <button type="button" id="tab-btn-axes" onclick="switchTab('axes')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all border border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1.5 whitespace-nowrap">
+                    <span>🏗️</span> Capacidade por Eixo de Fundação (Cota TOPO & Embutimento)
+                </button>
+                <button type="button" id="tab-btn-soundings" onclick="switchTab('soundings')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all border border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1.5 whitespace-nowrap">
+                    <span>📈</span> Detalhamento das Sondagens (SPT)
+                </button>
+                <button type="button" id="tab-btn-parameters" onclick="switchTab('parameters')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition-all border border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-1.5 whitespace-nowrap">
+                    <span>⚙️</span> Fatores de Projeto & Geometria
+                </button>
+            </div>
+
+
+            <!-- TAB 1: SUMMARY & OVERVIEW -->
+            <div id="view-tab-summary" class="tab-content space-y-6">
+                <!-- Summary Table Card -->
+                <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 gap-3">
+                        <div>
+                            <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span>📋</span> Tabela Síntese: Capacidade Axial Geotécnica por Sondagem
+                            </h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Comparativo de Resistência Última ($R_n$), Resistência Admissível ($R_{adm}$ com $FS=2$) e Profundidade Necessária para atingir a Carga Alvo de <span id="summary-target-text" class="font-bold text-blue-600 dark:text-blue-400">21.400 kN</span>.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <div class="flex items-center gap-1.5">
+                                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">Modo FS:</label>
+                                <select id="select-summary-fs-mode" onchange="renderSummaryTable()" class="px-2.5 py-1 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold focus:ring-2 focus:ring-blue-500">
+                                    <option value="both">Comparativo: FS Global (2.0) vs FS Diferenciado (1.5 / 3.0)</option>
+                                    <option value="global">Apenas FS Global (FS = 2.0)</option>
+                                    <option value="differentiated">Apenas FS Diferenciado (FSs = 1.5 / FSp = 3.0)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">Diâmetro em Foco:</label>
+                                <select id="select-focus-pile" onchange="updateSummaryFocus()" class="px-3 py-1 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold focus:ring-2 focus:ring-blue-500">
+                                    <option value="all">Todos os Diâmetros</option>
+                                    <option value="pile_48in">D = 1.20 m (48")</option>
+                                    <option value="pile_54in">D = 1.30 m (54")</option>
+                                    <option value="pile_60in">D = 1.50 m (60")</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Table -->
+                    <div class="overflow-x-auto mt-4 custom-scrollbar">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 uppercase tracking-wider font-extrabold text-[10px] border-b border-gray-200 dark:border-gray-700">
+                                    <th rowspan="2" class="p-3 border-r border-gray-200 dark:border-gray-700">Sondagem SPT</th>
+                                    <th colspan="3" class="p-2.5 text-center border-r border-gray-200 dark:border-gray-700 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300">
+                                        Resistência Última Rn (kN)
+                                    </th>
+                                    <th colspan="3" id="summary-th-radm" class="p-2.5 text-center border-r border-gray-200 dark:border-gray-700 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300">
+                                        Resistência Admissível Radm (kN - FS=2.0)
+                                    </th>
+                                    <th colspan="3" class="p-2.5 text-center border-r border-gray-200 dark:border-gray-700 bg-amber-50/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300">
+                                        Profundidade Máx Sondada (m)
+                                    </th>
+                                    <th colspan="3" class="p-2.5 text-center bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-900 dark:text-indigo-300">
+                                        Profundidade para Carga Alvo (m)
+                                    </th>
+                                </tr>
+                                <tr class="bg-gray-50 dark:bg-gray-800 text-[10px] font-bold text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                                    <!-- Rn -->
+                                    <th class="p-2 text-center th-pile-sub-0">1.2m</th>
+                                    <th class="p-2 text-center th-pile-sub-1">1.3m</th>
+                                    <th class="p-2 text-center border-r border-gray-200 dark:border-gray-700 th-pile-sub-2">1.5m</th>
+                                    <!-- Radm -->
+                                    <th class="p-2 text-center th-pile-sub-0">1.2m</th>
+                                    <th class="p-2 text-center th-pile-sub-1">1.3m</th>
+                                    <th class="p-2 text-center border-r border-gray-200 dark:border-gray-700 th-pile-sub-2">1.5m</th>
+                                    <!-- Prof max -->
+                                    <th class="p-2 text-center th-pile-sub-0">1.2m</th>
+                                    <th class="p-2 text-center th-pile-sub-1">1.3m</th>
+                                    <th class="p-2 text-center border-r border-gray-200 dark:border-gray-700 th-pile-sub-2">1.5m</th>
+                                    <!-- Prof alvo -->
+                                    <th class="p-2 text-center th-pile-sub-0">1.2m</th>
+                                    <th class="p-2 text-center th-pile-sub-1">1.3m</th>
+                                    <th class="p-2 text-center th-pile-sub-2">1.5m</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summary-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-medium">
+                                <!-- Preenchido via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Chart 1: Radm vs Depth Comparison -->
+                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <span>📈</span> Curvas de Capacidade Admissível (Radm × Profundidade)
+                                </h3>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                    Comparativo de todas as sondagens para o diâmetro selecionado.
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="chart-pile-select" onchange="renderSummaryCharts()" class="px-2.5 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold">
+                                    <option value="pile_48in">D = 1.20 m (48")</option>
+                                    <option value="pile_54in">D = 1.30 m (54")</option>
+                                    <option value="pile_60in">D = 1.50 m (60")</option>
+                                </select>
+                                <button type="button" onclick="copyChartToClipboardTransparent('chart-capacity-comparison', this)" class="px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs flex items-center gap-1 transition-all" title="Copiar gráfico com fundo transparente (PNG)">
+                                    <span>📋</span> Copiar
+                                </button>
+                                <button type="button" onclick="downloadChartTransparent('chart-capacity-comparison', 'curvas_capacidade_admissivel.png')" class="p-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs transition-all" title="Baixar PNG transparente">
+                                    <span>💾</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative flex-grow min-h-[460px] h-[460px]">
+                            <canvas id="chart-capacity-comparison"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Piles Comparison on Critical Sounding -->
+                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <span>🎯</span> Comparativo entre Diâmetros na Sondagem Crítica
+                                </h3>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                    Radm para 1.2m, 1.3m e 1.5m em <span id="label-critical-sounding-chart" class="font-bold text-blue-600 dark:text-blue-400">SPT-01</span>.
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                                    Alvo: 21.400 kN
+                                </span>
+                                <button type="button" onclick="copyChartToClipboardTransparent('chart-diameters-comparison', this)" class="px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs flex items-center gap-1 transition-all" title="Copiar gráfico com fundo transparente (PNG)">
+                                    <span>📋</span> Copiar
+                                </button>
+                                <button type="button" onclick="downloadChartTransparent('chart-diameters-comparison', 'comparativo_diametros_sondagem_critica.png')" class="p-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs transition-all" title="Baixar PNG transparente">
+                                    <span>💾</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative flex-grow min-h-[460px] h-[460px]">
+                            <canvas id="chart-diameters-comparison"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: AXES ANALYSIS -->
+            <div id="view-tab-axes" class="tab-content hidden space-y-6">
+                <!-- Axes Configuration and Results Card -->
+                <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700 gap-4 mb-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span>🏗️</span> Dimensionamento Axial por Eixo Estrutural
+                                </h2>
+                                <span id="badge-casing-info" class="bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-300 dark:border-rose-800">
+                                    Camisa: -10% (Fator 0.90)
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Cada eixo possui sua Cota TOPO (arrasamento / cota de início). O programa calcula a Cota de Fundo e o <strong>Embutimento Útil</strong> ($L_{util} = \text{Cota Fundo} - \text{Cota TOPO}$) considerando a redução por camisa metálica e FS=2.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="addNewAxis()" class="px-3 py-1.5 text-xs font-bold rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 transition-all flex items-center gap-1">
+                                <span>➕</span> Adicionar Eixo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Factors Bar -->
+                    <div class="mb-4 p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/50 dark:bg-indigo-950/30 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">Redução Camisa (%):</label>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <input type="number" id="quick-input-casing-pct" step="1" min="0" max="50" value="10" onchange="syncCasingPct(this.value)" class="w-16 px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400">
+                                    <span id="quick-casing-factor-badge" class="text-xs font-bold text-gray-500 dark:text-gray-400">(x0.90)</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 block" title="Extensão com camisa metálica a partir do topo da estaca. Vazio ou 0 = sem restrição.">Extensão Camisa (m):</label>
+                                <div class="flex items-center gap-1 mt-0.5">
+                                    <input type="number" id="quick-input-casing-len" step="0.5" min="0" max="150" placeholder="Total" onchange="syncCasingLength(this.value)" class="w-16 px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-rose-600 dark:text-rose-400">
+                                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400">m</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">Modo Camisa:</label>
+                                <select id="quick-select-casing-mode" onchange="syncCasingMode(this.value)" class="mt-0.5 px-2 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold">
+                                    <option value="excel_formula">Radm * 0.9 (Planilha)</option>
+                                    <option value="lateral_only">Rs * 0.9 (Só Lateral)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">FS Global:</label>
+                                <input type="number" id="quick-input-fs" step="0.1" min="1.0" max="4.0" value="2.0" onchange="syncFSGlobal(this.value)" class="mt-0.5 w-16 px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">FS Lateral (FS<sub>s</sub>):</label>
+                                <input type="number" id="quick-input-fs-s" step="0.1" min="1.0" max="4.0" value="1.5" onchange="syncFSLateral(this.value)" class="mt-0.5 w-16 px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">FS Ponta (FS<sub>p</sub>):</label>
+                                <input type="number" id="quick-input-fs-p" step="0.1" min="1.0" max="5.0" value="3.0" onchange="syncFSPonta(this.value)" class="mt-0.5 w-16 px-2 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400">
+                            </div>
+
+                            <!-- Diâmetros de Estaca (Inputs) -->
+                            <div class="border-l border-indigo-200 dark:border-indigo-800/80 pl-4 flex items-center gap-3">
+                                <div>
+                                    <label class="text-[11px] font-bold text-blue-700 dark:text-blue-300 block">D₁ (m):</label>
+                                    <input type="number" id="quick-input-diam-0" step="0.05" min="0.4" max="3.0" value="1.20" onchange="syncPileDiameter(0, this.value)" class="mt-0.5 w-16 px-2 py-1 text-xs font-bold rounded-lg border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-blue-700 dark:text-blue-300">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-bold text-blue-700 dark:text-blue-300 block">D₂ (m):</label>
+                                    <input type="number" id="quick-input-diam-1" step="0.05" min="0.4" max="3.0" value="1.30" onchange="syncPileDiameter(1, this.value)" class="mt-0.5 w-16 px-2 py-1 text-xs font-bold rounded-lg border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-blue-700 dark:text-blue-300">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-bold text-blue-700 dark:text-blue-300 block">D₃ (m):</label>
+                                    <input type="number" id="quick-input-diam-2" step="0.05" min="0.4" max="3.0" value="1.50" onchange="syncPileDiameter(2, this.value)" class="mt-0.5 w-16 px-2 py-1 text-xs font-bold rounded-lg border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-blue-700 dark:text-blue-300">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-3">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" id="quick-check-fhwa-beta" checked onchange="syncFHWABeta(this.checked)" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                                    <span>Critério FHWA Eq. 10-13 (β ≤ K<sub>p</sub> tan φ' & 900 psf)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="triggerCalculation()" class="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs flex items-center gap-1">
+                                <span>⚡</span> Recalcular
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Axes Table (Dual Comparison: Global FS=2 vs Differentiated FS) -->
+                    <div class="overflow-x-auto mt-2 custom-scrollbar">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 uppercase tracking-wider font-extrabold text-[10px] border-b border-gray-200 dark:border-gray-700">
+                                    <th rowspan="2" class="p-3 border-r border-gray-200 dark:border-gray-700">Eixo</th>
+                                    <th rowspan="2" class="p-3 border-r border-gray-200 dark:border-gray-700 text-center">Cota TOPO (m)</th>
+                                    <th rowspan="2" class="p-3 border-r border-gray-200 dark:border-gray-700 text-center">Critério de Segurança</th>
+                                    <th colspan="3" class="p-2.5 text-center border-r border-gray-200 dark:border-gray-700 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300">
+                                        Cota de Fundo Necessária (m)
+                                    </th>
+                                    <th colspan="3" class="p-2.5 text-center bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300">
+                                        Embutimento Útil L = Fundo - TOPO (m)
+                                    </th>
+                                    <th rowspan="2" class="p-3 text-center">Ações</th>
+                                </tr>
+                                <tr class="bg-gray-50 dark:bg-gray-800 text-[10px] font-bold text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                                    <th class="p-2 text-center th-axis-sub-0">1.2m</th>
+                                    <th class="p-2 text-center th-axis-sub-1">1.3m</th>
+                                    <th class="p-2 text-center border-r border-gray-200 dark:border-gray-700 th-axis-sub-2">1.5m</th>
+                                    <th class="p-2 text-center th-axis-sub-0">1.2m</th>
+                                    <th class="p-2 text-center th-axis-sub-1">1.3m</th>
+                                    <th class="p-2 text-center th-axis-sub-2">1.5m</th>
+                                </tr>
+                            </thead>
+                            <tbody id="axes-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-medium">
+                                <!-- Preenchido via JavaScript com linhas para Global e Diferenciado -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+                <!-- Axes Chart Section -->
+                <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                <span>📊</span> Perfil de Capacidade por Eixo (Iniciando na Cota de Arrasamento)
+                            </h3>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                Visualize o ganho de resistência acumulada a partir do topo do fuste para o eixo selecionado.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">Eixo:</label>
+                            <select id="select-chart-axis" onchange="renderAxesChart()" class="px-3 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold">
+                                <!-- Preenchido dinamicamente -->
+                            </select>
+                            <button type="button" onclick="copyChartToClipboardTransparent('chart-axes-capacity', this)" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs flex items-center gap-1 transition-all" title="Copiar gráfico com fundo transparente (PNG)">
+                                <span>📋</span> Copiar
+                            </button>
+                            <button type="button" onclick="downloadChartTransparent('chart-axes-capacity', 'capacidade_eixo.png')" class="p-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs transition-all" title="Baixar PNG transparente">
+                                <span>💾</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative min-h-[480px] h-[480px]">
+                        <canvas id="chart-axes-capacity"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: SOUNDINGS DETAILED PROFILE -->
+            <div id="view-tab-soundings" class="tab-content hidden space-y-6">
+                <!-- Sounding Selector and Controls -->
+                <div class="p-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🔍</span>
+                        <div>
+                            <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sondagem Ativa</label>
+                            <select id="select-active-sounding" onchange="changeActiveSounding()" class="mt-0.5 block px-3.5 py-1.5 text-sm font-bold rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+                                <!-- Preenchido dinamicamente -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="addNewLayer()" class="px-3 py-1.5 text-xs font-bold rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition-all flex items-center gap-1">
+                            <span>➕</span> Adicionar Camada
+                        </button>
+                        <button type="button" onclick="resetActiveSounding()" class="px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 transition-all flex items-center gap-1">
+                            <span>↺</span> Restaurar Furo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Layout Toolbar for Sounding Profile Charts -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs">
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5 uppercase tracking-wide">
+                            <span>📊</span> Visualização dos Perfis Geotécnicos Verticais
+                        </h4>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                            Ajuste a escala vertical e a quantidade de colunas. Copie qualquer gráfico com fundo transparente para relatórios.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Height Selector -->
+                        <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
+                            <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 px-1.5">Altura Vertical:</span>
+                            <button type="button" id="btn-height-600" onclick="setSoundingChartsHeight(600)" class="px-2 py-1 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all">
+                                600px
+                            </button>
+                            <button type="button" id="btn-height-750" onclick="setSoundingChartsHeight(750)" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-blue-600 bg-blue-600 text-white shadow-xs transition-all">
+                                750px (Padrão)
+                            </button>
+                            <button type="button" id="btn-height-900" onclick="setSoundingChartsHeight(900)" class="px-2 py-1 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all">
+                                900px (Extra Alto)
+                            </button>
+                        </div>
+
+                        <!-- Layout Mode Selector -->
+                        <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
+                            <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 px-1.5">Organização:</span>
+                            <button type="button" id="btn-layout-2col" onclick="setSoundingChartsLayout('2col')" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-blue-600 bg-blue-600 text-white shadow-xs transition-all" title="Exibir 2 gráficos principais lado a lado">
+                                ⊞ 2 Colunas
+                            </button>
+                            <button type="button" id="btn-layout-3col" onclick="setSoundingChartsLayout('3col')" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all" title="Exibir 3 colunas geotécnicas completas (Solo + Parâmetros + Radm)">
+                                📑 3 Colunas
+                            </button>
+                            <button type="button" id="btn-layout-1col" onclick="setSoundingChartsLayout('1col')" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all" title="Exibir gráficos empilhados em largura total">
+                                ☰ 1 Coluna
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts for Active Sounding -->
+                <div id="sounding-charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Subchart 1: N_SPT and Friction Angle -->
+                    <div id="card-sounding-stratigraphy" class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <span>📉</span> Perfil Estratigráfico: N_SPT e Ângulo de Atrito (φ')
+                                </h3>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    N₁,₆₀ original medido e N₆₀ corrigido por sobrecarga com C<sub>N</sub> = min(2,0; √(101,3 / σ'<sub>v</sub>)).
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="copyChartToClipboardTransparent('chart-sounding-stratigraphy', this)" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs flex items-center gap-1.5 transition-all" title="Copiar gráfico para a área de transferência com fundo transparente (PNG)">
+                                    <span>📋</span> Copiar Transparente
+                                </button>
+                                <button type="button" onclick="downloadChartTransparent('chart-sounding-stratigraphy', 'perfil_estratigrafico.png')" class="p-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs transition-all" title="Baixar imagem PNG transparente">
+                                    <span>💾</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Summary Pills Bar -->
+                        <div class="flex flex-wrap items-center gap-1.5 mb-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                            <span id="pill-strat-depth" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-[10px]">Prof. máx: --</span>
+                            <span id="pill-strat-n1" class="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold text-[10px]">N₁₍₆₀₎ máx: --</span>
+                            <span id="pill-strat-n60" class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">N₆₀ máx: --</span>
+                            <span id="pill-strat-phi" class="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold text-[10px]">φ' máx: --</span>
+                        </div>
+
+                        <div id="chart-wrap-stratigraphy" class="relative flex-grow h-[750px] min-h-[750px]">
+                            <canvas id="chart-sounding-stratigraphy"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Subchart 2: Unit Stresses and Strengths (qs, qp, sigma'_v) -->
+                    <div id="card-sounding-strengths" class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <span>⚡</span> Parâmetros Unitários: q<sub>s</sub>, q<sub>p</sub> e Tensão Efetiva
+                                </h3>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Atrito lateral unitário q<sub>s</sub> = β · σ'<sub>v</sub>, ponta unitária q<sub>p</sub> e tensão efetiva σ'<sub>v</sub> (kPa).
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="copyChartToClipboardTransparent('chart-sounding-strengths', this)" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs flex items-center gap-1.5 transition-all" title="Copiar gráfico para a área de transferência com fundo transparente (PNG)">
+                                    <span>📋</span> Copiar Transparente
+                                </button>
+                                <button type="button" onclick="downloadChartTransparent('chart-sounding-strengths', 'parametros_unitarios.png')" class="p-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs transition-all" title="Baixar imagem PNG transparente">
+                                    <span>💾</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Summary Pills Bar -->
+                        <div class="flex flex-wrap items-center gap-1.5 mb-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                            <span id="pill-strength-qs" class="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold text-[10px]">qₛ máx: --</span>
+                            <span id="pill-strength-qp" class="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold text-[10px]">qₚ máx: --</span>
+                            <span id="pill-strength-sigv" class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px]">σ'ᵥ máx: --</span>
+                        </div>
+
+                        <div id="chart-wrap-strengths" class="relative flex-grow h-[750px] min-h-[750px]">
+                            <canvas id="chart-sounding-strengths"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Subchart 3: Borehole Pile Capacity Radm(z) -->
+                    <div id="card-sounding-capacity" class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex flex-col hidden">
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-2">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                    <span>🎯</span> Capacidade Admissível no Furo: R<sub>adm</sub>(z)
+                                </h3>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Resistência admissível ao longo da profundidade para cada diâmetro no furo ativo.
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="copyChartToClipboardTransparent('chart-sounding-capacity', this)" class="px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs flex items-center gap-1.5 transition-all" title="Copiar gráfico para a área de transferência com fundo transparente (PNG)">
+                                    <span>📋</span> Copiar Transparente
+                                </button>
+                                <button type="button" onclick="downloadChartTransparent('chart-sounding-capacity', 'capacidade_furo_ativo.png')" class="p-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-xs transition-all" title="Baixar imagem PNG transparente">
+                                    <span>💾</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Summary Pills Bar -->
+                        <div class="flex flex-wrap items-center gap-1.5 mb-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                            <span id="pill-cap-p48" class="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold text-[10px]">1.2m máx: --</span>
+                            <span id="pill-cap-p54" class="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold text-[10px]">1.3m máx: --</span>
+                            <span id="pill-cap-p60" class="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold text-[10px]">1.5m máx: --</span>
+                        </div>
+
+                        <div id="chart-wrap-capacity" class="relative flex-grow h-[750px] min-h-[750px]">
+                            <canvas id="chart-sounding-capacity"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Layer-by-Layer Table -->
+                <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700 mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                <span>📑</span> Tabela Geotécnica Completa Passo a Passo
+                            </h3>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                Todas as grandezas intermediárias calculadas rigorosamente conforme a planilha de referência.
+                            </p>
+                        </div>
+                        <span id="sounding-layer-count" class="text-xs font-bold text-gray-500 dark:text-gray-400">
+                            0 camadas
+                        </span>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[500px] custom-scrollbar">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead class="sticky top-0 z-10">
+                                <tr class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase tracking-wider font-extrabold text-[10px] border-b border-gray-200 dark:border-gray-600 shadow-xs">
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">z_ini (m)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">z_fim (m)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">N1_60</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">Grupo Solo</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">SUCS</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">γ (kN/m³)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">σ'v (kPa)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">N60</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">φ'f (°)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 bg-amber-50/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300">Kp·tan φ'</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 text-gray-500">β_raw</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 font-bold bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-300">β (FHWA)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">qs (kPa)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">qp (kPa)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">Rs (1.2m)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600">Rn (1.2m)</th>
+                                    <th class="p-2 border-r border-gray-200 dark:border-gray-600 font-bold text-blue-700 dark:text-blue-300">Radm (FS=2)</th>
+                                    <th class="p-2 font-bold text-purple-700 dark:text-purple-300">Radm (DIF)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailed-layers-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-mono text-[11px]">
+                                <!-- Preenchido dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: PARAMETERS & PILE GEOMETRIES -->
+            <div id="view-tab-parameters" class="tab-content hidden space-y-6">
+                <!-- Global Settings Card -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left: Global Project Settings -->
+                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm space-y-4">
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5 pb-2 border-b border-gray-100 dark:border-gray-700">
+                            <span>⚙️</span> Parâmetros Globais de Projeto
+                        </h3>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Fator de Segurança Global -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">FS Global (NBR 6122 / Planilha):</label>
+                                <input type="number" id="input-fs" step="0.1" value="2.0" onchange="syncFSGlobal(this.value)" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 font-bold focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Padrão NBR 6122 = 2.0 (Rn / 2.0)</span>
+                            </div>
+
+                            <!-- Fatores Diferenciados -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-700 dark:text-gray-300">FS Lateral (FSs):</label>
+                                    <input type="number" id="input-fs-lateral" step="0.1" value="1.5" onchange="syncFSLateral(this.value)" class="mt-1 w-full px-2 py-1.5 text-xs rounded-xl border border-purple-300 dark:border-purple-600 bg-purple-50/50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 font-bold focus:ring-2 focus:ring-purple-500">
+                                    <span class="text-[9px] text-gray-400">Padrão 1.5</span>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-gray-700 dark:text-gray-300">FS Ponta (FSp):</label>
+                                    <input type="number" id="input-fs-ponta" step="0.1" value="3.0" onchange="syncFSPonta(this.value)" class="mt-1 w-full px-2 py-1.5 text-xs rounded-xl border border-purple-300 dark:border-purple-600 bg-purple-50/50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 font-bold focus:ring-2 focus:ring-purple-500">
+                                    <span class="text-[9px] text-gray-400">Padrão 3.0</span>
+                                </div>
+                            </div>
+
+                            <!-- Critério FHWA GEC 010 Eq. 10-13 -->
+                            <div class="col-span-2 p-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="check-apply-beta-fhwa" checked onchange="syncFHWABeta(this.checked)" class="w-4 h-4 rounded text-blue-600 border-gray-300 dark:border-gray-600 focus:ring-blue-500">
+                                        <span class="text-xs font-bold text-blue-950 dark:text-blue-200">Critério FHWA Eq. 10-13 (Controle de Tensões Baixas)</span>
+                                    </label>
+                                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">GEC-010</span>
+                                </div>
+                                <p class="text-[11px] text-gray-600 dark:text-gray-300 leading-tight">
+                                    $\beta \approx (1-\sin\phi')(\sigma'_p/\sigma'_v)^{\sin\phi'}\tan\phi' \le K_p\tan\phi'$. Em baixas profundidades ($z &lt; 7.5\text{ ft}$), limita $\sigma'_v \ge 900\text{ psf} \approx 43.1\text{ kPa}$.
+                                </p>
+                                <div class="grid grid-cols-2 gap-3 pt-1">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-700 dark:text-gray-300">Tensão Rasa Mínima (kPa):</label>
+                                        <input type="number" id="input-shallow-stress" step="0.1" value="43.1" onchange="triggerCalculation()" class="mt-0.5 w-full px-2.5 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                                        <span class="text-[9px] text-gray-400">900 psf = 43.1 kPa</span>
+                                    </div>
+                                    <div class="flex items-center pt-3">
+                                        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" id="check-beta-cap-kp" checked onchange="triggerCalculation()" class="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 dark:border-gray-600">
+                                            <span class="text-xs text-gray-700 dark:text-gray-300">Teto $\beta \le K_p \tan\phi'$</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Redução Camisa Metálica (%):</label>
+                                <input type="number" id="input-casing-reduction" step="1" min="0" max="50" value="10" onchange="syncCasingPct(this.value)" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-rose-600 dark:text-rose-400 font-bold focus:ring-2 focus:ring-rose-500">
+                                <span class="text-[10px] text-gray-400">Padrão 10% (Fator 0.90)</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Extensão da Camisa Metálica (m):</label>
+                                <input type="number" id="input-casing-length" step="0.5" min="0" max="150" placeholder="Deixe em branco p/ estaca inteira" onchange="syncCasingLength(this.value)" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-rose-600 dark:text-rose-400 font-bold focus:ring-2 focus:ring-rose-500">
+                                <span class="text-[10px] text-gray-400">Redução aplicada somente nesta extensão (m) a partir do topo</span>
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Modo de Aplicação da Camisa:</label>
+                                <select id="select-casing-mode" onchange="syncCasingMode(this.value)" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                    <option value="excel_formula">Capacidade Admissível Total (Fórmula Planilha: Radm * 0.9)</option>
+                                    <option value="lateral_only">Apenas no Atrito Lateral da Estaca (Rs * 0.9)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Cota do N.A. (m):</label>
+                                <input type="number" id="input-water-table" step="0.1" value="3.0" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Nível d'água freático</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Carga de Projeto Alvo (kN):</label>
+                                <input type="number" id="input-target-load" step="100" value="21400" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Carga Fase I (21.400 kN)</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Percentil Estatístico (%):</label>
+                                <input type="number" id="input-percentile" step="5" min="5" max="95" value="10" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Sondagem Média (10% na nova versão)</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Coef. de Ponta kp (FHWA):</label>
+                                <input type="number" id="input-kp-base" step="0.01" value="0.59" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Padrão 0.59 em qp</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Limite Superior CN:</label>
+                                <input type="number" id="input-cn-max" step="0.1" value="2.0" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Padrão CN ≤ 2.0</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Pressão Atmosférica pa (kPa):</label>
+                                <input type="number" id="input-pa-kpa" step="0.1" value="101.3" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <span class="text-[10px] text-gray-400">Padrão 101.3 kPa</span>
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Sondagem Crítica Adotada nos Eixos:</label>
+                                <select id="input-critical-sounding" onchange="triggerCalculation()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                    <option value="SPT-01">SPT-01 (Considerando o pior caso da planilha)</option>
+                                    <option value="SPT-02">SPT-02</option>
+                                    <option value="SPT-03">SPT-03</option>
+                                    <option value="SPT-04">SPT-04</option>
+                                    <option value="SPT-05">SPT-05</option>
+                                    <option value="SPT-06">SPT-06</option>
+                                    <option value="SPT médio (P10%)">SPT médio (Síntese estatística)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Soil Types and Weights -->
+                    <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm space-y-4">
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5 pb-2 border-b border-gray-100 dark:border-gray-700">
+                            <span>🌱</span> Pesos Específicos por Grupo de Solo (kN/m³)
+                        </h3>
+
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 dark:bg-gray-700 text-[10px] font-bold uppercase text-gray-600 dark:text-gray-300">
+                                        <th class="p-2">Grupo Solo</th>
+                                        <th class="p-2 text-center">Peso Seco (γ)</th>
+                                        <th class="p-2 text-center">Peso Sub (γ')</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="soil-groups-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-medium">
+                                    <!-- Preenchido via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Extrapolation Settings Card (Estimativa de Solo Profundo Baseada na Menor Profundidade dos Testes) -->
+                <div class="p-5 rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/20 shadow-sm space-y-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-amber-200/60 dark:border-amber-800/60 gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                                <span>⛏️</span> Extrapolação do Solo em Profundidade
+                            </h3>
+                            <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                                Identifica a menor profundidade medida entre os testes de sondagem para servir de base. Abaixo dessa cota, sintetiza o solo adotando as propriedades estatísticas do solo predominante.
+                            </p>
+                        </div>
+                        <span id="extrap-status-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200 whitespace-nowrap">
+                            N estimado = 27 (P15%)
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Profundidade Base dos Testes (m):</label>
+                                <button type="button" onclick="autoDetectAndSetMinDepth()" class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-0.5" title="Preencher com a menor profundidade encontrada entre todas as sondagens">
+                                    ⚡ Menor dos Testes
+                                </button>
+                            </div>
+                            <input type="number" id="input-spt01-depth" step="0.6" min="10" max="200" value="44.4" onchange="syncExtrapolationSettings()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold">
+                            <span id="detected-min-depth-hint" class="text-[10px] text-gray-400">Menor cota medida: 44.4 m (SPT-01)</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Percentil N60 para Estimativa (%):</label>
+                            <input type="number" id="input-extrap-percentile" step="1" min="1" max="99" value="15" onchange="syncExtrapolationSettings()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 font-bold">
+                            <span class="text-[10px] text-gray-400">P15% = N 27 (conservador)</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Tipo de Solo para Estimativa:</label>
+                            <select id="select-extrap-soil" onchange="syncExtrapolationSettings()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-semibold">
+                                <option value="auto" id="opt-extrap-auto">Mais comum na sondagem</option>
+                                <option value="Areias">Areias</option>
+                                <option value="Siltes">Siltes</option>
+                                <option value="Argilas">Argilas</option>
+                                <option value="Gravas">Gravas</option>
+                            </select>
+                            <span id="detected-modal-soil-hint" class="text-[10px] text-gray-400">Identificado da sondagem</span>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Profundidade Máxima Estimada (m):</label>
+                            <input type="number" id="input-extrap-max-depth" step="0.6" min="50" max="200" value="132.6" onchange="syncExtrapolationSettings()" class="mt-1 w-full px-3 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-bold">
+                            <span class="text-[10px] text-gray-400">Padrão do projeto: 132.6 m</span>
+                        </div>
+                    </div>
+
+                    <!-- Bloco de Exibição das Estimativas do Solo Extrapolado -->
+                    <div id="extrapolation-estimates-card" class="mt-4 pt-4 border-t border-amber-200/60 dark:border-amber-800/60">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                <span>📊</span> Estimativas Geotécnicas Adotadas para o Trecho Extrapolado
+                            </h4>
+                            <span id="extrap-summary-layers-badge" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-200/90 dark:bg-amber-900/90 text-amber-900 dark:text-amber-200">
+                                147 camadas sintetizadas (88.2 m)
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                            <!-- Solo Modal & SUCS -->
+                            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-900/40 shadow-xs">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block">Solo Adotado (SUCS)</span>
+                                <span id="est-soil-group" class="text-xs font-black text-amber-800 dark:text-amber-300 block mt-0.5">Gravas (GW-GM)</span>
+                                <span id="est-soil-occurrence" class="text-[9px] text-gray-400 block mt-0.5">42 de 74 camadas (56.8%)</span>
+                            </div>
+
+                            <!-- N60 Estimado -->
+                            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-900/40 shadow-xs">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block">N₆₀ Estimado (P15%)</span>
+                                <span id="est-n60-val" class="text-sm font-black text-blue-600 dark:text-blue-400 block mt-0.5">27</span>
+                                <span id="est-n60-stats" class="text-[9px] text-gray-400 block mt-0.5">Média: 43.3 | Mediana: 50.0</span>
+                            </div>
+
+                            <!-- Ângulo de Atrito phi' -->
+                            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-900/40 shadow-xs">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block">Ângulo Atrito (φ')</span>
+                                <span id="est-phi-val" class="text-sm font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">40.7°</span>
+                                <span class="text-[9px] text-gray-400 block mt-0.5">27.5° + 9.2·log₁₀(N)</span>
+                            </div>
+
+                            <!-- Atrito Lateral Médio qs -->
+                            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-900/40 shadow-xs">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block">Atrito Lateral Médio (qs)</span>
+                                <span id="est-qs-val" class="text-sm font-black text-purple-600 dark:text-purple-400 block mt-0.5">330.8 kPa</span>
+                                <span id="est-qs-range" class="text-[9px] text-gray-400 block mt-0.5">209.5 a 438.9 kPa</span>
+                            </div>
+
+                            <!-- Resistência de Ponta Média qp -->
+                            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-900/40 shadow-xs">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block">Ponta Média (qp)</span>
+                                <span id="est-qp-val" class="text-sm font-black text-indigo-600 dark:text-indigo-400 block mt-0.5">3.105,1 kPa</span>
+                                <span class="text-[9px] text-gray-400 block mt-0.5">Kp=0.59 (FHWA Mayne)</span>
+                            </div>
+
+                            <!-- Trecho Extrapolado -->
+                            <div class="p-2.5 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-900/40 shadow-xs">
+                                <span class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block">Trecho Sintetizado</span>
+                                <span id="est-interval-val" class="text-xs font-black text-amber-900 dark:text-amber-200 block mt-0.5">44.4 m → 132.6 m</span>
+                                <span id="est-layers-count" class="text-[9px] text-gray-400 block mt-0.5">147 camadas (dz = 0.6m)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pile Geometries Card -->
+                <div class="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <div class="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700 mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                <span>📏</span> Geometria das Estacas Escavadas
+                            </h3>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                                Diâmetro, perímetro e área de ponta calculados conforme as fórmulas da aba TABELA AUXILIAR.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-100 dark:bg-gray-700 text-[10px] font-bold uppercase text-gray-600 dark:text-gray-300">
+                                    <th class="p-2.5">Identificação</th>
+                                    <th class="p-2.5 text-center">Diâmetro (in)</th>
+                                    <th class="p-2.5 text-center">Diâmetro (m)</th>
+                                    <th class="p-2.5 text-center">Perímetro (m)</th>
+                                    <th class="p-2.5 text-center">Área Base (m²)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="piles-table-body" class="divide-y divide-gray-100 dark:divide-gray-700/60 font-medium">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Injection Placeholder -->
+        <div id="footer-placeholder" class="mt-8"></div>
+    </div>
+
+</body>
+</html>

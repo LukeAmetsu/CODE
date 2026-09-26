@@ -51,6 +51,7 @@ const DEFAULT_NAV_CONFIG = {
         { "key": "rs2-fem", "href": "gui/rs2_fem.html", "textKey": "rs2_fem" },
         { "key": "retaining-wall", "href": "gui/retaining_wall.html", "textKey": "retaining_wall" },
         { "key": "aoki-velloso", "href": "gui/aoki_velloso.html", "textKey": "aoki_velloso" },
+        { "key": "capacidade-estaca", "href": "gui/capacidade_estaca.html", "textKey": "capacidade_estaca" },
         { "key": "shallow-foundation", "href": "gui/shallow_foundation.html", "textKey": "shallow_foundation" },
         { "key": "deep-foundations", "href": "gui/deep_foundations.html", "textKey": "deep_foundations" },
         { "key": "piled-raft", "href": "gui/piled_raft.html", "textKey": "piled_raft" },
@@ -106,6 +107,22 @@ const DEFAULT_NAV_CONFIG = {
       "textKey": "timber_structures",
       "subNav": [
         { "key": "nds", "href": "nds/nds wood design.html", "textKey": "nds_wood" }
+      ]
+    },
+    {
+      "key": "pdf_tools",
+      "href": "gui/pdf_tools.html",
+      "textKey": "pdf_tools",
+      "subNav": [
+        { "key": "pdf-merge", "href": "gui/pdf_tools.html?tool=merge", "textKey": "pdf_merge" },
+        { "key": "pdf-split", "href": "gui/pdf_tools.html?tool=split", "textKey": "pdf_split" },
+        { "key": "pdf-organize", "href": "gui/pdf_tools.html?tool=organize", "textKey": "pdf_organize" },
+        { "key": "pdf-compress", "href": "gui/pdf_tools.html?tool=compress", "textKey": "pdf_compress" },
+        { "key": "pdf-unlock", "href": "gui/pdf_tools.html?tool=unlock", "textKey": "pdf_unlock" },
+        { "key": "pdf-protect", "href": "gui/pdf_tools.html?tool=protect", "textKey": "pdf_protect" },
+        { "key": "pdf-sign", "href": "gui/pdf_tools.html?tool=sign", "textKey": "pdf_sign" },
+        { "key": "pdf-to-img", "href": "gui/pdf_tools.html?tool=pdf_to_img", "textKey": "pdf_to_img" },
+        { "key": "img-to-pdf", "href": "gui/pdf_tools.html?tool=img_to_pdf", "textKey": "img_to_pdf" }
       ]
     }
   ]

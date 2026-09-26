@@ -197,6 +197,38 @@ def calculate_aoki_velloso(inputs):
         return {"success": False, "error": str(e), "trace": traceback.format_exc()}
 
 @eel.expose
+def get_capacidade_estaca_reference_data():
+    try:
+        from backend.calculators.capacidade_estaca import get_default_project_data
+        return {"success": True, "data": get_default_project_data()}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_capacidade_estaca(inputs):
+    try:
+        from backend.calculators.capacidade_estaca import run_full_analysis
+        return run_full_analysis(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def export_capacidade_estaca_excel(analysis_result, output_path=None):
+    try:
+        from backend.calculators.capacidade_estaca import export_to_excel
+        if not output_path:
+            out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist"))
+            os.makedirs(out_dir, exist_ok=True)
+            output_path = os.path.join(out_dir, "capacidade_estaca_export.xlsx")
+        export_to_excel(analysis_result, output_path)
+        return {"success": True, "filepath": output_path}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
 def get_liquefaction_reference_data():
     try:
         from backend.calculators.liquefaction import get_liquefaction_reference_data as py_get_liq
@@ -313,6 +345,8 @@ def mietc_load_default_workbook():
     try:
         import backend.calculators.comb_bases_mietc as m_mod
         candidates = [
+            os.path.join(os.path.abspath("."), "Refs", "Cargas nas bases.xlsx"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Refs", "Cargas nas bases.xlsx"),
             os.path.join(os.path.abspath("."), "Refs", "Cópia de Cargas nas bases MIETC.xlsx"),
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Refs", "Cópia de Cargas nas bases MIETC.xlsx")
         ]
@@ -368,6 +402,17 @@ def mietc_auto_detect_pairs(bases_list):
         import backend.calculators.comb_bases_mietc as m_mod
         pairs = m_mod.auto_detect_subsequent_pairs(bases_list)
         return {"status": "success", "pairs": pairs}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def mietc_cluster_by_similarity(summary_items, tolerance=0.20):
+    """Agrupa bases ou sapatas por similaridade de esforços para tipificação e dimensionamento"""
+    try:
+        import backend.calculators.comb_bases_mietc as m_mod
+        clustering = m_mod.cluster_bases_by_similarity(summary_items, tolerance=float(tolerance))
+        return {"status": "success", "clustering": clustering}
     except Exception as e:
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
@@ -855,8 +900,10 @@ def compare_lowess_curves_batch(live_curve, other_curves_dict):
 def calculate_flexible_retaining_wall(inputs):
     """Calculates sheet pile or diaphragm flexible retaining walls per Blum method."""
     try:
-        from backend.calculators.flexible_retaining_wall import calculate_flexible_wall
-        return calculate_flexible_wall(inputs)
+        import importlib
+        import backend.calculators.flexible_retaining_wall as flex_mod
+        importlib.reload(flex_mod)
+        return flex_mod.calculate_flexible_wall(inputs)
     except Exception as e:
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
@@ -905,6 +952,128 @@ def calculate_concrete_beam(inputs):
     except Exception as e:
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+
+# --- PDF Tools (Smallpdf Suite) Exposed Functions ---
+
+@eel.expose
+def pdf_inspect_doc(file_data, password=None):
+    """Inspects a PDF document and generates thumbnails for each page."""
+    try:
+        from backend.calculators.pdf_tools import pdf_inspect
+        return pdf_inspect(file_data, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_merge_docs(files_data, output_name="merged.pdf"):
+    """Merges multiple PDF documents."""
+    try:
+        from backend.calculators.pdf_tools import pdf_merge
+        return pdf_merge(files_data, output_name=output_name)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_split_doc(file_data, mode="extract", ranges="1", fixed_every_n=1, password=None):
+    """Splits a PDF into pages or intervals."""
+    try:
+        from backend.calculators.pdf_tools import pdf_split
+        return pdf_split(file_data, mode=mode, ranges=ranges, fixed_every_n=fixed_every_n, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_organize_doc(file_data, operations, password=None):
+    """Reorders, rotates and deletes pages."""
+    try:
+        from backend.calculators.pdf_tools import pdf_organize
+        return pdf_organize(file_data, operations=operations, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_unlock_doc(file_data, password):
+    """Removes password protection from a PDF."""
+    try:
+        from backend.calculators.pdf_tools import pdf_unlock
+        return pdf_unlock(file_data, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_protect_doc(file_data, user_password, owner_password=None, allow_printing=True, allow_copying=True):
+    """Encrypts and sets password on a PDF."""
+    try:
+        from backend.calculators.pdf_tools import pdf_protect
+        return pdf_protect(file_data, user_password=user_password, owner_password=owner_password,
+                           allow_printing=allow_printing, allow_copying=allow_copying)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_compress_doc(file_data, level="medium", password=None):
+    """Compresses a PDF file to reduce its size."""
+    try:
+        from backend.calculators.pdf_tools import pdf_compress
+        return pdf_compress(file_data, level=level, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_sign_stamp_doc(file_data, signatures, password=None):
+    """Overlays visual signatures or stamps on PDF pages."""
+    try:
+        from backend.calculators.pdf_tools import pdf_sign_stamp
+        return pdf_sign_stamp(file_data, signatures=signatures, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_convert_to_images(file_data, img_format="png", dpi=150, password=None):
+    """Converts PDF pages to high-resolution images."""
+    try:
+        from backend.calculators.pdf_tools import pdf_to_images
+        return pdf_to_images(file_data, img_format=img_format, dpi=dpi, password=password)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_convert_images_to_pdf(images_data, orientation="auto", fit_mode="contain"):
+    """Converts a collection of images to a single PDF."""
+    try:
+        from backend.calculators.pdf_tools import images_to_pdf
+        return images_to_pdf(images_data, orientation=orientation, fit_mode=fit_mode)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "message": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def pdf_read_local_file(file_path):
+    """Reads a local file directly and returns base64 data for large files."""
+    try:
+        if not os.path.isfile(file_path):
+            return {"status": "error", "message": "Arquivo não encontrado."}
+        with open(file_path, "rb") as f:
+            data = f.read()
+        import base64
+        return {
+            "status": "success",
+            "file_name": os.path.basename(file_path),
+            "file_size": len(data),
+            "data_url": f"data:application/pdf;base64,{base64.b64encode(data).decode('utf-8')}"
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == '__main__':

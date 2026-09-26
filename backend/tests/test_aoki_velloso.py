@@ -70,5 +70,74 @@ class TestAokiVelloso(unittest.TestCase):
         self.assertGreater(beam["pile_tension_adm_kN"], 100.0)
         self.assertGreater(beam["elastic_length_T_m"], 1.0)
 
+    def test_springs_per_meter_output(self):
+        res = calculate_aoki_velloso(self.inputs)
+        self.assertTrue(res["success"])
+        self.assertIn("springs_per_meter", res)
+        spm = res["springs_per_meter"]
+        self.assertGreater(len(spm), 0)
+        first_layer = spm[0]
+        self.assertIn("Kz_dyn_kN_m_per_m", first_layer)
+        self.assertIn("Kh_dyn_kN_m_per_m", first_layer)
+        self.assertIn("Kz_static_kN_m_per_m", first_layer)
+        self.assertGreater(first_layer["Kz_dyn_kN_m_per_m"], 0.0)
+        self.assertGreater(first_layer["Kh_dyn_kN_m_per_m"], 0.0)
+
+    def test_earth_pressure_separated_active_passive(self):
+        res = calculate_aoki_velloso(self.inputs)
+        self.assertTrue(res["success"])
+        self.assertIn("earth_pressure", res)
+        ep = res["earth_pressure"]
+
+        # Seções separadas
+        self.assertIn("active", ep)
+        self.assertIn("passive", ep)
+
+        active = ep["active"]
+        passive = ep["passive"]
+
+        # Empuxo Ativo
+        self.assertIn("Ka_rankine", active)
+        self.assertIn("Ka_coulomb", active)
+        self.assertIn("Ea_rankine_kN_m", active)
+        self.assertIn("Ea_coulomb_kN_m", active)
+        self.assertIn("ya_rankine_m", active)
+        self.assertIn("stress_diagram", active)
+        self.assertGreater(active["Ea_rankine_kN_m"], 0.0)
+
+        # Empuxo Passivo
+        self.assertIn("Kp_rankine", passive)
+        self.assertIn("Kp_coulomb", passive)
+        self.assertIn("Ep_rankine_kN_m", passive)
+        self.assertIn("Ep_coulomb_kN_m", passive)
+        self.assertIn("yp_rankine_m", passive)
+        self.assertIn("stress_diagram", passive)
+        self.assertGreater(passive["Ep_rankine_kN_m"], active["Ea_rankine_kN_m"])
+
+    def test_coulomb_converges_to_rankine_when_delta_zero(self):
+        inputs = self.inputs.copy()
+        inputs["earth_pressure"] = {
+            "H_m": 6.0,
+            "phi_deg": 30.0,
+            "gamma_kN_m3": 18.0,
+            "c_kPa": 0.0,
+            "delta_deg": 0.0,
+            "beta_deg": 0.0
+        }
+        res = calculate_aoki_velloso(inputs)
+        ep = res["earth_pressure"]
+        act = ep["active"]
+        pas = ep["passive"]
+
+        # Para phi=30°, Ka = 1/3 ~ 0.3333, Kp = 3.0
+        self.assertAlmostEqual(act["Ka_rankine"], 0.3333, places=3)
+        self.assertAlmostEqual(act["Ka_coulomb"], act["Ka_rankine"], places=3)
+        self.assertAlmostEqual(pas["Kp_rankine"], 3.0, places=3)
+        self.assertAlmostEqual(pas["Kp_coulomb"], pas["Kp_rankine"], places=3)
+
+        # Ponto de aplicação para triângulo puro = H/3 = 2.0m da base
+        self.assertAlmostEqual(act["ya_rankine_m"], 2.0, places=2)
+        self.assertAlmostEqual(pas["yp_rankine_m"], 2.0, places=2)
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central PDF Studio | Manipulação Completa de Documentos</title>
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Caveat:wght@600&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <script>
+        // Tema imediato
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <style>
+        .tool-tab-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tool-tab-btn.active {
+            background-color: var(--color-accent);
+            color: #ffffff;
+            box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.35);
+        }
+        .dropzone-active {
+            border-color: var(--color-accent) !important;
+            background-color: rgba(37, 99, 235, 0.06) !important;
+            transform: scale(1.008);
+        }
+        .page-card {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .page-card:hover {
+            transform: translateY(-2px);
+        }
+        .font-signature-1 { font-family: 'Caveat', cursive; }
+        .font-signature-2 { font-family: 'Dancing Script', cursive; }
+        
+        /* Drag-and-drop ghost element */
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] antialiased transition-colors duration-300 flex flex-col">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <!-- Header Injection Placeholder -->
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <main class="space-y-6 flex-grow flex flex-col">
+            <!-- Top Hero Banner -->
+            <div class="relative overflow-hidden rounded-2xl border border-[var(--color-border-primary)] bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 md:p-8 shadow-md">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30 mb-2">
+                            <span>🛡️ 100% Offline & Seguro</span>
+                            <span class="text-blue-400">•</span>
+                            <span>Processamento Local Ultrarrápido</span>
+                        </div>
+                        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">
+                            Central PDF Studio
+                        </h1>
+                        <p class="text-sm md:text-base text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                            Junte, divida, organize, assine, remova senhas, comprima e converta documentos PDF diretamente no seu computador sem enviar dados para a internet.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 self-stretch md:self-auto">
+                        <button id="btn-reset-workspace" onclick="resetWorkspace()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Reiniciar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tools Selector Grid/Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 mt-6 pt-5 border-t border-white/10">
+                    <button onclick="selectTool('merge')" id="tab-merge" class="tool-tab-btn active p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">📑</span>
+                        <span>Juntar PDF</span>
+                    </button>
+                    <button onclick="selectTool('split')" id="tab-split" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">✂️</span>
+                        <span>Dividir PDF</span>
+                    </button>
+                    <button onclick="selectTool('organize')" id="tab-organize" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">🔄</span>
+                        <span>Organizar & Girar</span>
+                    </button>
+                    <button onclick="selectTool('compress')" id="tab-compress" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">📉</span>
+                        <span>Comprimir</span>
+                    </button>
+                    <button onclick="selectTool('unlock')" id="tab-unlock" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">🔓</span>
+                        <span>Remover Senha</span>
+                    </button>
+                    <button onclick="selectTool('protect')" id="tab-protect" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">🔒</span>
+                        <span>Adicionar Senha</span>
+                    </button>
+                    <button onclick="selectTool('sign')" id="tab-sign" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">✍️</span>
+                        <span>Assinar & Carimbar</span>
+                    </button>
+                    <button onclick="selectTool('pdf_to_img')" id="tab-pdf_to_img" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">🖼️</span>
+                        <span>PDF para Imagens</span>
+                    </button>
+                    <button onclick="selectTool('img_to_pdf')" id="tab-img_to_pdf" class="tool-tab-btn p-2.5 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 text-center bg-white/5 hover:bg-white/15">
+                        <span class="text-xl">📄</span>
+                        <span>Imagens para PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- WORKSPACE CONTAINER -->
+            <div class="flex-grow flex flex-col bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-2xl p-5 md:p-7 shadow-sm">
+                
+                <!-- Tool Header / Info -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-[var(--color-border-primary)] mb-6 gap-3">
+                    <div class="flex items-center gap-3">
+                        <div id="tool-icon" class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl font-bold shadow-xs">
+                            📑
+                        </div>
+                        <div>
+                            <h2 id="tool-title" class="text-lg md:text-xl font-bold text-[var(--color-text-primary)]">
+                                Juntar Arquivos PDF (Merge)
+                            </h2>
+                            <p id="tool-desc" class="text-xs md:text-sm text-[var(--color-text-secondary)]">
+                                Combine múltiplos documentos PDF em um único arquivo organizado.
+                            </p>
+                        </div>
+                    </div>
+                    <div id="tool-top-actions" class="flex items-center gap-2 w-full sm:w-auto">
+                        <!-- Dynamic buttons (e.g. Add more files, rotate all, etc) -->
+                    </div>
+                </div>
+
+                <!-- FILE DROP ZONE (Shown when no files are loaded or for adding files) -->
+                <div id="dropzone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFileDrop(event)"
+                    class="border-2 border-dashed border-[var(--color-border-secondary)] hover:border-[var(--color-accent)] bg-[var(--color-bg-primary)] rounded-2xl p-8 md:p-12 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3">
+                    <input type="file" id="file-input" class="hidden" onchange="handleFileInput(event)">
+                    <div class="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-3xl shadow-sm mb-1">
+                        📂
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-base md:text-lg font-bold text-[var(--color-text-primary)]">
+                            Arraste e solte seus arquivos aqui
+                        </h3>
+                        <p class="text-xs md:text-sm text-[var(--color-text-secondary)]">
+                            ou clique no botão abaixo para selecionar do seu computador
+                        </p>
+                    </div>
+                    <button type="button" onclick="triggerFileInput()" class="mt-2 px-6 py-2.5 rounded-xl bg-[var(--color-accent)] hover:opacity-90 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Selecionar Arquivo(s)</span>
+                    </button>
+                    <span id="dropzone-hint" class="text-[11px] text-[var(--color-text-secondary)] mt-1">
+                        Suporta arquivos PDF de qualquer tamanho. 100% processado na sua máquina.
+                    </span>
+                </div>
+
+                <!-- MAIN WORKSPACE CONTENT (Hidden initially, shown after file selection) -->
+                <div id="tool-workspace" class="hidden flex-grow flex flex-col space-y-6 mt-4">
+                    <!-- Loaded files and specific tool parameters go here dynamically -->
+                    <div id="tool-content" class="flex-grow flex flex-col"></div>
+
+                    <!-- Bottom Action Bar -->
+                    <div class="pt-5 border-t border-[var(--color-border-primary)] flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div id="process-info" class="text-xs text-[var(--color-text-secondary)] flex items-center gap-2">
+                            <!-- e.g. "3 arquivos selecionados | 24 páginas totais" -->
+                        </div>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <button id="btn-add-more" onclick="triggerFileInput()" class="hidden px-4 py-2.5 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-hover)] text-xs font-semibold text-[var(--color-text-primary)] transition-all">
+                                + Adicionar mais
+                            </button>
+                            <button id="btn-execute" onclick="executeCurrentTool()" class="w-full sm:w-auto px-7 py-3 rounded-xl bg-[var(--color-accent)] hover:opacity-90 text-white font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2">
+                                <span id="execute-icon">⚡</span>
+                                <span id="execute-text">Processar PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESULT MODAL / SECTION -->
+                <div id="result-box" class="hidden my-4 p-6 rounded-2xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl font-bold">
+                            ✓
+                        </div>
+                        <div>
+                            <h4 id="result-title" class="text-base font-bold text-emerald-800 dark:text-emerald-300">
+                                Processamento concluído com sucesso!
+                            </h4>
+                            <p id="result-desc" class="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                                Seu arquivo está pronto para download.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <a id="btn-download" href="#" download="resultado.pdf" class="flex-grow md:flex-grow-0 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Baixar Arquivo</span>
+                        </a>
+                        <button onclick="resetWorkspace()" class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold text-[var(--color-text-secondary)]">
+                            Novo Trabalho
+                        </button>
+                    </div>
+                </div>
+
+                <!-- LOADING SPINNER OVERLAY -->
+                <div id="loading-overlay" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center">
+                    <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4 max-w-sm text-center">
+                        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <h4 id="loading-title" class="text-base font-bold text-[var(--color-text-primary)]">Processando PDF...</h4>
+                        <p id="loading-desc" class="text-xs text-[var(--color-text-secondary)]">Aguarde um momento enquanto executamos as operações localmente.</p>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Footer Injection Placeholder -->
+        <div id="footer-placeholder" class="mt-8"></div>
+    </div>
+
+    <!-- SCRIPT DO PDF STUDIO -->
+    <script src="pdf_tools.js"></script>
+
+    <!-- INICIALIZAÇÃO DE TEMPLATE -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'pdf_tools',
+                    pageTitle: 'pdf_tools',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

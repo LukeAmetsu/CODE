@@ -42,6 +42,60 @@ def is_row_in_subset(row, subset_key):
     if not subset_key or subset_key in ('ALL DATA', 'all', ''):
         return True
 
+    # Dynamic custom filter object from UI
+    if isinstance(subset_key, dict):
+        d_min = subset_key.get('d_min')
+        if d_min is not None and str(d_min).strip() != '' and bd < float(d_min):
+            return False
+        d_max = subset_key.get('d_max')
+        if d_max is not None and str(d_max).strip() != '' and bd > float(d_max):
+            return False
+
+        ratio_type = subset_key.get('ratio_type', 'bwd')
+        ratio_min = subset_key.get('ratio_min')
+        ratio_max = subset_key.get('ratio_max')
+        if ratio_type == 'dbw':
+            dbw = (bd / bbw) if (bd > 0 and bbw > 0) else 0.0
+            if ratio_min is not None and str(ratio_min).strip() != '' and dbw < float(ratio_min):
+                return False
+            if ratio_max is not None and str(ratio_max).strip() != '' and dbw > float(ratio_max):
+                return False
+        else: # bwd (bw / d)
+            if ratio_min is not None and str(ratio_min).strip() != '' and bwd < float(ratio_min):
+                return False
+            if ratio_max is not None and str(ratio_max).strip() != '' and bwd > float(ratio_max):
+                return False
+
+        ad_min = subset_key.get('ad_min')
+        if ad_min is not None and str(ad_min).strip() != '' and ba_d < float(ad_min):
+            return False
+        ad_max = subset_key.get('ad_max')
+        if ad_max is not None and str(ad_max).strip() != '' and ba_d > float(ad_max):
+            return False
+
+        rho_min = subset_key.get('rho_min')
+        if rho_min is not None and str(rho_min).strip() != '' and (rho * 100.0) < float(rho_min):
+            return False
+        rho_max = subset_key.get('rho_max')
+        if rho_max is not None and str(rho_max).strip() != '' and (rho * 100.0) > float(rho_max):
+            return False
+
+        fck_min = subset_key.get('fck_min')
+        if fck_min is not None and str(fck_min).strip() != '' and bfck < float(fck_min):
+            return False
+        fck_max = subset_key.get('fck_max')
+        if fck_max is not None and str(fck_max).strip() != '' and bfck > float(fck_max):
+            return False
+
+        bw_min = subset_key.get('bw_min')
+        if bw_min is not None and str(bw_min).strip() != '' and bbw < float(bw_min):
+            return False
+        bw_max = subset_key.get('bw_max')
+        if bw_max is not None and str(bw_max).strip() != '' and bbw > float(bw_max):
+            return False
+
+        return True
+
     # Slabs subsets
     if subset_key == 'slabs_slender_600':
         return is_slab and bd < 600.0
@@ -104,9 +158,13 @@ def load_and_clean_data(subset_key='ALL DATA'):
     Returns clean arrays for Nelder-Mead optimization and analytical C calibration.
     """
     global _cached_subsets
-    subset_key = str(subset_key or 'ALL DATA').strip()
-    if subset_key in _cached_subsets:
-        return _cached_subsets[subset_key]
+    if isinstance(subset_key, dict):
+        cache_key = "dyn_" + str(sorted((k, v) for k, v in subset_key.items() if v is not None and str(v).strip() != ''))
+    else:
+        cache_key = str(subset_key or 'ALL DATA').strip()
+
+    if cache_key in _cached_subsets:
+        return _cached_subsets[cache_key]
 
     all_records = get_all_codes_dataset()
     if isinstance(all_records, dict) and "error" in all_records:
@@ -167,7 +225,7 @@ def load_and_clean_data(subset_key='ALL DATA'):
         'subset': subset_key,
         'count': len(filtered)
     }
-    _cached_subsets[subset_key] = result_dict
+    _cached_subsets[cache_key] = result_dict
     return result_dict
 
 _cached_all_data = None

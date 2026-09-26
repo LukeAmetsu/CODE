@@ -227,6 +227,12 @@
                             <span id="badge-count-timber" class="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">1</span>
                         </button>
 
+                        <button id="tab-btn-pdf_tools" onclick="setHubFilter('discipline', 'pdf_tools', false)"
+                            class="tab-filter-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-xs transition-all border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]">
+                            <span>📄 PDF Studio</span>
+                            <span id="badge-count-pdf_tools" class="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">1</span>
+                        </button>
+
                         <div class="h-5 w-px bg-gray-300 dark:bg-gray-700 mx-1 hidden sm:block"></div>
 
                         <button id="tab-btn-br" onclick="setHubFilter('standard', 'br', false)"
@@ -270,6 +276,42 @@
 
                 <!-- GRID DE APLICATIVOS / CALCULADORAS -->
                 <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    <!-- CENTRAL PDF STUDIO (Smallpdf Suite) -->
+                    <div data-discipline="pdf_tools" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-indigo-500/50 hover:border-indigo-500 relative overflow-hidden bg-gradient-to-br from-indigo-50/30 via-white to-blue-50/20 dark:from-slate-900/90 dark:via-slate-800/95 dark:to-indigo-950/40 shadow-sm hover:shadow-md"
+                        data-standard="br us all" data-tags="pdf smallpdf studio merge juntar split dividir senha unlock desproteger compress comprimir assinar carimbo girar rotate converter imagem">
+                        <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            100% OFFLINE & PRIVADO
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">📑</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Central PDF Studio (Estilo Smallpdf)
+                                    </h3>
+                                    <span class="badge-norm bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Suíte Completa PDF</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Junte múltiplos PDFs, divida por intervalos, reordene e gire páginas visualmente, comprima sem perda de nitidez, remova ou adicione senhas com criptografia AES-256, assine e carimbe documentos com pré-visualização.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Juntar & Dividir</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">Organizar & Girar</span>
+                                <span class="badge-discipline bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">Remover / Adicionar Senha</span>
+                                <span class="badge-discipline bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Assinar & Carimbar</span>
+                                <span class="badge-discipline bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">Comprimir</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-[var(--color-border-primary)] flex items-center justify-between mt-auto">
+                            <span class="text-[11px] text-[var(--color-text-secondary)] font-medium">9 Ferramentas Integradas</span>
+                            <a href="pdf_tools.html" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5">
+                                <span>Abrir PDF Studio</span>
+                                <span>→</span>
+                            </a>
+                        </div>
+                    </div>
 
                     <!-- ======================================================== -->
                     <!-- MÓDULOS BRASILEIROS (NBR & GEOTECNIA)                    -->
@@ -360,6 +402,37 @@
                         </div>
                         <a href="aoki_velloso.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
                             <span>Molas de Estacas (Aoki & Décourt)</span>
+                            <span>→</span>
+                        </a>
+                    </div>
+
+                    <!-- 3a-2. Capacidade de Estacas Escavadas: FHWA / Mayne Beta-Method -->
+                    <div data-discipline="geotech" class="app-card form-section !mb-0 flex flex-col justify-between border-2 border-indigo-500/40 hover:border-indigo-500 relative overflow-hidden"
+                        data-standard="br" data-tags="capacidade carga estaca escavada fhwa mayne beta spt atrito lateral ponta diametro eixos fundacao cota arrasamento sondagem">
+                        <div class="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-bl shadow-sm">
+                            FHWA GEC 010
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-2xl">🏗️</span>
+                                <div>
+                                    <h3 class="text-lg font-bold text-[var(--color-text-primary)] leading-snug">
+                                        Capacidade de Estacas Escavadas (FHWA / Mayne)
+                                    </h3>
+                                    <span class="badge-norm bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Método β de Mayne • Ref. Planilha</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                                Dimensionamento geotécnico axial de estacas escavadas de grande diâmetro (48", 54", 60") a partir de sondagens SPT. Síntese estatística multi-furos (percentil/moda) e dimensionamento por eixos estruturais com cota de arrasamento.
+                            </p>
+                            <div class="flex flex-wrap gap-1.5 mb-5">
+                                <span class="badge-discipline bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">FHWA / Mayne β</span>
+                                <span class="badge-discipline bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">SPT Multi-Furos</span>
+                                <span class="badge-discipline bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">Cota por Eixo</span>
+                            </div>
+                        </div>
+                        <a href="capacidade_estaca.html" class="mt-auto w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-center text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Capacidade de Estacas (FHWA)</span>
                             <span>→</span>
                         </a>
                     </div>
@@ -1134,6 +1207,7 @@
             let countSteel = 0;
             let countAnalysis = 0;
             let countTimber = 0;
+            let countPdfTools = 0;
             let countBR = 0;
             let countUS = 0;
 
@@ -1147,6 +1221,7 @@
                 else if (disc === 'steel') countSteel++;
                 else if (disc === 'analysis_loads') countAnalysis++;
                 else if (disc === 'timber') countTimber++;
+                else if (disc === 'pdf_tools') countPdfTools++;
 
                 if (stdList.includes('br')) countBR++;
                 if (stdList.includes('us')) countUS++;
@@ -1163,6 +1238,7 @@
             setBadge('badge-count-steel', countSteel);
             setBadge('badge-count-analysis_loads', countAnalysis);
             setBadge('badge-count-timber', countTimber);
+            setBadge('badge-count-pdf_tools', countPdfTools);
             setBadge('badge-count-br', countBR);
             setBadge('badge-count-us', countUS);
 

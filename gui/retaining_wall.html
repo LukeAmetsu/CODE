@@ -919,6 +919,11 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="loadFlexiblePreset('strap_excel')"
+                            class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-1.5 px-3 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-xs"
+                            title="Carregar referência da planilha Empuxos_Atualizados_Interfaces.xlsx (4 camadas, Z_NA=2.5m, q=3 tf/m², L=12m)">
+                            <span>📊</span> Ref. Planilha STRAP (Excel)
+                        </button>
                         <button type="button" onclick="loadFlexiblePreset('anchored_sheet_pile')"
                             class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition-colors">
                             ⚓ Estaca-Prancha Ancorada H=6m
@@ -947,6 +952,7 @@
                             class="space-y-6">
 
                             <!-- Panel 1: Tipologia e Geometria -->
+                            <!-- Panel 1: Tipologia e Geometria -->
                             <div
                                 class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
                                 <h3
@@ -956,7 +962,7 @@
                                 <div class="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <label class="eng-label">Tipo de Parede</label>
-                                        <select id="flex_wall_type"
+                                        <select id="flex_wall_type" onchange="onFlexibleWallTypeChange()"
                                             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-sm">
                                             <option value="sheet_pile">Estaca-Prancha Metálica</option>
                                             <option value="diaphragm_wall">Parede Diafragma Concreto</option>
@@ -980,6 +986,20 @@
                                         <input type="number" id="flex_anchor_depth" value="1.0" step="0.1" min="0.2"
                                             class="eng-input">
                                     </div>
+                                    <div>
+                                        <label class="eng-label">Modo de Comprimento</label>
+                                        <select id="flex_length_mode" onchange="toggleFlexibleLengthMode()"
+                                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-sm font-medium">
+                                            <option value="auto">Automático (Método de Blum)</option>
+                                            <option value="manual">Manual (Definir Comprimento Total L)</option>
+                                        </select>
+                                    </div>
+                                    <div id="flex_total_length_row" class="hidden">
+                                        <label class="eng-label">Comprimento Total L (m)</label>
+                                        <input type="number" id="flex_total_length" value="8.0" step="0.5" min="1.0"
+                                            class="eng-input font-bold text-blue-600">
+                                        <div class="text-[11px] text-gray-400 mt-1">Ficha D = <span id="flex_calc_embedment_preview" class="font-bold text-blue-500">3.00</span> m</div>
+                                    </div>
                                     <div class="col-span-2">
                                         <label class="eng-label">Sobrecarga no Topo q (kPa)</label>
                                         <input type="number" id="flex_q" value="10.0" step="1.0" min="0.0"
@@ -988,14 +1008,23 @@
                                 </div>
                             </div>
 
-                            <!-- Panel 2: Geotecnia (Aterro / Escoramento) -->
+                            <!-- Panel 2: Geotecnia e Estratigrafia -->
                             <div
                                 class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                                <h3
-                                    class="text-base font-bold text-amber-600 dark:text-amber-400 mb-4 flex items-center gap-2">
-                                    <span>🌍</span> Parâmetros Geotécnicos
-                                </h3>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3
+                                        class="text-base font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                                        <span>🌍</span> Parâmetros Geotécnicos & Solos
+                                    </h3>
+                                    <select id="flex_soil_mode" onchange="toggleFlexibleSoilMode()"
+                                        class="text-xs rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-2 py-1 font-semibold">
+                                        <option value="homogenous">Solo Homogêneo (Simples)</option>
+                                        <option value="stratified">Múltiplas Camadas (Estratigrafia)</option>
+                                    </select>
+                                </div>
+
+                                <!-- Modo 1: Solo Homogêneo (Rápido) -->
+                                <div id="flex_homogenous_soil_container" class="grid grid-cols-2 gap-4 text-sm">
                                     <div class="col-span-2 text-xs font-semibold text-gray-500 uppercase">Solo de
                                         Escoramento / Montante (Empuxo Ativo)</div>
                                     <div>
@@ -1046,25 +1075,154 @@
                                             class="eng-input">
                                     </div>
                                 </div>
+
+                                <!-- Modo 2: Múltiplas Camadas de Solo (Estratigrafia Interativa) -->
+                                <div id="flex_stratified_soil_container" class="hidden space-y-4 text-sm">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-gray-500 uppercase">Estratigrafia Geotécnica do Perfil</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <button type="button" onclick="loadStratigraphyPreset('3layers_sand_clay_dense')"
+                                                class="text-[11px] bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded">
+                                                Exemplo 3 Camadas
+                                            </button>
+                                            <button type="button" onclick="addStratigraphyLayer()"
+                                                class="text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                                                <span>+</span> Nova Camada
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Layers list container -->
+                                    <div id="flex_strat_layers_list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                                        <!-- Dynamic layers injected by JS -->
+                                    </div>
+
+                                    <!-- Níveis d'Água para Estratigrafia -->
+                                    <div class="grid grid-cols-3 gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <div>
+                                            <label class="eng-label text-[11px]">Prof. NA Montante (m)</label>
+                                            <input type="number" id="flex_zw_back_strat" value="4.0" step="0.5" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Prof. NA Jusante (m)</label>
+                                            <input type="number" id="flex_zw_front_strat" value="5.0" step="0.5" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">FS Passivo</label>
+                                            <input type="number" id="flex_fs_passive_strat" value="1.5" step="0.1" class="eng-input text-xs">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <!-- Panel 3: Materiais -->
+                            <!-- Panel 3: Características Físicas e Geométricas da Seção -->
                             <div
                                 class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
-                                <h3
-                                    class="text-base font-bold text-slate-600 dark:text-slate-400 mb-4 flex items-center gap-2">
-                                    <span>⚙️</span> Resistência dos Materiais
-                                </h3>
-                                <div class="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <label class="eng-label">Aço Estaca fy (MPa)</label>
-                                        <input type="number" id="flex_steel_fy" value="345.0" step="5.0"
-                                            class="eng-input">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3
+                                        class="text-base font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                        <span>⚙️</span> Seção & Propriedades da Estaca
+                                    </h3>
+                                    <select id="flex_section_mode" onchange="toggleFlexibleSectionMode()"
+                                        class="text-xs rounded-md border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 px-2 py-1 font-semibold">
+                                        <option value="catalog">Catálogo Comercial</option>
+                                        <option value="custom">Personalizado / Manual</option>
+                                        <option value="auto">Dimensionamento Automático</option>
+                                    </select>
+                                </div>
+
+                                <!-- Sub-painel: Estaca-Prancha Metálica -->
+                                <div id="flex_steel_section_panel" class="space-y-3.5 text-sm">
+                                    <!-- Seletor de Perfil do Catálogo -->
+                                    <div id="flex_catalog_select_row">
+                                        <label class="eng-label text-xs">Perfil Comercial de Catálogo (ArcelorMittal)</label>
+                                        <select id="flex_profile_catalog" onchange="onFlexibleProfileSelected()"
+                                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                            <option value="PU 12 (Larssen)">PU 12 (Larssen) • Wel = 1200 cm³/m • Ix = 21600 cm⁴/m</option>
+                                            <option value="PU 18 (Larssen)" selected>PU 18 (Larssen) • Wel = 1800 cm³/m • Ix = 38400 cm⁴/m</option>
+                                            <option value="PU 22 (Larssen)">PU 22 (Larssen) • Wel = 2200 cm³/m • Ix = 49500 cm⁴/m</option>
+                                            <option value="PU 28 (Larssen)">PU 28 (Larssen) • Wel = 2800 cm³/m • Ix = 65800 cm⁴/m</option>
+                                            <option value="PU 32 (Larssen)">PU 32 (Larssen) • Wel = 3200 cm³/m • Ix = 78400 cm⁴/m</option>
+                                            <option value="AU 14">AU 14 • Wel = 1400 cm³/m • Ix = 28600 cm⁴/m</option>
+                                            <option value="AU 18">AU 18 • Wel = 1800 cm³/m • Ix = 39600 cm⁴/m</option>
+                                            <option value="AU 20">AU 20 • Wel = 2000 cm³/m • Ix = 44300 cm⁴/m</option>
+                                            <option value="AU 25">AU 25 • Wel = 2500 cm³/m • Ix = 56000 cm⁴/m</option>
+                                            <option value="AZ 18-700">AZ 18-700 • Wel = 1800 cm³/m • Ix = 37800 cm⁴/m</option>
+                                            <option value="AZ 26-700">AZ 26-700 • Wel = 2600 cm³/m • Ix = 60500 cm⁴/m</option>
+                                            <option value="AZ 36-700N">AZ 36-700N • Wel = 3600 cm³/m • Ix = 95400 cm⁴/m</option>
+                                            <option value="AZ 46-700N">AZ 46-700N • Wel = 4600 cm³/m • Ix = 133400 cm⁴/m</option>
+                                        </select>
                                     </div>
-                                    <div>
-                                        <label class="eng-label">Concreto fck (MPa)</label>
-                                        <input type="number" id="flex_fck_concrete" value="30.0" step="5.0"
-                                            class="eng-input">
+
+                                    <!-- Nome customizado se modo custom -->
+                                    <div id="flex_custom_name_row" class="hidden">
+                                        <label class="eng-label text-xs">Identificação do Perfil / Seção</label>
+                                        <input type="text" id="flex_sec_custom_name" value="Perfil Personalizado" class="eng-input text-xs font-semibold">
+                                    </div>
+
+                                    <!-- Grid de Características Físicas e Geométricas -->
+                                    <div class="grid grid-cols-2 gap-3 pt-1">
+                                        <div>
+                                            <label class="eng-label text-[11px]">Módulo Elástico W_el (cm³/m)</label>
+                                            <input type="number" id="flex_sec_wel" value="1800.0" step="50" min="100" class="eng-input text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Inércia I_x (cm⁴/m)</label>
+                                            <input type="number" id="flex_sec_ix" value="38400.0" step="500" min="500" class="eng-input text-xs font-bold text-blue-600 dark:text-blue-400">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Altura Seção h (mm)</label>
+                                            <input type="number" id="flex_sec_h" value="430.0" step="10" min="50" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Espessura Alma t_w (mm)</label>
+                                            <input type="number" id="flex_sec_tw" value="10.0" step="0.5" min="2" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Massa Linear (kg/m²)</label>
+                                            <input type="number" id="flex_sec_mass" value="118.0" step="1.0" min="10" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Módulo Elasticidade E (GPa)</label>
+                                            <input type="number" id="flex_steel_E" value="210.0" step="5.0" min="50" class="eng-input text-xs">
+                                        </div>
+                                        <div class="col-span-2">
+                                            <label class="eng-label text-[11px]">Tensão de Escoamento f_y (MPa)</label>
+                                            <input type="number" id="flex_steel_fy" value="345.0" step="5.0" min="100" class="eng-input text-xs">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sub-painel: Parede Diafragma de Concreto -->
+                                <div id="flex_concrete_section_panel" class="hidden space-y-3.5 text-sm">
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="eng-label text-[11px]">Modo de Espessura</label>
+                                            <select id="flex_diaphragm_mode" onchange="toggleDiaphragmThicknessMode()" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1.5 text-xs">
+                                                <option value="auto">Automática (Ótima p/ M_sd)</option>
+                                                <option value="manual">Manual (Fixar Espessura)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Espessura Parede t (m)</label>
+                                            <input type="number" id="flex_diaphragm_t" value="0.60" step="0.1" min="0.3" class="eng-input text-xs font-bold text-emerald-600">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Concreto f_ck (MPa)</label>
+                                            <input type="number" id="flex_fck_concrete" value="30.0" step="5.0" min="15" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Módulo Concreto E_c (GPa)</label>
+                                            <input type="number" id="flex_concrete_Ec" value="26.0" step="1.0" min="5" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Inércia Fissurada ELS (I_eff/I_bruto)</label>
+                                            <input type="number" id="flex_cracked_ratio" value="0.50" step="0.05" min="0.2" max="1.0" class="eng-input text-xs">
+                                        </div>
+                                        <div>
+                                            <label class="eng-label text-[11px]">Cobrimento c_nom (cm)</label>
+                                            <input type="number" id="flex_concrete_cover" value="6.0" step="0.5" min="2" class="eng-input text-xs">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1075,6 +1233,7 @@
                     <!-- Right Results & 2D Canvas (7 cols) -->
                     <div class="lg:col-span-7 space-y-6">
                         <!-- 2D Canvas Elevation & Diagrams -->
+                        <!-- 2D Canvas Elevation & Diagrams -->
                         <div
                             class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700 flex flex-col items-center">
                             <div
@@ -1083,79 +1242,105 @@
                                     class="text-base font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                                     <span>📊</span> Perfil 2D da Contenção & Diagrama de Momentos M(z)
                                 </h3>
-                                <span id="flex-res-status-badge"
-                                    class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
-                                    ✓ Aprovado
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="openFlexibleMemorial()"
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs shadow-xs transition-colors flex items-center gap-1.5"
+                                        title="Abrir Memorial de Cálculo detalhado com equações e verificações completas">
+                                        <span>📑</span> Memorial de Cálculo
+                                    </button>
+                                    <span id="flex-res-status-badge"
+                                        class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
+                                        ✓ Aprovado
+                                    </span>
+                                </div>
                             </div>
                             <canvas id="flex-wall-canvas" width="760" height="460"
                                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-slate-900"></canvas>
                         </div>
 
                         <!-- Results Summary Grid -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
                             <div
-                                class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
-                                <div class="text-xs text-gray-500">Ficha Requerida (D)</div>
+                                class="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
+                                <div id="flex-res-embedment-title" class="text-xs text-gray-500">Ficha (D)</div>
                                 <div id="flex-res-embedment" class="text-xl font-extrabold text-blue-600 my-1">-</div>
-                                <div class="text-[11px] text-gray-400">Total: <span id="flex-res-total-length">-</span>
-                                </div>
+                                <div class="text-[11px] text-gray-400">Total: <span id="flex-res-total-length">-</span></div>
+                                <div id="flex-res-fs-overturning" class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">FS = -</div>
                             </div>
                             <div
-                                class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
+                                class="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
                                 <div class="text-xs text-gray-500">Carga no Tirante (T)</div>
                                 <div id="flex-res-anchor-force" class="text-xl font-extrabold text-rose-600 my-1">-
                                 </div>
                                 <div class="text-[11px] text-gray-400">por metro linear</div>
                             </div>
                             <div
-                                class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
+                                class="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
                                 <div class="text-xs text-gray-500">Momento Fletor M_max</div>
                                 <div id="flex-res-max-moment" class="text-xl font-extrabold text-indigo-600 my-1">-
                                 </div>
                                 <div id="flex-res-moment-depth" class="text-[11px] text-gray-400">a z = -</div>
                             </div>
                             <div
-                                class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
+                                class="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center">
                                 <div class="text-xs text-gray-500">Cortante Máx. V_max</div>
                                 <div id="flex-res-max-shear" class="text-xl font-extrabold text-amber-600 my-1">-</div>
                                 <div class="text-[11px] text-gray-400">kN / m</div>
                             </div>
+                            <div
+                                class="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 text-center col-span-2 sm:col-span-1">
+                                <div class="text-xs text-gray-500">Deformação Topo (δ)</div>
+                                <div id="flex-res-deflection" class="text-xl font-extrabold text-teal-600 my-1">-</div>
+                                <div class="text-[11px] text-gray-400">Lim: <span id="flex-res-deflection-adm">-</span> mm</div>
+                                <div id="flex-res-deflection-badge" class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">✓ ELS OK</div>
+                            </div>
                         </div>
 
-                        <!-- Structural Section Design Card (Sheet Pile Catalog or Diaphragm Rebar) -->
+                        <!-- Structural Section Design Card (Sheet Pile Catalog or Custom) -->
                         <div id="flex-steel-section-card"
                             class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 p-5 rounded-xl border border-blue-200 dark:border-blue-900 shadow-sm">
                             <div
                                 class="flex items-center justify-between mb-3 border-b border-blue-200 dark:border-blue-800 pb-2">
                                 <h4 class="text-sm font-bold text-blue-900 dark:text-blue-200 flex items-center gap-2">
-                                    <span>🔩</span> Perfil Comercial ArcelorMittal Selecionado
+                                    <span>🔩</span> Características da Estaca Metálica Adotada
                                 </h4>
-                                <span class="text-xs text-blue-600 dark:text-blue-400 font-semibold">Catálogo AZ /
-                                    PU</span>
+                                <span id="flex-res-profile-mode-tag" class="text-xs text-blue-600 dark:text-blue-400 font-semibold">Catálogo ArcelorMittal</span>
                             </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                                <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
-                                    <div class="text-[11px] text-gray-500">Perfil Sugerido</div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+                                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-xs">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Perfil / Seção</div>
                                     <div id="flex-res-profile-name"
-                                        class="text-base font-extrabold text-blue-700 dark:text-blue-300">-</div>
+                                        class="text-sm font-extrabold text-blue-700 dark:text-blue-300 truncate my-0.5">-</div>
+                                    <div id="flex-res-sec-dims" class="text-[10px] text-gray-400">h = - mm</div>
                                 </div>
-                                <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
-                                    <div class="text-[11px] text-gray-500">W_el Fornecido</div>
+                                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-xs">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">W_el Adotado</div>
                                     <div id="flex-res-wel-prov"
-                                        class="text-base font-extrabold text-indigo-700 dark:text-indigo-300">-</div>
-                                    <div class="text-[10px] text-gray-400">Req: <span id="flex-res-wel-req">-</span>
-                                    </div>
+                                        class="text-sm font-extrabold text-indigo-700 dark:text-indigo-300 my-0.5">-</div>
+                                    <div class="text-[10px] text-gray-400">Req: <span id="flex-res-wel-req">-</span></div>
                                 </div>
-                                <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
-                                    <div class="text-[11px] text-gray-500">Taxa de Utilização</div>
-                                    <div id="flex-res-utilization" class="text-base font-extrabold text-emerald-600">-
-                                    </div>
+                                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-xs">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Inércia I_x</div>
+                                    <div id="flex-res-sec-ix"
+                                        class="text-sm font-extrabold text-blue-600 dark:text-blue-400 my-0.5">-</div>
+                                    <div class="text-[10px] text-gray-400">cm⁴/m</div>
                                 </div>
-                                <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-xs">
-                                    <div class="text-[11px] text-gray-500">Massa de Aço</div>
+                                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-xs">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Rigidez Flexional EI</div>
+                                    <div id="flex-res-sec-ei"
+                                        class="text-sm font-extrabold text-teal-600 dark:text-teal-400 my-0.5">-</div>
+                                    <div class="text-[10px] text-gray-400">kNm²/m</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-xs">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Taxa Utilização</div>
+                                    <div id="flex-res-utilization" class="text-sm font-extrabold text-emerald-600 my-0.5">-</div>
+                                    <div id="flex-res-util-status" class="text-[10px] text-emerald-500 font-semibold">OK (ELU)</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2.5 rounded-lg shadow-xs">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Massa de Aço</div>
                                     <div id="flex-res-steel-mass"
-                                        class="text-base font-extrabold text-gray-700 dark:text-gray-200">-</div>
+                                        class="text-sm font-extrabold text-gray-700 dark:text-gray-200 my-0.5">-</div>
+                                    <div class="text-[10px] text-gray-400">kg/m²</div>
                                 </div>
                             </div>
                         </div>
@@ -1202,9 +1387,139 @@
                             </div>
                         </div>
 
+                        <!-- Global Equilibrium Check (Cantilever Wall / Sheet Pile per Excel Empuxos STRAP) -->
+                        <div id="flex-strap-equilibrium-card"
+                            class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 space-y-4">
+                            <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2.5">
+                                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                    <span>⚖️</span> Verificação Global de Equilíbrio (Muro / Prancha em Balanço - Ref. Excel)
+                                </h4>
+                                <span id="flex-strap-overall-badge"
+                                    class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
+                                    OK (Seguro)
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                                <div class="bg-slate-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Empuxo Ativo Total (Ea)</div>
+                                    <div id="flex-res-strap-ea" class="text-base font-extrabold text-rose-600 my-0.5">-</div>
+                                    <div id="flex-res-strap-ea-tf" class="text-[10px] text-gray-400">- tf</div>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Capacidade Passiva (Ep)</div>
+                                    <div id="flex-res-strap-ep" class="text-base font-extrabold text-emerald-600 my-0.5">-</div>
+                                    <div id="flex-res-strap-ep-tf" class="text-[10px] text-gray-400">- tf</div>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Momento Tombamento (Base)</div>
+                                    <div id="flex-res-strap-mtom" class="text-base font-extrabold text-amber-600 my-0.5">-</div>
+                                    <div id="flex-res-strap-mtom-tf" class="text-[10px] text-gray-400">- tf.m</div>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Momento Resistente (Base)</div>
+                                    <div id="flex-res-strap-mres" class="text-base font-extrabold text-blue-600 my-0.5">-</div>
+                                    <div id="flex-res-strap-mres-tf" class="text-[10px] text-gray-400">- tf.m</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700">
+                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">FS Deslizamento (Passivo / Ativo):</span>
+                                    <div class="flex items-center gap-2">
+                                        <span id="flex-res-strap-fs-desl" class="font-extrabold text-sm text-gray-800 dark:text-gray-100">-</span>
+                                        <span id="flex-res-strap-badge-desl" class="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">OK</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700">
+                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300">FS Tombamento (M_res / M_tom):</span>
+                                    <div class="flex items-center gap-2">
+                                        <span id="flex-res-strap-fs-tomb" class="font-extrabold text-sm text-gray-800 dark:text-gray-100">-</span>
+                                        <span id="flex-res-strap-badge-tomb" class="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">OK</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Winkler Springs & STRAP Nodal Discretization Table Card -->
+                        <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700 pb-2.5">
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                        <span>🧬</span> Discretização Nodal STRAP & Molas de Winkler (tf, m e kN)
+                                    </h4>
+                                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                        Rigidez da mola (K_mola), limiar de plastificação (Fmax) e deslocamento de escoamento (x2 em mm) cota a cota.
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="copyStrapTableToClipboard()"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1 px-3 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-xs"
+                                        title="Copiar dados tabulados para colar no STRAP ou Excel">
+                                        <span>📋</span> Copiar Tabela STRAP
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="max-h-72 overflow-y-auto overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <table class="w-full text-[11px] text-left">
+                                    <thead class="bg-slate-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 sticky top-0 font-bold border-b border-gray-200 dark:border-gray-700">
+                                        <tr>
+                                            <th class="py-1.5 px-2">Nó</th>
+                                            <th class="py-1.5 px-2">Cota Z (m)</th>
+                                            <th class="py-1.5 px-2">Solo</th>
+                                            <th class="py-1.5 px-2 text-right">Fa Nó (tf)</th>
+                                            <th class="py-1.5 px-2 text-right">Fa Nó (kN)</th>
+                                            <th class="py-1.5 px-2 text-right">K_mola (tf/m)</th>
+                                            <th class="py-1.5 px-2 text-right">Fmax (tf)</th>
+                                            <th class="py-1.5 px-2 text-right">x2 (mm)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="flex-strap-springs-tbody" class="divide-y divide-gray-200 dark:divide-gray-700 text-gray-600 dark:text-gray-300 font-mono">
+                                        <tr><td colspan="8" class="text-center py-3 text-gray-400 font-sans">Carregando discretização nodal...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div> <!-- End flexible-walls-container -->
+
+            <!-- Modal Memorial de Cálculo (Contenções Flexíveis) -->
+            <div id="flex-memorial-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 md:p-6 overflow-y-auto">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full border border-gray-200 dark:border-gray-700 max-h-[92vh] flex flex-col my-auto overflow-hidden">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-900/60 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">📑</span>
+                            <div>
+                                <h3 class="text-base md:text-lg font-extrabold text-gray-900 dark:text-white">Memorial de Cálculo Geotécnico & Estrutural</h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Método de Blum (Free Earth Support) • NBR 8800 / NBR 6118 • Verificações ELU e ELS</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="printFlexibleMemorial()"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs shadow-xs transition-colors flex items-center gap-1.5">
+                                <span>🖨️</span> Imprimir / PDF
+                            </button>
+                            <button type="button" onclick="closeFlexibleMemorial()"
+                                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold px-2 py-0.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Modal Body -->
+                    <div id="flex-memorial-body" class="p-5 md:p-6 overflow-y-auto space-y-6 text-sm text-gray-800 dark:text-gray-200">
+                        <!-- Dynamic content rendered by JS -->
+                    </div>
+                    <!-- Modal Footer -->
+                    <div class="p-3.5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 shrink-0 flex justify-between items-center text-xs text-gray-500">
+                        <span class="hidden sm:inline">Memorial técnico analítico gerado para fins de validação e conferência.</span>
+                        <button type="button" onclick="closeFlexibleMemorial()"
+                            class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold py-1 px-4 rounded-lg transition-colors ml-auto">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <script>
                 function switchRetainingTab(tab) {
