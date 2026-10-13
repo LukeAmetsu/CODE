@@ -82,6 +82,11 @@
           "key": "interactive_shear",
           "href": "gui/interactive_shear.html",
           "textKey": "interactive_shear"
+        },
+        {
+          "key": "shear_reliability",
+          "href": "gui/shear_reliability.html",
+          "textKey": "shear_reliability"
         }
       ]
     },

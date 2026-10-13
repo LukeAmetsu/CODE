@@ -1106,6 +1106,131 @@ def run_shear_batch_export(options=None):
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
 
+# ---------------------------------------------------------------------------
+# STRUCTURAL RELIABILITY & SAFETY CALIBRATION (FORM / MONTE CARLO)
+# ---------------------------------------------------------------------------
+
+@eel.expose
+def run_shear_reliability_analysis(options):
+    """Calculates structural reliability (FORM & Monte Carlo) for shear models."""
+    try:
+        from backend.calculators.reliability_shear import StructuralReliabilityAnalysis
+        opts = options or {}
+        section = opts.get('section', {})
+        params = opts.get('model_params', {})
+        rv_config = opts.get('rv_config', None)
+        target_beta = float(opts.get('target_beta', 3.80))
+        code_design = opts.get('code_design', 'PROPOSED')
+        run_mc = bool(opts.get('run_monte_carlo', False))
+        mc_samples = int(opts.get('mc_samples', 20000))
+
+        sra = StructuralReliabilityAnalysis(
+            section_nom=section,
+            model_params=params,
+            rv_config=rv_config,
+            target_beta=target_beta,
+            code_design=code_design,
+        )
+        form_result = sra.run_form()
+
+        mc_result = None
+        if run_mc:
+            mc_result = sra.run_monte_carlo(n_samples=mc_samples)
+
+        return {
+            "success": True,
+            "form": form_result,
+            "mc": mc_result,
+        }
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calibrate_shear_partial_factor(options):
+    """Calibrates optimal partial factor gamma_v to attain target reliability index beta."""
+    try:
+        from backend.calculators.reliability_shear import calibrate_optimal_gamma_v
+        opts = options or {}
+        section = opts.get('section', {})
+        params = opts.get('model_params', {})
+        rv_config = opts.get('rv_config', None)
+        target_beta = float(opts.get('target_beta', 3.80))
+
+        res = calibrate_optimal_gamma_v(
+            section_nom=section,
+            model_params=params,
+            target_beta=target_beta,
+            rv_config=rv_config,
+        )
+        return {"success": True, **res}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def compare_shear_reliability_codes(options):
+    """Compares beta vs chi across multiple design codes (Proposed, NBR6118, EC2, ACI)."""
+    try:
+        from backend.calculators.reliability_shear import compare_all_codes_reliability
+        opts = options or {}
+        section = opts.get('section', {})
+        params = opts.get('model_params', {})
+        rv_config = opts.get('rv_config', None)
+        chi_values = opts.get('chi_values', [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70])
+
+        res = compare_all_codes_reliability(
+            section_nom=section,
+            model_params=params,
+            rv_config=rv_config,
+            chi_values=chi_values,
+        )
+        return {"success": True, **res}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_shear_model_error_stats(options):
+    """Extracts theta_R mean and COV from experimental database."""
+    try:
+        from backend.calculators.reliability_shear import extract_theta_r_from_database
+        opts = options or {}
+        params = opts.get('model_params', {})
+        subset_key = opts.get('subset_key', 'ALL DATA')
+        exclude_pc = bool(opts.get('exclude_pc', False))
+
+        res = extract_theta_r_from_database(
+            model_params=params,
+            subset_key=subset_key,
+            exclude_pc=exclude_pc,
+        )
+        return {"success": True, **res}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def generate_shear_reliability_latex(options):
+    """Generates LaTeX code for dissertation table."""
+    try:
+        from backend.calculators.reliability_shear import (
+            StructuralReliabilityAnalysis,
+            generate_latex_reliability_table,
+        )
+        opts = options or {}
+        section = opts.get('section', {})
+        params = opts.get('model_params', {})
+        rv_config = opts.get('rv_config', None)
+
+        sra = StructuralReliabilityAnalysis(section_nom=section, model_params=params, rv_config=rv_config)
+        form_res = sra.run_form()
+        latex = generate_latex_reliability_table(form_res, section, params)
+        return {"success": True, "latex": latex}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
 # --- New Modules: Geotechnical & Structural Engineering ---
 
 @eel.expose

@@ -443,7 +443,8 @@
         "chart_legend_title": "Interactive Chart Legend (Click items to toggle visibility)",
         "capacidade_estaca": "Drilled Shaft Capacity (FHWA)",
         "btn_correlation": "Correlation & Bias",
-        "loads_studio": "Structural Loading Studio (NBR • ASCE)"
+        "loads_studio": "Structural Loading Studio (NBR • ASCE)",
+        "shear_reliability": "Shear Structural Reliability (FORM & Safety Calibration)"
     },
     "es": {
         "engineering_hub": "Centro de Ingeniería",
@@ -742,7 +743,8 @@
         "chart_legend_title": "Leyenda Interactiva (Haga clic para ocultar/mostrar)",
         "capacidade_estaca": "Capacidad de Pilotes (FHWA)",
         "btn_correlation": "Correlación y Sesgo",
-        "loads_studio": "Central de Cargas y Acciones (NBR • ASCE)"
+        "loads_studio": "Central de Cargas y Acciones (NBR • ASCE)",
+        "shear_reliability": "Confiabilidad Estructural & Calibración de Seguridad"
     },
     "pt": {
         "engineering_hub": "Hub de Engenharia",
@@ -1067,6 +1069,7 @@
         "chart_legend_title": "Legenda Interativa do Gráfico (Clique nos itens para ocultar/exibir)",
         "capacidade_estaca": "Capacidade de Estacas (FHWA)",
         "btn_correlation": "Correlação & Viés",
-        "loads_studio": "Central de Cargas & Ações (NBR • ASCE)"
+        "loads_studio": "Central de Cargas & Ações (NBR • ASCE)",
+        "shear_reliability": "Confiabilidade Estrutural & Calibração de Segurança (FORM)"
     }
 }
