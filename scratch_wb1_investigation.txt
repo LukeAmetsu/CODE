@@ -1,0 +1,24 @@
+Sheet: Settings -> 23 rows, 2 cols
+  Headers: ['setting', 'value']
+Sheet: Summary axial lengths -> 256 rows, 21 cols
+  Headers: ['Axis (-)', 'D (m)', 'Concrete Mattress -4m (m)', 'Slope level (m)', 'Embedded length L (m)', 'Tip elevation (m)', 'Qs ultimate side (kN)', 'fs unit side resistance at tip (kPa)', 'fs average over L = Qs/(perimeter·L) (kPa)', 'qp unit tip resistance at tip (kPa)', 'Qp ultimate tip (kN)', 'Qult = Qs + Qp (kN)', 'Qall side = Qs/FS_side (kN)', 'Qall tip = Qp/FS_tip (kN)', 'Qall gross = side + tip (kN)']
+Sheet: Axis A data sheet -> 51 rows, 74 cols
+  Headers: ['PY Static Reese et al. (1974)']
+Sheet: Axis A axial lengths -> 52 rows, 17 cols
+  Headers: ['Embedded length L (m)', 'Tip elevation (m)', 'Qs ultimate side (kN)', 'fs unit side resistance at tip (kPa)', 'fs average over L = Qs/(perimeter·L) (kPa)', 'qp unit tip resistance at tip (kPa)', 'Qp ultimate tip (kN)', 'Qult = Qs + Qp (kN)', 'Qall side = Qs/FS_side (kN)', 'Qall tip = Qp/FS_tip (kN)', 'Qall gross = side + tip (kN)', 'W pile weight (kN)', 'Qall net = gross − W (kN)', 'Tip contribution to Qall gross (%)', 'Side contribution to Qall gross (%)']
+Sheet: Axis B data sheet -> 51 rows, 74 cols
+  Headers: ['PY Static Reese et al. (1974)']
+Sheet: Axis B axial lengths -> 52 rows, 17 cols
+  Headers: ['Embedded length L (m)', 'Tip elevation (m)', 'Qs ultimate side (kN)', 'fs unit side resistance at tip (kPa)', 'fs average over L = Qs/(perimeter·L) (kPa)', 'qp unit tip resistance at tip (kPa)', 'Qp ultimate tip (kN)', 'Qult = Qs + Qp (kN)', 'Qall side = Qs/FS_side (kN)', 'Qall tip = Qp/FS_tip (kN)', 'Qall gross = side + tip (kN)', 'W pile weight (kN)', 'Qall net = gross − W (kN)', 'Tip contribution to Qall gross (%)', 'Side contribution to Qall gross (%)']
+Sheet: Axis C data sheet -> 51 rows, 74 cols
+  Headers: ['PY Static Reese et al. (1974)']
+Sheet: Axis C axial lengths -> 52 rows, 17 cols
+  Headers: ['Embedded length L (m)', 'Tip elevation (m)', 'Qs ultimate side (kN)', 'fs unit side resistance at tip (kPa)', 'fs average over L = Qs/(perimeter·L) (kPa)', 'qp unit tip resistance at tip (kPa)', 'Qp ultimate tip (kN)', 'Qult = Qs + Qp (kN)', 'Qall side = Qs/FS_side (kN)', 'Qall tip = Qp/FS_tip (kN)', 'Qall gross = side + tip (kN)', 'W pile weight (kN)', 'Qall net = gross − W (kN)', 'Tip contribution to Qall gross (%)', 'Side contribution to Qall gross (%)']
+Sheet: Axis D data sheet -> 51 rows, 74 cols
+  Headers: ['PY Static Reese et al. (1974)']
+Sheet: Axis D axial lengths -> 52 rows, 17 cols
+  Headers: ['Embedded length L (m)', 'Tip elevation (m)', 'Qs ultimate side (kN)', 'fs unit side resistance at tip (kPa)', 'fs average over L = Qs/(perimeter·L) (kPa)', 'qp unit tip resistance at tip (kPa)', 'Qp ultimate tip (kN)', 'Qult = Qs + Qp (kN)', 'Qall side = Qs/FS_side (kN)', 'Qall tip = Qp/FS_tip (kN)', 'Qall gross = side + tip (kN)', 'W pile weight (kN)', 'Qall net = gross − W (kN)', 'Tip contribution to Qall gross (%)', 'Side contribution to Qall gross (%)']
+Sheet: Axis E data sheet -> 51 rows, 74 cols
+  Headers: ['PY Static Reese et al. (1974)']
+Sheet: Axis E axial lengths -> 52 rows, 17 cols
+  Headers: ['Embedded length L (m)', 'Tip elevation (m)', 'Qs ultimate side (kN)', 'fs unit side resistance at tip (kPa)', 'fs average over L = Qs/(perimeter·L) (kPa)', 'qp unit tip resistance at tip (kPa)', 'Qp ultimate tip (kN)', 'Qult = Qs + Qp (kN)', 'Qall side = Qs/FS_side (kN)', 'Qall tip = Qp/FS_tip (kN)', 'Qall gross = side + tip (kN)', 'W pile weight (kN)', 'Qall net = gross − W (kN)', 'Tip contribution to Qall gross (%)', 'Side contribution to Qall gross (%)']

@@ -798,9 +798,9 @@ function renderReport(res) {
                     <tr>
                         <td class="py-2.5 px-2">
                             <span class="font-bold text-gray-800 dark:text-gray-200">Compacidade da Mesa (FLM)</span>
-                            <div class="text-[10px] text-gray-400">λ = bf/(2·tf) vs λp = 0.38√(E/fy)</div>
+                            <div class="text-[10px] text-gray-400">$\lambda = \frac{b_f}{2 t_f}$ vs $\lambda_p = 0.38\sqrt{\frac{E}{f_y}}$</div>
                         </td>
-                        <td class="py-2.5 px-2">λ = ${res.lambda_mesa.toFixed(2)} | λp = ${res.lambda_p_mesa.toFixed(2)}</td>
+                        <td class="py-2.5 px-2">$\lambda = ${res.lambda_mesa.toFixed(2)}$ | $\lambda_p = ${res.lambda_p_mesa.toFixed(2)}$</td>
                         <td class="py-2.5 px-2">-</td>
                         <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${res.status_mesa.includes('Compact') ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700'}">${res.status_mesa}</span></td>
                         <td class="py-2.5 px-2 text-center">${(res.lambda_mesa / res.lambda_p_mesa).toFixed(2)}</td>
@@ -813,9 +813,9 @@ function renderReport(res) {
                     <tr>
                         <td class="py-2.5 px-2">
                             <span class="font-bold text-gray-800 dark:text-gray-200">Compacidade da Alma (FLA)</span>
-                            <div class="text-[10px] text-gray-400">λ = hw/tw vs λp = 3.76√(E/fy)</div>
+                            <div class="text-[10px] text-gray-400">$\lambda = \frac{h_w}{t_w}$ vs $\lambda_p = 3.76\sqrt{\frac{E}{f_y}}$</div>
                         </td>
-                        <td class="py-2.5 px-2">λ = ${res.lambda_alma.toFixed(2)} | λp = ${res.lambda_p_alma.toFixed(2)}</td>
+                        <td class="py-2.5 px-2">$\lambda = ${res.lambda_alma.toFixed(2)}$ | $\lambda_p = ${res.lambda_p_alma.toFixed(2)}$</td>
                         <td class="py-2.5 px-2">-</td>
                         <td class="py-2.5 px-2"><span class="px-2 py-0.5 rounded text-[11px] font-bold ${res.status_alma.includes('Compact') ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700'}">${res.status_alma}</span></td>
                         <td class="py-2.5 px-2 text-center">${(res.lambda_alma / res.lambda_p_alma).toFixed(2)}</td>
@@ -830,7 +830,7 @@ function renderReport(res) {
                             <span class="font-bold text-gray-800 dark:text-gray-200">Compressão Axial</span>
                             <div class="text-[10px] text-gray-400">Flambagem por flexão em torno do eixo Y</div>
                         </td>
-                        <td class="py-2.5 px-2">KL/r = ${res.max_slenderness.toFixed(1)} | χ = ${res.chi.toFixed(2)}</td>
+                        <td class="py-2.5 px-2">$\frac{KL}{r} = ${res.max_slenderness.toFixed(1)}$ | $\chi = ${res.chi.toFixed(2)}$</td>
                         <td class="py-2.5 px-2 font-mono">${res.Nsd.toFixed(1)} ${fUnit}</td>
                         <td class="py-2.5 px-2 font-mono">${res.NcRd.toFixed(1)} ${fUnit}</td>
                         <td class="py-2.5 px-2 text-center font-bold font-mono">${(res.ratio_N * 100).toFixed(1)}%</td>
@@ -843,7 +843,7 @@ function renderReport(res) {
                     <tr>
                         <td class="py-2.5 px-2">
                             <span class="font-bold text-gray-800 dark:text-gray-200">Flexão Maior & FLT</span>
-                            <div class="text-[10px] text-gray-400">${res.regime_flt} (Lp=${res.Lp.toFixed(2)}${lUnit}, Lb=${res.Lb.toFixed(2)}${lUnit}, Lr=${res.Lr.toFixed(2)}${lUnit})</div>
+                            <div class="text-[10px] text-gray-400">${res.regime_flt} ($L_p=${res.Lp.toFixed(2)}\text{ ${lUnit}}$, $L_b=${res.Lb.toFixed(2)}\text{ ${lUnit}}$, $L_r=${res.Lr.toFixed(2)}\text{ ${lUnit}}$)</div>
                         </td>
                         <td class="py-2.5 px-2 font-mono">${res.regime_flt.split('(')[0]}</td>
                         <td class="py-2.5 px-2 font-mono">${res.Msdx.toFixed(1)} ${mUnit}</td>
@@ -860,7 +860,7 @@ function renderReport(res) {
                             <span class="font-extrabold text-blue-600 dark:text-blue-400">Equação de Interação Global</span>
                             <div class="text-[10px] text-gray-500 font-mono mt-0.5">${res.eq_used}</div>
                         </td>
-                        <td class="py-3 px-2 text-xs text-gray-600 dark:text-gray-400">${res.ratio_N >= 0.2 ? 'N/NRd ≥ 0.20' : 'N/NRd < 0.20'}</td>
+                        <td class="py-3 px-2 text-xs text-gray-600 dark:text-gray-400">${res.ratio_N >= 0.2 ? '$\\frac{N_{Sd}}{N_{Rd}} \\ge 0.20$' : '$\\frac{N_{Sd}}{N_{Rd}} < 0.20$'}</td>
                         <td class="py-3 px-2 font-mono font-bold">${res.interaction_ratio.toFixed(3)}</td>
                         <td class="py-3 px-2 font-mono font-bold">1.000</td>
                         <td class="py-3 px-2 text-center font-extrabold font-mono text-sm ${res.interaction_ratio <= 1.0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">
@@ -876,6 +876,7 @@ function renderReport(res) {
             </table>
         </div>
     `;
+    if (window.renderLatex) window.renderLatex(container);
 }
 
 // --- 2D CANVAS SECTION DRAWING ---

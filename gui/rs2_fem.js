@@ -4856,15 +4856,15 @@ function renderMaterialsModalUI() {
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div>
-                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Coesão Efetiva c' (kPa)</label>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Coesão Efetiva $c'$ (kPa)</label>
                             <input type="number" step="0.5" min="0" value="${mat.c}" oninput="updateModalMaterialProp(${activeModalMatIdx}, 'c', cleanFloat(this.value, 0))" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-gray-900 dark:text-white">
                         </div>
                         <div>
-                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Ângulo de Atrito φ' (°)</label>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Ângulo de Atrito $\phi'$ (°)</label>
                             <input type="number" step="0.5" min="0" max="60" value="${mat.phi}" oninput="updateModalMaterialProp(${activeModalMatIdx}, 'phi', cleanFloat(this.value, 0))" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-gray-900 dark:text-white">
                         </div>
                         <div>
-                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1" title="Tension Cut-off / Resistência à Tração (kPa)">Tensão Limite de Tração σ_t (kPa)</label>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1" title="Tension Cut-off / Resistência à Tração (kPa)">Tensão Limite de Tração $\sigma_t$ (kPa)</label>
                             <input type="number" step="0.5" min="0" value="${mat.tension !== undefined ? mat.tension : 10.0}" oninput="updateModalMaterialProp(${activeModalMatIdx}, 'tension', cleanFloat(this.value, 0))" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-amber-600 dark:text-amber-400">
                         </div>
                     </div>
@@ -4888,20 +4888,21 @@ function renderMaterialsModalUI() {
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                         <div>
-                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Módulo de Young E (kPa)</label>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Módulo de Young $E$ (kPa)</label>
                             <input type="number" step="1000" min="100" value="${mat.E}" oninput="updateModalMaterialProp(${activeModalMatIdx}, 'E', cleanFloat(this.value, 50000))" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-gray-900 dark:text-white">
                         </div>
                         <div>
-                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Coef. de Poisson ν</label>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Coef. de Poisson $\nu$</label>
                             <input type="number" step="0.01" min="0.10" max="0.49" value="${mat.nu}" oninput="updateModalMaterialProp(${activeModalMatIdx}, 'nu', cleanFloat(this.value, 0.30))" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-gray-900 dark:text-white">
                         </div>
                         <div>
-                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Peso Específico Natural γ (kN/m³)</label>
+                            <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Peso Específico Natural $\gamma$ (kN/m³)</label>
                             <input type="number" step="0.2" min="5" max="35" value="${mat.gamma}" oninput="updateModalMaterialProp(${activeModalMatIdx}, 'gamma', cleanFloat(this.value, 19.0))" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-gray-900 dark:text-white">
                         </div>
                     </div>
                 </div>
             `;
+            if (window.renderLatex) window.renderLatex(detailPanel);
         }
     } else {
         // Render Wide Grid Table

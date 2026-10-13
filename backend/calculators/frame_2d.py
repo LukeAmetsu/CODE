@@ -370,12 +370,14 @@ def solve_frame_2d(model_data: dict) -> dict:
             elif isinstance(sup.get('krot'), (int, float)) and sup.get('krot') > 0:
                 K_global[3 * idx + 2, 3 * idx + 2] += float(sup['krot'])
 
-        # Check for uncoupled rotational DOFs (e.g. truss nodes where all meeting members have hinges)
+        # Check for ANY uncoupled / free DOFs with zero stiffness (isolated nodes, mechanisms, or pin-only nodes)
+        warnings = []
         for idx in range(num_nodes):
-            rot_dof = 3 * idx + 2
-            if rot_dof not in prescribed_dofs and abs(K_global[rot_dof, rot_dof]) < 1e-9:
-                prescribed_dofs.append(rot_dof)
-                prescribed_vals.append(0.0)
+            for dof_offset in range(3):
+                dof_i = 3 * idx + dof_offset
+                if dof_i not in prescribed_dofs and abs(K_global[dof_i, dof_i]) < 1e-9:
+                    prescribed_dofs.append(dof_i)
+                    prescribed_vals.append(0.0)
 
         prescribed_dofs = np.array(prescribed_dofs, dtype=int)
         prescribed_vals = np.array(prescribed_vals, dtype=float)
@@ -394,12 +396,28 @@ def solve_frame_2d(model_data: dict) -> dict:
             if len(prescribed_dofs) > 0:
                 F_eff -= K_global[free_dofs, :][:, prescribed_dofs] @ prescribed_vals
 
-            # Condition check
+            # Robust solve with conditioning check and SVD fallback
             try:
-                U_free = np.linalg.solve(K_ff, F_eff)
+                diag_mean = float(np.mean(np.diag(K_ff))) if len(free_dofs) > 0 else 1.0
+                if diag_mean > 0:
+                    cond = float(np.linalg.cond(K_ff))
+                    if cond > 1e13:
+                        # Mild regularization to handle ill-conditioned multi-pile models
+                        K_ff_reg = K_ff + np.eye(len(free_dofs)) * (1e-8 * diag_mean)
+                        U_free = np.linalg.solve(K_ff_reg, F_eff)
+                        warnings.append("Condicionamento numérico elevado: aplicada estabilização elástica suave.")
+                    else:
+                        U_free = np.linalg.solve(K_ff, F_eff)
+                else:
+                    U_free = np.linalg.solve(K_ff, F_eff)
                 U_global[free_dofs] = U_free
             except np.linalg.LinAlgError:
-                return {'status': 'error', 'error': 'Estrutura hipostática ou instável (determinante nulo). Verifique os apoios.'}
+                try:
+                    U_free, residuals, rank, s = np.linalg.lstsq(K_ff, F_eff, rcond=1e-10)
+                    U_global[free_dofs] = U_free
+                    warnings.append("Estrutura parcialmente hipostática resolvida por mínimos quadrados (SVD).")
+                except Exception as ex:
+                    return {'status': 'error', 'error': f'Estrutura hipostática ou instável (determinante nulo): {str(ex)}'}
 
         # 6. Support Reactions
         # R = K * U - F_ext_applied
@@ -612,7 +630,8 @@ def solve_frame_2d(model_data: dict) -> dict:
             'displacements_by_node': displacements_dict,
             'reactions': NodeResultCollection(reactions_output, key='node_id'),
             'reactions_by_node': reactions_dict,
-            'members': member_results
+            'members': member_results,
+            'warnings': warnings
         }
 
     except Exception as e:

@@ -115,6 +115,7 @@ async function runCalculation() {
             document.getElementById('res-d-rat').textContent = res.D_ratio.toFixed(2);
             
             drawShed(res);
+            if (window.renderLatex) window.renderLatex(document.getElementById('success-results'));
         }
     } catch (e) {
          console.error(e);

@@ -12,6 +12,8 @@ from backend.calculators.pcalc import (
     ConcreteSection,
     Solver,
     generate_interaction_surface,
+    generate_cracking_surface,
+    verify_cracking,
     calculate_column
 )
 
@@ -215,5 +217,142 @@ class TestPCalcPipeline(unittest.TestCase):
 
 
 
+    def test_calculate_column_L_section_mesh(self):
+        inputs = {
+            'section_type': 'L',
+            'bf': 40,
+            'h': 60,
+            'tf': 15,
+            'tw': 15,
+            'boundary': 'pinned',
+            'length': 350,
+            'fck': 30,
+            'fyk': 500,
+            'es': 210,
+            'gamac': 1.4,
+            'gamas': 1.15,
+            'gamaf': 1.4,
+            'bars': [
+                {'x': 5, 'y': 5, 'diametro': 16},
+                {'x': 35, 'y': 5, 'diametro': 16},
+                {'x': 5, 'y': 55, 'diametro': 16},
+                {'x': 10, 'y': 30, 'diametro': 16}
+            ],
+            'load': {'n': -700, 'mxTop': 40, 'mxBot': 40, 'myTop': 30, 'myBot': 30},
+            'calc_2nd_order': True,
+            'method_2nd': 'general_biaxial'
+        }
+        res = calculate_column(inputs)
+        self.assertIn('surface', res)
+        self.assertIn('results', res)
+        self.assertGreater(len(res['surface']['x']), 100)
+        self.assertGreater(res['results']['Mtot_x'], 0.0)
+        self.assertGreater(res['results']['Mtot_y'], 0.0)
+
+    def test_calculate_column_arbitrary_polygon_mesh(self):
+        # Hexagonal pillar
+        import math
+        R = 25.0
+        hex_pts = []
+        for i in range(6):
+            ang = (math.pi / 3.0) * i
+            hex_pts.append([R + R * math.cos(ang), R + R * math.sin(ang)])
+
+        inputs = {
+            'section_type': 'Poligono',
+            'exterior': hex_pts,
+            'boundary': 'pinned',
+            'length': 300,
+            'fck': 35,
+            'fyk': 500,
+            'es': 210,
+            'gamac': 1.4,
+            'gamas': 1.15,
+            'gamaf': 1.4,
+            'bars': [
+                {'x': p[0]*0.8 + 5.0, 'y': p[1]*0.8 + 5.0, 'diametro': 16} for p in hex_pts
+            ],
+            'load': {'n': -800, 'mxTop': 45, 'mxBot': 45, 'myTop': 45, 'myBot': 45},
+            'calc_2nd_order': True,
+            'method_2nd': 'curvature_approx'
+        }
+        res = calculate_column(inputs)
+        self.assertIn('surface', res)
+        self.assertIn('results', res)
+        self.assertGreater(len(res['surface']['z']), 100)
+
+
+class TestPCalcCracking(unittest.TestCase):
+    def setUp(self):
+        self.mat = MaterialData(fck=25, fyk=500, es=210)
+        self.geo = SectionGeometry('Retangular', hx=30, hy=50)
+        self.geo.discretize()
+        self.bars = [
+            {'x': 4 - 15, 'y': 4 - 25, 'diametro': 16},
+            {'x': 26 - 15, 'y': 4 - 25, 'diametro': 16},
+            {'x': 4 - 15, 'y': 46 - 25, 'diametro': 16},
+            {'x': 26 - 15, 'y': 46 - 25, 'diametro': 16},
+        ]
+        self.sec = ConcreteSection(self.geo, self.mat, self.bars)
+
+    def test_material_tensile_strengths(self):
+        # fck = 25 -> fctm = 0.3 * 25^(2/3) = 2.56496 MPa
+        self.assertAlmostEqual(self.mat.fctm, 2.565, places=2)
+        # fct_f = 1.2 * fctm = 3.078 MPa
+        self.assertAlmostEqual(self.mat.fct_f, 3.078, places=2)
+        self.assertAlmostEqual(self.mat.fct_f_kncm2, 0.3078, places=4)
+
+    def test_cracking_surface_generation(self):
+        surf_wk = generate_cracking_surface(self.sec, w_lim=0.3, criterion='wk_limit', num_angles=18, steps_n=10)
+        self.assertIn('x', surf_wk)
+        self.assertIn('y', surf_wk)
+        self.assertIn('z', surf_wk)
+        self.assertGreater(len(surf_wk['x']), 50)
+        self.assertTrue(all(not math.isnan(v) for v in surf_wk['x']))
+
+        surf_mr = generate_cracking_surface(self.sec, criterion='mr_cracking', num_angles=18, steps_n=10)
+        self.assertGreater(len(surf_mr['x']), 50)
+
+    def test_verify_cracking_uncracked(self):
+        # Low moment, high compression -> Stage I (Uncracked)
+        res = verify_cracking(self.sec, N_serv=-600, Mx_serv=20, My_serv=0, w_lim=0.3)
+        self.assertEqual(res['stage'], 'I')
+        self.assertEqual(res['wk'], 0.0)
+        self.assertTrue(res['is_ok'])
+        self.assertIn('Não Fissurado', res['status'])
+
+    def test_verify_cracking_cracked_and_calculate_column(self):
+        # Higher moment -> Stage II
+        res_crack = verify_cracking(self.sec, N_serv=-200, Mx_serv=100, My_serv=0, w_lim=0.3)
+        self.assertEqual(res_crack['stage'], 'II')
+        self.assertGreater(res_crack['wk'], 0.0)
+
+        # Integration check inside calculate_column
+        inputs = {
+            'section_type': 'Retangular',
+            'hx': 30, 'hy': 50,
+            'boundary': 'pinned',
+            'length': 400,
+            'fck': 25, 'fyk': 500, 'es': 210,
+            'bars': [
+                {'x': 4, 'y': 4, 'diametro': 16},
+                {'x': 26, 'y': 4, 'diametro': 16},
+                {'x': 4, 'y': 46, 'diametro': 16},
+                {'x': 26, 'y': 46, 'diametro': 16},
+            ],
+            'load': {'n': -600, 'mxTop': 50, 'mxBot': 50, 'myTop': 20, 'myBot': 20},
+            'calc_2nd_order': True,
+            'enable_cracking_envelope': True,
+            'cracking_w_lim': 0.3
+        }
+        col_res = calculate_column(inputs)
+        self.assertIn('cracking_surface', col_res)
+        self.assertIsNotNone(col_res['cracking_surface'])
+        self.assertIn('cracking_results', col_res)
+        self.assertIn('wk', col_res['cracking_results'])
+
+
 if __name__ == '__main__':
     unittest.main()
+
+

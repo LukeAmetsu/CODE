@@ -994,6 +994,7 @@ function renderResults(results) {
 
     resultsDiv.innerHTML = '';
     resultsDiv.appendChild(reportEl);
+    if (window.renderLatex) window.renderLatex(resultsDiv);
 
     // Re-attach listeners for the toolbar buttons
     document.getElementById('copy-report-btn')?.addEventListener('click', () => handleCopy('concrete-beam-report'));
@@ -1010,14 +1011,14 @@ function renderInputSummary(inputs, checks) {
     const Ap_total = (parseFloat(inputs.Ap) * total_strands).toFixed(2);
 
     const generalRows = [
-        ['Resistência do Concreto (f<sub>ck</sub>)', `${fck} MPa`],
-        ['Comprimento da Viga (L)', `${beam_length} m`],
-        ['Área Total de Protensão (Ap,total)', `<b>${Ap_total} cm²</b> (${total_strands} cordoalhas)`],
+        ['Resistência do Concreto ($f_{ck}$)', `${fck} MPa`],
+        ['Comprimento da Viga ($L$)', `${beam_length} m`],
+        ['Área Total de Protensão ($A_{p,\\text{total}}$)', `<b>${Ap_total} cm²</b> (${total_strands} cordoalhas)`],
     ];
     const loadRows = [
-        ['Peso Próprio (g<sub>pp</sub>)', `${load_pp} kN/m`],
-        ['Carga Permanente (g<sub>perm</sub>)', `${load_perm} kN/m`],
-        ['Carga Variável (q<sub>var</sub>)', `${load_var} kN/m`]
+        ['Peso Próprio ($g_{pp}$)', `${load_pp} kN/m`],
+        ['Carga Permanente ($g_{\\text{perm}}$)', `${load_perm} kN/m`],
+        ['Carga Variável ($q_{\\text{var}}$)', `${load_var} kN/m`]
     ];
 
     const cablesTable = h('table', { className: 'w-full mt-2 text-sm text-center border' }, [
@@ -1044,24 +1045,24 @@ function renderCalculatedProperties(checks, inputs) {
     const fmt = (val, dec = 2) => (val !== undefined && val !== null && !isNaN(val)) ? Number(val).toFixed(dec) : 'N/A';
 
     const geometricRows = [
-        ['Área da Seção (A)', `${fmt(properties.area, 2)} cm²`],
-        ['Centroide (ycg)', `${fmt(properties.centroid.y, 2)} cm`],
-        ['Inércia (I<sub>cx</sub>)', `${fmt(properties.I.cx, 0)} cm⁴`],
-        ['Módulo Resist. Inf. (W<sub>i</sub>)', `${fmt(properties.W.i, 0)} cm³`],
-        ['Módulo Resist. Sup. (W<sub>s</sub>)', `${fmt(properties.W.s, 0)} cm³`],
-        ['Módulo Auxiliar Inf. (k<sub>i</sub>)', `${fmt(properties.ki, 2)} cm`],
-        ['Módulo Auxiliar Sup. (k<sub>s</sub>)', `${fmt(properties.ks, 2)} cm`],
+        ['Área da Seção ($A_c$)', `${fmt(properties.area, 2)} cm²`],
+        ['Centroide ($y_{cg}$)', `${fmt(properties.centroid.y, 2)} cm`],
+        ['Inércia ($I_{cx}$)', `${fmt(properties.I.cx, 0)} cm⁴`],
+        ['Módulo Resist. Inf. ($W_i$)', `${fmt(properties.W.i, 0)} cm³`],
+        ['Módulo Resist. Sup. ($W_s$)', `${fmt(properties.W.s, 0)} cm³`],
+        ['Módulo Auxiliar Inf. ($k_i$)', `${fmt(properties.ki, 2)} cm`],
+        ['Módulo Auxiliar Sup. ($k_s$)', `${fmt(properties.ks, 2)} cm`],
         ['Excentricidade Média (Meio Vão)', `${fmt(checks.avg_ecc_mid * 100, 2)} cm`]
     ];
     const materialRows = [
-        ['Resist. à Tração Média (f<sub>ct,m</sub>)', `${fmt(materials.fctm, 2)} MPa`],
-        ['Resist. à Tração na Flexão (f<sub>ct,f</sub>)', `${fmt(materials.fctf, 2)} MPa`],
-        ['Resist. Concreto na Protensão (f<sub>ci</sub>)', `${fmt(materials.fci, 2)} MPa`],
+        ['Resist. à Tração Média ($f_{ct,m}$)', `${fmt(materials.fctm, 2)} MPa`],
+        ['Resist. à Tração na Flexão ($f_{ct,f}$)', `${fmt(materials.fctf, 2)} MPa`],
+        ['Resist. Concreto na Protensão ($f_{ci}$)', `${fmt(materials.fci, 2)} MPa`],
     ];
     const loadComboRows = [
-        ['Carga Permanente (g<sub>k</sub>)', `${fmt(loads.g_k, 2)} kN/m`],
-        ['Comb. Quase-Permanente (p<sub>qp</sub>)', `${fmt(loads.p_CQP, 2)} kN/m`],
-        ['Comb. Frequente (p<sub>freq</sub>)', `${fmt(loads.p_CF, 2)} kN/m`],
+        ['Carga Permanente ($g_k$)', `${fmt(loads.g_k, 2)} kN/m`],
+        ['Comb. Quase-Permanente ($p_{qp}$)', `${fmt(loads.p_CQP, 2)} kN/m`],
+        ['Comb. Frequente ($p_{\\text{freq}}$)', `${fmt(loads.p_CF, 2)} kN/m`],
     ];
     const momentRows = [
         ['Momento (Peso Próprio)', `${fmt(moments.M_g1k, 1)} kN·m`],
@@ -1082,10 +1083,10 @@ function renderPrestressEstimation(checks) {
     const fmt = (val, dec = 2) => (!isNaN(val)) ? val.toFixed(dec) : 'N/A';
 
     const rowsData = [
-        ['Momento Auxiliar (M<sub>aux</sub>)', `${fmt(prestress_estimation.M_aux_kNm, 1)} kN·m`],
-        ['Módulo do Núcleo (k<sub>s</sub>)', `${fmt(prestress_estimation.ks_m, 3)} m`],
-        ['Força por Cordoalha (P<sub>cordoalha</sub>)', `${fmt(prestress_estimation.P_cable, 1)} kN`],
-        ['Força Total Estimada (P<sub>est,total</sub>)', `${fmt(prestress_estimation.Pest_perdas, 1)} kN`],
+        ['Momento Auxiliar ($M_{\\text{aux}}$)', `${fmt(prestress_estimation.M_aux_kNm, 1)} kN·m`],
+        ['Módulo do Núcleo ($k_s$)', `${fmt(prestress_estimation.ks_m, 3)} m`],
+        ['Força por Cordoalha ($P_{\\text{cordoalha}}$)', `${fmt(prestress_estimation.P_cable, 1)} kN`],
+        ['Força Total Estimada ($P_{\\text{est,total}}$)', `${fmt(prestress_estimation.Pest_perdas, 1)} kN`],
         ['Total de Cordoalhas (Estimado)', `<b>${prestress_estimation.total_tendons}</b>`],
     ];
 
@@ -1101,28 +1102,28 @@ function renderDetailedLossCalculations(loss_results) {
 
     const createCalcLine = (text) => h('div', { className: 'font-mono text-xs py-1 border-b border-gray-100 dark:border-gray-700', innerHTML: text });
 
-    const frictionContent = detailed_calcs.friction.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: σ<sub>p</sub> = <b>${c.value.toFixed(1)} MPa</b>`));
+    const frictionContent = detailed_calcs.friction.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: $\\sigma_p$ = <b>${c.value.toFixed(1)} MPa</b>`));
 
-    const anchorRows = detailed_calcs.anchorage.sigma_prime.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: σ'<sub>p</sub> = <b>${c.value.toFixed(1)} MPa</b>`));
+    const anchorRows = detailed_calcs.anchorage.sigma_prime.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: $\\sigma'_p$ = <b>${c.value.toFixed(1)} MPa</b>`));
 
-    const elasticContent = detailed_calcs.elastic_shortening.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: Δσ<sub>ee</sub> = <b>${c.value.toFixed(1)} MPa</b>`));
+    const elasticContent = detailed_calcs.elastic_shortening.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: $\\Delta\\sigma_{ee}$ = <b>${c.value.toFixed(1)} MPa</b>`));
 
-    const timeDependentContent = detailed_calcs.interaction.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: Δσ<sub>dif</sub> = <b>${c.value.toFixed(1)} MPa</b> <span class="text-gray-400 ml-2">${c.calc}</span>`));
+    const timeDependentContent = detailed_calcs.interaction.map(c => createCalcLine(`x=${c.x.toFixed(1)}m: $\\Delta\\sigma_{\\text{dif}}$ = <b>${c.value.toFixed(1)} MPa</b> <span class="text-gray-400 ml-2">${c.calc}</span>`));
 
     return createReportSection('detailed-losses-section', 'Memória de Cálculo das Perdas de Protensão (Média Ponderada)', [
         h('h4', { className: 'font-bold mt-2 text-sm' }, ['1. Perdas Imediatas']),
-        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.1 Perda por Atrito (σp)']),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.1 Perda por Atrito ($\\sigma_p$)']),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, frictionContent),
 
-        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.2 Perda por Acomodação da Ancoragem (σ\'p)']),
-        createCalcLine(`Distância de Acomodação Média (x<sub>a</sub>) = <b>${detailed_calcs.anchorage.x_a.toFixed(2)} m</b>`),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.2 Perda por Acomodação da Ancoragem ($\\sigma\'_p$)']),
+        createCalcLine(`Distância de Acomodação Média ($x_a$) = <b>${detailed_calcs.anchorage.x_a.toFixed(2)} m</b>`),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, anchorRows),
 
-        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.3 Perda por Encurtamento Elástico (Δσee)']),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.3 Perda por Encurtamento Elástico ($\\Delta\\sigma_{ee}$)']),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, elasticContent),
 
         h('h4', { className: 'font-bold mt-4 text-sm' }, ['2. Perdas Diferidas']),
-        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.4 - 5.7 Interação (Δσdif)']),
+        h('h5', { className: 'text-xs font-bold mt-2' }, ['5.4 - 5.7 Interação ($\\Delta\\sigma_{\\text{dif}}$)']),
         h('div', { className: 'max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-2 rounded' }, timeDependentContent),
     ]);
 }
@@ -1144,7 +1145,7 @@ function renderPrestressChecks(checks) {
     const P_max_comp_i_val = prestress_checks?.P_max_comp_i?.value ? prestress_checks.P_max_comp_i.value * 1000 : null;
 
     return createReportSection('prestress-checks-section', 'Verificação da Força (Meio do Vão)', [
-        h('p', { className: 'text-center font-bold text-lg mb-2' }, [`Força Total Equivalente (P<sub>i</sub>) = ${fmt(P_adopt_kN)} kN`]),
+        h('p', { className: 'text-center font-bold text-lg mb-2' }, [`Força Total Equivalente ($P_i$) = ${fmt(P_adopt_kN)} kN`]),
         h('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' }, [
             h('div', {}, [
                 h('h4', { className: 'font-bold text-sm' }, ['Limites de Força']),
@@ -1167,11 +1168,11 @@ function renderUlsChecks(checks) {
     const colorClass = is_valid ? 'text-green-600' : 'text-red-600';
 
     const rows = [
-        ['M<sub>Sd</sub> (Solicitante)', `${uls_checks.Md_kNm.toFixed(1)} kNm`],
-        ['M<sub>Rd</sub> (Resistente)', `${uls_checks.MRd_kNm.toFixed(1)} kNm`],
-        ['Linha Neutra (x)', `${(uls_checks.x_m * 100).toFixed(1)} cm`],
-        ['Altura Útil (d<sub>p</sub>)', `${(uls_checks.d_p * 100).toFixed(1)} cm`],
-        ['Relação M<sub>Sd</sub>/M<sub>Rd</sub>', `<b class="${colorClass}">${uls_checks.ratio.toFixed(3)}</b>`]
+        ['$M_{Sd}$ (Solicitante)', `${uls_checks.Md_kNm.toFixed(1)} kNm`],
+        ['$M_{Rd}$ (Resistente)', `${uls_checks.MRd_kNm.toFixed(1)} kNm`],
+        ['Linha Neutra ($x$)', `${(uls_checks.x_m * 100).toFixed(1)} cm`],
+        ['Altura Útil ($d_p$)', `${(uls_checks.d_p * 100).toFixed(1)} cm`],
+        ['Relação $M_{Sd}/M_{Rd}$', `<b class="${colorClass}">${uls_checks.ratio.toFixed(3)}</b>`]
     ];
 
     return createReportSection('uls-checks-section', 'Verificação ELU (Estado Limite Último)', [
@@ -1758,13 +1759,14 @@ function drawCrossSectionDiagram(canvasId, inputsOrVertices) {
     const pillsContainer = document.getElementById('section-props-pills');
     if (pillsContainer) {
         pillsContainer.innerHTML = `
-            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">ÁREA Ac</span><b class="text-sky-400 font-mono text-[11px]">${props.area.toFixed(0)} cm²</b></div>
-            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">ALTURA h</span><b class="text-blue-400 font-mono text-[11px]">${props.height.toFixed(0)} cm</b></div>
-            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">CENTROIDE yG</span><b class="text-rose-400 font-mono text-[11px]">${props.centroid.y.toFixed(1)} cm</b></div>
-            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">INÉRCIA Ix</span><b class="text-indigo-400 font-mono text-[11px]">${(props.I.cx / 1e4).toFixed(1)}e4 cm⁴</b></div>
-            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">Winf</span><b class="text-amber-400 font-mono text-[11px]">${props.W.i.toFixed(0)} cm³</b></div>
-            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">Wsup</span><b class="text-emerald-400 font-mono text-[11px]">${props.W.s.toFixed(0)} cm³</b></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">ÁREA $A_c$</span><b class="text-sky-400 font-mono text-[11px]">${props.area.toFixed(0)} cm²</b></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">ALTURA $h$</span><b class="text-blue-400 font-mono text-[11px]">${props.height.toFixed(0)} cm</b></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">CENTROIDE $y_G$</span><b class="text-rose-400 font-mono text-[11px]">${props.centroid.y.toFixed(1)} cm</b></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">INÉRCIA $I_x$</span><b class="text-indigo-400 font-mono text-[11px]">${(props.I.cx / 1e4).toFixed(1)}e4 cm⁴</b></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">$W_{\\text{inf}}$</span><b class="text-amber-400 font-mono text-[11px]">${props.W.i.toFixed(0)} cm³</b></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 shadow-sm"><span class="text-gray-400 block text-[9px]">$W_{\\text{sup}}$</span><b class="text-emerald-400 font-mono text-[11px]">${props.W.s.toFixed(0)} cm³</b></div>
         `;
+        if (window.renderLatex) window.renderLatex(pillsContainer);
     }
 
     // Floating CAD HUD Overlay (RS2 Standard)

@@ -56,7 +56,7 @@
                 </select>
               </div>
               <div>
-                <label class="eng-label">Steel Yield (Fy)</label>
+                <label class="eng-label">Steel Yield ($F_y$)</label>
                 <div class="flex gap-2">
                   <input type="number" id="fy" value="50" class="eng-input" />
                   <span class="flex items-center text-sm text-gray-500">ksi</span>
@@ -76,14 +76,14 @@
                 Loading & Limits
               </h3>
               <div>
-                <label class="eng-label">Vertical Load</label>
+                <label class="eng-label">Vertical Load ($w$)</label>
                 <div class="flex gap-2">
                   <input type="number" step="0.1" id="load_plf" value="300" class="eng-select text-blue-700 dark:text-blue-300" />
                   <span class="flex items-center text-sm text-gray-500">plf</span>
                 </div>
               </div>
               <div>
-                <label class="eng-label">Deflection Limit</label>
+                <label class="eng-label">Deflection Limit ($L / \Delta_{\lim}$)</label>
                 <div class="flex gap-2 items-center">
                   <span class="text-gray-500">L /</span>
                   <input type="number" id="defl_limit" value="240" class="eng-input" />
@@ -103,21 +103,21 @@
 
               <div id="brace_inputs" class="grid grid-cols-2 gap-4 mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800">
                 <div>
-                  <label class="eng-label text-purple-800 dark:text-purple-300">Beam Elevation</label>
+                  <label class="eng-label text-purple-800 dark:text-purple-300">Beam Elevation ($H_{\text{beam}}$)</label>
                   <div class="flex gap-2">
                     <input type="number" step="0.1" id="beam_height" value="16" class="eng-select">
                     <span class="flex items-center text-xs text-gray-500">ft</span>
                   </div>
                 </div>
                 <div>
-                  <label class="eng-label text-purple-800 dark:text-purple-300">Column Brace Conn. Height</label>
+                  <label class="eng-label text-purple-800 dark:text-purple-300">Column Brace Conn. Height ($H_{\text{brace}}$)</label>
                   <div class="flex gap-2">
                     <input type="number" step="0.1" id="brace_height" value="8" class="eng-select">
                     <span class="flex items-center text-xs text-gray-500">ft</span>
                   </div>
                 </div>
                 <div>
-                  <label class="eng-label text-purple-800 dark:text-purple-300">Brace Angle (from vertically down)</label>
+                  <label class="eng-label text-purple-800 dark:text-purple-300">Brace Angle ($\theta$, from vertically down)</label>
                   <div class="flex gap-2">
                     <input type="number" step="1" id="brace_angle" value="45" class="eng-select">
                     <span class="flex items-center text-xs text-gray-500">°</span>
@@ -158,7 +158,7 @@
                <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg space-y-4">
                    <h3 class="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200 border-b pb-2">Analysis Results</h3>
                    <div class="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 p-4 rounded text-center">
-                        <div class="text-sm font-bold text-green-800 dark:text-green-300">MAX ALLOWABLE SPAN</div>
+                        <div class="text-sm font-bold text-green-800 dark:text-green-300">MAX ALLOWABLE SPAN ($L_{\max}$)</div>
                         <div class="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2" id="res-max-span">-- ft</div>
                         <div class="text-xs text-gray-500 mt-1 uppercase" id="res-critical">Critical: --</div>
                    </div>
@@ -174,19 +174,19 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                             <tr>
-                                <td class="px-4 py-2 font-medium">Bending Moment</td>
+                                <td class="px-4 py-2 font-medium">Bending Moment ($M$)</td>
                                 <td class="px-4 py-2 text-right" id="res-m-req">0 k-ft</td>
                                 <td class="px-4 py-2 text-right" id="res-m-cap">0 k-ft</td>
                                 <td class="px-4 py-2 text-right font-bold" id="res-m-rat">0.00</td>
                             </tr>
                             <tr>
-                                <td class="px-4 py-2 font-medium">Shear</td>
+                                <td class="px-4 py-2 font-medium">Shear ($V$)</td>
                                 <td class="px-4 py-2 text-right" id="res-v-req">0 k</td>
                                 <td class="px-4 py-2 text-right" id="res-v-cap">0 k</td>
                                 <td class="px-4 py-2 text-right font-bold" id="res-v-rat">0.00</td>
                             </tr>
                             <tr>
-                                <td class="px-4 py-2 font-medium">Deflection</td>
+                                <td class="px-4 py-2 font-medium">Deflection ($\Delta$)</td>
                                 <td class="px-4 py-2 text-right" id="res-d-req">0 in</td>
                                 <td class="px-4 py-2 text-right" id="res-d-cap">0 in</td>
                                 <td class="px-4 py-2 text-right font-bold" id="res-d-rat">0.00</td>

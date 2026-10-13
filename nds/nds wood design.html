@@ -90,11 +90,11 @@
                     <div class="form-section">
                         <h2>Applied Loads (ASD)</h2>
                         <div class="space-y-4">
-                            <div><label for="axial_load_P" class="eng-label">Axial (kips)</label><input
+                            <div><label for="axial_load_P" class="eng-label">Axial ($P$, kips)</label><input
                                     type="number" id="axial_load_P" value="0"></div>
-                            <div><label for="moment_load_M" class="eng-label">Moment (kip-ft)</label><input
+                            <div><label for="moment_load_M" class="eng-label">Moment ($M$, kip-ft)</label><input
                                     type="number" id="moment_load_M" value="0.05"></div>
-                            <div><label for="shear_load_V" class="eng-label">Shear (kips)</label><input
+                            <div><label for="shear_load_V" class="eng-label">Shear ($V$, kips)</label><input
                                     type="number" id="shear_load_V" value="0.04"></div>
                         </div>
                     </div>
@@ -108,19 +108,19 @@
                         </div>
                         <p class="text-xs mb-2">Unadjusted values from NDS Supplement.</p>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label for="Fb_unadjusted" class="eng-label">Fb (psi)</label><input type="number"
+                            <div><label for="Fb_unadjusted" class="eng-label">$F_b$ (psi)</label><input type="number"
                                     id="Fb_unadjusted" value="975"></div>
-                            <div><label for="Fv_unadjusted" class="eng-label">Fv (psi)</label><input type="number"
+                            <div><label for="Fv_unadjusted" class="eng-label">$F_v$ (psi)</label><input type="number"
                                     id="Fv_unadjusted" value="150"></div>
-                            <div><label for="Ft_unadjusted" class="eng-label">Ft (psi)</label><input type="number"
+                            <div><label for="Ft_unadjusted" class="eng-label">$F_t$ (psi)</label><input type="number"
                                     id="Ft_unadjusted" value="575"></div>
-                            <div><label for="Fc_perp_unadjusted" class="eng-label">Fc⊥ (psi)</label><input
+                            <div><label for="Fc_perp_unadjusted" class="eng-label">$F_{c\perp}$ (psi)</label><input
                                     type="number" id="Fc_perp_unadjusted" value="405"></div>
-                            <div><label for="Fc_unadjusted" class="eng-label">Fc (psi)</label><input type="number"
+                            <div><label for="Fc_unadjusted" class="eng-label">$F_c$ (psi)</label><input type="number"
                                     id="Fc_unadjusted" value="1550"></div>
-                            <div><label for="E_unadjusted" class="eng-label">E (psi)</label><input type="number"
+                            <div><label for="E_unadjusted" class="eng-label">$E$ (psi)</label><input type="number"
                                     id="E_unadjusted" value="1300000"></div>
-                            <div><label for="E_min_unadjusted" class="eng-label">E_min (psi)</label><input
+                            <div><label for="E_min_unadjusted" class="eng-label">$E_{\min}$ (psi)</label><input
                                     type="number" id="E_min_unadjusted" value="470000"></div>
                         </div>
                     </div>
@@ -137,20 +137,20 @@
                                     <option value="Glulam">Glulam / SCL</option>
                                 </select>
                             </div>
-                            <div><label for="b_width" class="eng-label">Width (b, in)</label><input type="number"
+                            <div><label for="b_width" class="eng-label">Width ($b$, in)</label><input type="number"
                                     id="b_width" value="1.5"></div>
-                            <div><label for="d_depth" class="eng-label">Depth (d, in)</label><input type="number"
+                            <div><label for="d_depth" class="eng-label">Depth ($d$, in)</label><input type="number"
                                     id="d_depth" value="2.5"></div>
-                            <div><label for="unbraced_length_L" class="eng-label">Unbraced L (ft)</label><input
+                            <div><label for="unbraced_length_L" class="eng-label">Unbraced $L$ (ft)</label><input
                                     type="number" id="unbraced_length_L" value="3.5"></div>
-                            <div><label for="effective_length_factor_K" class="eng-label">K Factor</label><input
+                            <div><label for="effective_length_factor_K" class="eng-label">Effective Length Factor ($K$)</label><input
                                     type="number" id="effective_length_factor_K" value="1.0"></div>
                             
                             <!-- Notch & Bearing -->
-                            <div><label for="notch_depth" class="eng-label">Notch Depth (dn, in)</label><input
+                            <div><label for="notch_depth" class="eng-label">Notch Depth ($d_n$, in)</label><input
                                     type="number" id="notch_depth" value="0"></div>
                                     
-                            <div><label for="bearing_length_Lb" class="eng-label">Bearing Lb (in)</label><input
+                            <div><label for="bearing_length_Lb" class="eng-label">Bearing $L_b$ (in)</label><input
                                     type="number" id="bearing_length_Lb" value="1.5"></div>
                             <div>
                                 <label for="bearing_type" class="eng-label">Bearing Type</label>
@@ -165,7 +165,7 @@
                         <h2>Adjustment Conditions</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="load_duration" class="eng-label">Load Duration</label>
+                                <label for="load_duration" class="eng-label">Load Duration ($C_D$)</label>
                                 <select id="load_duration">
                                     <option value="0.9">Permanent (0.9)</option>
                                     <option value="1.0">Ten years (1.0)</option>
@@ -176,14 +176,14 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="wet_service" class="eng-label">Wet Service</label>
+                                <label for="wet_service" class="eng-label">Wet Service ($C_M$)</label>
                                 <select id="wet_service">
                                     <option value="Dry (MC <= 19%)" selected>Dry (MC <= 19%)</option>
                                     <option value="Wet (MC > 19%)">Wet (MC > 19%)</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="temperature" class="eng-label">Temperature</label>
+                                <label for="temperature" class="eng-label">Temperature ($C_t$)</label>
                                 <select id="temperature">
                                     <option value="low" selected>T &lt;= 100°F</option>
                                     <option value="medium">100°F &lt; T &lt;= 125°F</option>
@@ -196,7 +196,7 @@
                         <h2>More Adjustment Conditions</h2>
                         <div class="space-y-4">
                             <div>
-                                <label for="flat_use" class="eng-label">Bending Axis</label>
+                                <label for="flat_use" class="eng-label">Bending Axis / Flat Use ($C_{fu}$)</label>
                                 <select id="flat_use" data-ui-toggle-controller
                                     data-ui-toggle-target="#repetitive-member-container"
                                     data-ui-toggle-condition-value="Strong Axis">
@@ -205,15 +205,14 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="incising" class="eng-label">Incising</label>
+                                <label for="incising" class="eng-label">Incising ($C_i$)</label>
                                 <select id="incising">
                                     <option value="No" selected>No</option>
                                     <option value="Yes">Yes</option>
                                 </select>
                             </div>
                             <div id="repetitive-member-container">
-                                <label for="repetitive_member" class="eng-label">Repetitive
-                                    Member</label>
+                                <label for="repetitive_member" class="eng-label">Repetitive Member ($C_r$)</label>
                                 <select id="repetitive_member">
                                     <option value="No" selected>No</option>
                                     <option value="Yes">Yes</option>
@@ -230,10 +229,8 @@
                         <p class="text-xs mb-2">Assumes a simply-supported beam with a uniform load causing the input
                             moment.</p>
                         <div class="space-y-4">
-                            <div><label for="deflection_span" class="eng-label">Span for Deflection
-                                    (ft)</label><input type="number" id="deflection_span" value="3.5"></div>
-                            <div><label for="deflection_limit" class="eng-label">Deflection Limit (e.g., 360 for
-                                    L/360)</label><input type="number" id="deflection_limit" value="360"></div>
+                            <div><label for="deflection_span" class="eng-label">Span for Deflection ($L_{\text{span}}$, ft)</label><input type="number" id="deflection_span" value="3.5"></div>
+                            <div><label for="deflection_limit" class="eng-label">Deflection Limit ($L / \Delta_{\lim}$)</label><input type="number" id="deflection_limit" value="360"></div>
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Cargas & Ações Estruturais | NBR 6123 • NBR 15421 • NBR 6120 • ASCE 7</title>
+    <script src="../js/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="loads_studio.js" defer></script>
+    <style>
+        .tab-studio-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-studio-btn.active {
+            background-color: var(--color-accent, #2563eb);
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.35);
+        }
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.08);
+        }
+        .badge-norm {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.2rem 0.55rem;
+            border-radius: 0.375rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col font-['Inter',sans-serif]">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <!-- Header Injection Placeholder -->
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <!-- EXECUTIVE MASTER HEADER -->
+        <div class="px-5 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 rounded-2xl shadow-sm">
+            <div>
+                <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        <span>⚡</span>
+                        <span>SUÍTE INTEGRADA DE CARREGAMENTOS</span>
+                    </span>
+                    <span id="active-standard-badge" class="badge-norm bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        🇧🇷 ABNT NBR (NBR 6123 • NBR 15421 • NBR 6120 • NBR 8681)
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        6 Módulos em 1 Só
+                    </span>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2.5 tracking-tight">
+                    <span>🏛️</span> Central de Cargas & Ações Estruturais
+                </h1>
+                <p class="text-xs md:text-sm text-gray-600 dark:text-gray-300 mt-1 max-w-4xl">
+                    Cálculo automatizado de ações ambientais (Vento, Sismo, Chuva, Neve, Tsunami) com tradução direta entre as <strong>Normas Brasileiras (NBR)</strong> e <strong>Normas Americanas (ASCE 7)</strong>, e envio instantâneo para o Gerador de Combinações de Ações e Envoltórias.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- SELETOR GLOBAL DE NORMA (NBR vs ASCE) -->
+                <div class="bg-gray-100 dark:bg-gray-700/70 p-1 rounded-xl flex items-center border border-gray-200 dark:border-gray-600">
+                    <button type="button" id="btn-standard-nbr" onclick="setStandard('nbr')"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-xs">
+                        <span>🇧🇷</span> NBR
+                    </button>
+                    <button type="button" id="btn-standard-asce" onclick="setStandard('asce')"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-900">
+                        <span>🇺🇸</span> ASCE 7
+                    </button>
+                </div>
+
+                <button type="button" onclick="calculateCurrentTab()" class="eng-btn-primary py-2 px-4 shadow-sm flex items-center gap-2">
+                    <span>⚡</span> <span id="btn-calc-label">Calcular Vento</span>
+                </button>
+                <button type="button" onclick="sendActiveLoadToCombos()" class="py-2 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5" title="Transfere as cargas calculadas diretamente para a aba de Combinações">
+                    <span>➕</span> Enviar para Combinações
+                </button>
+                <button type="button" onclick="saveProjectState()" class="eng-btn-save py-2 px-3 text-xs">
+                    <span>💾</span> Salvar
+                </button>
+                <button type="button" onclick="loadProjectState()" class="eng-btn-open py-2 px-3 text-xs">
+                    <span>📂</span> Abrir
+                </button>
+            </div>
+        </div>
+
+        <!-- BARRA DE TABS DOS MÓDULOS DE CARREGAMENTO -->
+        <div class="flex flex-wrap items-center gap-2 pb-3 mb-6 border-b border-gray-200 dark:border-gray-700/80">
+            <button id="tab-btn-wind" onclick="switchStudioTab('wind')"
+                class="tab-studio-btn active flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700">
+                <span class="text-base">💨</span>
+                <span>Vento (Wind)</span>
+                <span id="badge-wind-norm" class="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">NBR 6123</span>
+            </button>
+
+            <button id="tab-btn-seismic" onclick="switchStudioTab('seismic')"
+                class="tab-studio-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
+                <span class="text-base">⚡</span>
+                <span>Sismo (Seismic)</span>
+                <span id="badge-seismic-norm" class="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">NBR 15421</span>
+            </button>
+
+            <button id="tab-btn-rain" onclick="switchStudioTab('rain')"
+                class="tab-studio-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
+                <span class="text-base">🌧️</span>
+                <span>Chuva & Empoçamento</span>
+                <span id="badge-rain-norm" class="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">NBR 6120</span>
+            </button>
+
+            <button id="tab-btn-snow" onclick="switchStudioTab('snow')"
+                class="tab-studio-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
+                <span class="text-base">❄️</span>
+                <span>Neve & Sobrecargas</span>
+                <span id="badge-snow-norm" class="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">NBR 6120</span>
+            </button>
+
+            <button id="tab-btn-tsunami" onclick="switchStudioTab('tsunami')"
+                class="tab-studio-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
+                <span class="text-base">🌊</span>
+                <span>Tsunami & Hidrodinâmica</span>
+                <span id="badge-tsunami-norm" class="text-[10px] px-1.5 py-0.5 rounded font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">ASCE 7 Ch.6</span>
+            </button>
+
+            <button id="tab-btn-combos" onclick="switchStudioTab('combos')"
+                class="tab-studio-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
+                <span class="text-base">⚖️</span>
+                <span>Combinações & Envoltórias</span>
+                <span id="badge-combos-count" class="text-[10px] px-1.5 py-0.5 rounded-full font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">ELU & ELS</span>
+            </button>
+        </div>
+
+        <main class="space-y-6">
+
+            <!-- ================================================================= -->
+            <!-- ABA 1: VENTO (WIND)                                               -->
+            <!-- ================================================================= -->
+            <section id="panel-wind" class="space-y-6">
+                
+                <!-- CONTAINER ESPECÍFICO NBR 6123 -->
+                <div id="wind-nbr-container" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        
+                        <!-- Coluna de Parâmetros NBR 6123 -->
+                        <div class="lg:col-span-4 space-y-6">
+                            <div class="form-section">
+                                <div class="flex items-center justify-between mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">
+                                    <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>💨</span> Parâmetros de Vento (NBR 6123)
+                                    </h2>
+                                    <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded">Isopletas BR</span>
+                                </div>
+
+                                <div class="space-y-4 text-xs">
+                                    <div>
+                                        <label for="nbr_wind_city" class="eng-label">Capital / Região de Referência</label>
+                                        <select id="nbr_wind_city" onchange="onNbrWindCityChange()" class="eng-input">
+                                            <option value="">Selecione uma cidade ou insira V0 manual...</option>
+                                            <option value="São Paulo (SP)">São Paulo (SP) - V0 = 40 m/s</option>
+                                            <option value="Campinas / Interior (SP)">Campinas / Interior (SP) - V0 = 42 m/s</option>
+                                            <option value="Santos / Litoral (SP)">Santos / Litoral (SP) - V0 = 42 m/s</option>
+                                            <option value="Rio de Janeiro (RJ)">Rio de Janeiro (RJ) - V0 = 35 m/s</option>
+                                            <option value="Belo Horizonte (MG)">Belo Horizonte (MG) - V0 = 35 m/s</option>
+                                            <option value="Vitória (ES)">Vitória (ES) - V0 = 35 m/s</option>
+                                            <option value="Curitiba (PR)">Curitiba (PR) - V0 = 42 m/s</option>
+                                            <option value="Foz do Iguaçu (PR)">Foz do Iguaçu (PR) - V0 = 45 m/s</option>
+                                            <option value="Florianópolis (SC)">Florianópolis (SC) - V0 = 42 m/s</option>
+                                            <option value="Porto Alegre (RS)">Porto Alegre (RS) - V0 = 45 m/s</option>
+                                            <option value="Caxias do Sul / Serra Gaúcha (RS)">Serra Gaúcha / RS - V0 = 48 m/s</option>
+                                            <option value="Brasília (DF)">Brasília (DF) - V0 = 35 m/s</option>
+                                            <option value="Goiânia (GO)">Goiânia (GO) - V0 = 35 m/s</option>
+                                            <option value="Campo Grande (MS)">Campo Grande (MS) - V0 = 40 m/s</option>
+                                            <option value="Cuiabá (MT)">Cuiabá (MT) - V0 = 35 m/s</option>
+                                            <option value="Salvador (BA)">Salvador (BA) - V0 = 30 m/s</option>
+                                            <option value="Recife (PE)">Recife (PE) - V0 = 30 m/s</option>
+                                            <option value="Fortaleza (CE)">Fortaleza (CE) - V0 = 30 m/s</option>
+                                            <option value="Belém (PA)">Belém (PA) - V0 = 30 m/s</option>
+                                            <option value="Manaus (AM)">Manaus (AM) - V0 = 30 m/s</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_wind_v0" class="eng-label">Velocidade Básica V0 (m/s)</label>
+                                            <input type="number" id="nbr_wind_v0" value="40" step="1" min="20" max="60" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label for="nbr_wind_s3" class="eng-label">Fator Estatístico S3</label>
+                                            <select id="nbr_wind_s3" class="eng-input">
+                                                <option value="1">Grupo 1 (1.10 - Essencial/Hospital)</option>
+                                                <option value="2" selected>Grupo 2 (1.00 - Residencial/Comercial)</option>
+                                                <option value="3">Grupo 3 (0.95 - Baixa Ocupação)</option>
+                                                <option value="4">Grupo 4 (0.88 - Galpão Rural)</option>
+                                                <option value="5">Grupo 5 (0.83 - Provisória/Montagem)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_wind_topo" class="eng-label">Topografia (S1)</label>
+                                            <select id="nbr_wind_topo" onchange="toggleNbrTopoInputs()" class="eng-input">
+                                                <option value="flat" selected>Plano / Fraco Ondulado (S1 = 1.0)</option>
+                                                <option value="cliff">Talude / Encosta</option>
+                                                <option value="hill">Morro / Crista</option>
+                                            </select>
+                                        </div>
+                                        <div id="nbr_wind_slope_group" style="display:none;">
+                                            <label for="nbr_wind_slope" class="eng-label">Inclinação do Terreno (°)</label>
+                                            <input type="number" id="nbr_wind_slope" value="15" step="1" min="0" max="45" class="eng-input">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_wind_category" class="eng-label">Rugosidade (S2)</label>
+                                            <select id="nbr_wind_category" class="eng-input">
+                                                <option value="I">Cat. I (Mar/Lagos calmos)</option>
+                                                <option value="II">Cat. II (Campo aberto/fazenda)</option>
+                                                <option value="III">Cat. III (Pequena cidade/chácara)</option>
+                                                <option value="IV" selected>Cat. IV (Cidades médias/árvores)</option>
+                                                <option value="V">Cat. V (Grandes metrópoles/torres)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="nbr_wind_class" class="eng-label">Classe Edificação</label>
+                                            <select id="nbr_wind_class" class="eng-input">
+                                                <option value="A">Classe A (L ≤ 20m)</option>
+                                                <option value="B" selected>Classe B (20m < L ≤ 50m)</option>
+                                                <option value="C">Classe C (L > 50m)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <span class="font-bold text-gray-700 dark:text-gray-300 block mb-2">Geometria da Edificação</span>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label for="nbr_wind_height" class="eng-label">Altura H (m)</label>
+                                                <input type="number" id="nbr_wind_height" value="30" step="1" min="3" max="300" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_wind_width" class="eng-label">Largura L1 (m)</label>
+                                                <input type="number" id="nbr_wind_width" value="20" step="1" min="2" max="200" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_wind_depth" class="eng-label">Profund. L2 (m)</label>
+                                                <input type="number" id="nbr_wind_depth" value="30" step="1" min="2" max="200" class="eng-input">
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3 mt-3">
+                                            <div>
+                                                <label for="nbr_wind_floors" class="eng-label">N° de Pavimentos</label>
+                                                <input type="number" id="nbr_wind_floors" value="1" step="1" min="1" max="100" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_wind_cpi" class="eng-label">Pressão Interna Cpi</label>
+                                                <select id="nbr_wind_cpi" class="eng-input">
+                                                    <option value="-0.30" selected>-0.30 (Aberturas uniformes)</option>
+                                                    <option value="0.00">0.00 (Edificação estanque)</option>
+                                                    <option value="0.20">+0.20 (Sobrepressão moderada)</option>
+                                                    <option value="0.80">+0.80 (Abertura barlavento dominante)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- PARÂMETROS DO PÓRTICO 2D / TRELIÇA PARA O STRAP -->
+                                    <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                                <span>🏗️</span> Pórtico 2D / Galpão (STRAP)
+                                            </span>
+                                            <span class="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950 px-2 py-0.5 rounded">
+                                                NBR 6123 • 6120
+                                            </span>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2.5">
+                                            <div>
+                                                <label for="nbr_frame_span" class="eng-label">Vão Pórtico L (m)</label>
+                                                <input type="number" id="nbr_frame_span" value="18" step="0.5" min="4" max="80" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_eaves_h" class="eng-label">Altura Pilar H (m)</label>
+                                                <input type="number" id="nbr_frame_eaves_h" value="15" step="0.5" min="2" max="50" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_truss_eaves" class="eng-label">H Treliça Beiral (m)</label>
+                                                <input type="number" id="nbr_frame_truss_eaves" value="1.0" step="0.1" min="0" max="10" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_truss_ridge" class="eng-label">H Treliça Cumeeira (m)</label>
+                                                <input type="number" id="nbr_frame_truss_ridge" value="2.0" step="0.1" min="0.1" max="15" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_spacing" class="eng-label">Modulação Pórticos s (m)</label>
+                                                <input type="number" id="nbr_frame_spacing" value="6.0" step="0.5" min="2" max="25" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_purlin_d" class="eng-label">Dist. Terças d (m)</label>
+                                                <input type="number" id="nbr_frame_purlin_d" value="1.5" step="0.1" min="0.5" max="5" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_dead_roof" class="eng-label">2:Peso Telhas (kN/m²)</label>
+                                                <input type="number" id="nbr_frame_dead_roof" value="0.20" step="0.05" min="0.05" max="1.5" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_frame_live_roof" class="eng-label">3:SC Telhado (kN/m²)</label>
+                                                <input type="number" id="nbr_frame_live_roof" value="0.25" step="0.05" min="0" max="2.0" class="eng-input">
+                                            </div>
+                                            <div class="col-span-2">
+                                                <label for="nbr_frame_equip_roof" class="eng-label">4:SC EQUIPA... Utilidades (kN/m²)</label>
+                                                <input type="number" id="nbr_frame_equip_roof" value="0.15" step="0.05" min="0" max="2.0" class="eng-input">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" onclick="calculateNbrWind()" class="eng-btn-primary w-full py-2.5 mt-2 flex items-center justify-center gap-2">
+                                        <span>💨</span> Executar Análise de Vento NBR 6123
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna de Resultados NBR 6123 -->
+                        <div class="lg:col-span-8 space-y-6">
+                            <!-- KPIs Principais -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-blue-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Cortante Basal Total</span>
+                                    <div class="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                                        <span id="kpi-nbr-wind-shear">---</span> <span class="text-xs font-normal text-gray-500">kN</span>
+                                    </div>
+                                    <span class="text-[10px] text-gray-400">Arrasto Global na Fundação</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-indigo-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Momento de Tombamento</span>
+                                    <div class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">
+                                        <span id="kpi-nbr-wind-moment">---</span> <span class="text-xs font-normal text-gray-500">kN·m</span>
+                                    </div>
+                                    <span class="text-[10px] text-gray-400">Momento na Base</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-emerald-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Velocidade no Topo Vk</span>
+                                    <div class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                                        <span id="kpi-nbr-wind-vk">---</span> <span class="text-xs font-normal text-gray-500">m/s</span>
+                                    </div>
+                                    <span id="kpi-nbr-wind-vk-kmh" class="text-[10px] text-gray-400">--- km/h</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-purple-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Pressão Dinâmica q(H)</span>
+                                    <div class="text-xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">
+                                        <span id="kpi-nbr-wind-qtop">---</span> <span class="text-xs font-normal text-gray-500">kN/m²</span>
+                                    </div>
+                                    <span class="text-[10px] text-gray-400">Topo da Edificação</span>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico e Resumo de Pressões nas Faces -->
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                <!-- Gráfico Perfil Vertical -->
+                                <div class="md:col-span-7 form-section !mb-0">
+                                    <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-between">
+                                        <span>📈 Perfil de Velocidade Vk(z) e Pressão q(z)</span>
+                                        <span class="text-[10px] text-gray-400">NBR 6123 Item 5.3</span>
+                                    </h3>
+                                    <div class="h-64 relative">
+                                        <canvas id="nbrWindChart"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Cards de Pressão por Face (Barlavento / Sotavento / Laterais) -->
+                                <div class="md:col-span-5 form-section !mb-0 flex flex-col justify-between">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3">
+                                            🏷️ Pressões Resultantes nas Paredes
+                                        </h3>
+                                        <div class="space-y-3 text-xs">
+                                            <div class="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900">
+                                                <div class="flex justify-between items-center font-bold text-blue-900 dark:text-blue-300">
+                                                    <span>Face a Barlavento (Pressão)</span>
+                                                    <span id="nbr-face-windward">--- kN/m²</span>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Cpe = <span id="nbr-cpe-windward">+0.70</span> | Cpi = <span id="nbr-cpi-val">-0.30</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
+                                                <div class="flex justify-between items-center font-bold text-amber-900 dark:text-amber-300">
+                                                    <span>Face a Sotavento (Sucção)</span>
+                                                    <span id="nbr-face-leeward">--- kN/m²</span>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Cpe = <span id="nbr-cpe-leeward">-0.40</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="p-2.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900">
+                                                <div class="flex justify-between items-center font-bold text-purple-900 dark:text-purple-300">
+                                                    <span>Faces Laterais (Sucção)</span>
+                                                    <span id="nbr-face-sides">--- kN/m²</span>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                                    Cpe = <span id="nbr-cpe-sides">-0.60</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                        <span class="text-[11px] text-gray-500">Coeficiente de Arrasto Global Ca:</span>
+                                        <span id="nbr-ca-display" class="font-bold text-sm text-gray-800 dark:text-gray-200">1.20</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tabela de Pavimentos / Níveis -->
+                            <div class="form-section !mb-0 overflow-x-auto">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                        📊 Distribuição Vertical de Forças por Pavimento
+                                    </h3>
+                                    <button type="button" onclick="exportNbrWindTableCsv()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                        📥 Exportar CSV
+                                    </button>
+                                </div>
+                                <table class="w-full text-xs text-left text-gray-700 dark:text-gray-300 border-collapse">
+                                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold">
+                                        <tr>
+                                            <th class="p-2">Pavimento</th>
+                                            <th class="p-2">Cota z (m)</th>
+                                            <th class="p-2">S2</th>
+                                            <th class="p-2">Vk (m/s)</th>
+                                            <th class="p-2">q (kN/m²)</th>
+                                            <th class="p-2">Área Trib. (m²)</th>
+                                            <th class="p-2 font-extrabold text-blue-600 dark:text-blue-400">Força Fx (kN)</th>
+                                            <th class="p-2">Momento (kN·m)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="nbr-wind-floors-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                                        <tr>
+                                            <td colspan="8" class="p-4 text-center text-gray-400 italic">
+                                                Clique em "Executar Análise de Vento NBR 6123" para gerar a distribuição de esforços.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================== -->
+                    <!-- MÓDULO DEDICADO: GALPÃO & PÓRTICO TRELIÇADO 2D PARA O STRAP    -->
+                    <!-- ============================================================== -->
+                    <div id="strap-portal-section" class="form-section !mb-0 space-y-5 border-t-4 border-indigo-600 bg-white dark:bg-gray-850">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3 border-gray-200 dark:border-gray-700">
+                            <div>
+                                <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                                    <span>🏗️</span> Módulo Estrutural STRAP: Pórtico Plano 2D & Galpão Treliçado
+                                </h3>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Cálculo das pressões localizadas (NBR 6123 Tabela 4 e 5), cargas lineares (<span class="font-semibold text-gray-700 dark:text-gray-300">kN/m</span>) para barras e matriz com as <span class="font-bold text-indigo-600 dark:text-indigo-400">16 Combinações Exatas do STRAP</span> (NBR 8681 / NBR 8800).
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button type="button" onclick="copyStrapCombinationsText()" class="px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+                                    <span>📋</span> Copiar Tabela de Combinações STRAP
+                                </button>
+                                <button type="button" onclick="exportStrapReportTxt()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                                    <span>📥</span> Exportar Memorial (.txt)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Resumo dos Parâmetros Geométricos & Aerodinâmicos -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+                            <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-[10px] text-gray-500 block">Vão & Altura</span>
+                                <div class="font-extrabold text-gray-900 dark:text-white text-sm mt-0.5">
+                                    <span id="strap-disp-span">18.0</span>m × <span id="strap-disp-height">15.0</span>m
+                                </div>
+                                <span class="text-[10px] text-gray-400">Pórtico Simétrico</span>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-[10px] text-gray-500 block">Inclinação Cobertura (θ)</span>
+                                <div class="font-extrabold text-indigo-600 dark:text-indigo-400 text-sm mt-0.5">
+                                    <span id="strap-disp-pitch-deg">6.34</span>° (<span id="strap-disp-pitch-pct">11.1</span>%)
+                                </div>
+                                <span id="strap-disp-pitch-class" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">θ ≤ 10° (Baixa incl.)</span>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-[10px] text-gray-500 block">Modulação entre Pórticos</span>
+                                <div class="font-extrabold text-gray-900 dark:text-white text-sm mt-0.5">
+                                    s = <span id="strap-disp-spacing">6.0</span> m
+                                </div>
+                                <span class="text-[10px] text-gray-400">Largura tributária</span>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-[10px] text-gray-500 block">Espaçamento Terças</span>
+                                <div class="font-extrabold text-gray-900 dark:text-white text-sm mt-0.5">
+                                    d = <span id="strap-disp-purlin">1.5</span> m
+                                </div>
+                                <span class="text-[10px] text-gray-400">Cargas nodais</span>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-[10px] text-gray-500 block">Pressão Dinâmica q(H)</span>
+                                <div class="font-extrabold text-purple-600 dark:text-purple-400 text-sm mt-0.5">
+                                    <span id="strap-disp-q">0.536</span> kN/m²
+                                </div>
+                                <span class="text-[10px] text-gray-400">Topo pilares / telhado</span>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                                <span class="text-[10px] text-gray-500 block">Comprimento do Banzo</span>
+                                <div class="font-extrabold text-gray-900 dark:text-white text-sm mt-0.5">
+                                    <span id="strap-disp-rafter">9.06</span> m
+                                </div>
+                                <span class="text-[10px] text-gray-400">Água inclinada</span>
+                            </div>
+                        </div>
+
+                        <!-- Diagrama Gráfico do Pórtico 2D (Visualizador Esquemático em Canvas) -->
+                        <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-2 border-b border-gray-200 dark:border-gray-800 gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-gray-700 dark:text-gray-300">📐 Diagrama Esquemático do Pórtico & Cargas Aplicadas</span>
+                                    <span id="strap-diagram-badge" class="text-[10px] px-2 py-0.5 rounded font-extrabold bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300">6:W2 Arrancamento Crítico (Cpi = +0.20)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <button type="button" onclick="selectStrapDiagramCase('1:pp')" class="strap-diag-btn px-2.5 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer">1:pp</button>
+                                    <button type="button" onclick="selectStrapDiagramCase('2:Peso telhas')" class="strap-diag-btn px-2.5 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer">2:Peso telhas</button>
+                                    <button type="button" onclick="selectStrapDiagramCase('3:SC Telhado')" class="strap-diag-btn px-2.5 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer">3:SC Telhado</button>
+                                    <button type="button" onclick="selectStrapDiagramCase('4:SC EQUIPA...')" class="strap-diag-btn px-2.5 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer">4:SC EQUIPA...</button>
+                                    <button type="button" onclick="selectStrapDiagramCase('5:W1')" class="strap-diag-btn px-2.5 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer">5:W1</button>
+                                    <button type="button" onclick="selectStrapDiagramCase('6:W2')" class="strap-diag-btn active px-2.5 py-1 rounded text-[11px] font-bold bg-indigo-600 text-white shadow-xs cursor-pointer">6:W2 (Arrancamento)</button>
+                                    <button type="button" onclick="selectStrapDiagramCase('7:W3')" class="strap-diag-btn px-2.5 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer">7:W3</button>
+                                </div>
+                            </div>
+                            <div class="h-64 sm:h-72 w-full relative flex items-center justify-center">
+                                <canvas id="strapFrameCanvas" class="w-full h-full block rounded-lg bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800"></canvas>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mt-2 px-1">
+                                <span>Pilar Barlavento (Esq): x = 0m, z = 0 a 15m</span>
+                                <span class="font-semibold text-gray-700 dark:text-gray-300">Treliça: Beiral = 1.0m | Cumeeira = 2.0m</span>
+                                <span>Pilar Sotavento (Dir): x = 18m, z = 0 a 15m</span>
+                            </div>
+                        </div>
+
+                        <!-- TABELA DE CASOS DE CARGA PARA O STRAP (LOAD CASES) -->
+                        <div class="overflow-x-auto">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                    <span>📋</span> Casos de Carregamento a Criar no STRAP (<span class="text-indigo-600 dark:text-indigo-400">Load Cases 1 a 7</span>)
+                                </h4>
+                                <span class="text-[11px] text-gray-500">Modulação s = <span id="strap-table-spacing-val">6.0</span>m</span>
+                            </div>
+                            <table class="w-full text-xs text-left border-collapse border border-gray-200 dark:border-gray-800">
+                                <thead class="bg-gray-100 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-300 dark:border-gray-700">
+                                    <tr>
+                                        <th class="p-2.5">Caso STRAP</th>
+                                        <th class="p-2.5">Descrição da Ação</th>
+                                        <th class="p-2.5">Tipo no STRAP</th>
+                                        <th class="p-2.5">Onde Aplicar</th>
+                                        <th class="p-2.5">Pressão Norma (kN/m²)</th>
+                                        <th class="p-2.5 font-extrabold text-indigo-700 dark:text-indigo-300">Carga Linear w (kN/m)</th>
+                                        <th class="p-2.5 font-extrabold text-blue-700 dark:text-blue-300">Carga Nodal P (kN)</th>
+                                        <th class="p-2.5">Direção / Eixo no STRAP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="strap-loadcases-tbody" class="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- ============================================================== -->
+                        <!-- PAINEL CENTRAL: QUAIS VALORES DEVEM SER JUNTOS OU NÃO          -->
+                        <!-- ============================================================== -->
+                        <div class="space-y-4 pt-2">
+                            <div class="flex items-center gap-2 border-b pb-2 border-gray-200 dark:border-gray-700">
+                                <span class="text-lg">🚦</span>
+                                <h4 class="text-sm font-extrabold text-gray-900 dark:text-white">
+                                    Diretrizes de Associação no STRAP: Quais Valores Devem Ser Juntos ou Não
+                                </h4>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Card Vermelho: O que NUNCA Juntar -->
+                                <div class="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 space-y-3">
+                                    <div class="flex items-center gap-2 font-bold text-red-900 dark:text-red-300 text-xs">
+                                        <span class="text-base">⛔</span>
+                                        <span>O QUE NUNCA JUNTAR (Mutuamente Exclusivos e Incompatíveis)</span>
+                                    </div>
+                                    <ul class="text-xs text-red-800 dark:text-red-200/90 space-y-2 list-disc list-inside">
+                                        <li>
+                                            <strong>5:W1, 6:W2 e 7:W3 NUNCA JUNTOS:</strong> Representam estados físicos de vento distintos e mutuamente exclusivos (<code class="bg-red-100 dark:bg-red-900 px-1 py-0.5 rounded font-mono">Cpi = -0.30</code> sucção interna vs <code class="bg-red-100 dark:bg-red-900 px-1 py-0.5 rounded font-mono">Cpi = +0.20</code> sobrepressão vs vento inverso). Eles nunca ocorrem na mesma combinação!
+                                        </li>
+                                        <li>
+                                            <strong>NÃO SOMAR Sobrecargas (3:SC Telhado e 4:SC EQUIPA) em Arrancamento:</strong> Nas combinações de arrancamento crítico (Comb. 2, 4 e 6), os fatores das sobrecargas <strong>DEVEM SER VAZIOS / ZERO</strong>. Como a sobrecarga atua para baixo (↓), somá-la reduziria o esforço de arrancamento (↑), o que seria terminantemente contra a segurança da NBR 8681!
+                                        </li>
+                                        <li>
+                                            <strong>NÃO MAJORAR Peso Próprio no Arrancamento:</strong> Na verificação de tração/levantamento, as cargas permanentes entram com fator favorável <code class="bg-red-100 dark:bg-red-900 px-1 py-0.5 rounded font-mono">γg = 1.00</code> (e nunca 1.25), para não contar com um peso estabilizante que pode não existir.
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Card Verde: O que DEVE ser Junto -->
+                                <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 space-y-3">
+                                    <div class="flex items-center gap-2 font-bold text-emerald-900 dark:text-emerald-300 text-xs">
+                                        <span class="text-base">✅</span>
+                                        <span>O QUE DEVE SER JUNTO (Casos Reais e Combinações Normativas)</span>
+                                    </div>
+                                    <ul class="text-xs text-emerald-800 dark:text-emerald-200/90 space-y-2 list-disc list-inside">
+                                        <li>
+                                            <strong>1:pp (Peso Próprio) + 2:Peso telhas:</strong> São cargas permanentes e SEMPRE atuam juntas em todas as 16 combinações reais sem exceção.
+                                        </li>
+                                        <li>
+                                            <strong>No ELU Gravitacional (Comb. 1, 3, 5):</strong> Juntam-se as permanentes (<code class="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono">1.25 L1 + 1.25 L2</code>) + sobrecargas majoradas (<code class="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono">1.50 L3 + 1.50 L4</code>) + vento secundário (<code class="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono">0.84 W</code>).
+                                        </li>
+                                        <li>
+                                            <strong>No ELU de Arrancamento Crítico (Comb. 4):</strong> Juntam-se <code class="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono">1.00*1 + 1.00*2 + 1.40*6</code>. Essa combinação é a mais perigosa para galpões, gerando máxima tração nos chumbadores e sapatas, e comprimindo o banzo inferior.
+                                        </li>
+                                        <li>
+                                            <strong>No ELU com Vento Preponderante (Comb. 14, 15, 16):</strong> Juntam-se <code class="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono">1.25*1 + 1.25*2 + 1.05*3 + 1.05*4 + 1.40*W</code> para gerar o momento fletor máximo na base dos pilares.
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- TABELA DE COMBINAÇÕES PRONTAS PARA O STRAP -->
+                            <div class="overflow-x-auto pt-2">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                        <span>⚙️</span> Matriz de Combinações Normativas Exata do STRAP (16 Combinações NBR 8681 / NBR 8800)
+                                    </h5>
+                                    <span class="text-[10px] text-gray-500">Idêntico à tela de Combinações do STRAP</span>
+                                </div>
+                                <table class="w-full text-xs text-left border-collapse border border-gray-200 dark:border-gray-800 font-mono">
+                                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold border-b border-gray-300 dark:border-gray-700 text-center">
+                                        <tr>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-12 text-center">No.</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 text-left min-w-[210px]">Title</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-16 bg-blue-50/70 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300">1:pp</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-24 bg-blue-50/70 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300">2:Peso telhas</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-24 bg-amber-50/70 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300">3:SC Telhado</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-28 bg-amber-50/70 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300">4:SC EQUIPA...</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-16 bg-purple-50/70 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300">5:W1</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-16 bg-red-50/70 dark:bg-red-950/40 text-red-800 dark:text-red-300 font-extrabold">6:W2</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-16 bg-purple-50/70 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300">7:W3</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 text-left font-sans min-w-[220px]">Objetivo & Descrição Normativa</th>
+                                            <th class="p-2 border border-gray-200 dark:border-gray-700 w-20 text-center font-sans">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="strap-combos-tbody" class="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900 text-center">
+                                        <!-- Preenchido via JavaScript com as 16 linhas exatas do STRAP -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- CONTAINER ESPECÍFICO ASCE 7 -->
+                <div id="wind-asce-container" style="display:none;" class="space-y-6">
+                    <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-sm text-blue-900 dark:text-blue-200">Módulo ASCE 7 (MWFRS & C&C Directional Procedure)</span>
+                            <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                                Cargas de vento conforme ASCE 7-16 e ASCE 7-22 com categorias de exposição B/C/D e coeficientes topográficos Kzt.
+                            </p>
+                        </div>
+                        <a href="../asce/wind.html" target="_blank" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5">
+                            <span>Abrir Módulo Dedicado ASCE 7</span> <span>→</span>
+                        </a>
+                    </div>
+                    <!-- Frame / Embed ou controles diretos ASCE -->
+                    <div id="asce-wind-embed-host" class="form-section !mb-0 p-4">
+                        <iframe id="asce-wind-iframe" src="../asce/wind.html" class="w-full h-[750px] border-0 rounded-xl" title="ASCE Wind Frame"></iframe>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- ABA 2: SISMO (SEISMIC)                                            -->
+            <!-- ================================================================= -->
+            <section id="panel-seismic" style="display: none;" class="space-y-6">
+                
+                <!-- CONTAINER ESPECÍFICO NBR 15421 -->
+                <div id="seismic-nbr-container" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        
+                        <!-- Coluna de Parâmetros NBR 15421 -->
+                        <div class="lg:col-span-4 space-y-6">
+                            <div class="form-section">
+                                <div class="flex items-center justify-between mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">
+                                    <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>⚡</span> Parâmetros Sísmicos (NBR 15421)
+                                    </h2>
+                                    <span class="text-[11px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 rounded">Zonas 0 a 4</span>
+                                </div>
+
+                                <div class="space-y-4 text-xs">
+                                    <div>
+                                        <label for="nbr_seismic_zone" class="eng-label">Zona Sísmica Brasileira</label>
+                                        <select id="nbr_seismic_zone" onchange="onNbrSeismicZoneChange()" class="eng-input">
+                                            <option value="0">Zona 0 (ag ≤ 0.025g) - Sul, Sudeste, Centro-Oeste (Maior parte)</option>
+                                            <option value="1" selected>Zona 1 (ag = 0.050g) - Transição & Centro-Norte</option>
+                                            <option value="2">Zona 2 (ag = 0.100g) - Nordeste / CE / RN / Bacia Potiguar</option>
+                                            <option value="3">Zona 3 (ag = 0.150g) - Noroeste do Amazonas / Transição Acre</option>
+                                            <option value="4">Zona 4 (ag = 0.200g) - Extremo Oeste do Acre (Fronteira Andina)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_seismic_ag" class="eng-label">Aceleração de Pico ag (g)</label>
+                                            <input type="number" id="nbr_seismic_ag" value="0.050" step="0.005" min="0.01" max="0.40" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label for="nbr_seismic_soil" class="eng-label">Classe do Solo (A a E)</label>
+                                            <select id="nbr_seismic_soil" class="eng-input">
+                                                <option value="A">Solo A (Rocha sã - Vs > 1500 m/s)</option>
+                                                <option value="B">Solo B (Rocha - 760 < Vs ≤ 1500 m/s)</option>
+                                                <option value="C">Solo C (Solo muito denso / NSPT > 50)</option>
+                                                <option value="D" selected>Solo D (Solo rijo / 15 ≤ NSPT ≤ 50)</option>
+                                                <option value="E">Solo E (Solo mole / NSPT < 15)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="nbr_seismic_system" class="eng-label">Sistema Estrutural Resistente (R)</label>
+                                        <select id="nbr_seismic_system" class="eng-input">
+                                            <option value="portico_concreto_intermediario" selected>Pórticos de concreto intermediários (R = 4.5)</option>
+                                            <option value="portico_concreto_especial">Pórticos de concreto especiais (R = 7.0)</option>
+                                            <option value="portico_concreto_ordinario">Pórticos de concreto convencionais (R = 3.0)</option>
+                                            <option value="paredes_cisalhamento_concreto">Paredes de concreto / shear walls (R = 5.0)</option>
+                                            <option value="portico_aco_especial">Pórticos de aço especiais (R = 7.0)</option>
+                                            <option value="portico_aco_intermediario">Pórticos de aço intermediários (R = 4.5)</option>
+                                            <option value="alvenaria_estrutural_armada">Alvenaria estrutural armada (R = 2.5)</option>
+                                            <option value="alvenaria_nao_armada">Alvenaria não armada (R = 1.5)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_seismic_importance" class="eng-label">Fator de Importância I</label>
+                                            <select id="nbr_seismic_importance" class="eng-input">
+                                                <option value="I">Cat. I (0.80 - Depósitos/Agrícola)</option>
+                                                <option value="II" selected>Cat. II (1.00 - Comum/Residencial)</option>
+                                                <option value="III">Cat. III (1.25 - Escolas/Grandes Eventos)</option>
+                                                <option value="IV">Cat. IV (1.50 - Hospitais/Emergência)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="nbr_seismic_weight" class="eng-label">Peso Sísmico Total W (kN)</label>
+                                            <input type="number" id="nbr_seismic_weight" value="15000" step="500" min="100" class="eng-input">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_seismic_height" class="eng-label">Altura Total Hn (m)</label>
+                                            <input type="number" id="nbr_seismic_height" value="30" step="1" min="3" max="250" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label for="nbr_seismic_floors" class="eng-label">N° de Pavimentos</label>
+                                            <input type="number" id="nbr_seismic_floors" value="10" step="1" min="1" max="80" class="eng-input">
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="nbr_seismic_period" class="eng-label">Período Ta (s) [Vazio = Auto]</label>
+                                        <input type="number" id="nbr_seismic_period" placeholder="Calculado via Ct*(Hn)^x..." step="0.05" min="0.05" max="10.0" class="eng-input">
+                                    </div>
+
+                                    <button type="button" onclick="calculateNbrSeismic()" class="eng-btn-primary w-full py-2.5 mt-2 flex items-center justify-center gap-2">
+                                        <span>⚡</span> Executar Análise Sísmica NBR 15421
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna de Resultados NBR 15421 -->
+                        <div class="lg:col-span-8 space-y-6">
+                            <!-- Alerta de Dispensa (Zona 0) -->
+                            <div id="nbr-seismic-dispensation-alert" style="display:none;" class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-center gap-3">
+                                <span class="text-2xl">✅</span>
+                                <div class="text-xs text-emerald-900 dark:text-emerald-200">
+                                    <strong class="font-bold">Dispensa de Dimensionamento Sísmico (NBR 15421 Item 1.1):</strong>
+                                    Edificação em <strong>Zona 0 (ag ≤ 0.025g)</strong> com ocupação comum. As forças devidas ao vento governam os esforços laterais horizontais na estrutura.
+                                </div>
+                            </div>
+
+                            <!-- KPIs Sísmicos -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-purple-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Cortante Basal V0</span>
+                                    <div class="text-xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">
+                                        <span id="kpi-nbr-seis-v0">---</span> <span class="text-xs font-normal text-gray-500">kN</span>
+                                    </div>
+                                    <span id="kpi-nbr-seis-v0-pct" class="text-[10px] text-gray-400">---% do Peso W</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-blue-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Coef. de Projeto Cs</span>
+                                    <div class="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                                        <span id="kpi-nbr-seis-cs">---</span>
+                                    </div>
+                                    <span class="text-[10px] text-gray-400">Cs = Sa(Ta) / (R/I)</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-indigo-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Período Fundamental Ta</span>
+                                    <div class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">
+                                        <span id="kpi-nbr-seis-ta">---</span> <span class="text-xs font-normal text-gray-500">s</span>
+                                    </div>
+                                    <span id="kpi-nbr-seis-ts" class="text-[10px] text-gray-400">Ts = --- s</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-amber-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Momento de Tombamento</span>
+                                    <div class="text-xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
+                                        <span id="kpi-nbr-seis-moment">---</span> <span class="text-xs font-normal text-gray-500">kN·m</span>
+                                    </div>
+                                    <span class="text-[10px] text-gray-400">Esforço na Fundação</span>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico do Espectro de Resposta Sa x T -->
+                            <div class="form-section !mb-0">
+                                <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-between">
+                                    <span>📈 Espectro de Resposta Elástico & de Projeto Sa(T)</span>
+                                    <span class="text-[10px] text-gray-400">NBR 15421 Item 6.2</span>
+                                </h3>
+                                <div class="h-64 relative">
+                                    <canvas id="nbrSeismicChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Tabela de Pavimentos Fx -->
+                            <div class="form-section !mb-0 overflow-x-auto">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                        📊 Forças Sísmicas Equivalentes nos Andares (Fx)
+                                    </h3>
+                                    <button type="button" onclick="exportNbrSeismicTableCsv()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                        📥 Exportar CSV
+                                    </button>
+                                </div>
+                                <table class="w-full text-xs text-left text-gray-700 dark:text-gray-300 border-collapse">
+                                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold">
+                                        <tr>
+                                            <th class="p-2">Pavimento</th>
+                                            <th class="p-2">Altura z (m)</th>
+                                            <th class="p-2">Peso wx (kN)</th>
+                                            <th class="p-2">Fator Cvx</th>
+                                            <th class="p-2 font-extrabold text-purple-600 dark:text-purple-400">Força Fx (kN)</th>
+                                            <th class="p-2">Cortante Acumulado (kN)</th>
+                                            <th class="p-2">Momento (kN·m)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="nbr-seismic-floors-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                                        <tr>
+                                            <td colspan="7" class="p-4 text-center text-gray-400 italic">
+                                                Clique em "Executar Análise Sísmica NBR 15421" para calcular o cortante basal e forças nos andares.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CONTAINER ESPECÍFICO ASCE 7 -->
+                <div id="seismic-asce-container" style="display:none;" class="space-y-6">
+                    <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-900 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-sm text-purple-900 dark:text-purple-200">Módulo ASCE 7-22 & ASCE 61 (ELF & Piers)</span>
+                            <p class="text-xs text-purple-700 dark:text-purple-400 mt-0.5">
+                                Equivalent Lateral Force Procedure com parâmetros SDS, SD1, Seismic Design Category A-F e análise de cais portuários ASCE 61.
+                            </p>
+                        </div>
+                        <a href="../asce/seismic.html" target="_blank" class="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5">
+                            <span>Abrir Módulo Dedicado ASCE 7</span> <span>→</span>
+                        </a>
+                    </div>
+                    <div class="form-section !mb-0 p-4">
+                        <iframe id="asce-seismic-iframe" src="../asce/seismic.html" class="w-full h-[750px] border-0 rounded-xl" title="ASCE Seismic Frame"></iframe>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- ABA 3: CHUVA & EMPOÇAMENTO (RAIN & PONDING)                       -->
+            <!-- ================================================================= -->
+            <section id="panel-rain" style="display: none;" class="space-y-6">
+                
+                <!-- CONTAINER ESPECÍFICO NBR 6120 / NBR 10844 -->
+                <div id="rain-nbr-container" class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        
+                        <!-- Coluna de Parâmetros -->
+                        <div class="lg:col-span-4 space-y-6">
+                            <div class="form-section">
+                                <div class="flex items-center justify-between mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">
+                                    <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <span>🌧️</span> Chuva & Drenagem (NBR 6120 / 10844)
+                                    </h2>
+                                    <span class="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950 px-2 py-0.5 rounded">Empoçamento</span>
+                                </div>
+
+                                <div class="space-y-4 text-xs">
+                                    <div>
+                                        <label for="nbr_rain_city" class="eng-label">Capital / Intensidade Pluviométrica</label>
+                                        <select id="nbr_rain_city" onchange="onNbrRainCityChange()" class="eng-input">
+                                            <option value="">Selecione ou digite intensidade manual...</option>
+                                            <option value="São Paulo (SP)">São Paulo (SP) - 180 mm/h</option>
+                                            <option value="Rio de Janeiro (RJ)">Rio de Janeiro (RJ) - 195 mm/h</option>
+                                            <option value="Belo Horizonte (MG)">Belo Horizonte (MG) - 175 mm/h</option>
+                                            <option value="Curitiba (PR)">Curitiba (PR) - 160 mm/h</option>
+                                            <option value="Porto Alegre (RS)">Porto Alegre (RS) - 170 mm/h</option>
+                                            <option value="Florianópolis (SC)">Florianópolis (SC) - 175 mm/h</option>
+                                            <option value="Brasília (DF)">Brasília (DF) - 165 mm/h</option>
+                                            <option value="Salvador (BA)">Salvador (BA) - 185 mm/h</option>
+                                            <option value="Recife (PE)">Recife (PE) - 190 mm/h</option>
+                                            <option value="Belém (PA)">Belém (PA) - 210 mm/h</option>
+                                            <option value="Manaus (AM)">Manaus (AM) - 200 mm/h</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_rain_i" class="eng-label">Intensidade I (mm/h)</label>
+                                            <input type="number" id="nbr_rain_i" value="180" step="5" min="50" max="350" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label for="nbr_rain_area" class="eng-label">Área Contrib. A (m²)</label>
+                                            <input type="number" id="nbr_rain_area" value="250" step="10" min="5" max="10000" class="eng-input">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="nbr_rain_ds" class="eng-label">Nível Soleira ds (mm)</label>
+                                            <input type="number" id="nbr_rain_ds" value="50" step="5" min="0" max="500" class="eng-input">
+                                        </div>
+                                        <div>
+                                            <label for="nbr_rain_drain_type" class="eng-label">Tipo de Extravasor</label>
+                                            <select id="nbr_rain_drain_type" onchange="toggleNbrDrainInputs()" class="eng-input">
+                                                <option value="scupper" selected>Vertedor / Calha Retangular</option>
+                                                <option value="drain">Ralo / Bocal Circular</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div id="nbr_rain_scupper_group">
+                                        <label for="nbr_rain_scupper_w" class="eng-label">Largura do Vertedor b (mm)</label>
+                                        <input type="number" id="nbr_rain_scupper_w" value="300" step="10" min="50" max="3000" class="eng-input">
+                                    </div>
+
+                                    <div id="nbr_rain_drain_group" style="display:none;">
+                                        <label for="nbr_rain_drain_diam" class="eng-label">Diâmetro do Ralo D (mm)</label>
+                                        <input type="number" id="nbr_rain_drain_diam" value="150" step="10" min="50" max="500" class="eng-input">
+                                    </div>
+
+                                    <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <span class="font-bold text-gray-700 dark:text-gray-300 block mb-2">Instabilidade por Empoçamento (Vigas)</span>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label for="nbr_rain_span" class="eng-label">Vão da Viga L (m)</label>
+                                                <input type="number" id="nbr_rain_span" value="6.0" step="0.5" min="1.0" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_rain_spacing" class="eng-label">Espaçamento s (m)</label>
+                                                <input type="number" id="nbr_rain_spacing" value="2.0" step="0.2" min="0.5" class="eng-input">
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3 mt-2">
+                                            <div>
+                                                <label for="nbr_rain_inertia" class="eng-label">Inércia Ix (cm⁴)</label>
+                                                <input type="number" id="nbr_rain_inertia" value="2500" step="100" min="10" class="eng-input">
+                                            </div>
+                                            <div>
+                                                <label for="nbr_rain_emod" class="eng-label">Módulo E (GPa)</label>
+                                                <input type="number" id="nbr_rain_emod" value="200" step="10" min="10" class="eng-input">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" onclick="calculateNbrRain()" class="eng-btn-primary w-full py-2.5 mt-2 flex items-center justify-center gap-2">
+                                        <span>🌧️</span> Calcular Lâmina Pluvial & Empoçamento
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coluna de Resultados -->
+                        <div class="lg:col-span-8 space-y-6">
+                            <!-- Alertas de Empoçamento -->
+                            <div id="nbr-rain-alerts-container"></div>
+
+                            <!-- KPIs Pluviais -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-cyan-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Lâmina Total hp</span>
+                                    <div class="text-xl font-extrabold text-cyan-600 dark:text-cyan-400 mt-1">
+                                        <span id="kpi-nbr-rain-hp">---</span> <span class="text-xs font-normal text-gray-500">mm</span>
+                                    </div>
+                                    <span id="kpi-nbr-rain-heads" class="text-[10px] text-gray-400">ds + dh</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-blue-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Pressão Nominal pr</span>
+                                    <div class="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                                        <span id="kpi-nbr-rain-load">---</span> <span class="text-xs font-normal text-gray-500">kN/m²</span>
+                                    </div>
+                                    <span id="kpi-nbr-rain-load-kgf" class="text-[10px] text-gray-400">--- kgf/m²</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-indigo-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Vazão de Projeto Q</span>
+                                    <div class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">
+                                        <span id="kpi-nbr-rain-flow">---</span> <span class="text-xs font-normal text-gray-500">L/min</span>
+                                    </div>
+                                    <span id="kpi-nbr-rain-flow-m3s" class="text-[10px] text-gray-400">--- m³/s</span>
+                                </div>
+
+                                <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-emerald-500">
+                                    <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Estabilidade Ponding</span>
+                                    <div class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                                        <span id="kpi-nbr-rain-stability">OK</span>
+                                    </div>
+                                    <span id="kpi-nbr-rain-deflection" class="text-[10px] text-gray-400">Flecha: --- mm</span>
+                                </div>
+                            </div>
+
+                            <!-- Painel Explicativo da NBR 6120 -->
+                            <div class="form-section !mb-0 p-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-gray-800 dark:to-gray-800/80">
+                                <h3 class="text-xs font-bold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
+                                    <span>📘</span> Critérios Normativos ABNT NBR 6120:2019 & NBR 10844
+                                </h3>
+                                <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mb-3">
+                                    A NBR 6120 exige que toda cobertura plana ou de baixa declividade seja verificada quanto ao risco de <strong>empoçamento progressivo</strong> gerado pela deformação das terças e vigas sob a lâmina d'água acumulada durante chuvas intensas (TR=100 anos), considerando o transbordamento pelos extravasores secundários.
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                    <div class="p-3 rounded-lg bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600">
+                                        <strong class="text-gray-900 dark:text-white block mb-1">Sobrecarga Mínima de Manutenção:</strong>
+                                        0.25 a 0.50 kN/m² para coberturas não acessíveis a veículos.
+                                    </div>
+                                    <div class="p-3 rounded-lg bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600">
+                                        <strong class="text-gray-900 dark:text-white block mb-1">Carga de Água Efetiva de Projeto:</strong>
+                                        pr = γw · (ds + dh) = 0.010 · (ds + dh) kN/m² (100 kgf/m² para cada 10 cm de água acumulada).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- CONTAINER ESPECÍFICO ASCE 7 -->
+                <div id="rain-asce-container" style="display:none;" class="space-y-6">
+                    <div class="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-900 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-sm text-cyan-900 dark:text-cyan-200">Módulo ASCE 7 Chapter 8 (Rain & Ponding Loads)</span>
+                            <p class="text-xs text-cyan-700 dark:text-cyan-400 mt-0.5">
+                                Cálculo do static head ds, hydraulic head dh via IPC (scupper / drain) e nominal rain load R.
+                            </p>
+                        </div>
+                        <a href="../asce/rain.html" target="_blank" class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5">
+                            <span>Abrir Módulo Dedicado ASCE 7</span> <span>→</span>
+                        </a>
+                    </div>
+                    <div class="form-section !mb-0 p-4">
+                        <iframe id="asce-rain-iframe" src="../asce/rain.html" class="w-full h-[750px] border-0 rounded-xl" title="ASCE Rain Frame"></iframe>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- ABA 4: NEVE & COBERTURA (SNOW & ROOF LIVE)                        -->
+            <!-- ================================================================= -->
+            <section id="panel-snow" style="display: none;" class="space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-5 space-y-6">
+                        <div class="form-section">
+                            <h2 class="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <span>❄️</span> Sobrecargas de Cobertura & Neve / Granizo
+                            </h2>
+                            <p class="text-xs text-gray-600 dark:text-gray-300 mb-4">
+                                No Brasil, a <strong>NBR 6120:2019</strong> fixa a sobrecarga de utilização em telhados e a consideração de acúmulo de granizo em sheds e calhas. Para projetos internacionais nos EUA/Canadá, aplica-se o <strong>ASCE 7 Ch. 7</strong>.
+                            </p>
+
+                            <div class="space-y-4 text-xs">
+                                <div>
+                                    <label for="snow_norm_selector" class="eng-label">Norma Aplicável</label>
+                                    <select id="snow_norm_selector" onchange="onSnowNormSelectorChange()" class="eng-input">
+                                        <option value="nbr" selected>NBR 6120:2019 (Sobrecarga de Telhado & Granizo no Brasil)</option>
+                                        <option value="asce">ASCE 7-16 / 7-22 (Cargas de Neve, Slope & Snow Drifts)</option>
+                                    </select>
+                                </div>
+
+                                <div id="nbr_snow_box" class="space-y-3">
+                                    <div>
+                                        <label for="nbr_roof_usage" class="eng-label">Tipo de Ocupação da Cobertura</label>
+                                        <select id="nbr_roof_usage" onchange="calculateNbrRoofLive()" class="eng-input">
+                                            <option value="manutencao" selected>Cobertura inacessível (apenas manutenção) - 0.25 kN/m²</option>
+                                            <option value="placas_solares">Cobertura com placas solares / utilidades - 0.50 kN/m²</option>
+                                            <option value="terraco">Terraço acessível a pedestres - 1.50 kN/m²</option>
+                                            <option value="heliponto">Áreas técnicas especiais / helipontos - 3.00 kN/m²</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="nbr_hail_toggle" class="eng-label">Acúmulo de Granizo em Calhas/Sheds</label>
+                                        <select id="nbr_hail_toggle" onchange="calculateNbrRoofLive()" class="eng-input">
+                                            <option value="none">Não considerar granizo excepcional</option>
+                                            <option value="low" selected>Granizo moderado em calhas/vales (0.50 kN/m²)</option>
+                                            <option value="high">Região de serra/altitude com histórico severo (1.00 kN/m²)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button type="button" onclick="calculateNbrRoofLive()" class="eng-btn-primary w-full py-2.5 mt-2 flex items-center justify-center gap-2">
+                                    <span>❄️</span> Calcular Sobrecargas de Cobertura
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 space-y-6">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-indigo-500">
+                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Sobrecarga de Utilização</span>
+                                <div class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">
+                                    <span id="kpi-roof-live-val">0.25</span> <span class="text-xs font-normal text-gray-500">kN/m²</span>
+                                </div>
+                                <span class="text-[10px] text-gray-400">NBR 6120 Tabela 10</span>
+                            </div>
+
+                            <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-blue-500">
+                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Carga Total de Projeto</span>
+                                <div class="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                                    <span id="kpi-roof-total-val">0.75</span> <span class="text-xs font-normal text-gray-500">kN/m²</span>
+                                </div>
+                                <span class="text-[10px] text-gray-400">Governante para Cobertura</span>
+                            </div>
+                        </div>
+
+                        <div id="asce-snow-embed-box" style="display:none;" class="form-section !mb-0 p-4">
+                            <iframe src="../asce/snow.html" class="w-full h-[650px] border-0 rounded-xl" title="ASCE Snow Frame"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- ABA 5: TSUNAMI & HIDRODINÂMICA (TSUNAMI & DEBRIS)                 -->
+            <!-- ================================================================= -->
+            <section id="panel-tsunami" style="display: none;" class="space-y-6">
+                <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-sm text-blue-900 dark:text-blue-200">Ações de Tsunami & Detritos (ASCE 7-22 Chapter 6 & Hidráulica Costeira)</span>
+                        <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                            Cálculo de forças hidrostáticas, onda de choque / bore hidrodinâmico e impacto de detritos (madeira, contêineres de carga, rochas e veículos).
+                        </p>
+                    </div>
+                    <a href="../asce/tsunami.html" target="_blank" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5">
+                        <span>Abrir Módulo Dedicado Tsunami</span> <span>→</span>
+                    </a>
+                </div>
+                <div class="form-section !mb-0 p-4">
+                    <iframe id="asce-tsunami-iframe" src="../asce/tsunami.html" class="w-full h-[750px] border-0 rounded-xl" title="ASCE Tsunami Frame"></iframe>
+                </div>
+            </section>
+
+            <!-- ================================================================= -->
+            <!-- ABA 6: COMBINAÇÕES DE AÇÕES & ENVOLTÓRIAS (COMBINATIONS STUDIO)    -->
+            <!-- ================================================================= -->
+            <section id="panel-combos" style="display: none;" class="space-y-6">
+                
+                <!-- Card de Integração: Cargas Transferidas -->
+                <div class="p-4 rounded-xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-950/40 dark:via-indigo-950/40 dark:to-blue-950/40 border border-purple-200 dark:border-purple-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                        <span class="font-bold text-sm text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                            <span>⚖️</span> Motor Universal de Combinações de Ações (NBR 8681 • NBR 6118 • ASCE 7)
+                        </span>
+                        <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                            Gera automaticamente todas as combinações de <strong>ELU (Normal, Especial, Excepcional)</strong> e <strong>ELS (Quase-Permanente, Frequente, Rara)</strong> com regras de exclusão mútua (XOR) e envoltórias críticas.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="importActiveLoadsIntoTable()" class="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5">
+                            <span>📥</span> Puxar Cargas das Outras Abas
+                        </button>
+                        <button type="button" onclick="runUniversalCombinations()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5">
+                            <span>⚡</span> Gerar Combinações
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabela de Casos de Carga -->
+                <div class="form-section !mb-0 overflow-x-auto">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                            <span>📋</span> Casos de Carga Ativos & Coeficientes Normativos
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="addCustomLoadRow()" class="px-2.5 py-1 rounded bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200 font-bold text-xs">
+                                ➕ Adicionar Carga
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-xs text-left text-gray-700 dark:text-gray-300 border-collapse">
+                        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold">
+                            <tr>
+                                <th class="p-2">Nome da Ação</th>
+                                <th class="p-2">Tipo</th>
+                                <th class="p-2">Valor Característico (kN ou kN/m²)</th>
+                                <th class="p-2">γg / γq (ELU)</th>
+                                <th class="p-2">ψ0 (Combinação)</th>
+                                <th class="p-2">ψ1 (Frequente)</th>
+                                <th class="p-2">ψ2 (Quase-Perm.)</th>
+                                <th class="p-2">Grupo XOR</th>
+                                <th class="p-2 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="combos-load-cases-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                            <!-- Inserido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- KPIs e Resumo das Combinações Geradas -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-emerald-500">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Total Combinações ELU</span>
+                        <div class="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                            <span id="kpi-count-elu">0</span>
+                        </div>
+                        <span class="text-[10px] text-gray-400">Dimensionamento Último</span>
+                    </div>
+
+                    <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-blue-500">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Total Combinações ELS</span>
+                        <div class="text-xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                            <span id="kpi-count-els">0</span>
+                        </div>
+                        <span class="text-[10px] text-gray-400">QP, Frequentes e Raras</span>
+                    </div>
+
+                    <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-purple-500">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Envoltória Máxima (ELU)</span>
+                        <div class="text-xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">
+                            <span id="kpi-envelope-max">---</span>
+                        </div>
+                        <span class="text-[10px] text-gray-400">Pior Caso Crítico</span>
+                    </div>
+
+                    <div class="kpi-card form-section !mb-0 p-3 bg-white dark:bg-gray-800 border-l-4 border-amber-500">
+                        <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Envoltória Mínima (ELU)</span>
+                        <div class="text-xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
+                            <span id="kpi-envelope-min">---</span>
+                        </div>
+                        <span class="text-[10px] text-gray-400">Alívio / Sucção Crítica</span>
+                    </div>
+                </div>
+
+                <!-- Tabela de Resultados das Combinações -->
+                <div class="form-section !mb-0 overflow-x-auto">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                            <span>📑</span> Tabela Completa de Combinações & Equações Fatoradas
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="exportCombosExcel()" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1">
+                                <span>📊</span> Exportar Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-xs text-left text-gray-700 dark:text-gray-300 border-collapse">
+                        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-bold">
+                            <tr>
+                                <th class="p-2">ID</th>
+                                <th class="p-2">Estado Limite</th>
+                                <th class="p-2">Ação Principal</th>
+                                <th class="p-2">Equação Fatorada</th>
+                                <th class="p-2 font-extrabold text-blue-600 dark:text-blue-400">Valor Resultante</th>
+                            </tr>
+                        </thead>
+                        <tbody id="combos-results-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-gray-400 italic">
+                                    Clique em "Gerar Combinações" para calcular as combinações ELU e ELS.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- Footer Injection Placeholder -->
+        <div id="footer-placeholder" class="mt-10"></div>
+    </div>
+
+</body>
+</html>

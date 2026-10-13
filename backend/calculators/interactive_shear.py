@@ -6,7 +6,7 @@ import pickle
 
 _cached_subsets = {}
 
-def is_row_in_subset(row, subset_key):
+def is_row_in_subset(row, subset_key, exclude_pc=False):
     """Evaluates whether a database row belongs to the specified subset_key."""
     bd = float(row.get('d (mm)') or row.get('d') or 0.0)
     bbw = float(row.get('bw (mm)') or row.get('b (mm)') or row.get('bw') or 0.0)
@@ -37,6 +37,18 @@ def is_row_in_subset(row, subset_key):
     if not (bd > 0 and rho > 0 and bfck > 0 and ba_d > 0 and bbw > 0 and bV > 0):
         return False
     if np.isnan(bd) or np.isnan(rho) or np.isnan(bfck) or np.isnan(ba_d) or np.isnan(bbw) or np.isnan(bV):
+        return False
+
+    # Prestressed element evaluation
+    is_pc = (str(row.get('Member class (inferred)') or '') == 'PC' or 
+             'PC' in str(row.get('Source sheet') or '') or 
+             row.get('Prestressed') == 1 or row.get('Prestressed') is True)
+
+    effective_exclude_pc = bool(exclude_pc)
+    if isinstance(subset_key, dict) and subset_key.get('exclude_pc'):
+        effective_exclude_pc = True
+
+    if effective_exclude_pc and is_pc and subset_key != 'mat_pc':
         return False
 
     if not subset_key or subset_key in ('ALL DATA', 'all', ''):
@@ -152,16 +164,18 @@ def is_row_in_subset(row, subset_key):
     return True
 
 
-def load_and_clean_data(subset_key='ALL DATA'):
+def load_and_clean_data(subset_key='ALL DATA', exclude_pc=False):
     """
     Loads shear database rows filtered by the requested subset_key.
     Returns clean arrays for Nelder-Mead optimization and analytical C calibration.
     """
     global _cached_subsets
+    eff_exclude_pc = bool(exclude_pc)
     if isinstance(subset_key, dict):
-        cache_key = "dyn_" + str(sorted((k, v) for k, v in subset_key.items() if v is not None and str(v).strip() != ''))
+        eff_exclude_pc = eff_exclude_pc or bool(subset_key.get('exclude_pc'))
+        cache_key = "dyn_" + str(sorted((k, v) for k, v in subset_key.items() if v is not None and str(v).strip() != '')) + f"_expc_{eff_exclude_pc}"
     else:
-        cache_key = str(subset_key or 'ALL DATA').strip()
+        cache_key = str(subset_key or 'ALL DATA').strip() + f"_expc_{eff_exclude_pc}"
 
     if cache_key in _cached_subsets:
         return _cached_subsets[cache_key]
@@ -170,10 +184,10 @@ def load_and_clean_data(subset_key='ALL DATA'):
     if isinstance(all_records, dict) and "error" in all_records:
         return all_records
 
-    filtered = [r for r in all_records if is_row_in_subset(r, subset_key)]
+    filtered = [r for r in all_records if is_row_in_subset(r, subset_key, exclude_pc=eff_exclude_pc)]
     if len(filtered) < 3:
         if subset_key != 'ALL DATA':
-            filtered = [r for r in all_records if is_row_in_subset(r, 'ALL DATA')]
+            filtered = [r for r in all_records if is_row_in_subset(r, 'ALL DATA', exclude_pc=eff_exclude_pc)]
         if len(filtered) < 3:
             return {"error": f"Recorte '{subset_key}' possui poucas amostras válidas ({len(filtered)})."}
 
@@ -184,6 +198,7 @@ def load_and_clean_data(subset_key='ALL DATA'):
     fck = []
     a_d = []
     d_dg = []
+    sigma_cp = []
 
     for r in filtered:
         bd = float(r.get('d (mm)') or 0.0)
@@ -206,6 +221,9 @@ def load_and_clean_data(subset_key='ALL DATA'):
         if cur_ddg <= 0 or np.isnan(cur_ddg):
             cur_ddg = 32.0
 
+        raw_sig = r.get('Sigma_CP') if r.get('Sigma_CP') is not None else r.get('Sigma_CP.1')
+        cur_sigma_cp = max(0.0, float(raw_sig or 0.0))
+
         v_test.append(cur_vu_n)
         bw.append(bbw)
         d.append(bd)
@@ -213,6 +231,7 @@ def load_and_clean_data(subset_key='ALL DATA'):
         fck.append(cur_fck)
         a_d.append(cur_ad)
         d_dg.append(cur_ddg)
+        sigma_cp.append(cur_sigma_cp)
 
     result_dict = {
         'V_test': v_test,
@@ -222,6 +241,7 @@ def load_and_clean_data(subset_key='ALL DATA'):
         'fck': fck,
         'a_d': a_d,
         'd_dg': d_dg,
+        'sigma_cp': sigma_cp,
         'subset': subset_key,
         'count': len(filtered)
     }
@@ -287,14 +307,20 @@ def get_all_codes_dataset():
                 
                 v_test = clean_row.get('Vu (kN)', 0)
                 
+                # Prestressing axial stress (positive for compression)
+                raw_sig = clean_row.get('Sigma_CP') if clean_row.get('Sigma_CP') is not None else clean_row.get('Sigma_CP.1')
+                sigma_cp = max(0.0, float(raw_sig or 0.0))
+                clean_row['Sigma_CP'] = float(sigma_cp)
+                
                 if bw and d and fck and v_test and v_test > 0:
-                    v_mc1 = osc.calc_mc2010_level_1(bw, d, fck)
-                    v_mc2 = osc.calc_mc2010_level_2(bw, d, rho, fck, a_d, d_dg)
-                    v_ec2_04 = osc.calc_ec2_2004(bw, d, rho, fck)
-                    v_ec2_23 = osc.calc_ec2_2023(bw, d, rho, fck, a_d, d_dg)
-                    v_aci_14 = osc.calc_aci318_14(bw, d, fck)
-                    v_aci_19 = osc.calc_aci318_19(bw, d, rho, fck)
-                    v_nbr = osc.calc_nbr6118(bw, d, rho, fck)
+                    v_mc1 = osc.calc_mc2010_level_1(bw, d, fck, sigma_cp=sigma_cp)
+                    v_mc2 = osc.calc_mc2010_level_2(bw, d, rho, fck, a_d, d_dg, sigma_cp=sigma_cp)
+                    v_ec2_04 = osc.calc_ec2_2004(bw, d, rho, fck, sigma_cp=sigma_cp)
+                    v_ec2_23 = osc.calc_ec2_2023(bw, d, rho, fck, a_d, d_dg, sigma_cp=sigma_cp)
+                    v_aci_14 = osc.calc_aci318_14(bw, d, fck, sigma_cp=sigma_cp)
+                    v_aci_19 = osc.calc_aci318_19(bw, d, rho, fck, sigma_cp=sigma_cp)
+                    v_aci_25 = osc.calc_aci318_25(bw, d, rho, fck, sigma_cp=sigma_cp)
+                    v_nbr = osc.calc_nbr6118(bw, d, rho, fck, sigma_cp=sigma_cp)
                     
                     if v_mc1 and v_mc1 > 0: clean_row['A_MC2010_L1'] = float(v_test / v_mc1)
                     if v_mc2 and v_mc2 > 0: clean_row['A_MC2010_L2'] = float(v_test / v_mc2)
@@ -302,6 +328,7 @@ def get_all_codes_dataset():
                     if v_ec2_23 and v_ec2_23 > 0: clean_row['A_EC2_2023'] = float(v_test / v_ec2_23)
                     if v_aci_14 and v_aci_14 > 0: clean_row['A_ACI_14'] = float(v_test / v_aci_14)
                     if v_aci_19 and v_aci_19 > 0: clean_row['A_ACI_19'] = float(v_test / v_aci_19)
+                    if v_aci_25 and v_aci_25 > 0: clean_row['A_ACI_25'] = float(v_test / v_aci_25)
                     if v_nbr and v_nbr > 0: clean_row['A_NBR6118'] = float(v_test / v_nbr)
             except Exception as e:
                 pass # skip if math fails
@@ -326,21 +353,24 @@ def get_lowess(x, y, frac=0.3):
         y = np.asarray(y, dtype=float)
         valid = np.isfinite(x) & np.isfinite(y)
         x, y = x[valid], y[valid]
-        if len(x) < 3:
+        n = len(x)
+        if n < 5:
             return []
-            
+
         sort_idx = np.argsort(x)
         x, y = x[sort_idx], y[sort_idx]
-        
-        num_points = min(100, len(x))
+
+        num_points = min(100, n)
         eval_x = np.linspace(x[0], x[-1], num_points)
-        n = len(x)
-        k = max(4, int(np.ceil(frac * n)))
-        
+        k = min(n, max(3, int(np.ceil(frac * n))))
+
         eval_y = []
         for x0 in eval_x:
             dists = np.abs(x - x0)
-            idx_k = np.argpartition(dists, k-1)[:k]
+            if k >= n:
+                idx_k = np.arange(n)
+            else:
+                idx_k = np.argpartition(dists, k - 1)[:k]
             sub_dists = dists[idx_k]
             d_max = np.max(sub_dists)
             if d_max == 0:
@@ -370,18 +400,17 @@ def get_lowess(x, y, frac=0.3):
         print(f"LOWESS Error: {e}")
         return []
 
-def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterion='cov', subset_key='ALL DATA'):
+def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterion='cov', subset_key='ALL DATA', use_deff=False, exclude_pc=False):
     """
     Fits the empirical shear formula exponents using SciPy Nelder-Mead on the requested subset_key.
     
-    criterion:
-      - 'cov': Calibrates around pure COV (Coefficient of Variation) to find lowest scatter.
-               STRICT BEHAVIOR: Constant C is NOT varied at all. C remains fixed at its current value.
-      - 'mean': Calibrates around the Mean Safety Margin (Target Safety).
-                If C is free: adjusts C to achieve the target mean exactly.
-                If C is locked: calibrates free exponents so that the model mean converges to target_safety.
+    bw (epsilon) and d (zeta) are fixed physical constants = 1.0 (nominal shear area bw * d).
+    use_deff: when True, applies FIB Model Code / EC2 (2023) kinematic constraint:
+              a_cs = max(a, d) >= d
+              d_eff = min(d, sqrt((a_cs / 4) * d))
+              (d_dg / d_eff)^alpha instead of (d_dg / d)^alpha.
     """
-    data = load_and_clean_data(subset_key=subset_key)
+    data = load_and_clean_data(subset_key=subset_key, exclude_pc=exclude_pc)
     if "error" in data:
         return data
 
@@ -392,6 +421,8 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
     fck = np.array(data['fck'])
     a_d = np.array(data['a_d'])
     d_dg = np.array(data['d_dg'])
+
+    sigma_cp = np.array(data.get('sigma_cp', np.zeros_like(V_test)), dtype=float)
 
     if locked is None:
         locked = {}
@@ -404,8 +435,9 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
         'beta': 0.18,
         'gamma': 0.54,
         'delta': -0.24,
-        'epsilon': 0.90,
-        'zeta': 1.32
+        'mu': 0.15,
+        'epsilon': 1.0,
+        'zeta': 1.0
     }
     
     vals = {}
@@ -415,77 +447,101 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
             vals[k] = float(v) if v is not None else defaults[k]
         except (ValueError, TypeError):
             vals[k] = defaults[k]
+    # Enforce constant physical nominal area exponents
+    vals['epsilon'] = 1.0
+    vals['zeta'] = 1.0
+
+    # Prestress contribution force V_p (in N) = mu * min(sigma_cp, 0.2*fck) * bw * d
+    mu_val = float(vals.get('mu', 0.15))
+    sig_lim = np.minimum(sigma_cp, 0.2 * fck)
+    V_p = mu_val * sig_lim * bw * d
 
     criterion_mode = str(criterion or 'cov').lower().strip()
     is_cov_mode = (criterion_mode == 'cov' or 'cov' in criterion_mode or 'dispersao' in criterion_mode)
 
     c_locked = bool(locked.get('C', False))
-    exponent_keys = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta']
+    # Epsilon and Zeta are strictly constants = 1.0 (never varied in optimization)
+    exponent_keys = ['alpha', 'beta', 'gamma', 'delta']
     free_exponents = [k for k in exponent_keys if not bool(locked.get(k, False))]
+
+    # Effective depth with CSCT / EC2-2023 kinematic constraint
+    if use_deff:
+        acs = np.maximum(a_d * d, d)
+        d_eff = np.where(acs < 4.0 * d, np.sqrt((acs / 4.0) * d), d)
+        log_ddg_d = np.log(d_dg / d_eff)
+    else:
+        log_ddg_d = np.log(d_dg / d)
+
+    log_nominal_area = np.log(bw) + np.log(d)
 
     # Case 1: Everything is locked
     if not free_exponents and (c_locked or is_cov_mode):
-        log_ddg_d = np.log(d_dg / d)
         log_rho = np.log(100.0 * rho)
         log_fck = np.log(fck)
         log_ad = np.log(a_d)
-        log_bw = np.log(bw)
-        log_d = np.log(d)
         log_v_no_c = (vals['alpha'] * log_ddg_d + vals['beta'] * log_rho +
                       vals['gamma'] * log_fck + vals['delta'] * log_ad +
-                      vals['epsilon'] * log_bw + vals['zeta'] * log_d)
+                      log_nominal_area)
         V_calc_no_c = np.exp(log_v_no_c)
-        final_ratio = V_test / (vals['C'] * V_calc_no_c)
+        V_calc_tot = vals['C'] * V_calc_no_c + V_p
+        final_ratio = V_test / np.maximum(1e-6, V_calc_tot)
         cov = float(np.std(final_ratio) / np.mean(final_ratio)) * 100.0
         out = {k: float(vals[k]) for k in defaults}
         out['_cov'] = round(cov, 2)
         out['_mean'] = round(float(np.mean(final_ratio)), 3)
         out['_criterion'] = criterion_mode
+        out['_use_deff'] = bool(use_deff)
         return out
 
     # Case 2: Only C is free (all shape exponents are locked) in Mean mode
     if not free_exponents and not c_locked and not is_cov_mode:
-        log_ddg_d = np.log(d_dg / d)
         log_rho = np.log(100.0 * rho)
         log_fck = np.log(fck)
         log_ad = np.log(a_d)
-        log_bw = np.log(bw)
-        log_d = np.log(d)
         log_v_no_c = (vals['alpha'] * log_ddg_d + vals['beta'] * log_rho +
                       vals['gamma'] * log_fck + vals['delta'] * log_ad +
-                      vals['epsilon'] * log_bw + vals['zeta'] * log_d)
+                      log_nominal_area)
         V_calc_no_c = np.exp(log_v_no_c)
-        mean_r_no_c = float(np.mean(V_test / V_calc_no_c))
-        vals['C'] = float(mean_r_no_c / target_safety) if target_safety > 0 else vals['C']
+        if np.all(V_p == 0):
+            mean_r_no_c = float(np.mean(V_test / V_calc_no_c))
+            vals['C'] = float(mean_r_no_c / target_safety) if target_safety > 0 else vals['C']
+        else:
+            from scipy.optimize import root_scalar
+            def obj_c(c_cand):
+                if c_cand <= 0: return 1e6
+                return float(np.mean(V_test / (c_cand * V_calc_no_c + V_p)) - target_safety)
+            c_guess = float(np.mean(V_test / (V_calc_no_c + V_p)) / target_safety) if target_safety > 0 else vals['C']
+            try:
+                sol = root_scalar(obj_c, bracket=[0.001, 10.0], method='brentq')
+                vals['C'] = float(sol.root)
+            except Exception:
+                vals['C'] = max(0.01, c_guess)
 
-        final_ratio = V_test / (vals['C'] * V_calc_no_c)
+        V_calc_tot = vals['C'] * V_calc_no_c + V_p
+        final_ratio = V_test / np.maximum(1e-6, V_calc_tot)
         cov = float(np.std(final_ratio) / np.mean(final_ratio)) * 100.0
         out = {k: float(vals[k]) for k in defaults}
         out['_cov'] = round(cov, 2)
         out['_mean'] = round(float(np.mean(final_ratio)), 3)
         out['_criterion'] = criterion_mode
+        out['_use_deff'] = bool(use_deff)
         return out
 
     # Case 3: Free exponents to optimize via Nelder-Mead
     log_V_test = np.log(V_test)
-    log_ddg_d = np.log(d_dg / d)
     log_rho = np.log(100.0 * rho)
     log_fck = np.log(fck)
     log_ad = np.log(a_d)
-    log_bw = np.log(bw)
-    log_d = np.log(d)
 
     log_terms = {
         'alpha': log_ddg_d,
         'beta': log_rho,
         'gamma': log_fck,
-        'delta': log_ad,
-        'epsilon': log_bw,
-        'zeta': log_d
+        'delta': log_ad
     }
 
-    # Fixed base sum from locked shape exponents
-    base_log_v = np.zeros_like(log_d)
+    # Fixed base sum starts with nominal shear area log(bw) + log(d)
+    base_log_v = log_nominal_area.copy()
     for k in exponent_keys:
         if k not in free_exponents:
             base_log_v += vals[k] * log_terms[k]
@@ -496,11 +552,13 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
     if is_cov_mode:
         # MODE 1: PURE COV OPTIMIZATION
         # Constant C is NOT varied! C remains fixed at its current value.
+        c_eval = vals['C']
         def objective(x):
             log_vc = base_log_v.copy()
             for matrix, val in zip(free_log_matrices, x):
                 log_vc = log_vc + val * matrix
-            ratio = np.exp(log_V_test - log_vc)
+            v_calc = c_eval * np.exp(log_vc) + V_p
+            ratio = V_test / np.maximum(1e-6, v_calc)
             mean_ratio = np.mean(ratio)
             if mean_ratio <= 1e-6 or np.isnan(mean_ratio):
                 return 1e6
@@ -523,13 +581,13 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
         if c_locked:
             # User wants target mean with a fixed locked C: exponents must shift the mean
             c_eval = vals['C']
-            log_c = np.log(c_eval) if c_eval > 0 else 0.0
 
             def objective(x):
-                log_vc = base_log_v + log_c
+                log_vc = base_log_v.copy()
                 for matrix, val in zip(free_log_matrices, x):
                     log_vc = log_vc + val * matrix
-                ratio = np.exp(log_V_test - log_vc)
+                v_calc = c_eval * np.exp(log_vc) + V_p
+                ratio = V_test / np.maximum(1e-6, v_calc)
                 mean_ratio = np.mean(ratio)
                 if mean_ratio <= 1e-6 or np.isnan(mean_ratio):
                     return 1e6
@@ -550,11 +608,13 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
 
         else:
             # C is free in Mean mode: optimize exponents for lowest COV, then adjust C to target mean
+            c_eval = vals['C']
             def objective(x):
                 log_vc = base_log_v.copy()
                 for matrix, val in zip(free_log_matrices, x):
                     log_vc = log_vc + val * matrix
-                ratio = np.exp(log_V_test - log_vc)
+                v_calc = c_eval * np.exp(log_vc) + V_p
+                ratio = V_test / np.maximum(1e-6, v_calc)
                 mean_ratio = np.mean(ratio)
                 if mean_ratio <= 1e-6 or np.isnan(mean_ratio):
                     return 1e6
@@ -570,10 +630,24 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
             final_log_vc = base_log_v.copy()
             for matrix, val in zip(free_log_matrices, res.x):
                 final_log_vc += val * matrix
-            mean_r_no_c = float(np.mean(np.exp(log_V_test - final_log_vc)))
-            vals['C'] = float(mean_r_no_c / target_safety) if target_safety > 0 else vals['C']
+            V_calc_no_c = np.exp(final_log_vc)
+            if np.all(V_p == 0):
+                mean_r_no_c = float(np.mean(V_test / V_calc_no_c))
+                vals['C'] = float(mean_r_no_c / target_safety) if target_safety > 0 else vals['C']
+            else:
+                from scipy.optimize import root_scalar
+                def obj_c(c_cand):
+                    if c_cand <= 0: return 1e6
+                    return float(np.mean(V_test / (c_cand * V_calc_no_c + V_p)) - target_safety)
+                c_guess = float(np.mean(V_test / (V_calc_no_c + V_p)) / target_safety) if target_safety > 0 else vals['C']
+                try:
+                    sol = root_scalar(obj_c, bracket=[0.001, 10.0], method='brentq')
+                    vals['C'] = float(sol.root)
+                except Exception:
+                    vals['C'] = max(0.01, c_guess)
 
-    final_ratio = np.exp(log_V_test - (final_log_vc + np.log(max(1e-6, vals['C']))))
+    final_calc = vals['C'] * np.exp(final_log_vc) + V_p
+    final_ratio = V_test / np.maximum(1e-6, final_calc)
     final_cov = float(np.std(final_ratio) / np.mean(final_ratio)) * 100.0
     final_mean = float(np.mean(final_ratio))
 
@@ -583,15 +657,16 @@ def run_optimization(target_safety=1.0, locked=None, current_vals=None, criterio
     out['_criterion'] = criterion_mode
     out['_subset'] = data.get('subset', subset_key)
     out['_count'] = int(data.get('count', len(V_test)))
+    out['_use_deff'] = bool(use_deff)
     return out
 
 
-def calibrate_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL DATA'):
+def calibrate_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL DATA', use_deff=False, exclude_pc=False):
     """
     Analytically computes the exact multiplier C so that Mean(V_test / V_calc) = target_safety
     specifically for the active subset_key, without modifying any exponents and leaving the COV 100% unchanged.
     """
-    data = load_and_clean_data(subset_key=subset_key)
+    data = load_and_clean_data(subset_key=subset_key, exclude_pc=exclude_pc)
     if "error" in data:
         return data
 
@@ -602,6 +677,7 @@ def calibrate_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL D
     fck = np.array(data['fck'])
     a_d = np.array(data['a_d'])
     d_dg = np.array(data['d_dg'])
+    sigma_cp = np.array(data.get('sigma_cp', np.zeros_like(V_test)), dtype=float)
 
     defaults = {
         'C': 0.22,
@@ -609,8 +685,9 @@ def calibrate_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL D
         'beta': 0.18,
         'gamma': 0.54,
         'delta': -0.24,
-        'epsilon': 0.90,
-        'zeta': 1.32
+        'mu': 0.15,
+        'epsilon': 1.0,
+        'zeta': 1.0
     }
     vals = {}
     for k in defaults:
@@ -619,22 +696,47 @@ def calibrate_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL D
             vals[k] = float(v) if v is not None else defaults[k]
         except (ValueError, TypeError):
             vals[k] = defaults[k]
+    vals['epsilon'] = 1.0
+    vals['zeta'] = 1.0
 
-    log_ddg_d = np.log(d_dg / d)
+    mu_val = float(vals.get('mu', 0.15))
+    sig_lim = np.minimum(sigma_cp, 0.2 * fck)
+    V_p = mu_val * sig_lim * bw * d
+
+    if use_deff:
+        acs = np.maximum(a_d * d, d)
+        d_eff = np.where(acs < 4.0 * d, np.sqrt((acs / 4.0) * d), d)
+        log_ddg_d = np.log(d_dg / d_eff)
+    else:
+        log_ddg_d = np.log(d_dg / d)
+
     log_rho = np.log(100.0 * rho)
     log_fck = np.log(fck)
     log_ad = np.log(a_d)
-    log_bw = np.log(bw)
-    log_d = np.log(d)
+    log_nominal_area = np.log(bw) + np.log(d)
 
     log_v_no_c = (vals['alpha'] * log_ddg_d + vals['beta'] * log_rho +
                   vals['gamma'] * log_fck + vals['delta'] * log_ad +
-                  vals['epsilon'] * log_bw + vals['zeta'] * log_d)
+                  log_nominal_area)
     V_calc_no_c = np.exp(log_v_no_c)
-    mean_r_no_c = float(np.mean(V_test / V_calc_no_c))
-    new_c = float(mean_r_no_c / target_safety) if target_safety > 0 else vals['C']
 
-    final_ratio = V_test / (new_c * V_calc_no_c)
+    if np.all(V_p == 0):
+        mean_r_no_c = float(np.mean(V_test / V_calc_no_c))
+        new_c = float(mean_r_no_c / target_safety) if target_safety > 0 else vals['C']
+    else:
+        from scipy.optimize import root_scalar
+        def obj_c(c_cand):
+            if c_cand <= 0: return 1e6
+            return float(np.mean(V_test / (c_cand * V_calc_no_c + V_p)) - target_safety)
+        c_guess = float(np.mean(V_test / (V_calc_no_c + V_p)) / target_safety) if target_safety > 0 else vals['C']
+        try:
+            sol = root_scalar(obj_c, bracket=[0.001, 10.0], method='brentq')
+            new_c = float(sol.root)
+        except Exception:
+            new_c = max(0.01, c_guess)
+
+    final_calc = new_c * V_calc_no_c + V_p
+    final_ratio = V_test / np.maximum(1e-6, final_calc)
     cov = float(np.std(final_ratio) / np.mean(final_ratio)) * 100.0
     mean_val = float(np.mean(final_ratio))
 
@@ -643,7 +745,8 @@ def calibrate_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL D
         'cov': round(cov, 2),
         'mean': round(mean_val, 3),
         'subset': data.get('subset', subset_key),
-        'count': int(data.get('count', len(V_test)))
+        'count': int(data.get('count', len(V_test))),
+        '_use_deff': bool(use_deff)
     }
 
 
@@ -721,6 +824,8 @@ def batch_compare_lowess(live_curve, other_curves_dict):
     
     results = {}
     for code_name, curve in other_curves_dict.items():
+        if not code_name or not str(code_name).strip() or code_name == 'BASELINE_MODEL' or 'Referência' in str(code_name):
+            continue
         if not curve or len(curve) < 2:
             continue
             
@@ -792,3 +897,249 @@ def batch_compare_lowess(live_curve, other_curves_dict):
         }
         
     return results
+
+
+def calculate_shear_correlation_analysis(subset_key='ALL DATA', current_params=None, use_deff=False, exclude_pc=False):
+    """
+    Computes a comprehensive statistical correlation analysis:
+    1. Correlation of model residuals/ratios (Live Model and Official Codes) with physical variables (d, a/d, rho, fck, bw, bwd, ddg, V_test, tau_u).
+    2. Complete inter-variable correlation matrix (Pearson and Spearman).
+    3. Multicollinearity metrics (VIF).
+    4. Descriptive statistics.
+    5. Formatted LaTeX matrix table for thesis/dissertation export.
+    """
+    import math
+    import scipy.stats as stats
+
+    data = load_and_clean_data(subset_key=subset_key, exclude_pc=exclude_pc)
+    if "error" in data:
+        return data
+
+    d_arr = np.array(data['d'], dtype=float)
+    ad_arr = np.array(data['a_d'], dtype=float)
+    rho_arr = np.array(data['rho'], dtype=float) * 100.0  # in %
+    fck_arr = np.array(data['fck'], dtype=float)
+    bw_arr = np.array(data['bw'], dtype=float)
+    bwd_arr = bw_arr / np.maximum(1e-3, d_arr)
+    ddg_arr = np.array(data['d_dg'], dtype=float)
+    v_test = np.array(data['V_test'], dtype=float)  # in N
+    tau_u = v_test / np.maximum(1e-3, bw_arr * d_arr)  # in MPa
+    n_count = len(d_arr)
+
+    # Defaults
+    defaults = {
+        'C': 0.22, 'alpha': 0.37, 'beta': 0.18, 'gamma': 0.54,
+        'delta': -0.24, 'mu': 0.15, 'epsilon': 1.0, 'zeta': 1.0
+    }
+    vals = {}
+    disabled = {}
+    if current_params:
+        for k in defaults:
+            p_obj = current_params.get(k)
+            if isinstance(p_obj, dict):
+                vals[k] = float(p_obj.get('val', defaults[k]))
+                disabled[k] = bool(p_obj.get('disabled', False))
+            elif p_obj is not None:
+                try:
+                    vals[k] = float(p_obj)
+                except Exception:
+                    vals[k] = defaults[k]
+                disabled[k] = False
+            else:
+                vals[k] = defaults[k]
+                disabled[k] = False
+    else:
+        vals = defaults.copy()
+        disabled = {k: False for k in defaults}
+    vals['epsilon'] = 1.0
+    vals['zeta'] = 1.0
+
+    sigma_cp_arr = np.array(data.get('sigma_cp', np.zeros_like(d_arr)), dtype=float)
+
+    # Live model V_calc
+    c_factor = 1.0 if disabled.get('C') else vals['C']
+    if use_deff:
+        acs_arr = np.maximum(ad_arr * d_arr, d_arr)
+        d_eff_arr = np.where(acs_arr < 4.0 * d_arr, np.sqrt((acs_arr / 4.0) * d_arr), d_arr)
+        se_factor = 1.0 if disabled.get('alpha') else (ddg_arr / np.maximum(1e-3, d_eff_arr)) ** vals['alpha']
+    else:
+        se_factor = 1.0 if disabled.get('alpha') else (ddg_arr / np.maximum(1e-3, d_arr)) ** vals['alpha']
+
+    rho_factor = 1.0 if disabled.get('beta') else (rho_arr) ** vals['beta']
+    fck_factor = 1.0 if disabled.get('gamma') else (fck_arr) ** vals['gamma']
+    ad_factor = 1.0 if disabled.get('delta') else (ad_arr) ** vals['delta']
+
+    # Prestress contribution
+    mu_factor = 0.0 if disabled.get('mu') else float(vals.get('mu', 0.15))
+    sig_lim_arr = np.minimum(sigma_cp_arr, 0.2 * fck_arr)
+    vc_pc = mu_factor * sig_lim_arr
+
+    vc = c_factor * se_factor * rho_factor * fck_factor * ad_factor + vc_pc
+    # Nominal shear area bw * d
+    v_calc_n = vc * bw_arr * d_arr
+    r_live = np.where(v_calc_n > 0, v_test / np.maximum(1e-6, v_calc_n), np.nan)
+
+    # Variables dict
+    var_dict = {
+        'd': {'label': 'Altura Útil (d)', 'unit': 'mm', 'data': d_arr, 'coef': 'α'},
+        'a_d': {'label': 'Vão Cisalhante (a/d)', 'unit': '', 'data': ad_arr, 'coef': 'δ'},
+        'rho_w': {'label': 'Taxa de Armadura (ρw)', 'unit': '%', 'data': rho_arr, 'coef': 'β'},
+        'fck': {'label': 'Resistência Concreto (fck)', 'unit': 'MPa', 'data': fck_arr, 'coef': 'γ'},
+        'sigma_cp': {'label': 'Tensão Protensão (σ_cp)', 'unit': 'MPa', 'data': sigma_cp_arr, 'coef': 'μ'},
+        'bw': {'label': 'Largura da Alma (bw)', 'unit': 'mm', 'data': bw_arr, 'coef': 'ε'},
+        'bwd': {'label': 'Razão Seção (bw/d)', 'unit': '', 'data': bwd_arr, 'coef': 'bw/d'},
+        'V_test': {'label': 'Força Última (Vu)', 'unit': 'kN', 'data': v_test / 1000.0, 'coef': ''},
+        'tau_u': {'label': 'Tensão Nominal (τu)', 'unit': 'MPa', 'data': tau_u, 'coef': ''},
+        'R_Live': {'label': 'Modelo Proposto (R_Live)', 'unit': '', 'data': r_live, 'coef': 'Model'}
+    }
+
+    def safe_f(x):
+        return 0.0 if (x is None or math.isnan(x) or math.isinf(x)) else float(x)
+
+    # Descriptive statistics
+    stats_summary = {}
+    for vk, vinfo in var_dict.items():
+        arr = vinfo['data']
+        valid = arr[np.isfinite(arr)]
+        if len(valid) > 0:
+            stats_summary[vk] = {
+                'label': vinfo['label'],
+                'unit': vinfo['unit'],
+                'mean': safe_f(np.mean(valid)),
+                'std': safe_f(np.std(valid, ddof=1) if len(valid) > 1 else 0.0),
+                'median': safe_f(np.median(valid)),
+                'min': safe_f(np.min(valid)),
+                'max': safe_f(np.max(valid)),
+                'skew': safe_f(stats.skew(valid) if len(valid) > 2 else 0.0),
+                'count': len(valid)
+            }
+
+    # Inter-variable correlation matrix
+    matrix_keys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live']
+    pearson_matrix = {}
+    spearman_matrix = {}
+    pvalues_matrix = {}
+
+    for k1 in matrix_keys:
+        pearson_matrix[k1] = {}
+        spearman_matrix[k1] = {}
+        pvalues_matrix[k1] = {}
+        for k2 in matrix_keys:
+            if k1 == k2:
+                pearson_matrix[k1][k2] = 1.0
+                spearman_matrix[k1][k2] = 1.0
+                pvalues_matrix[k1][k2] = 0.0
+                continue
+            arr1 = var_dict[k1]['data']
+            arr2 = var_dict[k2]['data']
+            mask = np.isfinite(arr1) & np.isfinite(arr2)
+            sub1, sub2 = arr1[mask], arr2[mask]
+            if len(sub1) > 2:
+                try:
+                    pr, pp = stats.pearsonr(sub1, sub2)
+                    sr, sp = stats.spearmanr(sub1, sub2)
+                    pearson_matrix[k1][k2] = safe_f(pr)
+                    spearman_matrix[k1][k2] = safe_f(sr)
+                    pvalues_matrix[k1][k2] = safe_f(pp)
+                except Exception:
+                    pearson_matrix[k1][k2] = 0.0
+                    spearman_matrix[k1][k2] = 0.0
+                    pvalues_matrix[k1][k2] = 1.0
+            else:
+                pearson_matrix[k1][k2] = 0.0
+                spearman_matrix[k1][k2] = 0.0
+                pvalues_matrix[k1][k2] = 1.0
+
+    # Predictors VIF
+    pred_keys = ['d', 'a_d', 'rho_w', 'fck', 'bw']
+    vif_dict = {}
+    try:
+        c_sub = np.array([[pearson_matrix[k1][k2] for k2 in pred_keys] for k1 in pred_keys])
+        inv_c = np.linalg.inv(c_sub)
+        for i, pk in enumerate(pred_keys):
+            vif_dict[pk] = safe_f(inv_c[i, i])
+    except Exception:
+        for pk in pred_keys:
+            vif_dict[pk] = 1.0
+
+    # Model Bias Diagnostics against Physical Variables
+    bias_eval = {}
+    for vk in ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd']:
+        pr = pearson_matrix['R_Live'].get(vk, 0.0)
+        sr = spearman_matrix['R_Live'].get(vk, 0.0)
+        pp = pvalues_matrix['R_Live'].get(vk, 1.0)
+        abs_r = abs(pr)
+        if abs_r < 0.05:
+            severity = 'excelente'
+            desc = 'Sem viés residual (|r| < 0.05)'
+            action = 'Expoente perfeitamente calibrado.'
+        elif abs_r < 0.15:
+            severity = 'leve'
+            desc = f'Viés leve ({"+" if pr > 0 else "-"}{abs_r:.3f})'
+            action = 'Leve ajuste nos expoentes pode melhorar a ortogonalidade.'
+        elif abs_r < 0.30:
+            severity = 'moderado'
+            desc = f'Viés moderado ({"+" if pr > 0 else "-"}{abs_r:.3f})'
+            action = 'Recomenda-se recalibrar o expoente correspondente.'
+        else:
+            severity = 'severo'
+            desc = f'Viés acentuado ({"+" if pr > 0 else "-"}{abs_r:.3f})'
+            action = 'A formulação apresenta distorção sistemática nesta variável.'
+
+        bias_eval[vk] = {
+            'pearson': pr,
+            'spearman': sr,
+            'p_value': pp,
+            'significant': (pp < 0.05),
+            'severity': severity,
+            'desc': desc,
+            'action': action,
+            'label': var_dict[vk]['label'],
+            'coef': var_dict[vk]['coef']
+        }
+
+    # Residual Orthogonality Index (ROI)
+    sq_sum = sum(bias_eval[k]['pearson']**2 for k in ['d', 'a_d', 'rho_w', 'fck', 'bw'])
+    roi = max(0.0, min(100.0, (1.0 - math.sqrt(sq_sum / 5.0)) * 100.0))
+
+    # Generate LaTeX code
+    latex_rows = []
+    latex_cols = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'V_test', 'tau_u', 'R_Live']
+    latex_headers = [var_dict[k]['label'].split('(')[0].strip() for k in latex_cols]
+    header_str = " & ".join(["Variável"] + [f"${var_dict[k]['label'].split('(')[1].replace(')', '')}$" if '(' in var_dict[k]['label'] else k for k in latex_cols]) + " \\\\"
+    
+    for rk in latex_cols:
+        r_label = f"${var_dict[rk]['label'].split('(')[1].replace(')', '')}$" if '(' in var_dict[rk]['label'] else rk
+        vals_str = " & ".join([f"{pearson_matrix[rk][ck]:.3f}" for ck in latex_cols])
+        latex_rows.append(f"{r_label} & {vals_str} \\\\")
+        
+    latex_code = (
+        "\\begin{table}[htbp]\n"
+        "\\centering\n"
+        f"\\caption{{Matriz de Correlação de Pearson das Variáveis Experimentais e Razão de Cortante ($N = {n_count}$)}}\n"
+        "\\label{tab:shear_correlation_matrix}\n"
+        "\\begin{tabular}{l" + "c" * len(latex_cols) + "}\n"
+        "\\toprule\n"
+        f"{header_str}\n"
+        "\\midrule\n" +
+        "\n".join(latex_rows) + "\n"
+        "\\bottomrule\n"
+        "\\end{tabular}\n"
+        "\\end{table}"
+    )
+
+    return {
+        'count': n_count,
+        'subset': subset_key,
+        'roi': round(roi, 1),
+        'bias_evaluation': bias_eval,
+        'pearson_matrix': pearson_matrix,
+        'spearman_matrix': spearman_matrix,
+        'pvalues_matrix': pvalues_matrix,
+        'vif': vif_dict,
+        'descriptive_stats': stats_summary,
+        'matrix_keys': matrix_keys,
+        'labels': {k: var_dict[k]['label'] for k in matrix_keys},
+        'latex_code': latex_code
+    }
+

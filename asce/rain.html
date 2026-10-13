@@ -59,6 +59,19 @@
             </div>
         </div>
 
+        <!-- Banner de Suíte Unificada -->
+        <div class="mb-5 p-3 rounded-xl bg-gradient-to-r from-cyan-50 via-blue-50 to-indigo-50 dark:from-cyan-950/40 dark:via-blue-950/40 dark:to-indigo-950/40 border border-cyan-200 dark:border-cyan-800 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                <span class="text-base">✨</span>
+                <span>
+                    <strong>Central Unificada de Cargas:</strong> Acesse a nova <a href="../gui/loads_studio.html?tab=rain" class="font-bold text-cyan-600 dark:text-cyan-400 underline hover:text-cyan-800">Central de Cargas & Ações Estruturais</a> com cálculo de chuva e empoçamento segundo a <strong>NBR 6120:2019 / NBR 10844</strong> e ASCE 7 Ch. 8.
+                </span>
+            </div>
+            <a href="../gui/loads_studio.html?tab=rain" class="font-bold text-[11px] px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-700 text-white shrink-0 shadow-xs">
+                Abrir Central Unificada →
+            </a>
+        </div>
+
         <main id="rain-calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Column 1 -->
@@ -114,7 +127,7 @@
                     <div class="form-section">
                         <h2>Drainage System</h2>
                         <div class="flex items-center mb-4">
-                            <label for="dh_auto_calc_toggle" class="text-sm font-medium mr-3">Calculate d<sub>h</sub>
+                            <label for="dh_auto_calc_toggle" class="text-sm font-medium mr-3">Calculate $d_h$
                                 automatically?</label>
                             <input type="checkbox" id="dh_auto_calc_toggle" class="h-5 w-5 rounded" checked
                                 data-ui-toggle-controller data-ui-toggle-target="#dh_auto_calc_container"
@@ -133,7 +146,7 @@
                                 <div id="scupper_inputs_container">
                                     <div id="scupper_inputs">
                                         <label for="rain_scupper_width" class="eng-label">Scupper
-                                            Width (L)</label>
+                                            Width ($L$) <span class="rain-d-unit text-xs text-blue-600 dark:text-blue-400">[in]</span></label>
                                         <input type="number" id="rain_scupper_width" value="12"
                                             data-ui-toggle-target-for="rain_drain_type"
                                             data-ui-toggle-condition-value="scupper">
@@ -142,7 +155,7 @@
                                 <div id="drain_inputs_container" class="hidden">
                                     <div id="drain_inputs">
                                         <label for="rain_drain_diameter" class="eng-label">Drain
-                                            Diameter (d)</label>
+                                            Diameter ($d$) <span class="rain-d-unit text-xs text-blue-600 dark:text-blue-400">[in]</span></label>
                                         <input type="number" id="rain_drain_diameter" value="4"
                                             data-ui-toggle-target-for="rain_drain_type"
                                             data-ui-toggle-condition-value="drain">
@@ -151,7 +164,7 @@
                             </div>
                         </div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">
-                            Note: The rainfall intensity (i) is used to calculate the hydraulic head (d<sub>h</sub>)
+                            Note: The rainfall intensity ($i$) is used to calculate the hydraulic head ($d_h$)
                             based on the roof's tributary area and secondary drainage system capacity, per ASCE 7 and
                             the International Plumbing Code.
                         </p>
@@ -172,12 +185,12 @@
                             </div>
                             <div>
                                 <label for="rain_tributary_area" class="eng-label">Tributary Area
-                                    (A)</label>
+                                    ($A$) <span class="rain-a-unit text-xs text-blue-600 dark:text-blue-400">[ft²]</span></label>
                                 <input type="number" id="rain_tributary_area" value="1000">
                             </div>
                             <div>
                                 <label for="rain_intensity" class="eng-label">Rainfall Intensity
-                                    (i)</label>
+                                    ($i$) <span class="rain-i-unit text-xs text-blue-600 dark:text-blue-400">[in/hr]</span></label>
                                 <input type="number" id="rain_intensity" value="4.0">
                             </div>
                             <div>
@@ -196,14 +209,14 @@
                             </div>
                             <div>
                                 <label for="rain_static_head" class="eng-label">Static Head
-                                    (ds)</label>
+                                    ($d_s$) <span class="rain-d-unit text-xs text-blue-600 dark:text-blue-400">[in]</span></label>
                                 <input type="number" id="rain_static_head" value="2.0">
                             </div>
                             <div id="dh_manual_input_container_wrapper" class="hidden">
                                 <div id="dh_manual_input_container" data-ui-toggle-controller
                                     data-ui-toggle-target-for="dh_auto_calc_toggle" data-ui-toggle-invert="true">
                                     <label for="rain_hydraulic_head" class="eng-label">Hydraulic
-                                        Head (dh)</label>
+                                        Head ($d_h$) <span class="rain-d-unit text-xs text-blue-600 dark:text-blue-400">[in]</span></label>
                                     <input type="number" id="rain_hydraulic_head" value="1.0">
                                 </div>
                             </div>

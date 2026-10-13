@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../js/shared-utils.js"></script>
+</head>
+<body>
+<input type="number" id="test-input" value="21400">
+<div id="result"></div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    enableMathInInputs();
+    const inp = document.getElementById("test-input");
+    
+    // Check conversion
+    const typeAfter = inp.type;
+    
+    // Simulate user typing equation
+    inp.value = "21400 / 2";
+    
+    // Fire blur
+    inp.dispatchEvent(new Event('blur'));
+    
+    const valAfter = inp.value;
+    const titleAfter = inp.title;
+    const formulaAfter = inp.dataset.formula;
+    
+    document.getElementById("result").innerHTML = `
+        <p>Type after enable: ${typeAfter}</p>
+        <p>Value after blur: ${valAfter}</p>
+        <p>Title: ${titleAfter}</p>
+        <p>Formula dataset: ${formulaAfter}</p>
+    `;
+});
+</script>
+</body>
+</html>

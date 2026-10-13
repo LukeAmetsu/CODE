@@ -189,7 +189,7 @@ function updateCapResults(res) {
         elBadgeCol.className = st.ok_pilar ? "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800" : "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800";
     }
 
-    const elSigPile = document.getElementById('cap-res-sigma-estaca');
+    const elSigPile = document.getElementById('cap-res-sigma-pile') || document.getElementById('cap-res-sigma-estaca');
     const elSigPileLim = document.getElementById('cap-res-sigma-pile-lim');
     const elBadgePile = document.getElementById('cap-badge-sigma-pile');
     if (elSigPile) elSigPile.innerText = `${st.sigma_estaca_mpa ? st.sigma_estaca_mpa.toFixed(2) : '--'} MPa`;
@@ -198,6 +198,8 @@ function updateCapResults(res) {
         elBadgePile.innerText = st.ok_estaca ? "OK" : "Excedido";
         elBadgePile.className = st.ok_estaca ? "px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800" : "px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800";
     }
+
+    if (window.renderLatex) window.renderLatex();
 
     // 4. Draw CAD Schematic
     drawPileCapCanvas(res);

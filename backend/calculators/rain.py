@@ -24,21 +24,27 @@ def calculate_rain_load(inputs):
 
     if dh_auto_calc:
         # Q (gpm) calculation per IPC
-        Q_gpm = 0.0104 * A * i
+        A_sqft = A * 10.7639 if unit_system == 'metric' else A
+        i_in = i / 25.4 if unit_system == 'metric' else i
+        Q_gpm = 0.0104 * A_sqft * i_in
         
         if drain_type == 'scupper':
+            scupper_width_in = scupper_width / 25.4 if unit_system == 'metric' else scupper_width
             # Weir formula
-            if scupper_width > 0:
-                dh = math.pow(Q_gpm / (213 * scupper_width), 2/3)
-                dh_calc_note = f"d_h calculated from Q = {Q_gpm:.1f} gpm and a {scupper_width}-in wide scupper."
+            if scupper_width_in > 0:
+                dh_in = math.pow(Q_gpm / (213 * scupper_width_in), 2/3)
+                dh = dh_in * 25.4 if unit_system == 'metric' else dh_in
+                dh_calc_note = f"d_h calculated from Q = {Q_gpm:.1f} gpm and a {scupper_width}-{'mm' if unit_system == 'metric' else 'in'} wide scupper."
             else:
                 dh = 0
                 dh_calc_note = "Scupper width must be > 0 to calculate d_h."
         else: # drain
+            drain_diameter_in = drain_diameter / 25.4 if unit_system == 'metric' else drain_diameter
             # Orifice formula
-            if drain_diameter > 0:
-                dh = math.pow(Q_gpm / (24.5 * math.pow(drain_diameter, 2)), 2)
-                dh_calc_note = f"d_h calculated from Q = {Q_gpm:.1f} gpm and a {drain_diameter}-in diameter drain."
+            if drain_diameter_in > 0:
+                dh_in = math.pow(Q_gpm / (24.5 * math.pow(drain_diameter_in, 2)), 2)
+                dh = dh_in * 25.4 if unit_system == 'metric' else dh_in
+                dh_calc_note = f"d_h calculated from Q = {Q_gpm:.1f} gpm and a {drain_diameter}-{'mm' if unit_system == 'metric' else 'in'} diameter drain."
             else:
                 dh = 0
                 dh_calc_note = "Drain diameter must be > 0 to calculate d_h."

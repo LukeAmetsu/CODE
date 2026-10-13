@@ -208,14 +208,16 @@ def get_capacidade_estaca_reference_data():
 @eel.expose
 def calculate_capacidade_estaca(inputs):
     try:
-        from backend.calculators.capacidade_estaca import run_full_analysis
-        return run_full_analysis(inputs)
+        import importlib
+        import backend.calculators.capacidade_estaca as ce
+        importlib.reload(ce)
+        return ce.run_full_analysis(inputs)
     except Exception as e:
         import traceback
         return {"success": False, "error": str(e), "trace": traceback.format_exc()}
 
 @eel.expose
-def export_capacidade_estaca_excel(analysis_result, output_path=None):
+def export_capacidade_estaca_excel(analysis_result, output_path=None, auto_open=True):
     try:
         from backend.calculators.capacidade_estaca import export_to_excel
         if not output_path:
@@ -223,7 +225,51 @@ def export_capacidade_estaca_excel(analysis_result, output_path=None):
             os.makedirs(out_dir, exist_ok=True)
             output_path = os.path.join(out_dir, "capacidade_estaca_export.xlsx")
         export_to_excel(analysis_result, output_path)
+        if auto_open:
+            try:
+                os.startfile(output_path)
+            except Exception:
+                pass
         return {"success": True, "filepath": output_path}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def export_capacidade_estaca_pptx(analysis_result, sounding_name=None, output_path=None, auto_open=True):
+    try:
+        from backend.calculators.capacidade_estaca import export_sounding_to_pptx
+        path = export_sounding_to_pptx(analysis_result, sounding_name, output_path)
+        if auto_open:
+            try:
+                os.startfile(path)
+            except Exception:
+                pass
+        return {"success": True, "filepath": path}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def export_capacidade_estaca_axis_pptx(analysis_result, axis_name=None, output_path=None, auto_open=True):
+    try:
+        from backend.calculators.capacidade_estaca import export_axis_to_pptx
+        path = export_axis_to_pptx(analysis_result, axis_name, output_path)
+        if auto_open:
+            try:
+                os.startfile(path)
+            except Exception:
+                pass
+        return {"success": True, "filepath": path}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def save_capacidade_estaca_project_data(data):
+    try:
+        from backend.calculators.capacidade_estaca import save_project_data_to_cache
+        return save_project_data_to_cache(data)
     except Exception as e:
         import traceback
         return {"success": False, "error": str(e), "trace": traceback.format_exc()}
@@ -338,6 +384,55 @@ def calculate_universal_combinations(inputs, standard='NBR 8681', method='ELU_NO
 @eel.expose
 def calculate_nbr_combinations(inputs, standard='NBR 8681', method='ELU_NORMAL'):
     return calculate_universal_combinations(inputs, standard=standard, method=method)
+
+@eel.expose
+def calculate_asce_tsunami(inputs):
+    try:
+        import importlib
+        import backend.calculators.tsunami as tsunami_mod
+        importlib.reload(tsunami_mod)
+        return tsunami_mod.calculate_tsunami_loads(inputs)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_nbr_wind(inputs):
+    """Calcula ações de vento segundo a norma ABNT NBR 6123:1988."""
+    try:
+        import importlib
+        import backend.calculators.nbr_6123_wind as wind_mod
+        importlib.reload(wind_mod)
+        return wind_mod.calculate_nbr6123_wind(inputs)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_nbr_seismic(inputs):
+    """Calcula ações sísmicas e espectro de resposta segundo a norma ABNT NBR 15421:2006."""
+    try:
+        import importlib
+        import backend.calculators.nbr_15421_seismic as seis_mod
+        importlib.reload(seis_mod)
+        return seis_mod.calculate_nbr15421_seismic(inputs)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def calculate_nbr_rain(inputs):
+    """Calcula sobrecargas de chuva e empoçamento conforme ABNT NBR 6120:2019 e NBR 10844."""
+    try:
+        import importlib
+        import backend.calculators.nbr_6120_rain as rain_mod
+        importlib.reload(rain_mod)
+        return rain_mod.calculate_nbr6120_rain(inputs)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
+
 
 @eel.expose
 def mietc_load_default_workbook():
@@ -859,25 +954,25 @@ def get_python_lowess(x, y, frac=0.3):
         return []
 
 @eel.expose
-def run_scipy_optimization(target_safety=1.0, locked=None, current_vals=None, criterion='cov', subset_key='ALL DATA'):
+def run_scipy_optimization(target_safety=1.0, locked=None, current_vals=None, criterion='cov', subset_key='ALL DATA', use_deff=False, exclude_pc=False):
     """Runs Nelder-Mead to auto-fit exponents based on selected criterion ('cov' or 'mean') and active data subset."""
     try:
         import importlib
         import backend.calculators.interactive_shear as ishear
         importlib.reload(ishear)
-        return ishear.run_optimization(target_safety, locked, current_vals, criterion, subset_key)
+        return ishear.run_optimization(target_safety, locked, current_vals, criterion, subset_key, use_deff=use_deff, exclude_pc=exclude_pc)
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
 
 @eel.expose
-def calibrate_shear_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL DATA'):
+def calibrate_shear_constant_c(target_safety=1.0, current_vals=None, subset_key='ALL DATA', use_deff=False, exclude_pc=False):
     """Analytically computes constant C for the desired target safety mean on the active data subset in O(1)."""
     try:
         import importlib
         import backend.calculators.interactive_shear as ishear
         importlib.reload(ishear)
-        return ishear.calibrate_constant_c(target_safety, current_vals, subset_key)
+        return ishear.calibrate_constant_c(target_safety, current_vals, subset_key, use_deff=use_deff, exclude_pc=exclude_pc)
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
@@ -890,6 +985,123 @@ def compare_lowess_curves_batch(live_curve, other_curves_dict):
         import backend.calculators.interactive_shear as ishear
         importlib.reload(ishear)
         return ishear.batch_compare_lowess(live_curve, other_curves_dict)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_shear_correlation_analysis(subset_key='ALL DATA', current_params=None, use_deff=False, exclude_pc=False):
+    """Computes comprehensive correlation matrix, residual bias, VIF and LaTeX report for shear variables."""
+    try:
+        import importlib
+        import backend.calculators.interactive_shear as ishear
+        importlib.reload(ishear)
+        return ishear.calculate_shear_correlation_analysis(subset_key, current_params, use_deff=use_deff, exclude_pc=exclude_pc)
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def get_shear_batch_metadata():
+    """Returns metadata about subsets, variables, and default params for batch export."""
+    try:
+        from backend.calculators.shear_batch_exporter import get_available_metadata
+        return get_available_metadata()
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def open_shear_output_folder(folder_path="plots/shear_model_variations"):
+    """Opens the destination folder in Windows Explorer."""
+    try:
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(backend_dir, '..'))
+        if not os.path.isabs(folder_path):
+            folder_path = os.path.join(project_root, folder_path)
+        os.makedirs(folder_path, exist_ok=True)
+        if sys.platform == 'win32':
+            os.startfile(folder_path)
+        else:
+            import subprocess
+            subprocess.Popen(['xdg-open' if sys.platform != 'darwin' else 'open', folder_path])
+        return {"status": "success", "path": folder_path}
+    except Exception as e:
+        return {"error": str(e)}
+
+def broadcast_eel(func_name, *args):
+    """Broadcasts a callback to all connected Eel client websockets safely from threads."""
+    sent = False
+    try:
+        call_obj = eel._call_object(func_name, args)
+        payload = eel._safe_json(call_obj)
+        for _, ws in list(getattr(eel, '_websockets', [])):
+            try:
+                eel._repeated_send(ws, payload)
+                sent = True
+            except Exception:
+                pass
+    except Exception as ex:
+        print(f"[Eel Broadcast Error] {func_name}: {ex}")
+
+    if not sent:
+        try:
+            fn = getattr(eel, func_name, None)
+            if fn:
+                fn(*args)()
+        except Exception:
+            pass
+
+@eel.expose
+def run_shear_batch_export(options=None):
+    """Triggers batch export of shear model variations in background thread."""
+    try:
+        from backend.calculators.shear_batch_exporter import run_batch_shear_variations
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(backend_dir, '..'))
+
+        opts = options or {}
+        out_dir = opts.get('out_dir', 'plots/shear_model_variations')
+        if not os.path.isabs(out_dir):
+            out_dir = os.path.join(project_root, out_dir)
+
+        model_params = opts.get('model_params', {})
+        selected_subsets = opts.get('selected_subsets', None)
+        selected_vars = opts.get('selected_vars', None)
+        exclude_pc = bool(opts.get('exclude_pc', False))
+        include_codes = bool(opts.get('include_codes', True))
+        dpi = int(opts.get('dpi', 200))
+
+        print(f"[Shear Batch Export] Iniciando rotina automática com {len(selected_subsets or [])} recortes e {len(selected_vars or [])} variáveis...")
+        print(f"[Shear Batch Export] Parâmetros recebidos: {model_params}")
+
+        def _worker():
+            try:
+                def _cb(pct, msg, img, is_done, total, cur):
+                    print(f"[Shear Batch Export] {pct}% - {msg}")
+                    broadcast_eel('update_shear_batch_progress', pct, msg, img, is_done, total, cur)
+
+                result = run_batch_shear_variations(
+                    out_dir=out_dir,
+                    model_params=model_params,
+                    selected_subsets=selected_subsets,
+                    selected_vars=selected_vars,
+                    exclude_prestressed=exclude_pc,
+                    include_codes=include_codes,
+                    progress_callback=_cb,
+                    dpi=dpi,
+                )
+                print(f"[Shear Batch Export] Concluído com sucesso! {result.get('plots_count', 0)} gráficos gerados em: {out_dir}")
+                broadcast_eel('on_shear_batch_complete', result)
+            except Exception as exc:
+                import traceback
+                print(f"[Shear Batch Export Error]: {exc}")
+                traceback.print_exc()
+                broadcast_eel('update_shear_batch_progress', 0, f"Erro: {exc}", None, True, 0, 0)
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+        return {"status": "started", "out_dir": out_dir}
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
@@ -912,8 +1124,10 @@ def calculate_flexible_retaining_wall(inputs):
 def solve_2d_frame(model_data):
     """Solves 2D Frame / Truss structural models (Ftool Web equivalent)."""
     try:
-        from backend.calculators.frame_2d import solve_frame_2d
-        return solve_frame_2d(model_data)
+        import importlib
+        import backend.calculators.frame_2d as f2d_mod
+        importlib.reload(f2d_mod)
+        return f2d_mod.solve_frame_2d(model_data)
     except Exception as e:
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
@@ -953,6 +1167,15 @@ def calculate_concrete_beam(inputs):
         import traceback
         return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
+@eel.expose
+def calculate_asce_seismic(inputs):
+    """Calculates seismic loads and criteria per ASCE 7-16, ASCE 7-22, and ASCE 61."""
+    try:
+        from backend.calculators.seismic import calculate_seismic_loads
+        return calculate_seismic_loads(inputs)
+    except Exception as e:
+        import traceback
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
 
 # --- PDF Tools (Smallpdf Suite) Exposed Functions ---
 
@@ -1076,6 +1299,204 @@ def pdf_read_local_file(file_path):
         return {"status": "error", "message": str(e)}
 
 
+# ==============================================================================
+# TAKEOFF & FOUNDATION DATABASE FUNCTIONS (UTE & LT)
+# ==============================================================================
+@eel.expose
+def takeoff_upload_and_extract(file_base64, filename):
+    """Parses drawing/sheet automatically for UTE & LT foundations."""
+    try:
+        from backend.takeoff_db.cloud_api import api_upload_and_extract
+        return api_upload_and_extract(file_base64, filename)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def takeoff_save_entry(entry_data):
+    """Saves new or edited entry to the foundation database."""
+    try:
+        from backend.takeoff_db.cloud_api import api_save_entry
+        return api_save_entry(entry_data)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@eel.expose
+def takeoff_list_entries(category=None, search=None, structure_type=None, review_status=None, doc_type=None):
+    """Lists entries with optional filters including review_status and doc_type."""
+    try:
+        from backend.takeoff_db.cloud_api import api_list_entries
+        return api_list_entries(category, search, structure_type, review_status, doc_type)
+    except Exception as e:
+        return {"success": False, "error": str(e), "entries": [], "statistics": {}}
+
+@eel.expose
+def takeoff_get_entry(entry_id):
+    """Fetches full details for a single entry."""
+    try:
+        from backend.takeoff_db.cloud_api import api_get_entry
+        return api_get_entry(entry_id)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@eel.expose
+def takeoff_open_drawing(entry_id):
+    """Opens drawing PDF/Excel locally on Windows or opens SharePoint link."""
+    try:
+        from backend.takeoff_db.cloud_api import api_open_drawing
+        return api_open_drawing(entry_id)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@eel.expose
+def takeoff_update_review_status(entry_id, status):
+    """Updates review status to 'verified' or 'pending_review'."""
+    try:
+        from backend.takeoff_db.cloud_api import api_update_review_status
+        return api_update_review_status(entry_id, status)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@eel.expose
+def takeoff_get_default_onedrive_path():
+    """Returns detected OneDrive root directory path."""
+    try:
+        from backend.takeoff_db.cloud_api import api_get_default_onedrive_path
+        return api_get_default_onedrive_path()
+    except Exception as e:
+        return {"success": False, "error": str(e), "onedrive_root": ""}
+
+@eel.expose
+def takeoff_browse_folder_dialog(initial_path=None):
+    """Opens native Windows folder picker dialog starting in OneDrive."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        from backend.takeoff_db.db_manager import get_onedrive_root
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+
+        init_dir = initial_path or get_onedrive_root()
+        if not os.path.exists(init_dir):
+            init_dir = os.path.expanduser("~")
+
+        selected = filedialog.askdirectory(
+            title="Selecione a Pasta de Projetos / Pranchas (OneDrive)",
+            initialdir=init_dir
+        )
+        root.destroy()
+        return {"success": True, "selected_path": selected or ""}
+    except Exception as e:
+        return {"success": False, "error": str(e), "selected_path": ""}
+
+active_batch_scanner = None
+active_batch_thread = None
+
+@eel.expose
+def takeoff_cancel_scan():
+    """Cancels the currently running batch folder scan."""
+    global active_batch_scanner
+    if active_batch_scanner:
+        active_batch_scanner.cancel()
+        return {"success": True, "message": "Cancelamento solicitado."}
+    return {"success": False, "message": "Nenhuma varredura em execução."}
+
+@eel.expose
+def takeoff_batch_scan_folder(folder_path, recursive=True, category='termoeletrica', skip_existing=True, keyword_filter=None, focus_civil=False, max_files=None, doc_type_filter=None):
+    """Batch scans a folder (OneDrive/local) in a non-blocking background thread with live updates."""
+    global active_batch_scanner, active_batch_thread
+    try:
+        import threading
+        from backend.takeoff_db.cloud_api import db_instance
+        from backend.takeoff_db.scanner import FolderBatchScanner
+
+        active_batch_scanner = FolderBatchScanner(db_instance)
+
+        def _safe_push(func_name, *args):
+            try:
+                call_obj = eel._call_object(func_name, args)
+                for _, ws in list(eel._websockets):
+                    try:
+                        eel._repeated_send(ws, eel._safe_json(call_obj))
+                    except Exception:
+                        pass
+            except Exception as ex:
+                print(f"[Takeoff Eel Push Error] {func_name}: {ex}")
+
+        def _worker():
+            def _progress(pct, msg, current_entry):
+                try:
+                    summary = {
+                        "equipment": current_entry.get('equipment_name', '') if current_entry else '',
+                        "code": current_entry.get('drawing_code', '') if current_entry else '',
+                        "vol": current_entry.get('concrete_volume_m3', 0) if current_entry else 0
+                    } if current_entry else None
+                    print(f"[Takeoff Scan] {pct}% - {msg}")
+                    _safe_push('takeoff_scan_progress', pct, msg, summary)
+                except Exception as ex:
+                    print(f"[Takeoff Progress Error] {ex}")
+
+            try:
+                res = active_batch_scanner.scan_and_ingest(
+                    folder_path=folder_path,
+                    recursive=recursive,
+                    default_category=category,
+                    skip_existing=skip_existing,
+                    keyword_filter=keyword_filter,
+                    focus_civil=focus_civil,
+                    max_files=max_files,
+                    doc_type_filter=doc_type_filter,
+                    on_progress=_progress
+                )
+            except Exception as e:
+                import traceback
+                res = {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+            try:
+                print(f"[Takeoff Scan] Concluído: {res.get('imported', 0)} importados, {res.get('skipped', 0)} ignorados (cancelado={res.get('cancelled')})")
+                _safe_push('takeoff_scan_completed', res)
+            except Exception as ex:
+                print(f"[Takeoff Completed Error] {ex}")
+
+        active_batch_thread = threading.Thread(target=_worker, daemon=True)
+        active_batch_thread.start()
+        return {"success": True, "started": True}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def takeoff_delete_entry(entry_id):
+    """Deletes an entry from database."""
+    try:
+        from backend.takeoff_db.cloud_api import api_delete_entry
+        return api_delete_entry(entry_id)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@eel.expose
+def takeoff_run_estimate(parameters):
+    """Runs parametric budget estimate for new UTE or LT projects."""
+    try:
+        from backend.takeoff_db.cloud_api import api_run_estimate
+        return api_run_estimate(parameters)
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
+def takeoff_export_excel(category=None, entry_ids=None):
+    """Generates professional Excel workbook with takeoff database."""
+    try:
+        from backend.takeoff_db.cloud_api import api_export_excel
+        return api_export_excel(category, entry_ids)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+
 if __name__ == '__main__':
     # Initialize with the absolute path to the project root (CODE-2)
     # This exposes 'gui', 'aisc', 'js', etc.
@@ -1092,6 +1513,10 @@ if __name__ == '__main__':
     eel.init(project_root, allowed_extensions=[])
     try:
         eel._mock_js_function('update_shear_progress')
+        eel._mock_js_function('update_shear_batch_progress')
+        eel._mock_js_function('on_shear_batch_complete')
+        eel._mock_js_function('takeoff_scan_progress')
+        eel._mock_js_function('takeoff_scan_completed')
     except Exception:
         pass
     

@@ -140,12 +140,12 @@ function renderWoodResults(calculationOutput) {
             status: ratios.fb <= 1.0 ? 'Pass' : 'Fail',
             breakdown: `
                 <ul>
-                    <li>Actual Bending Stress (f<sub>b</sub>) = M / S<sub>x</sub> = ${inputs.M.toFixed(0)} lb-in / ${actual.Sx.toFixed(3)} in³ = <b>${actual.fb.toFixed(2)} psi</b></li>
-                    <li>Allowable Bending Stress (F'<sub>b</sub>) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * ${wood_results.factors.CV && wood_results.factors.CV < 1.0 ? 'C<sub>V</sub>' : 'C<sub>F</sub>'} * ${wood_results.factors.Cfu > 1.0 ? 'C<sub>fu</sub> * ' : ''}C<sub>i</sub> * C<sub>r</sub> * C<sub>OSHA</sub></li>
+                    <li>Actual Bending Stress ($f_b$) = $M / S_x =$ ${inputs.M.toFixed(0)} lb-in / ${actual.Sx.toFixed(3)} in³ = <b>${actual.fb.toFixed(2)} psi</b></li>
+                    <li>Allowable Bending Stress ($F'_b$) = F<sub>b</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>L</sub> * ${wood_results.factors.CV && wood_results.factors.CV < 1.0 ? 'C<sub>V</sub>' : 'C<sub>F</sub>'} * ${wood_results.factors.Cfu > 1.0 ? 'C<sub>fu</sub> * ' : ''}C<sub>i</sub> * C<sub>r</sub> * C<sub>OSHA</sub></li>
                     <li>F'<sub>b</sub> = ${inputs.Fb.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fb.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.CL.toFixed(3)} * ${wood_results.factors.CV && wood_results.factors.CV < 1.0 ? wood_results.factors.CV.toFixed(3) : wood_results.factors.CF.toFixed(3)} * ${wood_results.factors.Cfu > 1.0 ? wood_results.factors.Cfu.toFixed(3) + ' * ' : ''}${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.Cr.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fb_prime.toFixed(2)} psi</b></li>
-                    <li>Beam Stability Factor (C<sub>L</sub>) = <b>${wood_results.factors.CL.toFixed(3)}</b> (from R<sub>B</sub> = ${wood_results.Rb.toFixed(2)})</li>
-                    ${wood_results.factors.CV < 1.0 ? `<li>Volume Factor (C<sub>V</sub>) = <b>${wood_results.factors.CV.toFixed(3)}</b> (Glulam/SCL)</li>` : ''}
-                    ${wood_results.factors.Cfu > 1.0 ? `<li>Flat Use Factor (C<sub>fu</sub>) = <b>${wood_results.factors.Cfu.toFixed(3)}</b></li>` : ''}
+                    <li>Beam Stability Factor ($C_L$) = <b>${wood_results.factors.CL.toFixed(3)}</b> (from R<sub>B</sub> = ${wood_results.Rb.toFixed(2)})</li>
+                    ${wood_results.factors.CV < 1.0 ? `<li>Volume Factor ($C_V$) = <b>${wood_results.factors.CV.toFixed(3)}</b> (Glulam/SCL)</li>` : ''}
+                    ${wood_results.factors.Cfu > 1.0 ? `<li>Flat Use Factor ($C_{fu}$) = <b>${wood_results.factors.Cfu.toFixed(3)}</b></li>` : ''}
                 </ul>`
         },
         { // Shear
@@ -157,13 +157,13 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Shear Mode: <b>${wood_results.shear_mode || 'Standard'}</b></li>
-                    <li>Actual Shear Stress (f<sub>v</sub>) = 1.5 * V / A = 1.5 * ${inputs.V.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fv.toFixed(2)} psi</b></li>
+                    <li>Actual Shear Stress ($f_v$) = $1.5 \cdot V / A =$ 1.5 * ${inputs.V.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fv.toFixed(2)} psi</b></li>
                     ${wood_results.shear_mode === 'Notched (Tension Side)' ? 
                     `<li><b>Notched Member:</b> Allowable Shear Capacity Reduced.</li>
-                     <li>Ratio calculated as V / V'<sub>r</sub> where V'<sub>r</sub> = (2/3) F'<sub>v</sub> b d<sub>n</sub> (d<sub>n</sub>/d)²</li>
-                     <li>Notch Depth (dn) = ${inputs.dn.toFixed(2)} in</li>`
+                     <li>Ratio calculated as $V / V'_r$ where $V'_r = \frac{2}{3} F'_v b d_n (d_n/d)^2$</li>
+                     <li>Notch Depth ($d_n$) = ${inputs.dn.toFixed(2)} in</li>`
                     : ''}
-                    <li>Allowable Shear Stress (F'<sub>v</sub>) = F<sub>v</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
+                    <li>Allowable Shear Stress ($F'_v$) = F<sub>v</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
                     <li>F'<sub>v</sub> = ${inputs.Fv.toFixed(0)} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.CM_Fv.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fv_prime.toFixed(2)} psi</b></li>
                 </ul>`
         },
@@ -175,13 +175,13 @@ function renderWoodResults(calculationOutput) {
             status: ratios.ft <= 1.0 ? 'Pass' : 'Fail',
             breakdown: actual.ft > 0 ? `
                 <ul>
-                    <li>Actual Tension Stress (f<sub>t</sub>) = |P| / A = ${Math.abs(inputs.P).toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.ft.toFixed(2)} psi</b></li>
-                    <li>Allowable Tension Stress (F'<sub>t</sub>) = F<sub>t</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
+                    <li>Actual Tension Stress ($f_t$) = $|P| / A =$ ${Math.abs(inputs.P).toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.ft.toFixed(2)} psi</b></li>
+                    <li>Allowable Tension Stress ($F'_t$) = F<sub>t</sub> * C<sub>D</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>F</sub> * C<sub>i</sub> * C<sub>OSHA</sub></li>
                     <li>F'<sub>t</sub> = ${inputs.Ft ? inputs.Ft.toFixed(0) : '0'} * ${wood_results.factors.CD.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci ? wood_results.factors.Ci.toFixed(2) : '1.0'} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Ft_prime.toFixed(2)} psi</b></li>
                 </ul>` : 'No significant tension force.'
         },
         { // Bearing (Compression Perpendicular)
-            name: 'Bearing (Compression \u22A5)',
+            name: 'Bearing (Compression $\\perp$)',
             actual: `${actual.fc_perp.toFixed(2)} psi`,
             allowable: `${adj.Fc_perp_prime.toFixed(2)} psi`,
             ratio: ratios.fc_perp.toFixed(3),
@@ -189,10 +189,10 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Bearing Type: <b>${inputs.bearing_type || 'Side'} Grain</b></li>
-                    <li>Actual Bearing Stress (f<sub>c\u22A5</sub>) = V / (b * L<sub>b</sub>) = ${inputs.V.toFixed(0)} lb / (${inputs.b.toFixed(2)} * ${inputs.Lb.toFixed(2)}) in² = <b>${actual.fc_perp.toFixed(2)} psi</b></li>
-                    <li>Allowable Bearing Stress (F'<sub>c\u22A5</sub>) = F<sub>c\u22A5</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>b</sub> * C<sub>OSHA</sub></li>
+                    <li>Actual Bearing Stress ($f_{c\\perp}$) = $V / (b \\cdot L_b) =$ ${inputs.V.toFixed(0)} lb / (${inputs.b.toFixed(2)} * ${inputs.Lb.toFixed(2)}) in² = <b>${actual.fc_perp.toFixed(2)} psi</b></li>
+                    <li>Allowable Bearing Stress ($F'_{c\\perp}$) = F<sub>c\u22A5</sub> * C<sub>M</sub> * C<sub>t</sub> * C<sub>i</sub> * C<sub>b</sub> * C<sub>OSHA</sub></li>
                     <li>F'<sub>c\u22A5</sub> = ${inputs.Fc_perp.toFixed(0)} * ${wood_results.factors.CM_Fc_perp.toFixed(2)} * ${wood_results.factors.Ct.toFixed(2)} * ${wood_results.factors.Ci ? wood_results.factors.Ci.toFixed(2) : '1.0'} * ${wood_results.factors.Cb.toFixed(2)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fc_perp_prime.toFixed(2)} psi</b></li>
-                    <li>Bearing Area Factor (C<sub>b</sub>) = <b>${wood_results.factors.Cb.toFixed(3)}</b></li>
+                    <li>Bearing Area Factor ($C_b$) = <b>${wood_results.factors.Cb.toFixed(3)}</b></li>
                 </ul>`
         },
         { // Compression
@@ -203,9 +203,9 @@ function renderWoodResults(calculationOutput) {
             status: ratios.fc <= 1.0 ? 'Pass' : 'Fail',
             breakdown: `
                 <ul>
-                    <li>Actual Compression Stress (f<sub>c</sub>) = P / A = ${inputs.P.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fc.toFixed(2)} psi</b></li>
-                    <li>Allowable Compression Stress (F'<sub>c</sub>) = F<sub>c</sub>* * C<sub>P</sub> * C<sub>OSHA</sub> = ${wood_results.Fc_star.toFixed(2)} psi * ${wood_results.factors.Cp.toFixed(3)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fc_prime.toFixed(2)} psi</b></li>
-                    <li>Column Stability Factor (C<sub>P</sub>) = <b>${wood_results.factors.Cp.toFixed(3)}</b> (from L<sub>e</sub>/d = ${wood_results.Le_d.toFixed(2)})</li>
+                    <li>Actual Compression Stress ($f_c$) = $P / A =$ ${inputs.P.toFixed(0)} lb / ${actual.A.toFixed(3)} in² = <b>${actual.fc.toFixed(2)} psi</b></li>
+                    <li>Allowable Compression Stress ($F'_c$) = F<sub>c</sub>* * C<sub>P</sub> * C<sub>OSHA</sub> = ${wood_results.Fc_star.toFixed(2)} psi * ${wood_results.factors.Cp.toFixed(3)} * ${wood_results.factors.C_OSHA.toFixed(2)} = <b>${adj.Fc_prime.toFixed(2)} psi</b></li>
+                    <li>Column Stability Factor ($C_P$) = <b>${wood_results.factors.Cp.toFixed(3)}</b> (from L<sub>e</sub>/d = ${wood_results.Le_d.toFixed(2)})</li>
                 </ul>`
         },
         { // Deflection
@@ -217,7 +217,7 @@ function renderWoodResults(calculationOutput) {
             breakdown: `
                 <ul>
                     <li>Allowable Deflection = Span / ${inputs.deflection_limit_divisor.toFixed(0)} = ${inputs.deflection_span.toFixed(2)} in / ${inputs.deflection_limit_divisor.toFixed(0)} = <b>${deflection.allowable.toFixed(3)} in</b></li>
-                    <li>Actual Deflection (δ) = 5*M*L² / (48*E'*I) = (5 * ${inputs.M.toFixed(0)} * ${inputs.deflection_span.toFixed(2)}²) / (48 * ${deflection.E_adj.toExponential(2)} * ${(actual.Sx * inputs.d / 2).toFixed(2)}) = <b>${deflection.actual.toFixed(3)} in</b></li>
+                    <li>Actual Deflection ($\delta$) = $\frac{5 M L^2}{48 E' I} =$ (5 * ${inputs.M.toFixed(0)} * ${inputs.deflection_span.toFixed(2)}²) / (48 * ${deflection.E_adj.toExponential(2)} * ${(actual.Sx * inputs.d / 2).toFixed(2)}) = <b>${deflection.actual.toFixed(3)} in</b></li>
                 </ul>`
         },
         { // Interaction
@@ -242,23 +242,23 @@ function renderWoodResults(calculationOutput) {
 
     const factorRows = Object.entries(wood_results.factors).map(([key, value]) => {
         const factorMap = {
-            CD: { name: 'Load Duration (C<sub>D</sub>)', ref: 'NDS 2.3.2' },
-            CM_Fb: { name: 'Wet Service (C<sub>M,Fb</sub>)', ref: 'NDS Table 4.3.1' },
-            CM_Fv: { name: 'Wet Service (C<sub>M,Fv</sub>)', ref: 'NDS Table 4.3.1' }, // Added safely
-            CM_Fc: { name: 'Wet Service (C<sub>M,Fc</sub>)', ref: 'NDS Table 4.3.1' },
-            CM_Fc_perp: { name: 'Wet Service (C<sub>M,Fc_perp</sub>)', ref: 'NDS Table 4.3.1' },
-            CM_E: { name: 'Wet Service (C<sub>M,E</sub>)', ref: 'NDS Table 4.3.1' },
-            CM_E_min: { name: 'Wet Service (C<sub>M,Emin</sub>)', ref: 'NDS Table 4.3.1' },
-            Ct: { name: 'Temperature (C<sub>t</sub>)', ref: 'NDS 2.3.3' },
-            CF: { name: 'Size Factor (C<sub>F</sub>)', ref: 'NDS 4.3.6' },
-            Ci: { name: 'Incising (C<sub>i</sub>)', ref: 'NDS 4.3.8' },
-            Cr: { name: 'Repetitive Member (C<sub>r</sub>)', ref: 'NDS 4.3.9' },
-            Cb: { name: 'Bearing Area (C<sub>b</sub>)', ref: 'NDS 3.10.4' },
-            CL: { name: 'Beam Stability (C<sub>L</sub>)', ref: 'NDS 3.3.3' },
-            Cp: { name: 'Column Stability (C<sub>P</sub>)', ref: 'NDS 3.7.1' },
-            CV: { name: 'Volume Factor (C<sub>V</sub>)', ref: 'NDS 5.3.6' },
-            Cfu: { name: 'Flat Use Factor (C<sub>fu</sub>)', ref: 'NDS 4.3.7' },
-            C_OSHA: { name: 'OSHA Safety Factor (C<sub>OSHA</sub>)', ref: 'OSHA 1926' },
+            CD: { name: 'Load Duration ($C_D$)', ref: 'NDS 2.3.2' },
+            CM_Fb: { name: 'Wet Service ($C_{M,Fb}$)', ref: 'NDS Table 4.3.1' },
+            CM_Fv: { name: 'Wet Service ($C_{M,Fv}$)', ref: 'NDS Table 4.3.1' }, // Added safely
+            CM_Fc: { name: 'Wet Service ($C_{M,Fc}$)', ref: 'NDS Table 4.3.1' },
+            CM_Fc_perp: { name: 'Wet Service ($C_{M,Fc\perp}$)', ref: 'NDS Table 4.3.1' },
+            CM_E: { name: 'Wet Service ($C_{M,E}$)', ref: 'NDS Table 4.3.1' },
+            CM_E_min: { name: 'Wet Service ($C_{M,E\min}$)', ref: 'NDS Table 4.3.1' },
+            Ct: { name: 'Temperature ($C_t$)', ref: 'NDS 2.3.3' },
+            CF: { name: 'Size Factor ($C_F$)', ref: 'NDS 4.3.6' },
+            Ci: { name: 'Incising ($C_i$)', ref: 'NDS 4.3.8' },
+            Cr: { name: 'Repetitive Member ($C_r$)', ref: 'NDS 4.3.9' },
+            Cb: { name: 'Bearing Area ($C_b$)', ref: 'NDS 3.10.4' },
+            CL: { name: 'Beam Stability ($C_L$)', ref: 'NDS 3.3.3' },
+            Cp: { name: 'Column Stability ($C_P$)', ref: 'NDS 3.7.1' },
+            CV: { name: 'Volume Factor ($C_V$)', ref: 'NDS 5.3.6' },
+            Cfu: { name: 'Flat Use Factor ($C_{fu}$)', ref: 'NDS 4.3.7' },
+            C_OSHA: { name: 'OSHA Safety Factor ($C_{\text{OSHA}}$)', ref: 'OSHA 1926' },
         };
         const info = factorMap[key];
         if (info) {

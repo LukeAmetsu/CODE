@@ -189,18 +189,23 @@ def calculate_snow_load(inputs):
     Calculates snow loads.
     Ported from snow.js.
     """
+    unit_system = inputs.get('snow_unit_system', 'imperial')
+    is_metric = (unit_system == 'metric')
+    
     # Defaults and Inputs
-    pg = float(inputs.get('snow_ground_snow_load', 0))
-    if pg == 0:
-        pg = 25
+    pg_raw = float(inputs.get('snow_ground_snow_load', 0))
+    if pg_raw == 0:
+        pg_raw = 1.2 if is_metric else 25.0
+        
+    pg = pg_raw * 20.885434 if is_metric else pg_raw
         
     warnings = []
     
     jurisdiction = inputs.get('snow_jurisdiction', '')
     if jurisdiction == "NYCBC 2022":
-        nycbc_min = 25
-        if pg < nycbc_min:
-            warnings.append(f"Input ground snow load ({pg} psf) is less than NYCBC minimum ({nycbc_min} psf).")
+        nycbc_min = 1.2 if is_metric else 25.0
+        if pg_raw < nycbc_min:
+            warnings.append(f"Input ground snow load ({pg_raw} {'kPa' if is_metric else 'psf'}) is less than NYCBC minimum ({nycbc_min} {'kPa' if is_metric else 'psf'}).")
             
     risk = inputs.get('snow_risk_category', 'II')
     exposure = inputs.get('snow_exposure_condition', 'Partially Exposed')
@@ -224,61 +229,85 @@ def calculate_snow_load(inputs):
              ps_min_asce7 = pg * Is
         else:
              ps_min_asce7 = 20 * Is
-             
+              
     ps_asce7 = max(ps_calculated, ps_min_asce7) if is_low_slope else ps_calculated
     
     ps_balanced = ps_asce7
     is_nycbc_min_governed = False
-    nycbc_min_roof = float(inputs.get('snow_nycbc_minimum_roof_snow_load', 0))
+    nycbc_min_roof_raw = float(inputs.get('snow_nycbc_minimum_roof_snow_load', 0))
+    nycbc_min_roof = nycbc_min_roof_raw * 20.885434 if is_metric else nycbc_min_roof_raw
     if jurisdiction == "NYCBC 2022" and ps_balanced < nycbc_min_roof:
          ps_balanced = nycbc_min_roof
          is_nycbc_min_governed = True
          
     # Optional Calculations
+    l_factor = 3.28084 if is_metric else 1.0 # m to ft
     unbalanced_results = {}
     if inputs.get('snow_calculate_unbalanced', 'No') == 'Yes':
         gamma = calculate_snow_density(pg)
         unbalanced_results = calculate_unbalanced_loads(
             ps_balanced, pg, slope_deg, standard,
-            float(inputs.get('snow_eave_to_ridge_distance_W', 0)),
+            float(inputs.get('snow_eave_to_ridge_distance_W', 0)) * l_factor,
             inputs.get('snow_is_simply_supported_prismatic', False),
-            float(inputs.get('snow_winter_wind_parameter_W2', 0)),
+            float(inputs.get('snow_winter_wind_parameter_W2', 0)) * l_factor,
             gamma, Is, inputs.get('snow_roof_type', 'gable')
         )
+        if is_metric and unbalanced_results.get('applicable'):
+            if 'windward_nominal' in unbalanced_results:
+                unbalanced_results['windward_nominal'] *= 0.04788026
+            if 'leeward_nominal' in unbalanced_results:
+                unbalanced_results['leeward_nominal'] *= 0.04788026
+            if 'surcharge_magnitude' in unbalanced_results:
+                unbalanced_results['surcharge_magnitude'] *= 0.04788026
+            if 'surcharge_width' in unbalanced_results:
+                unbalanced_results['surcharge_width'] /= 3.28084
         
     drift_results = {}
     if inputs.get('snow_calculate_drift', 'No') == 'Yes':
         drift_results = calculate_drift_loads(
-            pg, float(inputs.get('snow_upper_roof_length_lu', 0)),
-            float(inputs.get('snow_height_difference_hc', 0)),
-            pf, standard, float(inputs.get('snow_winter_wind_parameter_W2', 0)),
-            float(inputs.get('snow_lower_roof_length_ll', 0)), Is
+            pg, float(inputs.get('snow_upper_roof_length_lu', 0)) * l_factor,
+            float(inputs.get('snow_height_difference_hc', 0)) * l_factor,
+            pf, standard, float(inputs.get('snow_winter_wind_parameter_W2', 0)) * l_factor,
+            float(inputs.get('snow_lower_roof_length_ll', 0)) * l_factor, Is
         )
+        if is_metric and drift_results.get('applicable'):
+            for p_k in ['pd_nominal', 'gamma']:
+                if p_k in drift_results:
+                    drift_results[p_k] *= 0.04788026
+            for l_k in ['hd', 'w', 'hc']:
+                if l_k in drift_results:
+                    drift_results[l_k] /= 3.28084
         
     sliding_results = {}
     if inputs.get('snow_calculate_sliding', 'No') == 'Yes':
         sliding_results = calculate_sliding_snow_load(
-            pf, float(inputs.get('snow_eave_to_ridge_distance_W', 0)),
-            Cs, is_slippery, inputs.get('snow_unit_system', 'imperial')
+            pf, float(inputs.get('snow_eave_to_ridge_distance_W', 0)) * l_factor,
+            Cs, is_slippery, 'imperial' # run in imperial
         )
+        if is_metric and sliding_results.get('applicable'):
+            if 'sliding_load' in sliding_results:
+                # convert lb/ft to kN/m: 1 lb/ft = 0.0145939 kN/m
+                sliding_results['sliding_load'] *= 0.0145939
+                sliding_results['unit'] = 'kN/m'
         
     partial_results = {}
     if inputs.get('snow_is_simply_supported_prismatic', 'Yes') == 'No':
         partial_results = {
             'applicable': True,
-            'load_on_adjacent_span': 0.5 * ps_balanced,
+            'load_on_adjacent_span': 0.5 * (ps_balanced * 0.04788026 if is_metric else ps_balanced),
             'note': "Check 0.5 balanced load on adjacent span."
         }
         
+    p_conv = 0.04788026 if is_metric else 1.0
     return {
         'inputs': inputs,
         'intermediate': {
-            'Is': Is, 'Ce': Ce, 'Ct': Ct, 'Cs': Cs, 'pf': pf,
-            'ps_asce7': ps_asce7, 'ps_min_asce7': ps_min_asce7,
+            'Is': Is, 'Ce': Ce, 'Ct': Ct, 'Cs': Cs, 'pf': pf * p_conv,
+            'ps_asce7': ps_asce7 * p_conv, 'ps_min_asce7': ps_min_asce7 * p_conv,
             'is_low_slope': is_low_slope, 'asce7_min_governed': (ps_asce7 > ps_calculated),
-            'ps_calculated': ps_calculated
+            'ps_calculated': ps_calculated * p_conv
         },
-        'results': {'ps_balanced_nominal': ps_balanced},
+        'results': {'ps_balanced_nominal': ps_balanced * p_conv},
         'unbalanced': unbalanced_results,
         'drift': drift_results,
         'sliding': sliding_results,

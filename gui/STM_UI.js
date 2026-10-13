@@ -507,7 +507,7 @@ function renderStmReport(data, result) {
         <!-- Global Performance Bar -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 bg-gray-50 dark:bg-gray-750 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs">
             <div>
-                <span class="text-gray-500 dark:text-gray-400 block text-[11px]">Trabalho de Deformação</span>
+                <span class="text-gray-500 dark:text-gray-400 block text-[11px]">Trabalho de Deformação ($W$)</span>
                 <span class="font-bold text-purple-600 dark:text-purple-400">${(summary.total_strain_energy_kNcm || 0).toFixed(2)} kN·cm</span>
             </div>
             <div>
@@ -519,7 +519,7 @@ function renderStmReport(data, result) {
                 <span class="font-bold text-rose-600 dark:text-rose-400">${((summary.total_strut_volume_cm3 || 0)/1000).toFixed(2)} dm³</span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-gray-400 block text-[11px]">Critério Angular NBR</span>
+                <span class="text-gray-500 dark:text-gray-400 block text-[11px]">Critério Angular ($\theta \ge 25^\circ$)</span>
                 <span class="font-bold ${summary.angle_check_pass ? 'text-emerald-600' : 'text-rose-600'}">${(summary.min_angle_deg || 0).toFixed(1)}° (${summary.angle_check_pass ? 'Aprovado' : 'Reprovado'})</span>
             </div>
         </div>
@@ -530,12 +530,12 @@ function renderStmReport(data, result) {
                     <tr>
                         <th class="p-2">#</th>
                         <th class="p-2">Barra</th>
-                        <th class="p-2">Compr.</th>
+                        <th class="p-2">Compr. $L$</th>
                         <th class="p-2">Tipo</th>
-                        <th class="p-2">Esforço Sd</th>
+                        <th class="p-2">Esforço $S_d\text{ (kN)}$</th>
                         <th class="p-2">Regime</th>
-                        <th class="p-2">Área Requerida</th>
-                        <th class="p-2">W (kN·cm)</th>
+                        <th class="p-2">Área Requerida ($A_s / A_c$)</th>
+                        <th class="p-2">$W\text{ (kN}\cdot\text{cm)}$</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -544,6 +544,7 @@ function renderStmReport(data, result) {
             </table>
         </div>
     `;
+    if (window.renderLatex) window.renderLatex(container);
 }
 
 function update3D(inputs, results) {

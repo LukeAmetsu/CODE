@@ -1849,45 +1849,45 @@ function renderDesignParameters(inputs, intermediate, units) {
     let html = `
                     <ul class="list-disc list-inside space-y-1">
                         <li><strong>Risk Category:</strong> ${sanitizeHTML(inputs.risk_category)} <span class="ref">[ASCE 7, Table 1.5-1]</span></li>
-                        <li><strong>Basic Design Wind Speed (V):</strong> ${safeToFixed(inputs.V_unreduced, 1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
-                        <li><strong>Building Dimensions (L x B):</strong> ${inputs.building_length_L} x ${inputs.building_width_B} ${h_unit.toUpperCase()}</li>
+                        <li><strong>Basic Design Wind Speed ($V$):</strong> ${safeToFixed(inputs.V_unreduced, 1)} ${v_unit.toUpperCase()} <span class="ref">[User Input / Jurisdiction]</span></li>
+                        <li><strong>Building Dimensions ($L \times B$):</strong> ${inputs.building_length_L} x ${inputs.building_width_B} ${h_unit.toUpperCase()}</li>
                         <li><strong>Exposure Category:</strong> ${sanitizeHTML(inputs.exposure_category)} <span class="ref">[ASCE 7, Sec. 26.7]</span></li>
-                        <li><strong>Building Height (h):</strong> ${inputs.mean_roof_height} ${h_unit.toUpperCase()}</li>
-                        <li><strong>L/B Ratio (Wind ⊥ to L):</strong> ${safeToFixed(inputs.building_length_L / inputs.building_width_B, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
-                        <li><strong>L/B Ratio (Wind ⊥ to B):</strong> ${safeToFixed(inputs.building_width_B / inputs.building_length_L, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
-                        <li><strong>Wind Directionality Factor (K<sub>d</sub>):</strong> ${safeToFixed(intermediate.Kd, 2)} <span class="ref">[${intermediate.Kd_ref}]</span></li>
-                        <li><strong>Topographic Factor (K<sub>zt</sub>):</strong> ${safeToFixed(inputs.topographic_factor_Kzt, 2)} <span class="ref">[ASCE 7, Sec. 26.8]</span></li>
-                        <li><strong>Ground Elevation Factor (K<sub>e</sub>):</strong> ${safeToFixed(intermediate.Ke, 3)} <span class="ref">[${intermediate.ke_ref}]</span></li> 
-                        <li><strong>Gust-Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)} <span class="ref">[${intermediate.g_ref}]</span></li>
+                        <li><strong>Building Height ($h$):</strong> ${inputs.mean_roof_height} ${h_unit.toUpperCase()}</li>
+                        <li><strong>$L/B$ Ratio (Wind $\perp$ to $L$):</strong> ${safeToFixed(inputs.building_length_L / inputs.building_width_B, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
+                        <li><strong>$L/B$ Ratio (Wind $\perp$ to $B$):</strong> ${safeToFixed(inputs.building_width_B / inputs.building_length_L, 2)} <span class="ref">[Used for Leeward Cp]</span></li>
+                        <li><strong>Wind Directionality Factor ($K_d$):</strong> ${safeToFixed(intermediate.Kd, 2)} <span class="ref">[${intermediate.Kd_ref}]</span></li>
+                        <li><strong>Topographic Factor ($K_{zt}$):</strong> ${safeToFixed(inputs.topographic_factor_Kzt, 2)} <span class="ref">[ASCE 7, Sec. 26.8]</span></li>
+                        <li><strong>Ground Elevation Factor ($K_e$):</strong> ${safeToFixed(intermediate.Ke, 3)} <span class="ref">[${intermediate.ke_ref}]</span></li> 
+                        <li><strong>Gust-Effect Factor ($G$):</strong> ${safeToFixed(intermediate.G, 3)} <span class="ref">[${intermediate.g_ref}]</span></li>
                         <li><strong>Structure Type:</strong> ${sanitizeHTML(inputs.structure_type)} <span class="ref">[User Input]</span></li>
                         ${inputs.structure_type === 'Open Signs/Frames' ? `
-                            <li class="pl-4"><strong>Solidity Ratio (ε):</strong> ${safeToFixed(inputs.solidity_ratio, 2)}</li>
+                            <li class="pl-4"><strong>Solidity Ratio ($\epsilon$):</strong> ${safeToFixed(inputs.solidity_ratio, 2)}</li>
                             <li class="pl-4"><strong>Member Shape:</strong> ${sanitizeHTML(inputs.member_shape)}</li>
-                            ${inputs.member_shape === 'round' ? `<li class="pl-6"><strong>Member Diameter (b):</strong> ${safeToFixed(inputs.member_diameter, 2)} ${h_unit}</li>` : ''}
+                            ${inputs.member_shape === 'round' ? `<li class="pl-6"><strong>Member Diameter ($b$):</strong> ${safeToFixed(inputs.member_diameter, 2)} ${h_unit}</li>` : ''}
                         ` : ''}
                         ${inputs.structure_type === 'Solid Freestanding Signs/Walls' ? `
-                            <li class="pl-4"><strong>Sign Width (B):</strong> ${safeToFixed(inputs.sign_width_B, 2)} ${h_unit}</li>
-                            <li class="pl-4"><strong>Sign Height (s):</strong> ${safeToFixed(inputs.sign_height_s, 2)} ${h_unit}</li>
-                            <li class="pl-4"><strong>Clearance from Ground (z):</strong> ${safeToFixed(inputs.clearance_z, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Sign Width ($B$):</strong> ${safeToFixed(inputs.sign_width_B, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Sign Height ($s$):</strong> ${safeToFixed(inputs.sign_height_s, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Clearance from Ground ($z$):</strong> ${safeToFixed(inputs.clearance_z, 2)} ${h_unit}</li>
                         ` : ''}
                         ${inputs.structure_type.startsWith('Chimneys, Tanks') ? `
-                            <li class="pl-4"><strong>Structure Height (h):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li>
-                            <li class="pl-4"><strong>Width/Diameter (D):</strong> ${safeToFixed(inputs.chimney_diameter, 2)} ${h_unit}</li>
-                            ${(inputs.structure_type.includes('Square') || inputs.structure_type.includes('Hexagonal')) ? `<li class="pl-6"><strong>Corner Radius (r):</strong> ${safeToFixed(inputs.corner_radius_r, 2)} ${h_unit}</li>` : ''}
+                            <li class="pl-4"><strong>Structure Height ($h$):</strong> ${safeToFixed(inputs.chimney_height, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Width/Diameter ($D$):</strong> ${safeToFixed(inputs.chimney_diameter, 2)} ${h_unit}</li>
+                            ${(inputs.structure_type.includes('Square') || inputs.structure_type.includes('Hexagonal')) ? `<li class="pl-6"><strong>Corner Radius ($r$):</strong> ${safeToFixed(inputs.corner_radius_r, 2)} ${h_unit}</li>` : ''}
                         ` : ''}
                         ${inputs.structure_type.startsWith('Trussed Towers') ? `
-                            <li class="pl-4"><strong>Tower Height (h):</strong> ${safeToFixed(inputs.tower_height, 2)} ${h_unit}</li>
-                            <li class="pl-4"><strong>Tower Face Width (w):</strong> ${safeToFixed(inputs.tower_width, 2)} ${h_unit}</li>
-                            <li class="pl-4"><strong>Solidity Ratio (ε):</strong> ${safeToFixed(inputs.tower_solidity_ratio, 2)}</li>
+                            <li class="pl-4"><strong>Tower Height ($h$):</strong> ${safeToFixed(inputs.tower_height, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Tower Face Width ($w$):</strong> ${safeToFixed(inputs.tower_width, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Solidity Ratio ($\epsilon$):</strong> ${safeToFixed(inputs.tower_solidity_ratio, 2)}</li>
                             <li class="pl-4"><strong>Member Shape:</strong> ${sanitizeHTML(inputs.tower_member_shape)}</li>
                         ` : ''}
                         ${inputs.structure_type === 'Arched Roofs' ? `
-                            <li class="pl-4"><strong>Roof Rise (r):</strong> ${safeToFixed(inputs.arched_roof_rise, 2)} ${h_unit}</li>
+                            <li class="pl-4"><strong>Roof Rise ($r$):</strong> ${safeToFixed(inputs.arched_roof_rise, 2)} ${h_unit}</li>
                             <li class="pl-4"><strong>Roof Spring Point:</strong> ${sanitizeHTML(inputs.arched_roof_spring_point)}</li>
                         ` : ''}
-                        <li><strong>Velocity Pressure Exposure Coefficient (K<sub>z</sub>):</strong> ${safeToFixed(intermediate.Kz, 2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
-                        <li><strong>Internal Pressure Coefficient (GC<sub>pi</sub>):</strong> &plusmn;${safeToFixed(inputs.GCpi_abs, 2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
-                        ${inputs.has_rooftop_protection ? `<li><strong>Rooftop Protection:</strong> Yes (Type: ${sanitizeHTML(inputs.rooftop_protection_type)}) <span class="ref">[Calculates C&C as p = q<sub>h</sub>GC<sub>p</sub>]</span></li>` : `<li><strong>Rooftop Protection:</strong> No</li>`}
+                        <li><strong>Velocity Pressure Exposure Coefficient ($K_z$):</strong> ${safeToFixed(intermediate.Kz, 2)} <span class="ref">[${intermediate.Kz_ref}]</span></li>
+                        <li><strong>Internal Pressure Coefficient ($GC_{pi}$):</strong> &plusmn;${safeToFixed(inputs.GCpi_abs, 2)} <span class="ref">[${intermediate.GCpi_ref}]</span></li>
+                        ${inputs.has_rooftop_protection ? `<li><strong>Rooftop Protection:</strong> Yes (Type: ${sanitizeHTML(inputs.rooftop_protection_type)}) <span class="ref">[Calculates C&C as $p = q_h G C_p$]</span></li>` : `<li><strong>Rooftop Protection:</strong> No</li>`}
                         ${inputs.temporary_construction === 'Yes' ? `<li><strong>Reduction Factor for Temporary Construction:</strong> 0.8 <span class="ref">[NYC BC, SEC. 1619.3.3]</span></li>` : ''}
                     </ul>`;
     return html;
@@ -1901,12 +1901,12 @@ function renderCalculationBreakdown(results, units) {
     const { h_unit, p_unit } = units; let breakdownContent = ''; if (open_sign_results) {
         const { Cf, ref, pressure } = open_sign_results; breakdownContent = `
             <ul class="list-disc list-inside space-y-2 mt-2"> 
-                <li><strong>Velocity Pressure (q<sub>z</sub>):</strong> ${safeToFixed(intermediate.qz, 2)} ${p_unit} (Calculated at height h=${inputs.mean_roof_height} ${h_unit})</li>
+                <li><strong>Velocity Pressure ($q_z$):</strong> ${safeToFixed(intermediate.qz, 2)} ${p_unit} (Calculated at height h=${inputs.mean_roof_height} ${h_unit})</li>
                 <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)}</li>
-                <li><strong>Net Force Coefficient (C<sub>f</sub>):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
-                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                <li><strong>Net Force Coefficient ($C_f$):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure ($p$):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
-                    <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of the sign face (A<sub>s</sub>).</div>
+                    <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of the sign face ($A_s$).</div>
                 </li>
             </ul>`;
     } else if (solid_sign_results) {
@@ -1916,8 +1916,8 @@ function renderCalculationBreakdown(results, units) {
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_sign, 3)}</li>
                 <li><strong>Velocity Pressure (q<sub>z</sub>) at centroid:</strong> ${safeToFixed(qz_sign, 2)} ${p_unit}</li>
                 <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)}</li>
-                <li><strong>Net Pressure Coefficient (C<sub>N</sub>):</strong> ${safeToFixed(CN, 3)} <span class="ref">[${ref}]</span></li>
-                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                <li><strong>Net Pressure Coefficient ($C_N$):</strong> ${safeToFixed(CN, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure ($p$):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(CN, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
                 </li>
             </ul>`;
@@ -1928,8 +1928,8 @@ function renderCalculationBreakdown(results, units) {
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at h:</strong> ${safeToFixed(Kz_struct, 3)}</li>
                 <li><strong>Velocity Pressure (q<sub>z</sub>) at h:</strong> ${safeToFixed(qz_struct, 2)} ${p_unit}</li>
                 <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)}</li>
-                <li><strong>Force Coefficient (C<sub>f</sub>):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
-                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                <li><strong>Force Coefficient ($C_f$):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure ($p$):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
                 </li>
             </ul>`;
@@ -1940,10 +1940,10 @@ function renderCalculationBreakdown(results, units) {
                 <li><strong>Exposure Coefficient (K<sub>z</sub>) at centroid:</strong> ${safeToFixed(Kz_tower, 3)}</li>
                 <li><strong>Velocity Pressure (q<sub>z</sub>) at centroid:</strong> ${safeToFixed(qz_tower, 2)} ${p_unit}</li>
                 <li><strong>Gust Effect Factor (G):</strong> ${safeToFixed(intermediate.G, 3)}</li>
-                <li><strong>Force Coefficient (C<sub>f</sub>):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
-                <li class="font-semibold"><strong>Design Pressure (p):</strong>
+                <li><strong>Force Coefficient ($C_f$):</strong> ${safeToFixed(Cf, 3)} <span class="ref">[${ref}]</span></li>
+                <li class="font-semibold"><strong>Design Pressure ($p$):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${safeToFixed(intermediate.G, 3)} &times; ${safeToFixed(Cf, 3)} = <b>${safeToFixed(pressure, 2)} ${p_unit}</b></div>
-                    <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of one face (A<sub>f</sub>).</div>
+                    <div class="pl-6 text-xs text-gray-500 dark:text-gray-400">This pressure acts on the solid area of one face ($A_f$).</div>
                 </li>
             </ul>`;
     } else {// Default breakdown for buildings
@@ -1957,7 +1957,7 @@ function renderCalculationBreakdown(results, units) {
                 <li><strong>Exposure Coefficient (K<sub>z</sub>):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">K<sub>z</sub> = 2.01 &times; (${safeToFixed(inputs.mean_roof_height, 2)} / ${safeToFixed(intermediate.zg, 0)})<sup>(2 / ${intermediate.alpha})</sup> = ${safeToFixed(intermediate.Kz, 3)}</div>
                 </li>
-                <li><strong>Velocity Pressure (q<sub>h</sub>):</strong>
+                <li><strong>Velocity Pressure ($q_h$):</strong>
                     <div class="pl-6 text-sm text-gray-600 dark:text-gray-400">
                         q<sub>h</sub> = 0.00256 &times; K<sub>z</sub> &times; K<sub>zt</sub> &times; K<sub>d</sub> &times; K<sub>e</sub> &times; V² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; I<sub>w</sub>` : ''} <br>
                         q<sub>h</sub> = 0.00256 &times; ${safeToFixed(intermediate.Kz, 3)} &times; ${safeToFixed(inputs.topographic_factor_Kzt, 2)} &times; ${safeToFixed(intermediate.Kd, 2)} &times; ${safeToFixed(intermediate.Ke, 3)} &times; ${safeToFixed(inputs.V_in, 1)}² ${inputs.effective_standard === 'ASCE 7-22' ? `&times; ${safeToFixed(intermediate.Iw, 2)}` : ''} = <b>${safeToFixed(intermediate.qz, 2)} ${p_unit}</b>
@@ -1976,11 +1976,11 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
     // --- Path 1: Handle high-rise rooftop structure results ---
     if (directional_results && directional_results.rooftop_structure) {
 
-        let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">ROOFTOP STRUCTURE PRESSURES (p = q_h*GC_r)</h3></div>`;
+        let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">ROOFTOP STRUCTURE PRESSURES ($p = q_h \cdot GC_r$)</h3></div>`;
 
         let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Rooftop Structure Pressures (${open_building_ref})</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
-                <th>Force Direction</th><th>GC_r</th><th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
+                <th>Force Direction</th><th>$GC_r$</th><th>Design Pressure (${inputs.design_method}) [${p_unit}]</th>
             </tr></thead>
             <tbody class="dark:text-gray-300 text-center">`;
 
@@ -2022,11 +2022,11 @@ function renderOpenBuildingResults(directional_results, open_building_ref, input
         openRoofResults = [];
     }
 
-    let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES (p = q_h*G*C_N)</h3></div>`;
+    let html = `<div class="text-center pt-4"><h3 class="text-xl font-bold">NET DESIGN PRESSURES ($p = q_h \cdot G \cdot C_N$)</h3></div>`;
 
     let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>Open Building Free Roof Pressures (${open_building_ref})</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
-                <th>Roof Zone</th><th>C_N,pos</th><th>C_N,neg</th><th>Positive Pressure (${inputs.design_method}) [${p_unit}]</th><th>Negative Pressure (${inputs.design_method}) [${p_unit}]</th>
+                <th>Roof Zone</th><th>$C_{N,\text{pos}}$</th><th>$C_{N,\text{neg}}$</th><th>Positive Pressure (${inputs.design_method}) [${p_unit}]</th><th>Negative Pressure (${inputs.design_method}) [${p_unit}]</th>
             </tr></thead>
             <tbody class="dark:text-gray-300 text-center">`;
 
@@ -2055,7 +2055,7 @@ function renderDirectionalResultsTable(data, title, id_prefix, inputs, intermedi
 
     let tableHtml = `<table class="w-full mt-4 border-collapse"><caption>${title}</caption>
             <thead class="bg-gray-100 dark:bg-gray-700"><tr class="text-center">
-                <th>Surface/Zone</th><th>C_p</th><th>Pressure (+GCpi) (${inputs.design_method}) [${p_unit}]</th><th>Pressure (-GCpi) (${inputs.design_method}) [${p_unit}]</th>
+                <th>Surface/Zone</th><th>$C_p$</th><th>Pressure ($+GC_{pi}$) (${inputs.design_method}) [${p_unit}]</th><th>Pressure ($-GC_{pi}$) (${inputs.design_method}) [${p_unit}]</th>
             </tr></thead>
             <tbody class="dark:text-gray-300 text-center">`;
 
@@ -2105,7 +2105,7 @@ function renderEnvelopeSection(envelope_results, inputs, intermediate, units) {
                 <thead class="bg-gray-100 dark:bg-gray-700">
                     <tr>
                         <th class="p-2 border dark:border-gray-600">Zone</th>
-                        <th class="p-2 border dark:border-gray-600">GCpf</th>
+                        <th class="p-2 border dark:border-gray-600">$GC_{pf}$</th>
                         <th class="p-2 border dark:border-gray-600">Design Pressure (+Internal) (${p_unit})</th>
                         <th class="p-2 border dark:border-gray-600">Design Pressure (-Internal) (${p_unit})</th>
                     </tr>
@@ -2127,7 +2127,7 @@ function renderEnvelopeSection(envelope_results, inputs, intermediate, units) {
     html += `
                 </tbody>
             </table>
-            <p class="text-xs text-gray-500 mt-2">* Pressures include internal pressure coefficient (GCpi).</p>
+            <p class="text-xs text-gray-500 mt-2">* Pressures include internal pressure coefficient ($GC_{pi}$).</p>
         </div>
     `;
     return html;
@@ -2185,8 +2185,8 @@ function renderHeightVaryingTable(heightVaryingResults, leeward_pressure, inputs
                         <thead class="bg-gray-100 dark:bg-gray-700">
                             <tr>
                                 <th>Height (${h_unit})</th>
-                                <th>Kz</th>
-                                <th>qz (${p_unit})</th>
+                                <th>$K_z$</th>
+                                <th>$q_z$ (${p_unit})</th>
                                 <th>Windward Wall Pressure (${p_unit})</th>
                             </tr> 
                         </thead>
@@ -2378,7 +2378,7 @@ function renderTorsionalCase(torsional_case, inputs, units) {
     let contentHtml;
     if (is_high_rise) {
         contentHtml = `<table class="w-full mt-4 border-collapse">
-                        <thead class="bg-gray-100 dark:bg-gray-700"><tr><th>Case</th><th>Torsional Moment (M<sub>t</sub>)</th></tr></thead>
+                        <thead class="bg-gray-100 dark:bg-gray-700"><tr><th>Case</th><th>Torsional Moment ($M_t$)</th></tr></thead>
                         <tbody class="dark:text-gray-300 text-center">`;
         Object.entries(torsional_case).forEach(([caseName, data], i) => {
             let Mt = is_imp ? data.Mt : data.Mt / 1000;
@@ -2390,9 +2390,9 @@ function renderTorsionalCase(torsional_case, inputs, units) {
                             </tr>
                             <tr id="${detailId}" class="details-row"><td colspan="2" class="p-0"><div class="calc-breakdown">
                                 <p>${data.note}</p>
-                                ${data.force > 0 ? `<p><b>Force (F):</b> ${safeToFixed(data.force, 0)} ${is_imp ? 'lb' : 'N'}</p>
-                                <p><b>Eccentricity (e):</b> ${data.eccentricity_val} &times; ${data.dimension} ${units.h_unit} = ${safeToFixed(data.eccentricity_val * data.dimension, 2)} ${units.h_unit}</p>
-                                <p><b>M<sub>t</sub> = F &times; e</b> = ${safeToFixed(data.force, 0)} &times; ${safeToFixed(data.eccentricity_val * data.dimension, 2)} = ${safeToFixed(data.force * data.eccentricity_val * data.dimension, 0)} ${m_unit.replace('-m', '-m')}</p>` : ''}
+                                ${data.force > 0 ? `<p><b>Force ($F$):</b> ${safeToFixed(data.force, 0)} ${is_imp ? 'lb' : 'N'}</p>
+                                <p><b>Eccentricity ($e$):</b> ${data.eccentricity_val} &times; ${data.dimension} ${units.h_unit} = ${safeToFixed(data.eccentricity_val * data.dimension, 2)} ${units.h_unit}</p>
+                                <p><b>$M_t = F \cdot e$</b> = ${safeToFixed(data.force, 0)} &times; ${safeToFixed(data.eccentricity_val * data.dimension, 2)} = ${safeToFixed(data.force * data.eccentricity_val * data.dimension, 0)} ${m_unit.replace('-m', '-m')}</p>` : ''}
                             </div></td></tr>`;
         });
         contentHtml += `</tbody></table>`;
@@ -2495,7 +2495,7 @@ function renderRooftopEquipmentSection(rooftop_results, inputs, intermediate, un
                     <td>${safeToFixed(pressure, 2)}</td>
                  </tr>
                  <tr id="${detailId}" class="details-row"><td colspan="2" class="p-0"><div class="calc-breakdown">
-                    <p><b>Formula:</b> p = q<sub>h</sub> &times; GC<sub>r</sub></p>
+                    <p><b>Formula:</b> $p = q_h \cdot GC_r$</p>
                     <p><b>Calculation:</b> ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(GCr, 2)} = ${safeToFixed(intermediate.qz * GCr, 2)} ${p_unit}</p>
                  </div></td></tr>`;
     });
@@ -2522,8 +2522,8 @@ function renderCandCSection(candc, inputs, intermediate, units) {
         html += `<thead class="bg-gray-100 dark:bg-gray-700">
                         <tr>
                             <th>Zone</th>
-                            <th>GCp (+)</th>
-                            <th>GCp (-)</th>
+                            <th>$GC_p\text{ (+)}$</th>
+                            <th>$GC_p\text{ (-)}$</th>
                             <th>LRFD Pressure (+ / -) [${p_unit}]</th>
                             <th>ASD Pressure (+ / -) [${p_unit}]</th>
                         </tr>
@@ -2543,7 +2543,7 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                             <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
                          </tr>`;
              html += `<tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
+                            <p><b>Formula:</b> $p = q_h \cdot (GC_p - GC_{pi})$</p>
                             <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                             <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                          </div></td></tr>`;
@@ -2552,7 +2552,7 @@ function renderCandCSection(candc, inputs, intermediate, units) {
         html += `<thead class="bg-gray-100 dark:bg-gray-700">
                         <tr>
                             <th>Zone</th>
-                            <th>GCp (+ / -)</th>
+                            <th>$GC_p\text{ (+ / -)}$</th>
                             <th>Design Pressure (+ / -) (${inputs.design_method}) [${p_unit}]</th>
                         </tr>
                     </thead>
@@ -2573,7 +2573,7 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                      </tr>`;
             
             html += `<tr id="${detailId}" class="details-row"><td colspan="3" class="p-0"><div class="calc-breakdown">
-                            <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
+                            <p><b>Formula:</b> $p = q_h \cdot (GC_p - GC_{pi})$</p>
                             <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_pos, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                             <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; (${safeToFixed(data.gcp_neg, 2)} - (&plusmn;${safeToFixed(inputs.GCpi_abs, 2)}))</p>
                          </div></td></tr>`;
@@ -2584,13 +2584,13 @@ function renderCandCSection(candc, inputs, intermediate, units) {
     // --- Render Rooftop Protection Table if applicable ---
     if (candc.protection && candc.protection.applicable && candc.protection.pressures && Object.keys(candc.protection.pressures).length > 0) {
         html += `<h4 class="font-bold text-center mt-6 mb-2">Rooftop Protection Pressures (${sanitizeHTML(candc.protection.type)})</h4>
-                 <p class="text-xs text-center text-gray-500 mb-2">Pressure equalized (Internal pressure excluded). Formula: p = q<sub>h</sub>GC<sub>p</sub></p>
+                 <p class="text-xs text-center text-gray-500 mb-2">Pressure equalized (Internal pressure excluded). Formula: $p = q_h GC_p$</p>
                  <table class="w-full border-collapse">
                     <thead class="bg-gray-100 dark:bg-gray-700">
                         <tr>
                             <th>Zone</th>
-                            <th>GCp (+)</th>
-                            <th>GCp (-)</th>
+                            <th>$GC_p\text{ (+)}$</th>
+                            <th>$GC_p\text{ (-)}$</th>
                             <th>LRFD Pressure (+ / -) [${p_unit}]</th>
                             <th>ASD Pressure (+ / -) [${p_unit}]</th>
                         </tr>
@@ -2611,7 +2611,7 @@ function renderCandCSection(candc, inputs, intermediate, units) {
                             <td>${safeToFixed(p_pos_asd, 2)} / ${safeToFixed(p_neg_asd, 2)}</td>
                          </tr>
                          <tr id="${detailId}" class="details-row"><td colspan="5" class="p-0"><div class="calc-breakdown">
-                            <p><b>Formula:</b> p = q<sub>h</sub> &times; GC<sub>p</sub></p>
+                            <p><b>Formula:</b> $p = q_h \cdot GC_p$</p>
                             <p><b>Positive Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(data.gcp_pos, 2)}</p>
                             <p><b>Negative Pressure Calc:</b> ${safeToFixed(intermediate.qz, 2)} &times; ${safeToFixed(data.gcp_neg, 2)}</p>
                          </div></td></tr>`;
@@ -2702,7 +2702,7 @@ function renderEnvelopeSection(envelope_results, inputs, intermediate, mwfrs_met
                 <thead class="bg-gray-100 dark:bg-gray-700">
                     <tr class="text-center">
                         <th>Zone</th>
-                        <th>(GCpf)</th>
+                        <th>($GC_{pf}$)</th>
                         <th>Design Pressure (+Internal) [${p_unit}]</th>
                         <th>Design Pressure (-Internal) [${p_unit}]</th>
                     </tr>
@@ -2808,7 +2808,7 @@ function renderWindResults(results) {
                         <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_tower, 3)}</p>
                         <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_tower, 2)} ${p_unit}</p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
+                        <p><b>Net Force Coefficient ($C_f$):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the solid area of one face (A<sub>f</sub> = ε &times; w &times; h).</p>
@@ -2828,10 +2828,10 @@ function renderWindResults(results) {
         const chimneyHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
                     <div class="calc-breakdown">
-                        <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
+                        <p><b>Structure Height ($h$):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at h:</b> ${safeToFixed(Kz_struct, 3)}</p>
                         <p><b>Velocity Pressure (q<sub>z</sub>) at h:</b> ${safeToFixed(qz_struct, 2)} ${p_unit}</p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
+                        <p><b>Net Force Coefficient ($C_f$):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
@@ -2861,7 +2861,7 @@ function renderWindResults(results) {
                             <td>${safeToFixed(data.gcp_neg, 2)}</td><td>${safeToFixed(pressure, 2)}</td>
                          </tr>
                          <tr id="${detailId}" class="details-row"><td colspan="3" class="p-0"><div class="calc-breakdown">
-                            <p><b>Formula:</b> p = q<sub>h</sub> &times; (GC<sub>p</sub> - GC<sub>pi</sub>)</p>
+                            <p><b>Formula:</b> $p = q_h \cdot (GC_p - GC_{pi})$</p>
                          </div></td></tr>`;
         });
     }
@@ -3007,7 +3007,7 @@ function renderWindResults(results) {
                         <p><b>Height to Tower Centroid (z):</b> ${safeToFixed(inputs.tower_height / 2, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_tower, 3)}</p>
                         <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_tower, 2)} ${p_unit}</p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
+                        <p><b>Net Force Coefficient ($C_f$):</b> ${safeToFixed(Cf, 3)} (from ${ref} for ε=${inputs.tower_solidity_ratio})</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_tower, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the solid area of one face (A<sub>f</sub> = ε &times; w &times; h).</p>
@@ -3027,10 +3027,10 @@ function renderWindResults(results) {
         const chimneyHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Calculations are based on the structure's top height.</p>
                     <div class="calc-breakdown">
-                        <p><b>Structure Height (h):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
+                        <p><b>Structure Height ($h$):</b> ${safeToFixed(h_struct, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at h:</b> ${safeToFixed(Kz_struct, 3)}</p>
                         <p><b>Velocity Pressure (q<sub>z</sub>) at h:</b> ${safeToFixed(qz_struct, 2)} ${p_unit}</p>
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
+                        <p><b>Net Force Coefficient ($C_f$):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>f</sub> = ${safeToFixed(qz_struct, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(Cf, 3)}</p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">This pressure acts on the projected area normal to the wind (A = D &times; h).</p>
@@ -3053,7 +3053,7 @@ function renderWindResults(results) {
                         <p><b>Height to Sign Centroid (z):</b> ${safeToFixed(inputs.clearance_z + inputs.sign_height_s / 2, 2)} ${h_unit}</p>
                         <p><b>Velocity Pressure Exposure Coefficient (K<sub>z</sub>) at centroid:</b> ${safeToFixed(Kz_sign, 3)}</p>
                         <p><b>Velocity Pressure (q<sub>z</sub>) at centroid:</b> ${safeToFixed(qz_sign, 2)} ${p_unit}</p>
-                        <p><b>Net Pressure Coefficient (C<sub>N</sub>):</b> ${safeToFixed(CN, 3)} (from ${ref})</p>
+                        <p><b>Net Pressure Coefficient ($C_N$):</b> ${safeToFixed(CN, 3)} (from ${ref})</p>
                         <p><b>Formula:</b> p = q<sub>z</sub> &times; G &times; C<sub>N</sub> = ${safeToFixed(qz_sign, 2)} &times; ${inputs.gust_effect_factor_g} &times; ${safeToFixed(CN, 3)}</p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                     </div>
@@ -3071,7 +3071,7 @@ function renderWindResults(results) {
         const openSignHtml = `
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">The design wind pressure below should be multiplied by the solid area of the sign (A<sub>s</sub>) to get the total design force (F).</p>
                     <div class="calc-breakdown">
-                        <p><b>Net Force Coefficient (C<sub>f</sub>):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
+                        <p><b>Net Force Coefficient ($C_f$):</b> ${safeToFixed(Cf, 3)} (from ${ref})</p>
                         <p><b>Formula:</b> p = q<sub>h</sub> &times; G &times; C<sub>f</sub></p>
                         <p class="font-bold text-lg mt-2">Design Wind Pressure (p): ${safeToFixed(final_pressure, 2)} ${p_unit}</p>
                     </div>
@@ -3153,6 +3153,53 @@ initializeApp({
     fileInputId: 'wind-file-input',
     storageKey: 'wind-calculator-inputs',
     onReady: () => {
+        const unitSelect = document.getElementById('unit_system');
+        const updateBadges = (unit) => {
+            const is_m = unit === 'metric';
+            document.querySelectorAll('.wind-v-unit').forEach(el => el.textContent = is_m ? '[m/s]' : '[mph]');
+            document.querySelectorAll('.wind-l-unit').forEach(el => el.textContent = is_m ? '[m]' : '[ft]');
+            document.querySelectorAll('.wind-a-unit').forEach(el => el.textContent = is_m ? '[m²]' : '[ft²]');
+        };
+
+        if (unitSelect) {
+            let currentUnit = unitSelect.value || 'imperial';
+            updateBadges(currentUnit);
+
+            unitSelect.addEventListener('change', (e) => {
+                const newUnit = e.target.value;
+                if (newUnit === currentUnit) return;
+
+                const vFactor = newUnit === 'metric' ? 0.44704 : (1 / 0.44704);
+                const lFactor = newUnit === 'metric' ? 0.3048 : (1 / 0.3048);
+                const aFactor = newUnit === 'metric' ? 0.092903 : (1 / 0.092903);
+
+                const vEl = document.getElementById('basic_wind_speed');
+                if (vEl && vEl.value !== '') {
+                    const v = parseFloat(vEl.value);
+                    if (!isNaN(v) && v !== 0) vEl.value = (v * vFactor).toFixed(1);
+                }
+
+                const lFields = ['mean_roof_height', 'building_length_L', 'building_width_B', 'ground_elevation', 'parapet_height_hp', 'chimney_height', 'chimney_diameter', 'corner_radius_r', 'member_diameter'];
+                lFields.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.value !== '') {
+                        const val = parseFloat(el.value);
+                        if (!isNaN(val) && val !== 0) el.value = (val * lFactor).toFixed(1);
+                    }
+                });
+
+                const aEl = document.getElementById('effective_wind_area');
+                if (aEl && aEl.value !== '') {
+                    const val = parseFloat(aEl.value);
+                    if (!isNaN(val) && val !== 0) aEl.value = (val * aFactor).toFixed(1);
+                }
+
+                currentUnit = newUnit;
+                updateBadges(newUnit);
+                document.getElementById('run-calculation-btn')?.click();
+            });
+        }
+
         // Attach report event listeners here, after the app is ready
         attachReportEventListeners('results-container', {
             reportId: 'wind-report-content',

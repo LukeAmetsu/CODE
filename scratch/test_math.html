@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../js/shared-utils.js"></script>
+</head>
+<body>
+<div id="output"></div>
+<script>
+const tests = [
+    { expr: "21400 / 2", expected: 10700 },
+    { expr: "12050 * 1.4", expected: 16870 },
+    { expr: "1,5 + 2,3", expected: 3.8 },
+    { expr: "25 - 4.6", expected: 20.4 },
+    { expr: "4 * 47.88", expected: 191.52 },
+    { expr: "2^3", expected: 8 },
+    { expr: "sqrt(16)", expected: 4 },
+    { expr: "21400 * 10%", expected: 2140 },
+    { expr: "max(10, 20)", expected: 20 },
+    { expr: "43.1", expected: 43.1 },
+    { expr: "0,5", expected: 0.5 }
+];
+
+let allPassed = true;
+tests.forEach(t => {
+    const res = safeMathEval(t.expr);
+    const pass = (Math.abs(res - t.expected) < 1e-4);
+    if (!pass) allPassed = false;
+    document.getElementById("output").innerHTML += `<p>${t.expr} => ${res} (Expected ${t.expected}) - ${pass ? 'PASS' : 'FAIL'}</p>`;
+});
+document.getElementById("output").innerHTML += `<h2>${allPassed ? 'ALL TESTS PASSED!' : 'SOME TESTS FAILED'}</h2>`;
+</script>
+</body>
+</html>

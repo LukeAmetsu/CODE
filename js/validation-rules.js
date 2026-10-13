@@ -10,10 +10,10 @@
  */
 const validationRules = {
     wind: {
-        'mean_roof_height': { min: 1, max: 2000, required: true, label: 'Mean Roof Height' },
-        'basic_wind_speed': { min: 70, max: 300, required: true, label: 'Basic Wind Speed' },
-        'building_length_L': { min: 1, required: true, label: 'Building Length (L)' },
-        'building_width_B': { min: 1, required: true, label: 'Building Width (B)' },
+        'mean_roof_height': { min: 0.1, max: 2000, required: true, label: 'Mean Roof Height' },
+        'basic_wind_speed': { min: 10, max: 300, required: true, label: 'Basic Wind Speed' },
+        'building_length_L': { min: 0.1, required: true, label: 'Building Length (L)' },
+        'building_width_B': { min: 0.1, required: true, label: 'Building Width (B)' },
         'roof_slope_deg': { min: 0, max: 90, required: false, label: 'Roof Slope' }
     },
     snow: {
@@ -31,7 +31,22 @@ const validationRules = {
         'combo_rain_load_r': { required: false, label: 'Rain Load (R)' },
         'combo_balanced_snow_load_sb': { required: false, label: 'Balanced Snow (Sb)' },
         'combo_wind_wall_ww_max': { required: false, label: 'Windward Wall Max Wind' },
-        'combo_seismic_load_e': { required: false, label: 'Seismic Load (E)' }
+        'combo_seismic_load_e': { required: false, label: 'Seismic Load (E)' },
+        'combo_tsunami_load_ts': { required: false, label: 'Tsunami Load (Ts)' }
+    },
+    tsunami: {
+        'tsunami_inundation_depth': { min: 0.01, required: true, label: 'Inundation Depth (h)' },
+        'tsunami_flow_velocity': { min: 0.01, required: true, label: 'Flow Velocity (u)' },
+        'tsunami_component_width': { min: 0.01, required: true, label: 'Component Width (B)' },
+        'tsunami_fluid_density': { min: 1, required: true, label: 'Fluid Density (ρs)' }
+    },
+    seismic: {
+        'seismic_ss': { min: 0.01, max: 5.0, required: true, label: 'Mapped Ss (0.2s)' },
+        'seismic_s1': { min: 0.005, max: 3.0, required: true, label: 'Mapped S1 (1.0s)' },
+        'seismic_tl': { min: 1.0, max: 24.0, required: true, label: 'Long Period TL' },
+        'seismic_r': { min: 1.0, max: 12.0, required: true, label: 'Response Modification Factor (R)' },
+        'seismic_height_hn': { min: 0.5, max: 1000.0, required: true, label: 'Structure Height (hn)' },
+        'seismic_weight_w': { min: 1.0, required: true, label: 'Effective Seismic Weight (W)' }
     },
     baseplate: {
         'base_plate_length_N': { min: 1, required: true, label: 'Plate Length (N)' },

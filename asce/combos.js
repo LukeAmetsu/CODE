@@ -4,6 +4,7 @@ var comboInputIds = [
     'combo_asce_standard', 'combo_jurisdiction', 'combo_design_method', 'combo_input_load_level', 'combo_unit_system',
     'combo_dead_load_d', 'combo_live_load_l', 'combo_roof_live_load_lr', 'combo_rain_load_r', 'combo_balanced_snow_load_sb',
     'combo_unbalanced_windward_snow_load_suw', 'combo_unbalanced_leeward_snow_load_sul', 'combo_drift_surcharge_sd', 'combo_seismic_load_e',
+    'combo_tsunami_load_ts',
     // Wind Loads (MWFRS)
     'combo_wind_wall_ww_max', 'combo_wind_wall_ww_min',
     'combo_wind_wall_lw_max', 'combo_wind_wall_lw_min',
@@ -22,7 +23,17 @@ var handleRunComboCheck = createCalculationHandler({
         const effective_standard = inputs.combo_jurisdiction === "NYCBC 2022" ? "ASCE 7-16" : inputs.combo_asce_standard;
         const scenarios = buildScenarios(inputs);
 
-        const base_combo_loads = { D: inputs.combo_dead_load_d, L: inputs.combo_live_load_l, Lr: inputs.combo_roof_live_load_lr, R: inputs.combo_rain_load_r, S: 0, W: 0, E: 0, unit_system: inputs.combo_unit_system };
+        const base_combo_loads = { 
+            D: parseFloat(inputs.combo_dead_load_d) || 0, 
+            L: parseFloat(inputs.combo_live_load_l) || 0, 
+            Lr: parseFloat(inputs.combo_roof_live_load_lr) || 0, 
+            R: parseFloat(inputs.combo_rain_load_r) || 0, 
+            S: 0, 
+            W: 0, 
+            E: parseFloat(inputs.combo_seismic_load_e) || 0, 
+            Ts: parseFloat(inputs.combo_tsunami_load_ts) || 0,
+            unit_system: inputs.combo_unit_system 
+        };
         const base_combos = comboLoadCalculator.calculate(base_combo_loads, effective_standard, inputs.combo_input_load_level, inputs.combo_design_method);
 
         const scenarios_data = {};
@@ -31,12 +42,13 @@ var handleRunComboCheck = createCalculationHandler({
 
             // Start with all loads from the form.
             const scenario_loads = {
-                D: inputs.combo_dead_load_d,
-                L: inputs.combo_live_load_l,
-                Lr: inputs.combo_roof_live_load_lr,
-                R: inputs.combo_rain_load_r,
+                D: parseFloat(inputs.combo_dead_load_d) || 0,
+                L: parseFloat(inputs.combo_live_load_l) || 0,
+                Lr: parseFloat(inputs.combo_roof_live_load_lr) || 0,
+                R: parseFloat(inputs.combo_rain_load_r) || 0,
                 S: scenarios[key].S, // Use scenario-specific snow
-                E: inputs.combo_seismic_load_e,
+                E: parseFloat(inputs.combo_seismic_load_e) || 0,
+                Ts: parseFloat(inputs.combo_tsunami_load_ts) || 0,
                 unit_system: inputs.combo_unit_system
             };
 
@@ -62,7 +74,38 @@ initializeApp({
     inputIds: comboInputIds,
     calculationHandler: handleRunComboCheck,
     onReady: () => {
-        loadDataFromStorage(); // This is specific to the combo calculator
+        loadDataFromStorage();
+
+        const unitSelect = document.getElementById('combo_unit_system');
+        const updateBadges = (unit) => {
+            const badgeText = unit === 'metric' ? '[kPa]' : '[psf]';
+            document.querySelectorAll('.combo-unit-badge').forEach(b => b.textContent = badgeText);
+        };
+
+        if (unitSelect) {
+            let currentUnit = unitSelect.value || 'imperial';
+            updateBadges(currentUnit);
+
+            unitSelect.addEventListener('change', (e) => {
+                const newUnit = e.target.value;
+                if (newUnit === currentUnit) return;
+
+                const factor = newUnit === 'metric' ? 0.04788026 : (1 / 0.04788026);
+                comboInputIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.type === 'number' && el.value !== '') {
+                        const val = parseFloat(el.value);
+                        if (!isNaN(val) && val !== 0) {
+                            el.value = (val * factor).toFixed(2);
+                        }
+                    }
+                });
+
+                currentUnit = newUnit;
+                updateBadges(newUnit);
+                document.getElementById('run-combo-calculation-btn')?.click();
+            });
+        }
     }
 });
 function loadDataFromStorage() {
@@ -71,7 +114,16 @@ function loadDataFromStorage() {
 
     try {
         const data = JSON.parse(storedLoads);
-        const { loads, source = 'another calculator', type = 'Generic' } = data;
+        const { loads, source = 'another calculator', type = 'Generic', unit_system } = data;
+
+        if (unit_system) {
+            const unitEl = document.getElementById('combo_unit_system');
+            if (unitEl && unitEl.value !== unit_system) {
+                unitEl.value = unit_system;
+                const badgeText = unit_system === 'metric' ? '[kPa]' : '[psf]';
+                document.querySelectorAll('.combo-unit-badge').forEach(b => b.textContent = badgeText);
+            }
+        }
 
         // Get the IDs of the inputs that will be populated.
         const importedIds = Object.keys(loads);
@@ -210,6 +262,8 @@ var comboStrategies = {
             '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 0.2, load: 'S' }],
             '6': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'W' }],
             '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+            'T1 (Tsunami)': [{ factor: 1.2, load: 'D' }, { factor: 0.5, load: 'L' }, { factor: 1.0, load: 'Ts' }, { factor: 0.2, load: 'S' }],
+            'T2 (Tsunami)': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'Ts' }],
         },
         // REPLACED `asdRules` with explicit `asdDefs` for correctness.
         asdDefs: {
@@ -222,13 +276,14 @@ var comboStrategies = {
             '6a. D + 0.75L + 0.75(0.6W) + 0.75(Lr|S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.45, load: 'W' }, { factor: 0.75, maxOf: ['Lr', 'S', 'R'] }],
             '6b. D + 0.75L + 0.75(0.7E) + 0.75S': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.525, load: 'E' }, { factor: 0.75, load: 'S' }],
             '7. 0.6D + 0.6W': [{ factor: 0.6, load: 'D' }, { factor: 0.6, load: 'W' }],
-            '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }]
+            '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }],
+            'T1. D + 0.75Ts': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'Ts' }],
+            'T2. D + 0.75L + 0.75Ts': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.75, load: 'Ts' }],
+            'T3. 0.6D + 0.75Ts': [{ factor: 0.6, load: 'D' }, { factor: 0.75, load: 'Ts' }]
         }
     },
     'ASCE 7-22': {
         prepareLoads: (loads, level) => {
-            // All formulas in ASCE 7-22 LRFD and ASD use nominal-level loads directly with factors.
-            // No pre-adjustment is necessary.
             return {
                 scope: { ...loads },
                 adjustment_notes: {}
@@ -240,11 +295,12 @@ var comboStrategies = {
             '3a': [{ factor: 1.2, load: 'D' }, { factor: 1.6, maxOf: ['Lr', 'R'] }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
             '3b': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'S' }, { maxOf: [{ factor: 1.0, load: 'L' }, { factor: 0.5, load: 'W' }] }],
             '4': [{ factor: 1.2, load: 'D' }, { factor: 1.6, load: 'W' }, { factor: 1.0, load: 'L' }, { factor: 0.5, maxOf: ['Lr', 'S', 'R'] }],
-            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }], // Note: 1.0S, not 0.2S as in 7-16
+            '5': [{ factor: 1.2, load: 'D' }, { factor: 1.0, load: 'E' }, { factor: 1.0, load: 'L' }, { factor: 1.0, load: 'S' }],
             '6': [{ factor: 0.9, load: 'D' }, { factor: 1.6, load: 'W' }],
             '7': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'E' }],
+            'T1 (Tsunami)': [{ factor: 1.2, load: 'D' }, { factor: 0.5, load: 'L' }, { factor: 1.0, load: 'Ts' }, { factor: 0.2, load: 'S' }],
+            'T2 (Tsunami)': [{ factor: 0.9, load: 'D' }, { factor: 1.0, load: 'Ts' }],
         },
-        // REPLACED `asdRules` with explicit `asdDefs` for correctness.
         asdDefs: {
             '1. D': [{ factor: 1.0, load: 'D' }],
             '2. D + L': [{ factor: 1.0, load: 'D' }, { factor: 1.0, load: 'L' }],
@@ -254,7 +310,10 @@ var comboStrategies = {
             '5b. D + 0.7E': [{ factor: 1.0, load: 'D' }, { factor: 0.7, load: 'E' }],
             '6. D + 0.75L + 0.75W + 0.75(Lr|0.7S|R)': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.75, load: 'W' }, { factor: 0.75, maxOf: [{ load: 'Lr' }, { factor: 0.7, load: 'S' }, { load: 'R' }] }],
             '7. 0.6D + W': [{ factor: 0.6, load: 'D' }, { factor: 1.0, load: 'W' }],
-            '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }]
+            '8. 0.6D + 0.7E': [{ factor: 0.6, load: 'D' }, { factor: 0.7, load: 'E' }],
+            'T1. D + 0.75Ts': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'Ts' }],
+            'T2. D + 0.75L + 0.75Ts': [{ factor: 1.0, load: 'D' }, { factor: 0.75, load: 'L' }, { factor: 0.75, load: 'Ts' }],
+            'T3. 0.6D + 0.75Ts': [{ factor: 0.6, load: 'D' }, { factor: 0.75, load: 'Ts' }]
         }
     }
 };
@@ -388,27 +447,27 @@ function buildScenarios(inputs) {
  * Each object can have a 'label', 'id' (for simple value lookup), or a 'value' function for complex calculations.
  */
 var inputLoadConfig = [
-    { label: 'Dead Load (D)', id: 'combo_dead_load_d' },
-    { label: 'Live Load (L)', id: 'combo_live_load_l' },
-    { label: 'Roof Live (Lr)', id: 'combo_roof_live_load_lr' },
-    { label: 'Rain Load (R)', id: 'combo_rain_load_r' },
-    { label: 'Balanced Snow (Sb)', id: 'combo_balanced_snow_load_sb' },
-    { label: 'Unbalanced Windward (Suw)', id: 'combo_unbalanced_windward_snow_load_suw' },
-    { label: 'Unbalanced Leeward (Sul)', id: 'combo_unbalanced_leeward_snow_load_sul' },
-    { label: 'Drift Surcharge (Sd)', id: 'combo_drift_surcharge_sd' },
-    { label: 'Max Wind (Wmax)', value: (i) => Math.max(i.combo_wind_wall_ww_max, i.combo_wind_wall_lw_max, i.combo_wind_roof_ww_max, i.combo_wind_roof_lw_max, i.combo_wind_cc_max, i.combo_wind_cc_wall_max) },
-    { label: 'Min Wind (Wmin)', value: (i) => Math.min(i.combo_wind_wall_ww_min, i.combo_wind_wall_lw_min, i.combo_wind_roof_ww_min, i.combo_wind_roof_lw_min, i.combo_wind_cc_min, i.combo_wind_cc_wall_min) },
-    { label: 'Windward Wall Max (W)', id: 'combo_wind_wall_ww_max' },
-    { label: 'Windward Wall Min (W)', id: 'combo_wind_wall_ww_min' },
-    { label: 'Leeward Wall Max (W)', id: 'combo_wind_wall_lw_max' },
-    { label: 'Leeward Wall Min (W)', id: 'combo_wind_wall_lw_min' },
-    { label: 'Windward Roof Max (W)', id: 'combo_wind_roof_ww_max' },
-    { label: 'Windward Roof Min (W)', id: 'combo_wind_roof_ww_min' },
-    { label: 'Leeward Roof Max (W)', id: 'combo_wind_roof_lw_max' },
-    { label: 'Leeward Roof Min (W)', id: 'combo_wind_roof_lw_min' },
-    { label: 'C&C Roof Max/Min (W)', value: (i) => `${i.combo_wind_cc_max.toFixed(2)} / ${i.combo_wind_cc_min.toFixed(2)}` },
-    { label: 'C&C Wall Max/Min (W)', value: (i) => `${i.combo_wind_cc_wall_max.toFixed(2)} / ${i.combo_wind_cc_wall_min.toFixed(2)}` },
-    { label: 'Seismic Load (E)', id: 'combo_seismic_load_e' }
+    { label: 'Dead Load ($D$)', id: 'combo_dead_load_d' },
+    { label: 'Live Load ($L$)', id: 'combo_live_load_l' },
+    { label: 'Roof Live ($L_r$)', id: 'combo_roof_live_load_lr' },
+    { label: 'Rain Load ($R$)', id: 'combo_rain_load_r' },
+    { label: 'Balanced Snow ($S_b$)', id: 'combo_balanced_snow_load_sb' },
+    { label: 'Unbalanced Windward ($S_{uw}$)', id: 'combo_unbalanced_windward_snow_load_suw' },
+    { label: 'Unbalanced Leeward ($S_{ul}$)', id: 'combo_unbalanced_leeward_snow_load_sul' },
+    { label: 'Drift Surcharge ($S_d$)', id: 'combo_drift_surcharge_sd' },
+    { label: 'Max Wind ($W_{\\max}$)', value: (i) => Math.max(i.combo_wind_wall_ww_max, i.combo_wind_wall_lw_max, i.combo_wind_roof_ww_max, i.combo_wind_roof_lw_max, i.combo_wind_cc_max, i.combo_wind_cc_wall_max) },
+    { label: 'Min Wind ($W_{\\min}$)', value: (i) => Math.min(i.combo_wind_wall_ww_min, i.combo_wind_wall_lw_min, i.combo_wind_roof_ww_min, i.combo_wind_roof_lw_min, i.combo_wind_cc_min, i.combo_wind_cc_wall_min) },
+    { label: 'Windward Wall Max ($W$)', id: 'combo_wind_wall_ww_max' },
+    { label: 'Windward Wall Min ($W$)', id: 'combo_wind_wall_ww_min' },
+    { label: 'Leeward Wall Max ($W$)', id: 'combo_wind_wall_lw_max' },
+    { label: 'Leeward Wall Min ($W$)', id: 'combo_wind_wall_lw_min' },
+    { label: 'Windward Roof Max ($W$)', id: 'combo_wind_roof_ww_max' },
+    { label: 'Windward Roof Min ($W$)', id: 'combo_wind_roof_ww_min' },
+    { label: 'Leeward Roof Max ($W$)', id: 'combo_wind_roof_lw_max' },
+    { label: 'Leeward Roof Min ($W$)', id: 'combo_wind_roof_lw_min' },
+    { label: 'C&C Roof Max/Min ($W$)', value: (i) => `${i.combo_wind_cc_max.toFixed(2)} / ${i.combo_wind_cc_min.toFixed(2)}` },
+    { label: 'C&C Wall Max/Min ($W$)', value: (i) => `${i.combo_wind_cc_wall_max.toFixed(2)} / ${i.combo_wind_cc_wall_min.toFixed(2)}` },
+    { label: 'Seismic Load ($E$)', id: 'combo_seismic_load_e' }
 ];
 
 /**

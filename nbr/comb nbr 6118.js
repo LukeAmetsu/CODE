@@ -1445,9 +1445,9 @@ function renderCombinationsReport(combos) {
         if (std.includes('ASCE')) {
             coefInfo = `Tipo ASCE: ${meta.asce_type || 'D'}`;
         } else if (std.includes('Eurocode')) {
-            coefInfo = meta.isVariable ? `&gamma;<sub>Q</sub>=1.50, &psi;<sub>0</sub>=${meta.ec.psi0}` : `&gamma;<sub>G</sub>=1.35/1.00`;
+            coefInfo = meta.isVariable ? `$\gamma_Q = 1.50, \psi_0 = ${meta.ec.psi0}$` : `$\gamma_G = 1.35 / 1.00$`;
         } else {
-            coefInfo = meta.isVariable ? `&gamma;<sub>q</sub>=1.40, &psi;<sub>0</sub>=${meta.nbr.psi0}` : `&gamma;<sub>g</sub>=1.35-1.40/1.00`;
+            coefInfo = meta.isVariable ? `$\gamma_q = 1.40, \psi_0 = ${meta.nbr.psi0}$` : `$\gamma_g = 1.35\text{-}1.40 / 1.00$`;
         }
 
         return `
@@ -1648,7 +1648,7 @@ function renderCombinationsReport(combos) {
                     </div>
                     <div class="space-y-1.5">
                         <p>• <b class="text-gray-900 dark:text-gray-100">Ponderação de Ações Permanentes</b>: consideração simultânea de esforços favoráveis e desfavoráveis para captura do pior caso de tombamento/alívio.</p>
-                        <p>• <b class="text-gray-900 dark:text-gray-100">Ações Variáveis Concorrentes</b>: alternância sistemática de ação variável principal e redução de simultaneidade (&psi;<sub>0</sub> / fatores de acompanhamento).</p>
+                        <p>• <b class="text-gray-900 dark:text-gray-100">Ações Variáveis Concorrentes</b>: alternância sistemática de ação variável principal e redução de simultaneidade ($\psi_0$ / fatores de acompanhamento).</p>
                     </div>
                 </div>
             </div>
@@ -1712,6 +1712,7 @@ function renderCombinationsReport(combos) {
     `;
 
     container.innerHTML = reportHtml;
+    if (window.renderLatex) window.renderLatex(container);
 }
 
 function handleStandardChange() {

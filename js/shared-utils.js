@@ -548,29 +548,57 @@ function printReport(elementId) {
 
 /**
  * Safely evaluates a mathematical expression string.
- * Allows basic operators: +, -, *, /, (, ), and decimal numbers.
+ * Allows operators: +, -, *, /, ^, %, parentheses, decimal commas (1,5), and Math functions (sqrt, abs, round, min, max, pi).
  * @param {string|number} expression - The expression to evaluate.
  * @returns {number|null} The evaluated number or null if invalid.
  */
 function safeMathEval(expression) {
     if (expression === null || expression === undefined || expression === '') return null;
-    if (typeof expression === 'number') return expression;
+    if (typeof expression === 'number') return isFinite(expression) ? expression : null;
 
-    // Convert to string and sanitize
-    const str = String(expression);
-    // Allow digits, dots, spaces, and operators +, -, *, /, (, )
-    if (!/^[0-9+\-*/().\s]+$/.test(str)) {
-        // Fallback for simple parse if invalid chars found (though input type usually restricts this)
-        const val = parseFloat(str);
+    let str = String(expression).trim();
+    if (!str) return null;
+
+    // Fast-path: simple integer or float
+    if (/^-?\d+(\.\d+)?$/.test(str)) {
+        const val = Number(str);
+        return isFinite(val) ? val : null;
+    }
+
+    // Replace Brazilian/European decimal comma when surrounded by digits: e.g. "1,5" -> "1.5"
+    str = str.replace(/(\d+),(\d+)/g, '$1.$2');
+    // Replace leading decimal comma: e.g. ",5" -> "0.5"
+    str = str.replace(/(^|[+\-*/(])\s*,(\d+)/g, '$1 0.$2');
+
+    // Replace power operator '^' with exponentiation '**'
+    str = str.replace(/\^/g, '**');
+
+    // Replace percentage: e.g. "10%" -> "(10/100)"
+    str = str.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
+
+    // Allow safe Math functions and constants (case-insensitive)
+    const allowedMath = ['sqrt', 'abs', 'round', 'floor', 'ceil', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'log', 'log10', 'exp', 'min', 'max', 'pi'];
+    allowedMath.forEach(fn => {
+        const regex = new RegExp(`\\b${fn}\\b`, 'gi');
+        if (fn.toLowerCase() === 'pi') {
+            str = str.replace(regex, 'Math.PI');
+        } else {
+            str = str.replace(regex, `Math.${fn.toLowerCase()}`);
+        }
+    });
+
+    // Whitelist check: allow digits, dots, operators +, -, *, /, (, ), spaces, and commas
+    const sanitized = str.replace(/Math\.(sqrt|abs|round|floor|ceil|sin|cos|tan|asin|acos|atan|log|log10|exp|min|max|PI)/g, '');
+    if (!/^[0-9+\-*/().\s,]+$/.test(sanitized)) {
+        // Fallback for simple parse if invalid chars found
+        const val = parseFloat(str.replace(',', '.'));
         return isNaN(val) ? null : val;
     }
 
     try {
-        // Use Function constructor to evaluate safely-ish (sandboxed by regex check)
-        // "return " + str
-        const func = new Function('return ' + str);
+        const func = new Function('"use strict"; return (' + str + ');');
         const result = func();
-        return isFinite(result) ? result : null;
+        return (typeof result === 'number' && isFinite(result)) ? result : null;
     } catch (e) {
         return null;
     }
@@ -703,21 +731,26 @@ function initializeSharedUI() {
 
 /**
  * Enables mathematical expressions in numeric inputs.
- * Converts type="number" to type="text" to allow characters like +, -, *, /, (, ).
- * Evaluates the expression on blur.
+ * Converts type="number" to type="text" to allow characters like +, -, *, /, (, ), ^, %, commas.
+ * Evaluates the expression on blur or Enter.
  * Also sets up a MutationObserver to handle dynamically added inputs.
  */
 function enableMathInInputs() {
     const processInput = (input) => {
-        // Only process inputs that are numbers or have the numeric-input class
-        if (input.tagName !== 'INPUT') return;
-        if (input.type !== 'number' && !input.classList.contains('numeric-input')) return;
+        // Only process inputs that are numbers or have numeric characteristics
+        if (!input || input.tagName !== 'INPUT') return;
+        const isNumeric = input.type === 'number' || 
+                          input.classList.contains('numeric-input') || 
+                          input.dataset.originalType === 'number' ||
+                          input.hasAttribute('step');
+        if (!isNumeric) return;
 
         // Convert to text to allow typing expressions
         if (input.type === 'number') {
             input.type = 'text';
-            input.inputMode = 'decimal'; // Show numeric keyboard on mobile
+            input.dataset.originalType = 'number';
         }
+        input.dataset.mathEnabled = 'true';
         
         // Remove old listeners to avoid duplicates if re-initializing
         input.removeEventListener('blur', handleMathInputBlur);
@@ -729,11 +762,10 @@ function enableMathInInputs() {
     };
 
     // 1. Process existing inputs
-    const numericInputs = document.querySelectorAll('input[type="number"], input.numeric-input');
+    const numericInputs = document.querySelectorAll('input[type="number"], input.numeric-input, input[data-original-type="number"], input[step]');
     numericInputs.forEach(processInput);
 
-    // 2. Set up MutationObserver for dynamically added inputs (e.g., in batch tables)
-    // Prevent multiple observers if initializeSharedUI is called multiple times
+    // 2. Set up MutationObserver for dynamically added inputs (e.g., in batch tables or axis tables)
     if (window._mathInputsObserver) {
         window._mathInputsObserver.disconnect();
     }
@@ -742,14 +774,11 @@ function enableMathInInputs() {
         mutations.forEach(mutation => {
             if (mutation.type === 'childList') {
                 mutation.addedNodes.forEach(node => {
-                    // Check if the added node is an element
                     if (node.nodeType === Node.ELEMENT_NODE) {
-                        // If the node itself is an input
                         if (node.tagName === 'INPUT') {
                             processInput(node);
                         }
-                        // Check for inputs inside the added node
-                        const inputs = node.querySelectorAll('input[type="number"], input.numeric-input');
+                        const inputs = node.querySelectorAll('input[type="number"], input.numeric-input, input[data-original-type="number"], input[step]');
                         inputs.forEach(processInput);
                     }
                 });
@@ -757,11 +786,19 @@ function enableMathInInputs() {
         });
     });
 
-    // Start observing the body for added nodes
-    window._mathInputsObserver.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    if (document.body) {
+        // Start observing the body for added nodes
+        window._mathInputsObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+}
+
+// Expose globally so all pages and scripts can call it directly
+if (typeof window !== 'undefined') {
+    window.safeMathEval = safeMathEval;
+    window.enableMathInInputs = enableMathInInputs;
 }
 
 function handleMathInputBlur(e) {
@@ -771,29 +808,28 @@ function handleMathInputBlur(e) {
 function handleMathInputKeydown(e) {
     if (e.key === 'Enter') {
         evaluateInputExpression(e.target);
-        // Note: We don't preventDefault here usually, so that form submission or other listeners can still happen
-        // assuming they run *after* this sync evaluation or pick up the updated value.
     }
 }
 
 function evaluateInputExpression(input) {
+    if (!input) return;
     const originalValue = input.value;
-    if (!originalValue) return;
+    if (originalValue === null || originalValue === undefined) return;
+    const str = String(originalValue).trim();
+    if (!str) return;
 
-    // Check if it looks like a math expression (contains operators)
-    if (/[+\-*/()]/.test(originalValue)) {
-        const result = safeMathEval(originalValue);
+    // Check if it looks like a math expression (contains operators, comma between digits, functions, ^, %)
+    const hasMath = /[+\-*/()^%]/.test(str) || /(\d+),(\d+)/.test(str) || /\b(sqrt|abs|round|floor|ceil|sin|cos|tan|min|max|pi)\b/i.test(str);
+    if (hasMath) {
+        const result = safeMathEval(str);
         if (result !== null && isFinite(result)) {
-            // Update value if valid
-            // Format to reasonable decimals if needed, or keep precision?
-            // Let's keep distinct precision but avoid long float errors like 3.000000004
-            
+            input.dataset.formula = str;
+            input.title = `Fórmula: ${str} = ${result}`;
+
             // Check if it's an integer
             if (Number.isInteger(result)) {
                 input.value = result.toString();
             } else {
-                // Determine precision based on magnitude? Or just max 6 decimals
-                // parseFloat(toFixed(6)) removes trailing zeros
                 input.value = parseFloat(result.toFixed(6)).toString(); 
             }
             
@@ -1057,29 +1093,382 @@ async function convertSvgToPng(svg) {
 }
 
 /**
- * Creates Word-compatible HTML structure with a header and basic styling.
+ * Converts LaTeX formulas to clean HTML typography for Microsoft Word.
+ * Word does not support LaTeX/MathML cleanly from HTML, so this converts
+ * to standard sub, sup, b, Greek characters, and clean math operators.
+ */
+function latexToWordHtml(latex) {
+    if (!latex) return '';
+    let s = String(latex).trim();
+
+    // Strip wrapping $$ or $
+    s = s.replace(/^\$\$([\s\S]*)\$\$$/, '$1').replace(/^\$([\s\S]*)\$$/, '$1').trim();
+
+    // Helper to replace balanced braces: \cmd{...}
+    function replaceCommand(str, cmd, wrapperOpen, wrapperClose) {
+        const pattern = '\\' + cmd + '{';
+        let safety = 0;
+        while (str.includes(pattern) && safety++ < 60) {
+            const idx = str.indexOf(pattern);
+            if (idx === -1) break;
+            const start = idx + pattern.length;
+            let depth = 1;
+            let end = start;
+            while (end < str.length && depth > 0) {
+                if (str[end] === '{') depth++;
+                else if (str[end] === '}') depth--;
+                end++;
+            }
+            if (depth === 0) {
+                const inner = str.slice(start, end - 1);
+                str = str.slice(0, idx) + wrapperOpen + inner + wrapperClose + str.slice(end);
+            } else {
+                break;
+            }
+        }
+        return str;
+    }
+
+    // Helper for \frac{num}{den}
+    function replaceFractions(str) {
+        let safety = 0;
+        while (str.includes('\\frac{') && safety++ < 60) {
+            const idx = str.indexOf('\\frac{');
+            if (idx === -1) break;
+            const numStart = idx + 6;
+            let depth = 1;
+            let numEnd = numStart;
+            while (numEnd < str.length && depth > 0) {
+                if (str[numEnd] === '{') depth++;
+                else if (str[numEnd] === '}') depth--;
+                numEnd++;
+            }
+            if (depth !== 0 || str[numEnd] !== '{') break;
+            const denStart = numEnd + 1;
+            depth = 1;
+            let denEnd = denStart;
+            while (denEnd < str.length && depth > 0) {
+                if (str[denEnd] === '{') depth++;
+                else if (str[denEnd] === '}') depth--;
+                denEnd++;
+            }
+            if (depth === 0) {
+                const num = str.slice(numStart, numEnd - 1).trim();
+                const den = str.slice(denStart, denEnd - 1).trim();
+                const cleanNum = (num.includes('+') || num.includes('-')) ? `(${num})` : num;
+                const cleanDen = (den.includes('+') || den.includes('-') || den.includes(' ') || den.includes('·') || den.includes('×')) ? `(${den})` : den;
+                str = str.slice(0, idx) + `${cleanNum} / ${cleanDen}` + str.slice(denEnd);
+            } else {
+                break;
+            }
+        }
+        return str;
+    }
+
+    // Remove LaTeX sizing/delimiters
+    s = s.replace(/\\left\s*\(/g, '(')
+         .replace(/\\right\s*\)/g, ')')
+         .replace(/\\left\s*\[/g, '[')
+         .replace(/\\right\s*\]/g, ']')
+         .replace(/\\left\s*\\\{/g, '{')
+         .replace(/\\right\s*\\\}/g, '}')
+         .replace(/\\\{/g, '{')
+         .replace(/\\\}/g, '}');
+
+    // Replace fractions and roots
+    s = replaceFractions(s);
+    s = replaceCommand(s, 'sqrt', '√(', ')');
+    s = replaceCommand(s, 'mathbf', '<b>', '</b>');
+    s = replaceCommand(s, 'textbf', '<b>', '</b>');
+    s = replaceCommand(s, 'mathit', '<i>', '</i>');
+    s = replaceCommand(s, 'textit', '<i>', '</i>');
+    s = replaceCommand(s, 'text', '', '');
+    s = replaceCommand(s, 'mathrm', '', '');
+    s = replaceCommand(s, 'operatorname', '', '');
+
+    // Subscripts: _{...} then _name
+    s = s.replace(/_\{([^{}]+)\}/g, (m, p) => `<sub>${p}</sub>`);
+    s = s.replace(/_([a-zA-Z0-9]+)/g, (m, p) => `<sub>${p}</sub>`);
+
+    // Superscripts: ^{...} then ^num
+    s = s.replace(/\^\{([^{}]+)\}/g, (m, p) => `<sup>${p}</sup>`);
+    s = s.replace(/\^([0-9a-zA-Z]+)/g, (m, p) => `<sup>${p}</sup>`);
+
+    // Replace math operators and symbols
+    s = s.replace(/\\cdotp?/g, ' · ')
+         .replace(/\\times/g, ' × ')
+         .replace(/\\div/g, ' ÷ ')
+         .replace(/\\pm/g, ' ± ')
+         .replace(/\\mp/g, ' ∓ ')
+         .replace(/\\approx/g, ' ≈ ')
+         .replace(/\\equiv/g, ' ≡ ')
+         .replace(/\\ge(q)?/g, ' ≥ ')
+         .replace(/\\le(q)?/g, ' ≤ ')
+         .replace(/\\neq/g, ' ≠ ')
+         .replace(/\\(to|rightarrow)/g, ' → ')
+         .replace(/\\(implies|Rightarrow)/g, ' ⇒ ')
+         .replace(/\\sum/g, 'Σ')
+         .replace(/\\int/g, '∫')
+         .replace(/\\infty/g, '∞')
+         .replace(/\\partial/g, '∂')
+         .replace(/\\nabla/g, '∇');
+
+    // Greek symbols dictionary
+    const greek = {
+        '\\Delta': 'Δ', '\\delta': 'δ',
+        '\\Omega': 'Ω', '\\omega': 'ω',
+        '\\Theta': 'Θ', '\\theta': 'θ',
+        '\\Gamma': 'Γ', '\\gamma': 'γ',
+        '\\Lambda': 'Λ', '\\lambda': 'λ',
+        '\\Sigma': 'Σ', '\\sigma': 'σ',
+        '\\Phi': 'Φ',   '\\phi': 'φ',
+        '\\Psi': 'Ψ',   '\\psi': 'ψ',
+        '\\rho': 'ρ',   '\\pi': 'π',
+        '\\alpha': 'α', '\\beta': 'β',
+        '\\eta': 'η',   '\\mu': 'μ',
+        '\\nu': 'ν',    '\\tau': 'τ',
+        '\\xi': 'ξ',    '\\zeta': 'ζ',
+        '\\epsilon': 'ε'
+    };
+    for (const [cmd, char] of Object.entries(greek)) {
+        const re = new RegExp(cmd.replace('\\', '\\\\') + '(?![a-zA-Z])', 'g');
+        s = s.replace(re, char);
+    }
+
+    // Clean spacers & stray backslashes
+    s = s.replace(/\\[,;\s]/g, ' ')
+         .replace(/\\quad/g, '   ')
+         .replace(/\\qquad/g, '     ')
+         .replace(/\\/g, '')
+         .replace(/\s+/g, ' ')
+         .trim();
+
+    return s;
+}
+
+/**
+ * Prepares a cloned DOM element for Microsoft Word export:
+ * - Replaces KaTeX rendered MathML + HTML with clean typography (sub/sup/bold/greek)
+ * - Removes hidden and duplicate math nodes
+ * - Cleans dark mode styling so Word gets a clean light engineering memorial
+ */
+function sanitizeElementForWordExport(clone) {
+    if (!clone) return;
+
+    // 1. Process all .katex and .katex-error elements
+    const katexNodes = Array.from(clone.querySelectorAll('.katex, .katex-error'));
+    katexNodes.forEach(kNode => {
+        let formula = '';
+        const annotation = kNode.querySelector('annotation');
+        if (annotation && annotation.textContent) {
+            formula = annotation.textContent.trim();
+        } else if (kNode.getAttribute('title')) {
+            formula = kNode.getAttribute('title').replace(/^KaTeX parse error:\s*/i, '').trim();
+        } else {
+            const mathml = kNode.querySelector('.katex-mathml');
+            if (mathml) mathml.remove();
+            formula = kNode.innerText || kNode.textContent || '';
+        }
+
+        const cleanHtml = latexToWordHtml(formula);
+        const rep = document.createElement('span');
+        rep.className = 'word-formula';
+        rep.innerHTML = cleanHtml;
+        if (kNode.parentNode) {
+            kNode.parentNode.replaceChild(rep, kNode);
+        }
+    });
+
+    // 2. Extra safety: remove any leftover MathML or katex inner fragments
+    clone.querySelectorAll('.katex-mathml, .katex-html, math, annotation').forEach(el => el.remove());
+
+    // 3. Process any remaining text nodes with $...$ or LaTeX commands
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT, null, false);
+    const nodesToReplace = [];
+    let cur = walker.nextNode();
+    while (cur) {
+        if (cur.nodeValue && (cur.nodeValue.includes('$') || cur.nodeValue.includes('\\'))) {
+            nodesToReplace.push(cur);
+        }
+        cur = walker.nextNode();
+    }
+
+    nodesToReplace.forEach(node => {
+        if (!node.parentNode) return;
+        let text = node.nodeValue;
+        if (text.includes('$')) {
+            text = text.replace(/\$\$([^$]+)\$\$/g, (m, f) => latexToWordHtml(f))
+                       .replace(/\$([^$]+)\$/g, (m, f) => latexToWordHtml(f));
+        }
+        if (text.includes('\\')) {
+            text = latexToWordHtml(text);
+        }
+        if (text !== node.nodeValue) {
+            const span = document.createElement('span');
+            span.innerHTML = text;
+            node.parentNode.replaceChild(span, node);
+        }
+    });
+
+    // 4. Remove dark-mode classes & styles so Word opens with a clean print layout
+    clone.querySelectorAll('*').forEach(el => {
+        const toRemove = [];
+        el.classList.forEach(c => {
+            if (c.startsWith('dark:') || c.includes('dark') || c.includes('bg-gray-900') || c.includes('bg-gray-800') || c.includes('bg-slate-900')) {
+                toRemove.push(c);
+            }
+        });
+        toRemove.forEach(c => el.classList.remove(c));
+    });
+}
+
+/**
+ * Creates Word-compatible HTML structure with a header and clean typography styling.
  * @param {string} content - The main HTML content of the report.
  * @param {string} title - The title for the report header.
  * @returns {string} A full HTML document string formatted for MS Word.
  */
 function createWordCompatibleHTML(content, title) {
     const cssStyles = `
-        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; page-break-inside: avoid; }
-        th, td { border: 1px solid #000; padding: 4px 8px; text-align: left; }
-        th { background-color: #f0f0f0; font-weight: bold; }
-        caption { font-weight: bold; text-align: center; margin-bottom: 0.5em; font-size: 14pt; }
-        h1, h2, h3, h4 { font-family: 'Arial', sans-serif; }
-        h1 { font-size: 16pt; text-align: center; }
-        h2 { font-size: 14pt; border-bottom: 1px solid #000; margin-top: 1.5em; }
-        h3 { font-size: 13pt; }
-        .pass { color: #008000; font-weight: bold; }
-        .fail { color: #ff0000; font-weight: bold; }
+        @page {
+            size: A4 portrait;
+            margin: 2cm 2cm 2cm 2cm;
+            mso-header-margin: 1cm;
+            mso-footer-margin: 1cm;
+        }
+        body {
+            font-family: 'Calibri', 'Segoe UI', Arial, sans-serif;
+            font-size: 11pt;
+            color: #111827;
+            background-color: #ffffff;
+            line-height: 1.45;
+            margin: 0;
+            padding: 0;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Calibri', Arial, sans-serif;
+            font-weight: bold;
+            color: #0f172a;
+            page-break-after: avoid;
+        }
+        h1 {
+            font-size: 16pt;
+            text-align: center;
+            color: #1e3a8a;
+            border-bottom: 2pt solid #2563eb;
+            padding-bottom: 6pt;
+            margin-bottom: 16pt;
+        }
+        h2 {
+            font-size: 13pt;
+            color: #1e40af;
+            border-bottom: 1pt solid #cbd5e1;
+            padding-bottom: 4pt;
+            margin-top: 18pt;
+            margin-bottom: 10pt;
+        }
+        h3 {
+            font-size: 12pt;
+            color: #1e293b;
+            margin-top: 14pt;
+            margin-bottom: 6pt;
+        }
+        h4 {
+            font-size: 11pt;
+            color: #334155;
+            margin-top: 10pt;
+            margin-bottom: 4pt;
+        }
+        h5 {
+            font-size: 10.5pt;
+            color: #475569;
+            margin-top: 8pt;
+            margin-bottom: 4pt;
+        }
+        p {
+            margin-top: 0;
+            margin-bottom: 6pt;
+        }
+        ul, ol {
+            margin-top: 4pt;
+            margin-bottom: 8pt;
+            padding-left: 20pt;
+        }
+        li {
+            margin-bottom: 4pt;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 8pt;
+            margin-bottom: 14pt;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        th, td {
+            border: 1pt solid #94a3b8;
+            padding: 5pt 7pt;
+            text-align: left;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #f1f5f9;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+        caption {
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0.5em;
+            font-size: 12pt;
+        }
+        .word-formula {
+            font-family: 'Cambria Math', 'Calibri', serif;
+            font-size: 11pt;
+            font-style: normal;
+            display: inline;
+            color: #0f172a;
+        }
+        .word-formula b {
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+        .word-formula sub, .word-formula sup {
+            font-size: 8pt;
+            line-height: 0;
+        }
+        .pass { color: #16a34a; font-weight: bold; }
+        .fail { color: #dc2626; font-weight: bold; }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 8pt auto;
+            display: block;
+        }
     `;
     return `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head><meta charset='utf-8'><title>${title}</title><style>${cssStyles}</style></head>
-        <body><h1>${title}</h1>${content}</body>
+        <head>
+            <meta charset='utf-8'>
+            <title>${title}</title>
+            <!--[if gte mso 9]>
+            <xml>
+                <w:WordDocument>
+                    <w:View>Print</w:View>
+                    <w:Zoom>100</w:Zoom>
+                    <w:DoNotOptimizeForBrowser/>
+                </w:WordDocument>
+            </xml>
+            <![endif]-->
+            <style>${cssStyles}</style>
+        </head>
+        <body>
+            <h1>${title}</h1>
+            ${content}
+        </body>
         </html>`;
 }
 
@@ -1196,6 +1585,9 @@ async function handleCopy(targetId, options = {}) {
                 tr.remove();
             }
         });
+
+        // Sanitize DOM for Word and clipboard typography
+        sanitizeElementForWordExport(clone);
 
         showFeedback('Copiando para a área de transferência...', false, feedbackElId);
 
@@ -1344,6 +1736,9 @@ async function handleDownloadWord(containerId, filename, feedbackElId = 'feedbac
             }
         }));
     }
+
+    // Sanitize DOM for Word export (convert KaTeX to clean Word typography, sub, sup, greek, no duplicates)
+    sanitizeElementForWordExport(clone);
 
     const reportTitle = document.getElementById('main-title')?.innerText || 'Calculation Report';
     const finalHtml = createWordCompatibleHTML(clone.innerHTML, reportTitle);
@@ -1958,6 +2353,9 @@ class ReportBuilder {
         });
 
         mainContainer.appendChild(reportContainer);
+        if (typeof window !== 'undefined' && window.renderLatex) {
+            window.renderLatex(reportContainer);
+        }
     }
 }
 

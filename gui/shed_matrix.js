@@ -168,6 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         resultsContainer.classList.remove("hidden");
+        if (window.renderLatex) window.renderLatex(resultsContainer);
         resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 });

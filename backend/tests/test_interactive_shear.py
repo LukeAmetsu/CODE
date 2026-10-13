@@ -63,8 +63,12 @@ class TestInteractiveShearOptimization(unittest.TestCase):
         calib2 = calibrate_constant_c(target_safety=1.40, current_vals=current)
         self.assertAlmostEqual(calib2['mean'], 1.40, delta=0.02)
 
-        # COV must be 100% identical regardless of target safety
-        self.assertEqual(calib1['cov'], calib2['cov'])
+        # COV is virtually identical with prestressed members (< 0.1% delta)
+        self.assertAlmostEqual(calib1['cov'], calib2['cov'], delta=0.1)
+
+        calib_rc1 = calibrate_constant_c(target_safety=1.00, current_vals=current, exclude_pc=True)
+        calib_rc2 = calibrate_constant_c(target_safety=1.40, current_vals=current, exclude_pc=True)
+        self.assertAlmostEqual(calib_rc1['cov'], calib_rc2['cov'], delta=0.1)
     def test_subset_specific_optimization_thick_slabs(self):
         """Test that Nelder-Mead optimizes specifically on active data subsets (e.g. slabs_thick_600)."""
         current = {'C': 0.50, 'alpha': 0.37, 'beta': 0.18, 'gamma': 0.54, 'delta': -0.24, 'epsilon': 0.90, 'zeta': 1.32}
@@ -161,6 +165,57 @@ class TestInteractiveShearOptimization(unittest.TestCase):
         opt = run_optimization(target_safety=1.0, locked={'C': True}, current_vals=None, criterion='cov', subset_key=dyn_filter)
         self.assertIn('_cov', opt)
         self.assertEqual(opt['_count'], calib['count'])
+
+    def test_constant_area_exponents_and_deff_constraint(self):
+        """Test that epsilon and zeta remain strictly 1.0 and use_deff executes cleanly."""
+        current = {'C': 0.22, 'alpha': 0.33, 'beta': 0.33, 'gamma': 0.33, 'delta': 0.0, 'epsilon': 1.0, 'zeta': 1.0}
+        locked = {'C': False, 'alpha': False, 'beta': False, 'gamma': False, 'delta': True}
+        
+        # Test optimization with use_deff=True
+        res = run_optimization(target_safety=1.0, locked=locked, current_vals=current, criterion='cov', use_deff=True)
+        self.assertEqual(res['epsilon'], 1.0)
+        self.assertEqual(res['zeta'], 1.0)
+        self.assertTrue(res['_use_deff'])
+        self.assertLess(res['_cov'], 70.0)
+
+        # Test calibrate C with use_deff=True
+        calib = calibrate_constant_c(target_safety=1.0, current_vals=current, use_deff=True)
+        self.assertAlmostEqual(calib['mean'], 1.0, delta=0.02)
+        self.assertTrue(calib['_use_deff'])
+
+    def test_exclude_prestressed_from_database(self):
+        """Test that exclude_pc removes all 141 valid prestressed concrete members, leaving exactly 1663 beams."""
+        all_data = load_and_clean_data(subset_key='ALL DATA', exclude_pc=False)
+        no_pc_data = load_and_clean_data(subset_key='ALL DATA', exclude_pc=True)
+        self.assertEqual(all_data['count'], 1804)
+        self.assertEqual(no_pc_data['count'], 1663)
+        self.assertEqual(all_data['count'] - no_pc_data['count'], 141)
+
+        # Test with calibration
+        calib = calibrate_constant_c(target_safety=1.0, subset_key='ALL DATA', exclude_pc=True)
+        self.assertEqual(calib['count'], 1663)
+
+        # Test with dynamic filter dict containing exclude_pc
+        dyn_filter = {'exclude_pc': True}
+        dyn_data = load_and_clean_data(subset_key=dyn_filter)
+        self.assertEqual(dyn_data['count'], 1663)
+
+    def test_prestressed_concrete_model_and_codes(self):
+        """Test prestressed concrete subset (mat_pc), mu contribution, and official code calculations."""
+        pc_data = load_and_clean_data(subset_key='mat_pc', exclude_pc=False)
+        self.assertEqual(pc_data['count'], 141)
+        self.assertTrue(any(s > 0 for s in pc_data['sigma_cp']))
+
+        # Test official code calculation for PC
+        from backend.calculators.official_shear_codes import calc_nbr6118, calc_ec2_2004
+        # Test row with prestress: bw=150, d=300, rho=0.01, fck=30, sigma_cp=5.0
+        r_rc = calc_nbr6118(bw=150, d=300, rho=0.01, fck=30, sigma_cp=0.0)
+        r_pc = calc_nbr6118(bw=150, d=300, rho=0.01, fck=30, sigma_cp=5.0)
+        self.assertGreater(r_pc, r_rc)
+        # Difference in tau_R must be exactly 0.15 * sigma_cp = 0.75 MPa
+        diff_kN = r_pc - r_rc
+        expected_diff_kN = (0.15 * 5.0) * 150.0 * 300.0 / 1000.0
+        self.assertAlmostEqual(diff_kN, expected_diff_kN, places=3)
 
 
 if __name__ == '__main__':

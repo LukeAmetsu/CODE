@@ -1047,6 +1047,7 @@ function setEnvelopeView(view) {
  * Renderiza o cabeçalho dinâmico da Tabela Resumo de Envoltórias
  */
 function renderSummaryTableHead() {
+    setTimeout(() => { const th = document.getElementById('summary-table-head'); if (th && window.renderLatex) window.renderLatex(th); }, 50);
     const thead = document.getElementById('summary-table-head');
     if (!thead) return;
 
@@ -1057,54 +1058,54 @@ function renderSummaryTableHead() {
             <tr class="bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-[11px]">
                 <th rowspan="2" class="py-2.5 px-3 text-center border-r border-gray-200 dark:border-gray-700">${baseColTitle}</th>
                 <th colspan="5" class="py-1.5 px-2 text-center bg-gray-200/70 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 font-extrabold">1. Picos Globais (kN, kNm)</th>
-                <th colspan="6" class="py-1.5 px-2 text-center bg-blue-50 dark:bg-blue-950/40 border-r border-blue-200 dark:border-blue-900/40 text-blue-700 dark:text-blue-300 font-extrabold">2. V Máx & Concomitantes</th>
-                <th colspan="6" class="py-1.5 px-2 text-center bg-amber-50 dark:bg-amber-950/40 border-r border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 font-extrabold">3. V Mín & Concomitantes</th>
-                <th colspan="6" class="py-1.5 px-2 text-center bg-emerald-50 dark:bg-emerald-950/40 border-r border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-extrabold">4. X Máx & Concomitantes</th>
-                <th colspan="6" class="py-1.5 px-2 text-center bg-indigo-50 dark:bg-indigo-950/40 border-r border-indigo-200 dark:border-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-extrabold">5. Y Máx & Concomitantes</th>
-                <th colspan="6" class="py-1.5 px-2 text-center bg-purple-50 dark:bg-purple-950/40 border-r border-purple-200 dark:border-purple-900/40 text-purple-700 dark:text-purple-300 font-extrabold">6. H Máx & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-blue-50 dark:bg-blue-950/40 border-r border-blue-200 dark:border-blue-900/40 text-blue-700 dark:text-blue-300 font-extrabold">2. $V_{\max}$ & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-amber-50 dark:bg-amber-950/40 border-r border-amber-200 dark:border-amber-900/40 text-amber-700 dark:text-amber-300 font-extrabold">3. $V_{\min}$ & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-emerald-50 dark:bg-emerald-950/40 border-r border-emerald-200 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-extrabold">4. $X_{\max}$ & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-indigo-50 dark:bg-indigo-950/40 border-r border-indigo-200 dark:border-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-extrabold">5. $Y_{\max}$ & Concomitantes</th>
+                <th colspan="6" class="py-1.5 px-2 text-center bg-purple-50 dark:bg-purple-950/40 border-r border-purple-200 dark:border-purple-900/40 text-purple-700 dark:text-purple-300 font-extrabold">6. $H_{\max}$ & Concomitantes</th>
                 <th rowspan="2" class="py-2.5 px-3 text-center">Ações</th>
             </tr>
             <tr class="text-[10px] text-gray-500 dark:text-gray-400">
                 <!-- 1. Picos -->
-                <th class="py-1.5 px-2 text-right">V_pico</th>
-                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">|M|_pico</th>
-                <th class="py-1.5 px-2 text-right">|X|_pico</th>
-                <th class="py-1.5 px-2 text-right">|Y|_pico</th>
-                <th class="py-1.5 px-2 text-right border-r border-gray-200 dark:border-gray-700">H_pico</th>
+                <th class="py-1.5 px-2 text-right">$V_{\text{pico}}$</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">$|M|_{\text{pico}}$</th>
+                <th class="py-1.5 px-2 text-right">$|X|_{\text{pico}}$</th>
+                <th class="py-1.5 px-2 text-right">$|Y|_{\text{pico}}$</th>
+                <th class="py-1.5 px-2 text-right border-r border-gray-200 dark:border-gray-700">$H_{\text{pico}}$</th>
                 <!-- 2. V_max -->
-                <th class="py-1.5 px-2 text-right font-bold text-blue-600 dark:text-blue-400">V_máx</th>
-                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
-                <th class="py-1.5 px-2 text-right">X conc</th>
-                <th class="py-1.5 px-2 text-right">Y conc</th>
-                <th class="py-1.5 px-2 text-right">H conc</th>
+                <th class="py-1.5 px-2 text-right font-bold text-blue-600 dark:text-blue-400">$V_{\max}$</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$X_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$Y_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$H_{\text{conc}}$</th>
                 <th class="py-1.5 px-2 text-left border-r border-blue-200 dark:border-blue-900/40">Combinação</th>
                 <!-- 3. V_min -->
-                <th class="py-1.5 px-2 text-right font-bold text-amber-600 dark:text-amber-400">V_mín</th>
-                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
-                <th class="py-1.5 px-2 text-right">X conc</th>
-                <th class="py-1.5 px-2 text-right">Y conc</th>
-                <th class="py-1.5 px-2 text-right">H conc</th>
+                <th class="py-1.5 px-2 text-right font-bold text-amber-600 dark:text-amber-400">$V_{\min}$</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$X_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$Y_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$H_{\text{conc}}$</th>
                 <th class="py-1.5 px-2 text-left border-r border-amber-200 dark:border-amber-900/40">Combinação</th>
                 <!-- 4. X_max -->
-                <th class="py-1.5 px-2 text-right font-bold text-emerald-600 dark:text-emerald-400">|X|_máx</th>
-                <th class="py-1.5 px-2 text-right">V conc</th>
-                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
-                <th class="py-1.5 px-2 text-right">Y conc</th>
-                <th class="py-1.5 px-2 text-right">H conc</th>
+                <th class="py-1.5 px-2 text-right font-bold text-emerald-600 dark:text-emerald-400">$|X|_{\max}$</th>
+                <th class="py-1.5 px-2 text-right">$V_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$Y_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$H_{\text{conc}}$</th>
                 <th class="py-1.5 px-2 text-left border-r border-emerald-200 dark:border-emerald-900/40">Combinação</th>
                 <!-- 5. Y_max -->
-                <th class="py-1.5 px-2 text-right font-bold text-indigo-600 dark:text-indigo-400">|Y|_máx</th>
-                <th class="py-1.5 px-2 text-right">V conc</th>
-                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
-                <th class="py-1.5 px-2 text-right">X conc</th>
-                <th class="py-1.5 px-2 text-right">H conc</th>
+                <th class="py-1.5 px-2 text-right font-bold text-indigo-600 dark:text-indigo-400">$|Y|_{\max}$</th>
+                <th class="py-1.5 px-2 text-right">$V_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$X_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$H_{\text{conc}}$</th>
                 <th class="py-1.5 px-2 text-left border-r border-indigo-200 dark:border-indigo-900/40">Combinação</th>
                 <!-- 6. H_max -->
-                <th class="py-1.5 px-2 text-right font-bold text-purple-600 dark:text-purple-400">H_máx</th>
-                <th class="py-1.5 px-2 text-right">V conc</th>
-                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">M conc</th>
-                <th class="py-1.5 px-2 text-right">X conc</th>
-                <th class="py-1.5 px-2 text-right">Y conc</th>
+                <th class="py-1.5 px-2 text-right font-bold text-purple-600 dark:text-purple-400">$H_{\max}$</th>
+                <th class="py-1.5 px-2 text-right">$V_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$X_{\text{conc}}$</th>
+                <th class="py-1.5 px-2 text-right">$Y_{\text{conc}}$</th>
                 <th class="py-1.5 px-2 text-left border-r border-purple-200 dark:border-purple-900/40">Combinação</th>
             </tr>
         `;
@@ -1112,11 +1113,11 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
-                <th class="py-3 px-4 text-right text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/20">1. V Máximo Pico (kN)</th>
-                <th class="py-3 px-4 text-right text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20">1. |M| Máximo Pico (kNm)</th>
-                <th class="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20">1. |X| Máximo Pico (kN)</th>
-                <th class="py-3 px-4 text-right text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20">1. |Y| Máximo Pico (kN)</th>
-                <th class="py-3 px-4 text-right text-purple-600 dark:text-purple-400 bg-purple-50/40 dark:bg-purple-950/20">1. H Resultante Máx (kN)</th>
+                <th class="py-3 px-4 text-right text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/20">1. $V_{\max,\text{pico}}$ (kN)</th>
+                <th class="py-3 px-4 text-right text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20">1. $|M|_{\max,\text{pico}}$ (kNm)</th>
+                <th class="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20">1. $|X|_{\max,\text{pico}}$ (kN)</th>
+                <th class="py-3 px-4 text-right text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20">1. $|Y|_{\max,\text{pico}}$ (kN)</th>
+                <th class="py-3 px-4 text-right text-purple-600 dark:text-purple-400 bg-purple-50/40 dark:bg-purple-950/20">1. $H_{\text{res},\max}$ (kN)</th>
                 <th class="py-3 px-3 text-center">Detalhar</th>
             </tr>
         `;
@@ -1124,11 +1125,11 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
-                <th class="py-3 px-4 text-right text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/20 font-bold">2. V Máximo (kN)</th>
-                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
-                <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
+                <th class="py-3 px-4 text-right text-blue-600 dark:text-blue-400 bg-blue-50/40 dark:bg-blue-950/20 font-bold">2. $V_{\max}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$ (kNm)</th>
+                <th class="py-3 px-3 text-right">$X_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right">$Y_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">$H_{\text{res}}$ (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
                 <th class="py-3 px-3 text-center">Detalhar</th>
             </tr>
@@ -1137,11 +1138,11 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
-                <th class="py-3 px-4 text-right text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20 font-bold">3. V Mínimo / Alívio (kN)</th>
-                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
-                <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
+                <th class="py-3 px-4 text-right text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-950/20 font-bold">3. $V_{\min}$ / Alívio (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$ (kNm)</th>
+                <th class="py-3 px-3 text-right">$X_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right">$Y_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">$H_{\text{res}}$ (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
                 <th class="py-3 px-3 text-center">Detalhar</th>
             </tr>
@@ -1150,11 +1151,11 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
-                <th class="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 font-bold">4. |X| Máximo (kN)</th>
-                <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">V Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
-                <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
+                <th class="py-3 px-4 text-right text-emerald-600 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 font-bold">4. $|X|_{\max}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">$V_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$ (kNm)</th>
+                <th class="py-3 px-3 text-right">$Y_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">$H_{\text{res}}$ (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
                 <th class="py-3 px-3 text-center">Detalhar</th>
             </tr>
@@ -1163,11 +1164,11 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
-                <th class="py-3 px-4 text-right text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20 font-bold">5. |Y| Máximo (kN)</th>
-                <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">V Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
-                <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">H_res (kN)</th>
+                <th class="py-3 px-4 text-right text-indigo-600 dark:text-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20 font-bold">5. $|Y|_{\max}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">$V_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$ (kNm)</th>
+                <th class="py-3 px-3 text-right">$X_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-purple-600 dark:text-purple-400">$H_{\text{res}}$ (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
                 <th class="py-3 px-3 text-center">Detalhar</th>
             </tr>
@@ -1176,11 +1177,11 @@ function renderSummaryTableHead() {
         thead.innerHTML = `
             <tr>
                 <th class="py-3 px-3 text-center w-28">${baseColTitle}</th>
-                <th class="py-3 px-4 text-right text-purple-600 dark:text-purple-400 bg-purple-50/40 dark:bg-purple-950/20 font-bold">6. H Resultante Máx (kN)</th>
-                <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">V Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">M Concomitante (kNm)</th>
-                <th class="py-3 px-3 text-right">X Concomitante (kN)</th>
-                <th class="py-3 px-3 text-right">Y Concomitante (kN)</th>
+                <th class="py-3 px-4 text-right text-purple-600 dark:text-purple-400 bg-purple-50/40 dark:bg-purple-950/20 font-bold">6. $H_{\text{res},\max}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-blue-600 dark:text-blue-400">$V_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right text-amber-600 dark:text-amber-400">$M_{\text{conc}}$ (kNm)</th>
+                <th class="py-3 px-3 text-right">$X_{\text{conc}}$ (kN)</th>
+                <th class="py-3 px-3 text-right">$Y_{\text{conc}}$ (kN)</th>
                 <th class="py-3 px-4 text-left">Combinação Crítica Governante</th>
                 <th class="py-3 px-3 text-center">Detalhar</th>
             </tr>
@@ -1289,7 +1290,7 @@ function renderSummaryTable() {
                     <td class="py-2 px-2 text-right mono-num font-semibold text-gray-800 dark:text-gray-200">${formatNumber(it.peak_Y ?? it.Y_max)}</td>
                     <td class="py-2 px-2 text-right mono-num font-semibold text-gray-800 dark:text-gray-200 border-r border-gray-200 dark:border-gray-700/60">${formatNumber(it.peak_H ?? it.H_max)}</td>
 
-                    <!-- 2. V Máx & Concomitantes -->
+                    <!-- 2. $V_{\max}$ & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-950/10">${formatNumber(it.V_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.V_max_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_X)}</td>
@@ -1297,7 +1298,7 @@ function renderSummaryTable() {
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_max_H)}</td>
                     <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-blue-200 dark:border-blue-900/40" title="${it.V_max_comb || ''} &#10;Fórmula: ${it.V_max_formula || ''}">${it.V_max_formula || it.V_max_comb || '--'}</td>
 
-                    <!-- 3. V Mín & Concomitantes -->
+                    <!-- 3. $V_{\min}$ & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold bg-amber-50/30 dark:bg-amber-950/10"><span class="${vMinHighlight}">${formatNumber(it.V_min)}</span></td>
                     <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.V_min_M)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_X)}</td>
@@ -1305,7 +1306,7 @@ function renderSummaryTable() {
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.V_min_H)}</td>
                     <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-amber-200 dark:border-amber-900/40" title="${it.V_min_comb || ''} &#10;Fórmula: ${it.V_min_formula || ''}">${it.V_min_formula || it.V_min_comb || '--'}</td>
 
-                    <!-- 4. X Máx & Concomitantes -->
+                    <!-- 4. $X_{\max}$ & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10">${formatNumber(it.X_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.X_max_V)}</td>
                     <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.X_max_M)}</td>
@@ -1313,7 +1314,7 @@ function renderSummaryTable() {
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.X_max_H)}</td>
                     <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-emerald-200 dark:border-emerald-900/40" title="${it.X_max_comb || ''} &#10;Fórmula: ${it.X_max_formula || ''}">${it.X_max_formula || it.X_max_comb || '--'}</td>
 
-                    <!-- 5. Y Máx & Concomitantes -->
+                    <!-- 5. $Y_{\max}$ & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10">${formatNumber(it.Y_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.Y_max_V)}</td>
                     <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.Y_max_M)}</td>
@@ -1321,7 +1322,7 @@ function renderSummaryTable() {
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.Y_max_H)}</td>
                     <td class="py-2 px-2 text-left text-gray-700 dark:text-gray-200 truncate max-w-[160px] font-mono text-[11px] border-r border-indigo-200 dark:border-indigo-900/40" title="${it.Y_max_comb || ''} &#10;Fórmula: ${it.Y_max_formula || ''}">${it.Y_max_formula || it.Y_max_comb || '--'}</td>
 
-                    <!-- 6. H Máx & Concomitantes -->
+                    <!-- 6. $H_{\max}$ & Concomitantes -->
                     <td class="py-2 px-2 text-right mono-num font-bold text-purple-600 dark:text-purple-400 bg-purple-50/30 dark:bg-purple-950/10">${formatNumber(it.H_max)}</td>
                     <td class="py-2 px-2 text-right mono-num text-gray-600 dark:text-gray-400">${formatNumber(it.H_max_V)}</td>
                     <td class="py-2 px-2 text-right mono-num text-amber-600 dark:text-amber-400">${formatNumber(it.H_max_M)}</td>
@@ -1458,6 +1459,7 @@ function renderSummaryTable() {
     });
 
     tbody.innerHTML = html;
+    if (window.renderLatex) window.renderLatex(tbody);
 }
 
 /**
@@ -2052,6 +2054,7 @@ function openBaseDetailModal(baseName) {
     });
 
     tbody.innerHTML = html;
+    if (window.renderLatex) window.renderLatex(tbody);
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }

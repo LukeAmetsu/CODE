@@ -192,27 +192,27 @@
                                 </h2>
                                 <div class="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                        <label class="eng-label">Peso Esp. Aterro γ (kN/m³)</label>
+                                        <label class="eng-label">$\text{Peso Esp. Aterro } \gamma\text{ (kN/m³)}$</label>
                                         <input type="number" id="gamma_soil" value="18.0" step="0.5" min="10"
                                             class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Ângulo Atrito Interno φ' (°)</label>
+                                        <label class="eng-label">$\text{Ângulo Atrito Interno } \phi'\text{ (°)}$</label>
                                         <input type="number" id="phi_soil" value="30.0" step="1" min="10" max="45"
                                             class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Inclinação Aterro β (°)</label>
+                                        <label class="eng-label">$\text{Inclinação Aterro } \beta\text{ (°)}$</label>
                                         <input type="number" id="backfill_slope" value="0.0" step="1" min="0" max="35"
                                             class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Sobrecarga Uniforme q (kPa)</label>
+                                        <label class="eng-label">$\text{Sobrecarga Uniforme } q\text{ (kPa)}$</label>
                                         <input type="number" id="q_surcharge" value="10.0" step="1" min="0"
                                             class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Nível d'Água no Aterro H_w (m)</label>
+                                        <label class="eng-label">$\text{Nível d'Água no Aterro } H_w\text{ (m)}$</label>
                                         <input type="number" id="water_height" value="0.0" step="0.2" min="0"
                                             class="eng-input">
                                     </div>
@@ -229,7 +229,7 @@
                                         <select id="theory" onchange="toggleTheoryOptions()" class="eng-input">
                                             <option value="rankine" selected>Rankine (Empuxo Ativo - Sem Atrito no Dorso
                                                 do Muro)</option>
-                                            <option value="coulomb">Coulomb (Considera Atrito Solo-Muro δ & Inclinação)
+                                            <option value="coulomb">Coulomb (Considera Atrito Solo-Muro $\delta$ & Inclinação)
                                             </option>
                                         </select>
                                     </div>
@@ -237,14 +237,14 @@
                                         class="col-span-2 hidden bg-blue-50/70 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
                                         <div class="grid grid-cols-2 gap-3 text-sm">
                                             <div>
-                                                <label class="eng-label">Atrito Solo-Muro δ (°)</label>
+                                                <label class="eng-label">$\text{Atrito Solo-Muro } \delta\text{ (°)}$</label>
                                                 <input type="number" id="wall_friction" value="20.0" step="1" min="0"
                                                     max="45" class="eng-input"
                                                     title="Ângulo de atrito entre o solo e o dorso do muro">
                                             </div>
                                             <div
                                                 class="flex items-center text-xs text-blue-700 dark:text-blue-300 pt-5">
-                                                <span>💡 Sugestão NBR 11682: δ ≈ ⅔ · φ' (<span id="delta-suggested"
+                                                <span>💡 Sugestão NBR 11682: $\delta \approx \frac{2}{3} \phi'$ (<span id="delta-suggested"
                                                         class="font-bold">20.0</span>°)</span>
                                             </div>
                                         </div>
@@ -367,28 +367,28 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="eng-label">Cobrimento Haste c<sub>haste</sub> (mm)</label>
+                                        <label class="eng-label">Cobrimento Haste $c_{\text{haste}}\text{ (mm)}$</label>
                                         <input type="number" id="cover_stem" value="40" step="5" min="20" max="80"
                                             class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Cobrimento Sapata c<sub>sapata</sub> (mm)</label>
+                                        <label class="eng-label">Cobrimento Sapata $c_{\text{sapata}}\text{ (mm)}$</label>
                                         <input type="number" id="cover_base" value="50" step="5" min="25" max="100"
                                             class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Diâmetro das Barras φ (mm)</label>
+                                        <label class="eng-label">Diâmetro das Barras $\phi\text{ (mm)}$</label>
                                         <select id="bar_diam" class="eng-input">
-                                            <option value="8">φ 8 mm</option>
-                                            <option value="10">φ 10 mm</option>
-                                            <option value="12.5">φ 12,5 mm</option>
-                                            <option value="16" selected>φ 16 mm</option>
-                                            <option value="20">φ 20 mm</option>
-                                            <option value="25">φ 25 mm</option>
+                                            <option value="8">$\phi$ 8 mm</option>
+                                            <option value="10">$\phi$ 10 mm</option>
+                                            <option value="12.5">$\phi$ 12,5 mm</option>
+                                            <option value="16" selected>$\phi$ 16 mm</option>
+                                            <option value="20">$\phi$ 20 mm</option>
+                                            <option value="25">$\phi$ 25 mm</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="eng-label">Fator de Carga γ<sub>f</sub></label>
+                                        <label class="eng-label">Fator de Carga $\gamma_f$</label>
                                         <select id="gamma_f" class="eng-input">
                                             <option value="1.3">1,3 (ELS / Verificação)</option>
                                             <option value="1.4" selected>1,4 (ELU Padrão NBR 6118)</option>
@@ -553,28 +553,28 @@
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Fletor na
-                                                Base da Haste (M_u,haste)</td>
+                                                Base da Haste ($M_{u,\text{haste}}$)</td>
                                             <td id="res-M-stem"
                                                 class="py-2 px-2 font-bold text-right text-blue-600 dark:text-blue-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Esforço Cortante na
-                                                Base da Haste (V_u,haste)</td>
+                                                Base da Haste ($V_{u,\text{haste}}$)</td>
                                             <td id="res-V-stem"
                                                 class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Fletor
-                                                Solicitante na Puntera (M_u,puntera)</td>
+                                                Solicitante na Puntera ($M_{u,\text{puntera}}$)</td>
                                             <td id="res-M-toe"
                                                 class="py-2 px-2 font-semibold text-right text-indigo-600 dark:text-indigo-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Fletor
-                                                Solicitante no Calcanhar (M_u,calcanhar)</td>
+                                                Solicitante no Calcanhar ($M_{u,\text{calcanhar}}$)</td>
                                             <td id="res-M-heel"
                                                 class="py-2 px-2 font-semibold text-right text-indigo-600 dark:text-indigo-400">
                                                 -</td>
@@ -588,70 +588,70 @@
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Teoria de Empuxo &
-                                                Atrito (δ)</td>
+                                                Atrito ($\delta$)</td>
                                             <td id="res-theory-info"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Coeficiente de Empuxo
-                                                Ativo (K<sub>a</sub>)</td>
+                                                Ativo ($K_a$)</td>
                                             <td id="res-Ka"
                                                 class="py-2 px-2 font-bold text-right text-blue-600 dark:text-blue-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Largura Total da Base
-                                                (B)</td>
+                                                ($B$)</td>
                                             <td id="res-base-B"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Empuxo Ativo
-                                                Horizontal Solicitante (P<sub>a,h</sub>)</td>
+                                                Horizontal Solicitante ($P_{a,h}$)</td>
                                             <td id="res-P-h"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Empuxo Ativo Vertical
-                                                Estabilizante (P<sub>a,v</sub>)</td>
+                                                Estabilizante ($P_{a,v}$)</td>
                                             <td id="res-P-v"
                                                 class="py-2 px-2 font-semibold text-right text-emerald-600 dark:text-emerald-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Capotante
-                                                (M_tombamento)</td>
+                                                ($M_{\text{tombamento}}$)</td>
                                             <td id="res-M-overturning"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento Resistente
-                                                (M_resistente)</td>
+                                                ($M_{\text{resistente}}$)</td>
                                             <td id="res-M-resisting"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Resistência ao
-                                                Deslizamento (R_deslizamento)</td>
+                                                Deslizamento ($R_{\text{deslizamento}}$)</td>
                                             <td id="res-R-sliding"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Tensão Máxima na
-                                                Puntera (q_toe)</td>
+                                                Puntera ($q_{\text{toe}}$)</td>
                                             <td id="res-q-toe"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Tensão no Calcanhar
-                                                (q_heel)</td>
+                                                ($q_{\text{heel}}$)</td>
                                             <td id="res-q-heel"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
@@ -665,46 +665,46 @@
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Módulo de Reação do
-                                                Solo (k_s)</td>
+                                                Solo ($k_s$)</td>
                                             <td id="res-ks"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Rigidez Rotacional da
-                                                Sapata (K_θ)</td>
+                                                Sapata ($K_\theta$)</td>
                                             <td id="res-k-theta"
                                                 class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Deslocamento por
-                                                Rotação (d_rot)</td>
+                                                Rotação ($d_{\text{rot}}$)</td>
                                             <td id="res-d-rot"
                                                 class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Deslocamento por
-                                                Translação (d_trans)</td>
+                                                Translação ($d_{\text{trans}}$)</td>
                                             <td id="res-d-trans"
                                                 class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">
                                                 -</td>
                                         </tr>
                                         <tr class="border-b border-gray-100 dark:border-gray-700">
                                             <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Deslocamento por
-                                                Flexão da Haste (d_flex)</td>
+                                                Flexão da Haste ($d_{\text{flex}}$)</td>
                                             <td id="res-d-flex"
                                                 class="py-2 px-2 font-semibold text-right text-blue-600 dark:text-blue-400">
                                                 -</td>
                                         </tr>
                                         <tr>
-                                            <td class="py-2 px-2 text-gray-800 dark:text-gray-200 font-bold">
-                                                Deslocamento Total do Topo (d_tot vs Limite H/300)</td>
-                                            <td id="res-d-total-limit"
-                                                class="py-2 px-2 font-bold text-right text-blue-700 dark:text-blue-300">
-                                                -</td>
-                                        </tr>
+                                             <td class="py-2 px-2 text-gray-800 dark:text-gray-200 font-bold">
+                                                 Deslocamento Total do Topo ($d_{\text{tot}} \text{ vs Limite } H/300$)</td>
+                                             <td id="res-d-total-limit"
+                                                 class="py-2 px-2 font-bold text-right text-blue-700 dark:text-blue-300">
+                                                 -</td>
+                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -731,24 +731,24 @@
                                             class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                        <div class="flex justify-between"><span>Largura da Seção (h)</span><span
+                                        <div class="flex justify-between"><span>Largura da Seção ($h$)</span><span
                                                 id="res-haste-h"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>Altura Útil (d)</span><span
+                                        <div class="flex justify-between"><span>Altura Útil ($d$)</span><span
                                                 id="res-haste-d"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>Momento Design (Md)</span><span
+                                        <div class="flex justify-between"><span>Momento de Cálculo ($M_d$)</span><span
                                                 id="res-haste-Md"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>As,req (cálculo)</span><span
+                                        <div class="flex justify-between"><span>$A_{s,\text{req}}\text{ (cálculo)}$</span><span
                                                 id="res-haste-As-req"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>As,min (NBR 6118)</span><span
+                                        <div class="flex justify-between"><span>$A_{s,\min}\text{ (NBR 6118)}$</span><span
                                                 id="res-haste-As-min"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
                                         <div
                                             class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
-                                            <span class="font-bold text-gray-700 dark:text-gray-200">As,final
+                                            <span class="font-bold text-gray-700 dark:text-gray-200">$A_{s,\text{final}}$
                                                 ★</span><span id="res-haste-As-final"
                                                 class="font-bold text-rose-600 dark:text-rose-400">-</span></div>
                                         <div
@@ -768,24 +768,24 @@
                                             class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                        <div class="flex justify-between"><span>Espessura (h)</span><span
+                                        <div class="flex justify-between"><span>Espessura ($h$)</span><span
                                                 id="res-puntera-h"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>Altura Útil (d)</span><span
+                                        <div class="flex justify-between"><span>Altura Útil ($d$)</span><span
                                                 id="res-puntera-d"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>Momento Design (Md)</span><span
+                                        <div class="flex justify-between"><span>Momento de Cálculo ($M_d$)</span><span
                                                 id="res-puntera-Md"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>As,req (cálculo)</span><span
+                                        <div class="flex justify-between"><span>$A_{s,\text{req}}\text{ (cálculo)}$</span><span
                                                 id="res-puntera-As-req"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>As,min (NBR 6118)</span><span
+                                        <div class="flex justify-between"><span>$A_{s,\min}\text{ (NBR 6118)}$</span><span
                                                 id="res-puntera-As-min"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
                                         <div
                                             class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
-                                            <span class="font-bold text-gray-700 dark:text-gray-200">As,final
+                                            <span class="font-bold text-gray-700 dark:text-gray-200">$A_{s,\text{final}}$
                                                 ★</span><span id="res-puntera-As-final"
                                                 class="font-bold text-indigo-600 dark:text-indigo-400">-</span></div>
                                         <div
@@ -805,24 +805,24 @@
                                             class="inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700">-</span>
                                     </div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                        <div class="flex justify-between"><span>Espessura (h)</span><span
+                                        <div class="flex justify-between"><span>Espessura ($h$)</span><span
                                                 id="res-calcanhar-h"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>Altura Útil (d)</span><span
+                                        <div class="flex justify-between"><span>Altura Útil ($d$)</span><span
                                                 id="res-calcanhar-d"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>Momento Design (Md)</span><span
+                                        <div class="flex justify-between"><span>Momento de Cálculo ($M_d$)</span><span
                                                 id="res-calcanhar-Md"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>As,req (cálculo)</span><span
+                                        <div class="flex justify-between"><span>$A_{s,\text{req}}\text{ (cálculo)}$</span><span
                                                 id="res-calcanhar-As-req"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
-                                        <div class="flex justify-between"><span>As,min (NBR 6118)</span><span
+                                        <div class="flex justify-between"><span>$A_{s,\min}\text{ (NBR 6118)}$</span><span
                                                 id="res-calcanhar-As-min"
                                                 class="font-semibold text-gray-900 dark:text-white">-</span></div>
                                         <div
                                             class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
-                                            <span class="font-bold text-gray-700 dark:text-gray-200">As,final
+                                            <span class="font-bold text-gray-700 dark:text-gray-200">$A_{s,\text{final}}$
                                                 ★</span><span id="res-calcanhar-As-final"
                                                 class="font-bold text-purple-600 dark:text-purple-400">-</span></div>
                                         <div

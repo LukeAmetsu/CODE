@@ -430,6 +430,10 @@ function renderResults(data) {
       "dark:text-white"
     );
   }
+
+  if (window.renderLatex && resultsArea) {
+    window.renderLatex(resultsArea);
+  }
 }
 
 const angleBatchResults = []; // Store batch results

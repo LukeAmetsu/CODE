@@ -275,6 +275,10 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             tbody.appendChild(tr2);
         });
+
+        if (window.renderLatex) {
+            window.renderLatex(document.getElementById('resultsSection'));
+        }
     }
 
     function showError(msg) {

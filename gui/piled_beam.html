@@ -123,7 +123,7 @@
                 <!-- Card 1: Momento Máximo Positivo (Vão) -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
                     <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
-                        <span>Momento Positivo Vão (M+)</span>
+                        <span>Momento Positivo Vão ($M^+$)</span>
                         <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">NBR 6118</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
@@ -131,14 +131,14 @@
                         <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">kN·m</span>
                     </div>
                     <div id="card-as-inf" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        As inferior: -
+                        $A_s\text{ inferior}$: -
                     </div>
                 </div>
 
                 <!-- Card 2: Momento Máximo Negativo (Apoios) -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 transition-all">
                     <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
-                        <span>Momento Negativo Apoio (M-)</span>
+                        <span>Momento Negativo Apoio ($M^-$)</span>
                         <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">Sobre Estacas</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
@@ -146,14 +146,14 @@
                         <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">kN·m</span>
                     </div>
                     <div id="card-as-sup" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        As superior: -
+                        $A_s\text{ superior}$: -
                     </div>
                 </div>
 
                 <!-- Card 3: Cortante Máximo & Estribos -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all">
                     <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
-                        <span>Cortante Máximo (V_max)</span>
+                        <span>Cortante Máximo ($V_{\max}$)</span>
                         <span id="badge-shear-status" class="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Biela OK</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
@@ -168,7 +168,7 @@
                 <!-- Card 4: Reação Máxima na Estaca -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 hover:border-cyan-300 dark:hover:border-cyan-600 transition-all">
                     <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
-                        <span>Reação Máx Estaca</span>
+                        <span>Reação Máx Estaca ($R_{\max}$)</span>
                         <span id="badge-pile-beam-status" class="px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">OK</span>
                     </div>
                     <div class="mt-2 flex items-baseline gap-2">
@@ -176,7 +176,7 @@
                         <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">tf / estaca</span>
                     </div>
                     <div id="card-pile-adm" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        R_adm: -
+                        $R_{\text{adm}}$: -
                     </div>
                 </div>
             </div>
@@ -193,23 +193,23 @@
                             </h2>
                             <div class="grid grid-cols-2 gap-4 text-xs">
                                 <div>
-                                    <label class="eng-label">Comprimento Viga (m)</label>
+                                    <label class="eng-label">Comprimento $L\text{ (m)}$</label>
                                     <input type="number" id="beam_length" value="24.0" step="1.0" min="6" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Vão entre Estacas (m)</label>
+                                    <label class="eng-label">Vão entre Estacas $s\text{ (m)}$</label>
                                     <input type="number" id="pile_spacing" value="3.0" step="0.25" min="1.5" max="6.0" class="eng-input font-mono text-blue-600 dark:text-blue-400" title="Distância entre eixos de estacas">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Largura bw (m)</label>
+                                    <label class="eng-label">Largura $b_w\text{ (m)}$</label>
                                     <input type="number" id="beam_width" value="0.80" step="0.05" min="0.3" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Altura h (m)</label>
+                                    <label class="eng-label">Altura $h\text{ (m)}$</label>
                                     <input type="number" id="beam_height" value="1.20" step="0.05" min="0.4" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="eng-label">fck Concreto (MPa)</label>
+                                    <label class="eng-label">$f_{ck}\text{ Concreto (MPa)}$</label>
                                     <input type="number" id="fck" value="35.0" step="5" min="20" class="eng-input font-mono">
                                 </div>
                                 <div>
@@ -225,7 +225,7 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="eng-label">Cobrimento c (mm)</label>
+                                    <label class="eng-label">Cobrimento $c\text{ (mm)}$</label>
                                     <input type="number" id="cover" value="50.0" step="5" min="30" class="eng-input font-mono">
                                 </div>
                             </div>
@@ -242,7 +242,7 @@
                                     <input type="number" id="gantry_load_tf" value="148.42" step="5" min="20" class="eng-input font-mono text-amber-600 dark:text-amber-400" title="Carga de serviço da perna do pórtico">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Impacto Dinâmico (φ)</label>
+                                    <label class="eng-label">Impacto Dinâmico ($\phi_{\text{din}}$)</label>
                                     <input type="number" id="dynamic_factor" value="1.25" step="0.05" min="1.0" max="2.0" class="eng-input font-mono">
                                 </div>
                                 <div>
@@ -279,19 +279,19 @@
                             </h2>
                             <div class="grid grid-cols-2 gap-4 text-xs">
                                 <div>
-                                    <label class="eng-label">Capacidade R_adm (kN)</label>
+                                    <label class="eng-label">Capacidade $R_{\text{adm}}\text{ (kN)}$</label>
                                     <input type="number" id="pile_capacity_adm" value="1600.0" step="50" min="200" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Mola Vertical Kz (kN/m)</label>
+                                    <label class="eng-label">Mola Vertical $K_z\text{ (kN/m)}$</label>
                                     <input type="number" id="pile_spring_kz" value="180000.0" step="10000" min="10000" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Diâmetro Estaca (m)</label>
+                                    <label class="eng-label">Diâmetro Estaca $D_p\text{ (m)}$</label>
                                     <input type="number" id="pile_diameter" value="0.80" step="0.1" min="0.4" class="eng-input font-mono">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Mola Horizontal Kx (kN/m)</label>
+                                    <label class="eng-label">Mola Horizontal $K_x\text{ (kN/m)}$</label>
                                     <input type="number" id="pile_spring_kx" value="40000.0" step="5000" min="5000" class="eng-input font-mono">
                                 </div>
                             </div>
@@ -487,13 +487,13 @@
                             <table id="span-optimization-table" class="w-full text-xs text-left border-collapse">
                                 <thead>
                                     <tr class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold border-b border-gray-200 dark:border-gray-600">
-                                        <th class="p-2">Vão (m)</th>
+                                        <th class="p-2">Vão $s\text{ (m)}$</th>
                                         <th class="p-2">Nº Estacas</th>
                                         <th class="p-2">Perfuração</th>
-                                        <th class="p-2 text-right">M+ máx (kN·m)</th>
-                                        <th class="p-2 text-right">M- máx (kN·m)</th>
-                                        <th class="p-2 text-right">R máx (tf)</th>
-                                        <th class="p-2 text-right">As inf (cm²)</th>
+                                        <th class="p-2 text-right">$M^+_{\max}\text{ (kN}\cdot\text{m)}$</th>
+                                        <th class="p-2 text-right">$M^-_{\max}\text{ (kN}\cdot\text{m)}$</th>
+                                        <th class="p-2 text-right">$R_{\max}\text{ (tf)}$</th>
+                                        <th class="p-2 text-right">$A_{s,\text{inf}}\text{ (cm}^2\text{)}$</th>
                                     </tr>
                                 </thead>
                                 <tbody id="span-opt-tbody">
@@ -516,7 +516,7 @@
                                         <td colspan="2" class="pt-2.5 pb-1.5 px-2 rounded">📐 Dimensionamento da Viga (NBR 6118)</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Cálculo Positivo (M_sd+)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Cálculo Positivo ($M_{Sd}^+$)</td>
                                         <td id="res-m-sd-pos" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
@@ -524,7 +524,7 @@
                                         <td id="res-detail-inf" class="py-2 px-2 font-bold text-right text-blue-600 dark:text-blue-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Cálculo Negativo (M_sd-)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Cálculo Negativo ($M_{Sd}^-$)</td>
                                         <td id="res-m-sd-neg" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
@@ -532,11 +532,11 @@
                                         <td id="res-detail-sup" class="py-2 px-2 font-bold text-right text-purple-600 dark:text-purple-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura de Pele Lateral (h &ge; 60 cm)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Armadura de Pele Lateral ($h \ge 60\text{ cm}$)</td>
                                         <td id="res-skin-rebar" class="py-2 px-2 font-bold text-right text-teal-600 dark:text-teal-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Cortante de Cálculo (V_sd) vs VRd2</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Cortante de Cálculo ($V_{Sd}\text{ vs } V_{Rd2}$)</td>
                                         <td id="res-v-sd" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
@@ -544,7 +544,7 @@
                                         <td id="res-stirrups-desc" class="py-2 px-2 font-bold text-right text-emerald-600 dark:text-emerald-400">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Abertura de Fissuras ELS-W (Fadiga)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Abertura de Fissuras ELS-W ($w_k$)</td>
                                         <td id="res-crack-beam" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
 
@@ -552,7 +552,7 @@
                                         <td colspan="2" class="pt-2.5 pb-1.5 px-2 rounded">📍 Verificação das Estacas (NBR 6122)</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Compressão Máxima vs R_adm</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Compressão Máxima vs $R_{\text{adm}}$</td>
                                         <td id="res-pile-comp" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
@@ -560,11 +560,11 @@
                                         <td id="res-pile-uplift" class="py-2 px-2 font-semibold text-right text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Esforço de Frenagem por Estaca (H)</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Esforço de Frenagem por Estaca ($H$)</td>
                                         <td id="res-pile-h" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                     <tr class="border-b border-gray-100 dark:border-gray-700">
-                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Frenagem no Topo do Fuste</td>
+                                        <td class="py-2 px-2 text-gray-600 dark:text-gray-400">Momento de Frenagem no Topo do Fuste ($M_{\text{topo}}$)</td>
                                         <td id="res-pile-m-head" class="py-2 px-2 font-semibold text-right font-mono text-gray-900 dark:text-white">-</td>
                                     </tr>
                                 </tbody>

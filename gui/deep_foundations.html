@@ -137,28 +137,28 @@
 
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="eng-label">Diâmetro Estaca D [m]</label>
+                                        <label class="eng-label">Diâmetro Estaca $D\text{ [m]}$</label>
                                         <input type="number" id="cap_pile_diam_m" step="0.10" min="0.25" value="0.80" class="eng-input">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Espaçamento e [m]</label>
+                                        <label class="eng-label">Espaçamento $e\text{ [m]}$</label>
                                         <input type="number" id="cap_pile_spacing_m" step="0.10" min="0.60" value="2.40" class="eng-input">
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="eng-label">Pilar Lado a (X) [m]</label>
+                                        <label class="eng-label">Pilar Lado $a\text{ (X) [m]}$</label>
                                         <input type="number" id="cap_col_a_m" step="0.05" min="0.20" value="0.50" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2.5 text-gray-900 dark:text-white">
                                     </div>
                                     <div>
-                                        <label class="eng-label">Pilar Lado b (Y) [m]</label>
+                                        <label class="eng-label">Pilar Lado $b\text{ (Y) [m]}$</label>
                                         <input type="number" id="cap_col_b_m" step="0.05" min="0.20" value="0.50" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2.5 text-gray-900 dark:text-white">
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label class="eng-label">Carga Normal do Pilar Nk [kN]</label>
+                                    <label class="eng-label">Carga Normal do Pilar $N_k\text{ [kN]}$</label>
                                     <input type="number" id="cap_load_Nk_kN" step="50.0" value="2400.0" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2.5 font-bold text-indigo-600 dark:text-indigo-400">
                                 </div>
                             </div>
@@ -175,7 +175,7 @@
 
                             <div class="grid grid-cols-2 gap-3 text-xs">
                                 <div>
-                                    <label class="eng-label">fck [MPa]</label>
+                                    <label class="eng-label">$f_{ck}\text{ [MPa]}$</label>
                                     <select id="cap_fck_mpa" class="eng-input">
                                         <option value="25">C25 (25 MPa)</option>
                                         <option value="30" selected>C30 (30 MPa)</option>
@@ -184,18 +184,18 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="eng-label">fyk [MPa]</label>
+                                    <label class="eng-label">$f_{yk}\text{ [MPa]}$</label>
                                     <select id="cap_fyk_mpa" class="eng-input">
                                         <option value="500" selected>CA-50 (500 MPa)</option>
                                         <option value="600">CA-60 (600 MPa)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="eng-label">Cobrimento [cm]</label>
+                                    <label class="eng-label">Cobrimento $c\text{ [cm]}$</label>
                                     <input type="number" id="cap_cover_cm" step="0.5" value="5.0" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2.5 text-gray-900 dark:text-white">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Embutimento Estaca [cm]</label>
+                                    <label class="eng-label">Embutimento $\Delta h\text{ [cm]}$</label>
                                     <input type="number" id="cap_embedment_cm" step="1.0" value="5.0" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 p-2.5 text-gray-900 dark:text-white">
                                 </div>
                             </div>
@@ -207,7 +207,7 @@
                         <!-- Top KPI Cards -->
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Carga / Estaca Pd</span>
+                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Carga / Estaca $P_d$</span>
                                 <div class="mt-1 flex items-baseline gap-1">
                                     <span id="cap-res-pd" class="text-xl font-extrabold text-gray-900 dark:text-white">--</span>
                                     <span class="text-xs text-gray-500">kN</span>
@@ -218,17 +218,17 @@
                             </div>
 
                             <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Ângulo Biela θ</span>
+                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Ângulo Biela $\theta$</span>
                                 <div class="mt-1 flex items-baseline gap-1">
                                     <span id="cap-res-theta" class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">--°</span>
                                 </div>
                                 <div id="cap-res-theta-badge" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 truncate">
-                                    45° ≤ θ ≤ 55° (OK)
+                                    $45^\circ \le \theta \le 55^\circ\text{ (OK)}$
                                 </div>
                             </div>
 
                             <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Tração Tirante Ftd</span>
+                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Tração Tirante $F_{td}$</span>
                                 <div class="mt-1 flex items-baseline gap-1">
                                     <span id="cap-res-ftd" class="text-xl font-extrabold text-gray-900 dark:text-white">--</span>
                                     <span class="text-xs text-gray-500">kN</span>
@@ -239,7 +239,7 @@
                             </div>
 
                             <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Armadura Total As</span>
+                                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Armadura Total $A_s$</span>
                                 <div class="mt-1 flex items-baseline gap-1">
                                     <span id="cap-res-as" class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">--</span>
                                     <span class="text-xs text-gray-500">cm²</span>
@@ -275,7 +275,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                                 <div class="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/30">
                                     <div class="flex items-center justify-between mb-1">
-                                        <span class="font-bold text-gray-800 dark:text-gray-200">Tensão Biela no Pilar</span>
+                                        <span class="font-bold text-gray-800 dark:text-gray-200">Tensão Biela no Pilar ($\sigma_{cd,\text{pilar}}$)</span>
                                         <span id="cap-badge-sigma-col" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">OK</span>
                                     </div>
                                     <span id="cap-res-sigma-col" class="text-base font-extrabold text-gray-900 dark:text-white">-- MPa</span>
@@ -284,7 +284,7 @@
 
                                 <div class="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/30">
                                     <div class="flex items-center justify-between mb-1">
-                                        <span class="font-bold text-gray-800 dark:text-gray-200">Tensão Biela na Estaca</span>
+                                        <span class="font-bold text-gray-800 dark:text-gray-200">Tensão Biela na Estaca ($\sigma_{cd,\text{estaca}}$)</span>
                                         <span id="cap-badge-sigma-pile" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">OK</span>
                                     </div>
                                     <span id="cap-res-sigma-pile" class="text-base font-extrabold text-gray-900 dark:text-white">-- MPa</span>

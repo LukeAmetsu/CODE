@@ -131,35 +131,35 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="eng-label">Concreto f<sub>ck</sub> (MPa)</label>
+                                <label class="eng-label">Concreto $f_{ck}\text{ (MPa)}$</label>
                                 <select id="fck" class="eng-select">
-                                    <option value="30">C30 (fck = 30 MPa)</option>
-                                    <option value="35" selected>C35 (fck = 35 MPa)</option>
-                                    <option value="40">C40 (fck = 40 MPa)</option>
-                                    <option value="45">C45 (fck = 45 MPa)</option>
-                                    <option value="50">C50 (fck = 50 MPa)</option>
-                                    <option value="60">C60 (fck = 60 MPa)</option>
+                                    <option value="30">C30 ($f_{ck} = 30\text{ MPa}$)</option>
+                                    <option value="35" selected>C35 ($f_{ck} = 35\text{ MPa}$)</option>
+                                    <option value="40">C40 ($f_{ck} = 40\text{ MPa}$)</option>
+                                    <option value="45">C45 ($f_{ck} = 45\text{ MPa}$)</option>
+                                    <option value="50">C50 ($f_{ck} = 50\text{ MPa}$)</option>
+                                    <option value="60">C60 ($f_{ck} = 60\text{ MPa}$)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="eng-label">Aço Protensão f<sub>ptk</sub></label>
+                                <label class="eng-label">Aço Protensão $f_{ptk}$</label>
                                 <select id="fptk" class="eng-select">
-                                    <option value="1900" selected>CP-190 RB (1900 MPa)</option>
-                                    <option value="2100">CP-210 RB (2100 MPa)</option>
-                                    <option value="1750">CP-175 RN (1750 MPa)</option>
+                                    <option value="1900" selected>CP-190 RB ($1900\text{ MPa}$)</option>
+                                    <option value="2100">CP-210 RB ($2100\text{ MPa}$)</option>
+                                    <option value="1750">CP-175 RN ($1750\text{ MPa}$)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="eng-label">Mód. Aço E<sub>p</sub> (MPa)</label>
+                                <label class="eng-label">Mód. Aço $E_p\text{ (MPa)}$</label>
                                 <input type="number" id="Ep" value="200000" step="5000"
                                     class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="eng-label">Área Cordoalha A<sub>p</sub> (cm²)</label>
+                                <label class="eng-label">Área Cordoalha $A_p\text{ (cm²)}$</label>
                                 <select id="Ap" class="eng-select font-mono">
-                                    <option value="1.40" selected>1,40 cm² (Ø 15,2 mm)</option>
-                                    <option value="0.987">0,987 cm² (Ø 12,7 mm)</option>
-                                    <option value="1.65">1,65 cm² (Ø 16,0 mm)</option>
+                                    <option value="1.40" selected>$1{,}40\text{ cm² } (\varnothing 15{,}2\text{ mm})$</option>
+                                    <option value="0.987">$0{,}987\text{ cm² } (\varnothing 12{,}7\text{ mm})$</option>
+                                    <option value="1.65">$1{,}65\text{ cm² } (\varnothing 16{,}0\text{ mm})$</option>
                                 </select>
                             </div>
                         </div>
@@ -172,12 +172,12 @@
                         </h2>
                         <div class="grid grid-cols-2 gap-3.5 text-xs">
                             <div>
-                                <label class="eng-label" title="Coeficiente de atrito cabo-bainha">Atrito μ (rad⁻¹)</label>
+                                <label class="eng-label" title="Coeficiente de atrito cabo-bainha">Atrito $\mu\text{ (rad}^{-1}\text{)}$</label>
                                 <input type="number" id="mu" value="0.20" step="0.02" min="0.10" max="0.35"
                                     class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="eng-label" title="Coeficiente de perda por ondulação parasita">Ondulação k (m⁻¹)</label>
+                                <label class="eng-label" title="Coeficiente de perda por ondulação parasita">Ondulação $k\text{ (m}^{-1}\text{)}$</label>
                                 <input type="number" id="k" value="0.0020" step="0.0005"
                                     class="eng-input font-mono">
                             </div>
@@ -187,17 +187,17 @@
                                     class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="eng-label">Umidade Relativa U (%)</label>
+                                <label class="eng-label">Umidade Relativa $U\text{ (\%)}$</label>
                                 <input type="number" id="humidity" value="70" step="5" min="30" max="95"
                                     class="eng-input font-mono">
                             </div>
                             <div>
-                                <label class="eng-label">Cimento (s NBR 6118)</label>
+                                <label class="eng-label">Cimento ($s\text{ NBR 6118)}$</label>
                                 <select id="cement_s_factor"
                                     class="eng-input">
-                                    <option value="0.25" selected>CP-I / CP-II (s=0,25)</option>
-                                    <option value="0.20">CP-V ARI (s=0,20 - Rápido)</option>
-                                    <option value="0.38">CP-III / CP-IV (s=0,38 - Lento)</option>
+                                    <option value="0.25" selected>CP-I / CP-II ($s=0{,}25$)</option>
+                                    <option value="0.20">CP-V ARI ($s=0{,}20$ - Rápido)</option>
+                                    <option value="0.38">CP-III / CP-IV ($s=0{,}38$ - Lento)</option>
                                 </select>
                             </div>
                             <div>
@@ -217,23 +217,23 @@
                     <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
                         <h2 class="font-bold text-sm text-blue-600 dark:text-blue-400 mb-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-2">
                             <span class="flex items-center gap-2"><span>📐</span> Geometria da Viga</span>
-                            <span id="beam-height-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">h = 100 cm</span>
+                            <span id="beam-height-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">$h = 100\text{ cm}$</span>
                         </h2>
                         <div class="grid grid-cols-2 gap-3.5 mb-3 text-xs">
                             <div>
-                                <label class="eng-label">Comprimento Vão L (m)</label>
+                                <label class="eng-label">Comprimento Vão $L\text{ (m)}$</label>
                                 <input type="number" id="beam_length" value="20" step="1" min="4" max="60"
                                     class="w-full p-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
                             </div>
                             <div>
-                                <label class="eng-label">Altura da Seção (cm)</label>
+                                <label class="eng-label">Altura da Seção $h\text{ (cm)}$</label>
                                 <input type="number" id="beam_height" value="100" readonly
                                     class="w-full p-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-xs font-mono text-gray-500">
                             </div>
                         </div>
                         <div>
                             <div class="flex items-center justify-between mb-1 text-xs">
-                                <label class="eng-label">Vértices da Seção (X, Y em cm)</label>
+                                <label class="eng-label">Vértices da Seção ($X, Y\text{ em cm}$)</label>
                                 <span class="text-[10px] text-gray-400">Polígono fechado no sentido horário</span>
                             </div>
                             <textarea id="beam_coords" rows="5"
@@ -278,17 +278,17 @@
                         </h2>
                         <div class="grid grid-cols-3 gap-3 text-xs">
                             <div>
-                                <label class="eng-label">g<sub>pp</sub> (Próprio)</label>
+                                <label class="eng-label">$g_{pp}\text{ (Próprio)}$</label>
                                 <input type="number" id="load_pp" value="7.5" step="0.5"
                                     class="eng-select font-mono">
                             </div>
                             <div>
-                                <label class="eng-label">g<sub>perm</sub> (Adicional)</label>
+                                <label class="eng-label">$g_{\text{perm}}\text{ (Adicional)}$</label>
                                 <input type="number" id="load_perm" value="12.0" step="0.5"
                                     class="eng-select font-mono">
                             </div>
                             <div>
-                                <label class="eng-label">q<sub>var</sub> (Acidental)</label>
+                                <label class="eng-label">$q_{\text{var}}\text{ (Acidental)}$</label>
                                 <input type="number" id="load_var" value="16.0" step="0.5"
                                     class="eng-select font-mono">
                             </div>

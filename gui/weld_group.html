@@ -94,37 +94,37 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="input-group">
-                            <label>Fx</label>
+                            <label>$F_x$</label>
                             <input type="number" id="load_fx" value="0" step="any">
                         </div>
                         <div class="input-group">
-                            <label>Mx</label>
+                            <label>$M_x$</label>
                             <input type="number" id="load_mx" value="0" step="any">
                         </div>
                         <div class="input-group">
-                            <label>Fy</label>
+                            <label>$F_y$</label>
                             <input type="number" id="load_fy" value="10" step="any">
                         </div>
                         <div class="input-group">
-                            <label>My</label>
+                            <label>$M_y$</label>
                             <input type="number" id="load_my" value="0" step="any">
                         </div>
                         <div class="input-group">
-                            <label>Fz</label>
+                            <label>$F_z$</label>
                             <input type="number" id="load_fz" value="0" step="any">
                         </div>
                         <div class="input-group">
-                            <label>Mz</label>
+                            <label>$M_z$</label>
                             <input type="number" id="load_mz" value="0" step="any">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-[var(--color-border-primary)]">
                         <div class="input-group">
-                            <label>Load Pos X</label>
+                            <label>Load Pos $X$</label>
                             <input type="number" id="load_px" value="5" step="any">
                         </div>
                         <div class="input-group">
-                            <label>Load Pos Y</label>
+                            <label>Load Pos $Y$</label>
                             <input type="number" id="load_py" value="0" step="any">
                         </div>
                     </div>
@@ -140,11 +140,11 @@
                         <table class="w-full text-sm text-left">
                             <thead class="text-xs uppercase bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]">
                                 <tr>
-                                    <th class="px-2 py-2">X1</th>
-                                    <th class="px-2 py-2">Y1</th>
-                                    <th class="px-2 py-2">X2</th>
-                                    <th class="px-2 py-2">Y2</th>
-                                    <th class="px-2 py-2">Size (a)</th>
+                                    <th class="px-2 py-2">$X_1$</th>
+                                    <th class="px-2 py-2">$Y_1$</th>
+                                    <th class="px-2 py-2">$X_2$</th>
+                                    <th class="px-2 py-2">$Y_2$</th>
+                                    <th class="px-2 py-2">Size ($a$)</th>
                                     <th class="px-2 py-2">Act</th>
                                 </tr>
                             </thead>
@@ -173,19 +173,19 @@
                     
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-[var(--color-bg-primary)] p-3 rounded border border-[var(--color-border-primary)]">
-                            <div class="text-xs text-[var(--color-text-secondary)]">Total Area</div>
+                            <div class="text-xs text-[var(--color-text-secondary)]">Total Area ($A_w$)</div>
                             <div class="font-bold text-lg" id="res_area">-</div>
                         </div>
                         <div class="bg-[var(--color-bg-primary)] p-3 rounded border border-[var(--color-border-primary)]">
-                            <div class="text-xs text-[var(--color-text-secondary)]">Centroid (X,Y)</div>
+                            <div class="text-xs text-[var(--color-text-secondary)]">Centroid ($X_G, Y_G$)</div>
                             <div class="font-bold text-lg" id="res_centroid">-</div>
                         </div>
                         <div class="bg-[var(--color-bg-primary)] p-3 rounded border border-[var(--color-border-primary)]">
-                            <div class="text-xs text-[var(--color-text-secondary)]">Polar Inertia (Jz)</div>
+                            <div class="text-xs text-[var(--color-text-secondary)]">Polar Inertia ($J_z$)</div>
                             <div class="font-bold text-lg" id="res_jz">-</div>
                         </div>
                         <div class="bg-[var(--color-bg-primary)] p-3 rounded border border-red-500 bg-red-50 dark:bg-red-900/20">
-                            <div class="text-xs text-red-600 dark:text-red-400 font-bold">Max Resultant Stress</div>
+                            <div class="text-xs text-red-600 dark:text-red-400 font-bold">Max Resultant Stress ($f_{\text{res},\max}$)</div>
                             <div class="font-bold text-2xl text-red-600 dark:text-red-400" id="res_max_stress">-</div>
                         </div>
                     </div>
@@ -195,12 +195,12 @@
                             <thead class="text-xs uppercase bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]">
                                 <tr>
                                     <th class="px-3 py-2">Point</th>
-                                    <th class="px-3 py-2">X</th>
-                                    <th class="px-3 py-2">Y</th>
-                                    <th class="px-3 py-2">fx</th>
-                                    <th class="px-3 py-2">fy</th>
-                                    <th class="px-3 py-2">fz</th>
-                                    <th class="px-3 py-2 font-bold text-[var(--color-text-primary)]">f_res</th>
+                                    <th class="px-3 py-2">$X$</th>
+                                    <th class="px-3 py-2">$Y$</th>
+                                    <th class="px-3 py-2">$f_x$</th>
+                                    <th class="px-3 py-2">$f_y$</th>
+                                    <th class="px-3 py-2">$f_z$</th>
+                                    <th class="px-3 py-2 font-bold text-[var(--color-text-primary)]">$f_{\text{res}}$</th>
                                 </tr>
                             </thead>
                             <tbody id="stressTableBody" class="divide-y divide-[var(--color-border-primary)]">

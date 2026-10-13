@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base de Dados de Quantitativos & Orçamentos | Termelétricas & LT</title>
+    <script src="../js/tailwind.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'takeoff_database',
+                    pageTitle: 'Quantitativos & Orçamentos',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(100,116,139,0.3);
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(100,116,139,0.5);
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            border-color: transparent;
+            box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.35);
+        }
+        .editable-cell:focus {
+            outline: 2px solid #2563eb;
+            background-color: rgba(37, 99, 235, 0.08);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] antialiased transition-colors duration-300 flex flex-col font-['Inter',sans-serif]">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <!-- Header Injection Placeholder -->
+        <div id="header-placeholder" style="min-height: 100px;"></div>
+
+        <!-- Hero Header -->
+        <section class="relative overflow-hidden rounded-2xl border border-[var(--color-border-primary)] bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 md:p-8 shadow-xl mb-6">
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30 mb-3 backdrop-blur-sm">
+                        <span>⚡</span>
+                        <span>Fundações de Termelétricas (UTE) & Linhas de Transmissão (LT)</span>
+                    </div>
+                    <h1 class="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white mb-2">
+                        Base de Quantitativos, Desenhos & Orçamentos
+                    </h1>
+                    <p class="text-sm md:text-base text-slate-300 leading-relaxed">
+                        Repositório corporativo para catalogação de pranchas técnicas, extração automática de consumos de concreto, aço e fôrmas com edição manual direta, e gerador de estimativas paramétricas de novos orçamentos.
+                    </p>
+                </div>
+
+                <!-- Live Metrics Summary Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/5 border border-white/10 p-3.5 rounded-xl backdrop-blur-md">
+                    <div class="text-center px-2">
+                        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Fundações</div>
+                        <div id="stat-total-count" class="text-xl md:text-2xl font-black text-white">0</div>
+                    </div>
+                    <div class="text-center px-2 border-l border-white/10">
+                        <div class="text-[11px] uppercase tracking-wider text-blue-300 font-bold">Concreto Total</div>
+                        <div id="stat-total-concrete" class="text-xl md:text-2xl font-black text-blue-400">0 m³</div>
+                    </div>
+                    <div class="text-center px-2 border-l border-white/10">
+                        <div class="text-[11px] uppercase tracking-wider text-amber-300 font-bold">Aço Total</div>
+                        <div id="stat-total-steel" class="text-xl md:text-2xl font-black text-amber-400">0 t</div>
+                    </div>
+                    <div class="text-center px-2 border-l border-white/10">
+                        <div class="text-[11px] uppercase tracking-wider text-emerald-300 font-bold">Taxa Média</div>
+                        <div id="stat-avg-ratio" class="text-xl md:text-2xl font-black text-emerald-400">0 kg/m³</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Navigation Tabs -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-primary)] pb-3 mb-6">
+            <div class="flex flex-wrap items-center gap-2">
+                <button id="nav-btn-repo" onclick="switchMainTab('repo')"
+                    class="tab-btn active flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                    <span>📁</span>
+                    <span>Repositório de Fundações</span>
+                </button>
+
+                <button id="nav-btn-batch" onclick="switchMainTab('batch')"
+                    class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all relative">
+                    <span>🔄</span>
+                    <span>Varredura Automática (OneDrive)</span>
+                    <span id="batch-pending-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">0</span>
+                </button>
+
+                <button id="nav-btn-upload" onclick="switchMainTab('upload')"
+                    class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                    <span>⚡</span>
+                    <span>Cadastrar Prancha / Leitura Individual</span>
+                </button>
+
+                <button id="nav-btn-estimator" onclick="switchMainTab('estimator')"
+                    class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                    <span>📊</span>
+                    <span>Estimador de Orçamento</span>
+                </button>
+
+                <button id="nav-btn-analytics" onclick="switchMainTab('analytics')"
+                    class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                    <span>📈</span>
+                    <span>Indicadores Paramétricos</span>
+                </button>
+            </div>
+
+            <!-- Server Connection Indicator & Excel Export -->
+            <div class="flex items-center gap-2">
+                <span id="connection-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Base Ativa (Local/Nuvem)</span>
+                </span>
+
+                <button onclick="downloadExcelExport()"
+                    class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all">
+                    <span>📥</span>
+                    <span>Exportar Excel</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- TAB 1: REPOSITÓRIO DE FUNDAÇÕES & DESENHOS                                  -->
+        <!-- ========================================================================= -->
+        <div id="tab-content-repo" class="space-y-6">
+            <!-- Filter & Search Toolbar -->
+            <div class="p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <!-- Category and Status Pills -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-[var(--color-text-secondary)] mr-1">Obras:</span>
+                    <button id="filter-cat-all" onclick="setCategoryFilter('todas')"
+                        class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all">
+                        Todas
+                    </button>
+                    <button id="filter-cat-ute" onclick="setCategoryFilter('termoeletrica')"
+                        class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                        ⚡ UTE
+                    </button>
+                    <button id="filter-cat-lt" onclick="setCategoryFilter('linha_transmissao')"
+                        class="cat-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                        🗼 LT
+                    </button>
+
+                    <div class="h-5 w-px bg-[var(--color-border-primary)] mx-1 hidden sm:block"></div>
+
+                    <span class="text-xs font-bold text-[var(--color-text-secondary)] mr-1">Status:</span>
+                    <button id="filter-status-all" onclick="setReviewFilter('todas')"
+                        class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-white transition-all">
+                        Todos
+                    </button>
+                    <button id="filter-status-pending" onclick="setReviewFilter('pending_review')"
+                        class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-400/80 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-all flex items-center gap-1.5">
+                        <span>⚠️</span>
+                        <span>Aguardando Verificação</span>
+                        <span id="badge-pending-count" class="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-white">0</span>
+                    </button>
+                    <button id="filter-status-verified" onclick="setReviewFilter('verified')"
+                        class="status-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold border border-emerald-400/80 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all flex items-center gap-1.5">
+                        <span>✓</span>
+                        <span>Verificados</span>
+                    </button>
+
+                    <div class="h-5 w-px bg-[var(--color-border-primary)] mx-1 hidden sm:block"></div>
+
+                    <span class="text-xs font-bold text-[var(--color-text-secondary)] mr-1">Tipo:</span>
+                    <select id="filter-doc-type" onchange="setDocTypeFilter(this.value)"
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:outline-none">
+                        <option value="todas">Todos os Tipos</option>
+                        <option value="desenho">📐 Desenho / Prancha</option>
+                        <option value="memorial_calculo">📑 Memorial de Cálculo</option>
+                        <option value="croqui">✏️ Croqui / Esboço</option>
+                        <option value="relatorio_tecnico">📋 Relatório Técnico</option>
+                        <option value="especificacao_tecnica">📜 Especificação / Critério</option>
+                        <option value="quantitativo_material">📊 Quantitativo de Materiais</option>
+                    </select>
+                </div>
+
+                <!-- Search Input -->
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <div class="relative flex-grow md:w-72">
+                        <input type="text" id="repo-search-input" onkeyup="handleSearchKey(event)"
+                            placeholder="Buscar equipamento, prancha, obra, caminho..."
+                            class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none">
+                        <span class="absolute left-3 top-2.5 text-xs text-slate-400">🔍</span>
+                    </div>
+                    <button onclick="applyFilters()" class="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all">
+                        Buscar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cards Container -->
+            <div id="repo-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="repo-empty-state" class="hidden text-center py-16 border-2 border-dashed border-[var(--color-border-primary)] rounded-2xl p-8">
+                <span class="text-4xl block mb-2">🔍</span>
+                <h3 class="text-base font-bold text-[var(--color-text-primary)]">Nenhuma estrutura encontrada</h3>
+                <p class="text-xs text-[var(--color-text-secondary)] mt-1">Tente ajustar os filtros de busca ou cadastre uma nova prancha técnica.</p>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- TAB BATCH: VARREDURA AUTOMÁTICA DE PASTAS (ONEDRIVE / SHAREPOINT)          -->
+        <!-- ========================================================================= -->
+        <div id="tab-content-batch" class="hidden space-y-6">
+            <div class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-sm space-y-5">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border-primary)]">
+                    <div>
+                        <h2 class="text-base md:text-lg font-black text-[var(--color-text-primary)] flex items-center gap-2">
+                            <span>🔄</span>
+                            <span>Varredura Automática de Pranchas (OneDrive / Pastas)</span>
+                        </h2>
+                        <p class="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed">
+                            O sistema vasculha a pasta selecionada, lê todos os PDFs e planilhas de pranchas técnicas, extrai os quantitativos de concreto, aço e fôrma, e cadastra tudo no banco com status <b>"Aguardando Verificação"</b> para sua conferência.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center gap-1.5">
+                            <span>⚡</span>
+                            <span>Leitura em Lote</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Folder Selection Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="lg:col-span-8 space-y-2">
+                        <label class="block text-xs font-bold text-[var(--color-text-secondary)]">
+                            Caminho da Pasta de Projetos / Pranchas:
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="text" id="batch-folder-input"
+                                placeholder="Ex: C:\OD\OneDrive - Andrade Gutierrez\Projetos\Fundacoes ou escolha abaixo"
+                                class="flex-grow px-3.5 py-2.5 text-xs font-medium rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none shadow-xs">
+                            <button onclick="browseBatchFolder()"
+                                class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-sm shrink-0">
+                                <span>📁</span>
+                                <span>Procurar Pasta</span>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                            <button onclick="useDefaultOneDriveFolder()" class="text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1">
+                                <span>☁️ Usar Raiz do OneDrive</span>
+                            </button>
+                            <span class="text-slate-400">•</span>
+                            <span id="detected-onedrive-hint" class="text-slate-400">Detectando pasta do OneDrive...</span>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-4 space-y-2">
+                        <label class="block text-xs font-bold text-[var(--color-text-secondary)]">
+                            Disciplina / Obra Padrão:
+                        </label>
+                        <select id="batch-default-category"
+                            class="w-full px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none">
+                            <option value="termoeletrica">⚡ Termelétrica (UTE)</option>
+                            <option value="linha_transmissao">🗼 Linha de Transmissão (LT)</option>
+                        </select>
+                        <span class="text-[10px] text-slate-400 block">Será refinada automaticamente se a pasta indicar LT ou UTE.</span>
+                    </div>
+                </div>
+
+                <!-- Scan Options & Filters -->
+                <div class="space-y-3 p-4 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)]">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <div class="md:col-span-4">
+                            <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">
+                                Filtrar Nome da Prancha / Subpasta (Opcional):
+                            </label>
+                            <input type="text" id="batch-filter-keyword"
+                                placeholder="Ex: CI, CIVIL, FUND, ESTR, PLANTA (deixe vazio para tudo)"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none">
+                        </div>
+
+                        <div class="md:col-span-3">
+                            <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">
+                                Tipo de Documento Desejado:
+                            </label>
+                            <select id="batch-doc-type-filter"
+                                class="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none">
+                                <option value="todas">Todos os Documentos</option>
+                                <option value="desenho" selected>📐 Apenas Desenhos / Pranchas (DSN/DDM/DWG)</option>
+                                <option value="memorial_calculo">📑 Apenas Memoriais de Cálculo (MCC)</option>
+                                <option value="croqui">✏️ Apenas Croquis (CRQ)</option>
+                                <option value="quantitativo_material">📊 Apenas Quantitativos / Listas</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">
+                                Limite Máximo:
+                            </label>
+                            <select id="batch-max-files"
+                                class="w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none">
+                                <option value="50">50 arquivos</option>
+                                <option value="150">150 arquivos</option>
+                                <option value="300">300 arquivos</option>
+                                <option value="0" selected>Sem limite</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-3 flex flex-col justify-end">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-blue-600 dark:text-blue-400">
+                                <input type="checkbox" id="batch-opt-focus-civil" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                <span>Focar em Civil/Fundações</span>
+                            </label>
+                            <span class="text-[10px] text-slate-400 mt-0.5">Pula pastas de elétrica, tubulação e mecânica</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-6 pt-2 border-t border-[var(--color-border-primary)] text-xs font-semibold">
+                        <label class="flex items-center gap-2 cursor-pointer text-[var(--color-text-primary)] font-bold">
+                            <input type="checkbox" id="batch-opt-recursive" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-4 h-4">
+                            <span class="text-blue-600 dark:text-blue-400">Varredura recursiva (percorrer todas as subpastas em qualquer nível)</span>
+                        </label>
+
+                        <label class="flex items-center gap-2 cursor-pointer text-[var(--color-text-primary)]">
+                            <input type="checkbox" id="batch-opt-skip" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span>Pular arquivos já cadastrados anteriormente</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Launch & Cancel Buttons -->
+                <div class="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="text-xs text-[var(--color-text-secondary)] flex items-center gap-1.5">
+                        <span>💡</span>
+                        <span>Suporta pranchas <b>PDF</b>, planilhas <b>Excel</b> e subpastas profundas do OneDrive.</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button id="btn-cancel-batch-scan" onclick="cancelBatchScan()"
+                            class="hidden px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5 animate-pulse">
+                            <span>⏹️</span>
+                            <span>Interromper Varredura</span>
+                        </button>
+
+                        <button id="btn-start-batch-scan" onclick="startBatchScan()"
+                            class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs md:text-sm shadow-md transition-all flex items-center gap-2">
+                            <span>🚀</span>
+                            <span>Iniciar Varredura e Leitura de Pranchas</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Real-time Progress Panel -->
+                <div id="batch-progress-card" class="hidden p-5 rounded-2xl border border-blue-300 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/30 space-y-3.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></span>
+                            <span class="text-xs font-bold text-[var(--color-text-primary)]" id="batch-progress-status-title">Varredura em Andamento...</span>
+                        </div>
+                        <span id="batch-progress-pct" class="text-xs font-black text-blue-600 dark:text-blue-400">0%</span>
+                    </div>
+
+                    <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                        <div id="batch-progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+
+                    <div class="text-[11px] text-[var(--color-text-secondary)] font-medium" id="batch-progress-msg">
+                        Aguardando início...
+                    </div>
+
+                    <!-- Live Log Box -->
+                    <div id="batch-log-container" class="max-h-40 overflow-y-auto custom-scrollbar p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] font-mono text-[10px] space-y-1 text-slate-500 dark:text-slate-400">
+                        <!-- Streamed entries -->
+                    </div>
+                </div>
+
+                <!-- Finished Summary Card -->
+                <div id="batch-summary-card" class="hidden p-5 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                            <span>✅</span>
+                            <span>Varredura Concluída com Sucesso!</span>
+                        </h3>
+                        <span id="batch-summary-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                            Pronto para Conferência
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)]">
+                            <span class="text-[10px] text-slate-400 block font-bold">Total Encontrado</span>
+                            <span id="batch-sum-found" class="text-sm font-black text-slate-700 dark:text-slate-200">0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)]">
+                            <span class="text-[10px] text-slate-400 block font-bold">Importados / Ingeridos</span>
+                            <span id="batch-sum-imported" class="text-sm font-black text-blue-600 dark:text-blue-400">0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)]">
+                            <span class="text-[10px] text-slate-400 block font-bold">Já Existentes (Pulados)</span>
+                            <span id="batch-sum-skipped" class="text-sm font-black text-slate-400">0</span>
+                        </div>
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)]">
+                            <span class="text-[10px] text-slate-400 block font-bold">Aguardando Revisão</span>
+                            <span id="batch-sum-pending" class="text-sm font-black text-amber-600 dark:text-amber-400">0</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-between">
+                        <p class="text-xs text-slate-600 dark:text-slate-300">
+                            Os novos registros já estão no Repositório. Você pode abrir o PDF original e aprovar ou editar cada um deles.
+                        </p>
+                        <button onclick="goToRepoAndFilterPending()"
+                            class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5">
+                            <span>🔍</span>
+                            <span>Verificar Pranchas Importadas</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- TAB 2: CADASTRAR PRANCHA / LEITURA INDIVIDUAL COM EDIÇÃO MANUAL             -->
+        <!-- ========================================================================= -->
+        <div id="tab-content-upload" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Upload Dropzone & Extractor Status -->
+                <div class="lg:col-span-4 space-y-4">
+                    <div class="p-6 rounded-2xl border-2 border-dashed border-blue-400/60 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-center transition-all cursor-pointer relative group"
+                        id="upload-dropzone" onclick="document.getElementById('file-upload-input').click()">
+                        <input type="file" id="file-upload-input" class="hidden" accept=".pdf,.xlsx,.xls,.csv,image/*" onchange="handleFileSelected(event)">
+                        
+                        <div class="space-y-3">
+                            <div class="w-14 h-14 mx-auto rounded-full bg-blue-100 dark:bg-blue-900/60 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                📄
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                    Arraste ou Clique para Carregar
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    Suporta Desenhos Técnicos em <b>PDF</b>, Planilhas <b>Excel</b> ou Imagens
+                                </p>
+                            </div>
+                            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow-sm">
+                                Leitura Automática Inteligente
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Extraction Status Card -->
+                    <div id="extraction-status-card" class="hidden p-4 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-[var(--color-text-primary)]">Status da Leitura</span>
+                            <span id="extraction-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Concluído</span>
+                        </div>
+                        <p id="extraction-message" class="text-xs text-[var(--color-text-secondary)]">
+                            Arquivo analisado. Revise os campos e a tabela ao lado. Caso algum valor esteja diferente, ajuste manualmente antes de salvar.
+                        </p>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 border-t border-[var(--color-border-primary)] pt-2 flex justify-between">
+                            <span id="file-name-info">arquivo.pdf</span>
+                            <span id="file-size-info">0 KB</span>
+                        </div>
+                    </div>
+
+                    <!-- Guidance Note for Engineers -->
+                    <div class="p-4 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
+                        <div class="font-bold flex items-center gap-1.5">
+                            <span>💡</span>
+                            <span>Controle Total pelo Engenheiro</span>
+                        </div>
+                        <p class="leading-relaxed text-[11px]">
+                            O algoritmo detecta blocos, sapatas, estacas e tabelas de quantitativos da prancha. <b>Você pode modificar qualquer dado</b>: renomear o equipamento, alterar volumes, fck, ou adicionar e excluir linhas na tabela abaixo.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Editor Form & Quantities Table -->
+                <div class="lg:col-span-8 space-y-6">
+                    <!-- General Metadata Form -->
+                    <div class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] space-y-4 shadow-sm">
+                        <div class="flex items-center justify-between pb-3 border-b border-[var(--color-border-primary)]">
+                            <h3 class="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                                <span>✏️</span>
+                                <span>Identificação da Estrutura & Prancha</span>
+                            </h3>
+                            <span class="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">Campos Editáveis</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                            <!-- Document Type -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Tipo de Documento *</label>
+                                <select id="edit-doc-type"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                    <option value="desenho">📐 Desenho / Prancha</option>
+                                    <option value="memorial_calculo">📑 Memorial de Cálculo</option>
+                                    <option value="croqui">✏️ Croqui / Esboço</option>
+                                    <option value="relatorio_tecnico">📋 Relatório Técnico</option>
+                                    <option value="especificacao_tecnica">📜 Especificação / Critério</option>
+                                    <option value="quantitativo_material">📊 Quantitativo de Materiais</option>
+                                    <option value="outro">📁 Outro Documento</option>
+                                </select>
+                            </div>
+
+                            <!-- Category -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Área / Disciplina *</label>
+                                <select id="edit-category" onchange="handleCategoryChange(this.value)"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-semibold">
+                                    <option value="linha_transmissao">🗼 Linha de Transmissão / SE</option>
+                                    <option value="termoeletrica">⚡ Termelétrica (UTE)</option>
+                                </select>
+                            </div>
+
+                            <!-- Equipment Name (USER CAN EDIT FREELY!) -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">
+                                    Nome do Equipamento / Estrutura *
+                                </label>
+                                <input type="text" id="edit-equipment-name"
+                                    placeholder="Ex: Fundação do Pórtico PRT1 ou Torre T-14"
+                                    class="w-full px-3 py-2 text-xs font-bold rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] focus:border-blue-500 focus:outline-none">
+                            </div>
+
+                            <!-- Project Name -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Obra / Projeto *</label>
+                                <input type="text" id="edit-project-name" placeholder="Ex: UTE Porto de Sergipe"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- Structure Type -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Tipo de Fundação</label>
+                                <input type="text" id="edit-structure-type" placeholder="Ex: Bloco Maciço, Sapatas Isoladas, Grelha"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- Drawing Code -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Nº Prancha / DWG</label>
+                                <input type="text" id="edit-drawing-code" placeholder="Ex: DE-4010-001"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- Revision -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Revisão</label>
+                                <input type="text" id="edit-revision" placeholder="Ex: 02 ou Rev. B"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- fck Concrete -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">fck Concreto (MPa)</label>
+                                <input type="number" id="edit-fck" step="5" placeholder="30"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- Soil Condition -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Condição do Solo</label>
+                                <input type="text" id="edit-soil" placeholder="Ex: Solo Normal, Solo Mole, Rocha"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- SharePoint / Cloud URL -->
+                            <div class="md:col-span-2">
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Link Web SharePoint / OneDrive (Opcional)</label>
+                                <input type="url" id="edit-sharepoint-url" placeholder="https://andradegutierrez.sharepoint.com/..."
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+                            </div>
+
+                            <!-- Review Status -->
+                            <div>
+                                <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Status de Verificação</label>
+                                <select id="edit-review-status"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                    <option value="verified">✓ Verificado</option>
+                                    <option value="pending_review">⚠️ Aguardando Verificação</option>
+                                </select>
+                            </div>
+
+                            <!-- Hidden reference inputs -->
+                            <input type="hidden" id="edit-drawing-filename">
+                            <input type="hidden" id="edit-relative-path">
+                            <input type="hidden" id="edit-source-folder">
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Quantities Table (100% USER EDITABLE IN-PLACE) -->
+                    <div class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] space-y-4 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--color-border-primary)]">
+                            <div>
+                                <h3 class="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2">
+                                    <span>📋</span>
+                                    <span>Tabela de Quantitativos de Materiais</span>
+                                </h3>
+                                <p class="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
+                                    Clique nas células para editar valores, adicione linhas ou remova itens à mão.
+                                </p>
+                            </div>
+
+                            <button onclick="addNewMaterialRow()"
+                                class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all flex items-center gap-1.5 self-start sm:self-auto shadow-sm">
+                                <span>➕</span>
+                                <span>Adicionar Linha</span>
+                            </button>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto custom-scrollbar border border-[var(--color-border-primary)] rounded-xl">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 dark:bg-slate-800 text-[var(--color-text-secondary)] border-b border-[var(--color-border-primary)] text-[11px]">
+                                        <th class="p-2.5 font-bold">Item / Material</th>
+                                        <th class="p-2.5 font-bold">Especificação</th>
+                                        <th class="p-2.5 font-bold w-20 text-center">Unidade</th>
+                                        <th class="p-2.5 font-bold w-28 text-right">Quantidade</th>
+                                        <th class="p-2.5 font-bold">Observações</th>
+                                        <th class="p-2.5 font-bold w-12 text-center">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="materials-table-body" class="divide-y divide-[var(--color-border-primary)] bg-[var(--color-bg-primary)]">
+                                    <!-- Rows added dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Real-time Consolidated Indicators Bar -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-[var(--color-border-primary)]">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Concreto Total</span>
+                                <span id="summary-live-concrete" class="text-base font-black text-blue-600 dark:text-blue-400">0.00 m³</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Aço CA-50 Total</span>
+                                <span id="summary-live-steel" class="text-base font-black text-amber-600 dark:text-amber-400">0 kg</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Taxa de Armadura</span>
+                                <span id="summary-live-ratio" class="text-base font-black text-emerald-600 dark:text-emerald-400">0.0 kg/m³</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Fôrma Total</span>
+                                <span id="summary-live-formwork" class="text-base font-black text-indigo-600 dark:text-indigo-400">0.00 m²</span>
+                            </div>
+                        </div>
+
+                        <!-- Notes / Observações -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Notas Técnicas / Observações da Equipe</label>
+                            <textarea id="edit-notes" rows="2" placeholder="Observações de concretagem, controle de temperatura, restrições de montagem..."
+                                class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"></textarea>
+                        </div>
+
+                        <!-- Save Action Button -->
+                        <div class="pt-4 border-t border-[var(--color-border-primary)] flex items-center justify-between">
+                            <span id="save-status-msg" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400"></span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="resetEditorForm()"
+                                    class="px-4 py-2 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xs font-bold transition-all">
+                                    Limpar Formulário
+                                </button>
+                                <button onclick="saveCurrentEntryToDB()"
+                                    class="px-6 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs shadow-md transition-all flex items-center gap-2">
+                                    <span>💾</span>
+                                    <span>Salvar na Base de Dados</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- TAB 3: ESTIMADOR PARAMÉTRICO DE ORÇAMENTO (PARA NOVOS PROJETOS)             -->
+        <!-- ========================================================================= -->
+        <div id="tab-content-estimator" class="hidden space-y-6">
+            <div class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border-primary)]">
+                    <div>
+                        <h2 class="text-lg font-black text-[var(--color-text-primary)] flex items-center gap-2">
+                            <span>📊</span>
+                            <span>Estimador Paramétrico de Orçamento</span>
+                        </h2>
+                        <p class="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                            Gere estimativas instantâneas de quantitativos e custos para uma nova obra a partir dos parâmetros históricos da base de dados.
+                        </p>
+                    </div>
+
+                    <!-- Type Selector Switch -->
+                    <div class="flex rounded-xl p-1 bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)]">
+                        <button id="estimator-type-ute" onclick="switchEstimatorCategory('termoeletrica')"
+                            class="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all">
+                            ⚡ Termelétrica (UTE)
+                        </button>
+                        <button id="estimator-type-lt" onclick="switchEstimatorCategory('linha_transmissao')"
+                            class="px-4 py-1.5 rounded-lg text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all">
+                            🗼 Linha de Transmissão (LT)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Parameters Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-5">
+                    <!-- Config Form -->
+                    <div class="lg:col-span-5 space-y-5">
+                        <!-- UTE Controls -->
+                        <div id="estimator-controls-ute" class="space-y-4">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                                Equipamentos Principais da Usina
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Turbogeradores (TG/TV)</label>
+                                    <input type="number" id="est-ute-tg" value="2" min="0" max="10"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Caldeiras HRSG</label>
+                                    <input type="number" id="est-ute-hrsg" value="2" min="0" max="10"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Transformadores Elevadores</label>
+                                    <input type="number" id="est-ute-tr" value="3" min="0" max="20"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Chaminés (Stacks)</label>
+                                    <input type="number" id="est-ute-stack" value="2" min="0" max="10"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Extensão Pipe Racks (metros)</label>
+                                    <input type="number" id="est-ute-piperack" value="180" min="0" step="30"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LT Controls -->
+                        <div id="estimator-controls-lt" class="hidden space-y-4">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                Quantidade de Torres / Trecho da LT
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Torres de Suspensão</label>
+                                    <input type="number" id="est-lt-ts" value="45" min="0"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Torres de Ancoragem/Ângulo</label>
+                                    <input type="number" id="est-lt-ta" value="12" min="0"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Torres com Grelha Metálica</label>
+                                    <input type="number" id="est-lt-gr" value="8" min="0"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-[var(--color-text-secondary)] mb-1">Torres em Tubulão</label>
+                                    <input type="number" id="est-lt-tb" value="6" min="0"
+                                        class="w-full px-3 py-2 text-xs rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-bold">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unit Prices & BDI -->
+                        <div class="p-3.5 rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] space-y-3">
+                            <span class="text-xs font-bold text-[var(--color-text-primary)] block">Preços Unitários de Mercado (R$)</span>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">Concreto Bombeado (m³)</span>
+                                    <input type="number" id="est-price-concrete" value="550" class="w-full p-1.5 text-xs rounded border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">Aço CA-50 Armado (kg)</span>
+                                    <input type="number" id="est-price-steel" value="10.50" step="0.5" class="w-full p-1.5 text-xs rounded border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">Fôrma Resinada (m²)</span>
+                                    <input type="number" id="est-price-form" value="95" class="w-full p-1.5 text-xs rounded border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block">BDI (%)</span>
+                                    <input type="number" id="est-bdi" value="22" step="1" class="w-full p-1.5 text-xs rounded border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] font-bold">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="calculateBudgetEstimate()"
+                            class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2">
+                            <span>⚡</span>
+                            <span>Calcular Estimativa de Orçamento</span>
+                        </button>
+                    </div>
+
+                    <!-- Estimate Results Panel -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <div id="estimate-result-box" class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] space-y-5">
+                            <div class="flex items-center justify-between pb-3 border-b border-[var(--color-border-primary)]">
+                                <h3 class="text-sm font-bold text-[var(--color-text-primary)]" id="est-result-title">
+                                    Resultado da Estimativa Paramétrica
+                                </h3>
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                                    Base Histórica Calibrada
+                                </span>
+                            </div>
+
+                            <!-- Totals Cards -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div class="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
+                                    <span class="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 block">Concreto Total</span>
+                                    <span id="est-total-vol" class="text-lg font-black text-slate-900 dark:text-white">--</span>
+                                </div>
+                                <div class="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+                                    <span class="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">Aço CA-50 Total</span>
+                                    <span id="est-total-steel" class="text-lg font-black text-slate-900 dark:text-white">--</span>
+                                </div>
+                                <div class="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900">
+                                    <span class="text-[10px] uppercase font-bold text-purple-600 dark:text-purple-400 block">Fôrma Total</span>
+                                    <span id="est-total-form" class="text-lg font-black text-slate-900 dark:text-white">--</span>
+                                </div>
+                                <div class="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
+                                    <span class="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">Custo Estimado (BRL)</span>
+                                    <span id="est-total-cost" class="text-lg font-black text-emerald-600 dark:text-emerald-400">--</span>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Item Breakdown Table -->
+                            <div class="overflow-x-auto custom-scrollbar border border-[var(--color-border-primary)] rounded-xl">
+                                <table class="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-100 dark:bg-slate-800 text-[var(--color-text-secondary)] border-b border-[var(--color-border-primary)] text-[11px]">
+                                            <th class="p-2 font-bold">Elemento</th>
+                                            <th class="p-2 font-bold text-center">Qtd</th>
+                                            <th class="p-2 font-bold text-right">Concreto (m³)</th>
+                                            <th class="p-2 font-bold text-right">Aço (kg)</th>
+                                            <th class="p-2 font-bold text-right">Taxa (kg/m³)</th>
+                                            <th class="p-2 font-bold text-right">Custo c/ BDI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="estimate-breakdown-body" class="divide-y divide-[var(--color-border-primary)]">
+                                        <tr>
+                                            <td colspan="6" class="p-6 text-center text-slate-400">
+                                                Clique em "Calcular Estimativa" para ver a decomposição.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- TAB 4: INDICADORES PARAMÉTRICOS & BENCHMARKS                                -->
+        <!-- ========================================================================= -->
+        <div id="tab-content-analytics" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Card 1: Benchmark Termelétricas -->
+                <div class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] space-y-4 shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">⚡</span>
+                        <div>
+                            <h3 class="text-sm font-bold text-[var(--color-text-primary)]">
+                                Índices Típicos - Termelétricas (UTE)
+                            </h3>
+                            <span class="text-[11px] text-[var(--color-text-secondary)]">Consumos de referência para orçamentos rápidos</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Turbogerador (Bloco Maciço)</span>
+                                <span class="text-[11px] text-slate-400">Controle térmico severo / armadura tridimensional</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold">110 a 130 kg/m³</span>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Caldeira de Recuperação (HRSG)</span>
+                                <span class="text-[11px] text-slate-400">Blocos sobre estacas tracionadas/comprimidas</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold">100 a 115 kg/m³</span>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Base de Transformador + Bacia</span>
+                                <span class="text-[11px] text-slate-400">Muretas estanques e parede corta-fogo</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold">85 a 95 kg/m³</span>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Chaminé (Stack)</span>
+                                <span class="text-[11px] text-slate-400">Base circular sujeita a vento dinâmico</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-bold">120 a 140 kg/m³</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Benchmark Linhas de Transmissão -->
+                <div class="p-6 rounded-2xl border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] space-y-4 shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🗼</span>
+                        <div>
+                            <h3 class="text-sm font-bold text-[var(--color-text-primary)]">
+                                Índices Típicos - Linhas de Transmissão (LT)
+                            </h3>
+                            <span class="text-[11px] text-[var(--color-text-secondary)]">Médias por tipo de fundação (4 pés)</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Torre Suspensão 500kV (Solo Normal)</span>
+                                <span class="text-[11px] text-slate-400">4 Sapatas tronco-cônicas rasas</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold">~28 m³ | 80 a 90 kg/m³</span>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Torre Ancoragem / Ângulo 500kV</span>
+                                <span class="text-[11px] text-slate-400">Sapatas pesadas para arrancamento</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold">~58 m³ | 90 a 105 kg/m³</span>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Fundação com Grelha Metálica</span>
+                                <span class="text-[11px] text-slate-400">Sem concreto | Perfis de aço galvanizado</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold">3.5 a 4.2 t Aço / Torre</span>
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] flex justify-between items-center">
+                            <div>
+                                <span class="font-bold block">Tubulões a Céu Aberto</span>
+                                <span class="text-[11px] text-slate-400">Fuste escavado e base alargada (4 pés)</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold">~36 m³ | 85 a 95 kg/m³</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Injection Placeholder -->
+        <div id="footer-placeholder" class="mt-auto pt-8"></div>
+    </div>
+
+    <!-- Detail & Edit Modal -->
+    <div id="entry-detail-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-[var(--color-border-primary)]">
+                <div>
+                    <h3 id="modal-title" class="text-base font-bold text-[var(--color-text-primary)]">Detalhes da Estrutura</h3>
+                    <span id="modal-subtitle" class="text-xs text-[var(--color-text-secondary)]">Código e Obra</span>
+                </div>
+                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-100 text-lg font-bold">✕</button>
+            </div>
+
+            <div id="modal-body-content" class="space-y-4 text-xs">
+                <!-- Dynamically loaded -->
+            </div>
+
+            <div class="pt-4 border-t border-[var(--color-border-primary)] flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <button id="modal-btn-open-pdf" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all text-xs flex items-center gap-1.5 shadow-sm">
+                        <span>📄</span>
+                        <span>Abrir PDF (Windows)</span>
+                    </button>
+                    <button id="modal-btn-open-sp" class="px-3.5 py-2 rounded-xl border border-sky-400/80 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 font-bold transition-all text-xs flex items-center gap-1.5">
+                        <span>🌐</span>
+                        <span>SharePoint</span>
+                    </button>
+                    <button id="modal-btn-toggle-verify" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all text-xs flex items-center gap-1.5 shadow-sm">
+                        <span>✓</span>
+                        <span id="modal-verify-label">Marcar Verificado</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button id="modal-btn-edit" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-bold transition-all text-xs flex items-center gap-1">
+                        <span>✏️</span>
+                        <span>Editar / Corrigir</span>
+                    </button>
+                    <button id="modal-btn-delete" class="px-3 py-2 rounded-xl bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white font-bold transition-all text-xs">
+                        Excluir
+                    </button>
+                    <button onclick="closeDetailModal()" class="px-4 py-2 rounded-xl border border-[var(--color-border-primary)] text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Logic Script -->
+    <script src="takeoff_database.js"></script>
+</body>
+
+</html>

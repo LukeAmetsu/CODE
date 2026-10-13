@@ -22,8 +22,30 @@ let isDragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
 
+let tableSyncTimeout = null;
+function setupTableSyncListeners() {
+    const panels = [document.getElementById('panel-nodes'), document.getElementById('panel-members')];
+    panels.forEach(panel => {
+        if (!panel) return;
+        panel.addEventListener('input', () => {
+            clearTimeout(tableSyncTimeout);
+            tableSyncTimeout = setTimeout(() => {
+                readTablesToModel();
+                updateTypicalLoadsMemberSelect();
+                redrawCanvas();
+            }, 80);
+        });
+        panel.addEventListener('change', () => {
+            readTablesToModel();
+            updateTypicalLoadsMemberSelect();
+            redrawCanvas();
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initCanvasEvents();
+    setupTableSyncListeners();
     loadFramePreset('portal');
 });
 
@@ -143,12 +165,80 @@ function loadFramePreset(presetKey) {
                 }
             ]
         };
+    } else if (presetKey === 'cais_estaqueado') {
+        frameModel = {
+            nodes: [
+                { id: 0, x: 0.0, y: 21.0, support: 'free', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 1, x: 1.6, y: 21.0, support: 'free', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 2, x: 13.0, y: 21.0, support: 'free', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 3, x: 22.5, y: 21.0, support: 'free', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 4, x: 32.0, y: 21.0, support: 'free', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 5, x: 0.0, y: 0.0, support: 'fixed', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 6, x: 1.6, y: 3.0, support: 'fixed', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 7, x: 13.0, y: 6.0, support: 'fixed', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 8, x: 22.5, y: 8.0, support: 'fixed', k_x: 0, k_y: 0, k_rot: 0 },
+                { id: 9, x: 32.0, y: 15.0, support: 'fixed', k_x: 0, k_y: 0, k_rot: 0 }
+            ],
+            members: [
+                // Mesa do Tabuleiro (Deck)
+                { id: 0, node_i: 0, node_j: 1, E: 30.0, A: 15000.0, I: 30000000.0, hinge_i: false, hinge_j: false },
+                { id: 1, node_i: 1, node_j: 2, E: 30.0, A: 15000.0, I: 30000000.0, hinge_i: false, hinge_j: false },
+                { id: 2, node_i: 2, node_j: 3, E: 30.0, A: 15000.0, I: 30000000.0, hinge_i: false, hinge_j: false },
+                { id: 3, node_i: 3, node_j: 4, E: 30.0, A: 15000.0, I: 30000000.0, hinge_i: false, hinge_j: false },
+                // Estacas no Talude (Piles)
+                { id: 4, node_i: 5, node_j: 0, E: 30.0, A: 7854.0, I: 4908700.0, hinge_i: false, hinge_j: false },
+                { id: 5, node_i: 6, node_j: 1, E: 30.0, A: 7854.0, I: 4908700.0, hinge_i: false, hinge_j: false },
+                { id: 6, node_i: 7, node_j: 2, E: 30.0, A: 7854.0, I: 4908700.0, hinge_i: false, hinge_j: false },
+                { id: 7, node_i: 8, node_j: 3, E: 30.0, A: 7854.0, I: 4908700.0, hinge_i: false, hinge_j: false },
+                { id: 8, node_i: 9, node_j: 4, E: 30.0, A: 7854.0, I: 4908700.0, hinge_i: false, hinge_j: false }
+            ],
+            node_loads: [
+                { node_id: 0, F_x: 750.0, F_y: 0.0, M_z: 0.0 }
+            ],
+            member_loads: [
+                // Carga vertical no tabuleiro 610 kN/m
+                { member_id: 0, type: 'uniform', q_y: -610.0, q_x: 0.0 },
+                { member_id: 1, type: 'uniform', q_y: -610.0, q_x: 0.0 },
+                { member_id: 2, type: 'uniform', q_y: -610.0, q_x: 0.0 },
+                { member_id: 3, type: 'uniform', q_y: -610.0, q_x: 0.0 },
+                // Empuxo lateral do solo nas estacas
+                { member_id: 4, type: 'uniform', coord_sys: 'global', description: 'Empuxo Solo Estaca 1', QX_i: 63.81, QX_j: 63.81, QY_i: 0.0, QY_j: 0.0 },
+                { member_id: 5, type: 'uniform', coord_sys: 'global', description: 'Empuxo Solo Estaca 2', QX_i: 63.81, QX_j: 63.81, QY_i: 0.0, QY_j: 0.0 },
+                { member_id: 6, type: 'uniform', coord_sys: 'global', description: 'Empuxo Solo Estaca 3', QX_i: 63.81, QX_j: 63.81, QY_i: 0.0, QY_j: 0.0 },
+                { member_id: 7, type: 'uniform', coord_sys: 'global', description: 'Empuxo Solo Estaca 4', QX_i: 63.81, QX_j: 63.81, QY_i: 0.0, QY_j: 0.0 },
+                { member_id: 8, type: 'uniform', coord_sys: 'global', description: 'Empuxo Solo Estaca 5', QX_i: 77.08, QX_j: 77.08, QY_i: 0.0, QY_j: 0.0 }
+            ]
+        };
     }
 
     renderModelTables();
     updateTypicalLoadsMemberSelect();
     resetCanvasView();
     solveModel();
+}
+
+function showSolverMessage(msg, type = 'info') {
+    let box = document.getElementById('frame-solver-msg');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'frame-solver-msg';
+        document.body.appendChild(box);
+    }
+    box.style.display = 'flex';
+    if (type === 'error') {
+        box.className = 'fixed bottom-4 right-4 z-50 max-w-md p-3.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 bg-rose-600 text-white border border-rose-700 animate-bounce';
+        box.innerHTML = `<span>⚠️</span> <span>${msg}</span>`;
+    } else if (type === 'warning') {
+        box.className = 'fixed bottom-4 right-4 z-50 max-w-md p-3.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 bg-amber-600 text-white border border-amber-700';
+        box.innerHTML = `<span>⚡</span> <span>${msg}</span>`;
+    } else {
+        box.className = 'fixed bottom-4 right-4 z-50 max-w-md p-3.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 bg-emerald-600 text-white border border-emerald-700';
+        box.innerHTML = `<span>✅</span> <span>${msg}</span>`;
+    }
+    clearTimeout(box._timer);
+    box._timer = setTimeout(() => {
+        box.style.display = 'none';
+    }, 4500);
 }
 
 // -------------------------------------------------------------
@@ -182,12 +272,17 @@ async function solveModel() {
                 analysisResult = res;
                 updateSummaryBadges(res);
                 redrawCanvas();
+
+                if (Array.isArray(res.warnings) && res.warnings.length > 0) {
+                    showSolverMessage(res.warnings.join(' | '), 'warning');
+                }
             } else if (res && res.error) {
-                alert("Erro na análise do pórtico: " + res.error);
+                showSolverMessage(res.error, 'error');
             }
         }
     } catch (err) {
         console.error("Erro resolvendo pórtico:", err);
+        showSolverMessage("Erro inesperado resolvendo pórtico.", 'error');
     }
 }
 
@@ -243,16 +338,18 @@ function updateSummaryBadges(res) {
             const badge = document.createElement('div');
             badge.className = 'bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 px-2.5 py-1 rounded text-[11px] font-mono flex items-center gap-2';
             badge.innerHTML = `<span class="font-bold text-indigo-600 dark:text-indigo-400">Nó ${r.node_id}:</span> ` +
-                `<span>Rx=<strong>${rx.toFixed(1)}</strong>kN</span> ` +
-                `<span>Ry=<strong>${ry.toFixed(1)}</strong>kN</span> ` +
-                (Math.abs(mz) > 0.01 ? `<span class="text-amber-600 dark:text-amber-400">Mz=<strong>${mz.toFixed(1)}</strong>kNm</span>` : '');
+                `<span>$R_x$=<strong>${rx.toFixed(1)}</strong> kN</span> ` +
+                `<span>$R_y$=<strong>${ry.toFixed(1)}</strong> kN</span> ` +
+                (Math.abs(mz) > 0.01 ? `<span class="text-amber-600 dark:text-amber-400">$M_z$=<strong>${mz.toFixed(1)}</strong> kNm</span>` : '');
             reacBadges.appendChild(badge);
         });
 
         const eqBadge = document.createElement('div');
         eqBadge.className = 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-2.5 py-1 rounded text-[11px] font-mono font-bold flex items-center gap-1.5';
-        eqBadge.innerHTML = `<span>⚖️ ΣRx = ${sumRx.toFixed(1)} kN</span> | <span>ΣRy = ${sumRy.toFixed(1)} kN</span>`;
+        eqBadge.innerHTML = `<span>⚖️ $\\Sigma R_x$ = ${sumRx.toFixed(1)} kN</span> | <span>$\\Sigma R_y$ = ${sumRy.toFixed(1)} kN</span>`;
         reacBadges.appendChild(eqBadge);
+
+        if (window.renderLatex) window.renderLatex(reacContainer);
     }
 }
 
@@ -590,10 +687,39 @@ function drawSupportSymbol(ctx, px, py, type) {
 }
 
 // -------------------------------------------------------------
-// Diagrams: Brazilian Structural Tension Convention (M plotted on tension fiber)
+// Diagrams: Auto-normalized scale per structural span & Brazilian Tension convention
 // -------------------------------------------------------------
+function getDiagramNormFactor(type, userScale) {
+    if (!analysisResult || !Array.isArray(analysisResult.members) || analysisResult.members.length === 0) return 0.05 * userScale;
+    let maxAbs = 0;
+    analysisResult.members.forEach(m => {
+        let vals = null;
+        if (type === 'moment') vals = m.M_values ?? m.M;
+        else if (type === 'shear') vals = m.V_values ?? m.V;
+        else if (type === 'axial') vals = [m.N_axial ?? m.N_values?.[0] ?? m.N?.[0] ?? m.max_N ?? 0];
+        if (Array.isArray(vals)) {
+            vals.forEach(v => {
+                const av = Math.abs(v);
+                if (av > maxAbs) maxAbs = av;
+            });
+        }
+    });
+
+    let charDim = 6.0;
+    if (frameModel.nodes.length > 1) {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        frameModel.nodes.forEach(n => {
+            if (n.x < minX) minX = n.x; if (n.x > maxX) maxX = n.x;
+            if (n.y < minY) minY = n.y; if (n.y > maxY) maxY = n.y;
+        });
+        charDim = Math.max(maxX - minX, maxY - minY, 4.0);
+    }
+    const targetHeight = charDim * 0.12; // ~12% of structure dimension
+    return (maxAbs > 1e-4 ? (targetHeight / maxAbs) : 0.01) * userScale;
+}
+
 function drawMomentDiagram(ctx, nodeDict, scale) {
-    const factor = 0.8 * scale;
+    const factor = getDiagramNormFactor('moment', scale);
     if (!analysisResult || !Array.isArray(analysisResult.members)) return;
     analysisResult.members.forEach(m => {
         const origMem = frameModel.members.find(om => om.id === (m.member_id ?? m.id));
@@ -625,8 +751,7 @@ function drawMomentDiagram(ctx, nodeDict, scale) {
         for (let i = 0; i < x_pts.length; i++) {
             const xi = x_pts[i];
             const Mi = M_vals[i];
-            // Plot on tension fiber:
-            const offsetLocalY = -Mi * factor / 50.0;
+            const offsetLocalY = -Mi * factor;
             const wx = ni.x + xi * cos - offsetLocalY * sin;
             const wy = ni.y + xi * sin + offsetLocalY * cos;
             const sc = worldToScreen(wx, wy);
@@ -664,7 +789,7 @@ function drawMomentDiagram(ctx, nodeDict, scale) {
 }
 
 function drawShearDiagram(ctx, nodeDict, scale) {
-    const factor = 0.8 * scale;
+    const factor = getDiagramNormFactor('shear', scale);
     if (!analysisResult || !Array.isArray(analysisResult.members)) return;
     analysisResult.members.forEach(m => {
         const origMem = frameModel.members.find(om => om.id === (m.member_id ?? m.id));
@@ -693,7 +818,7 @@ function drawShearDiagram(ctx, nodeDict, scale) {
         for (let i = 0; i < x_pts.length; i++) {
             const xi = x_pts[i];
             const Vi = V_vals[i];
-            const offsetLocalY = Vi * factor / 40.0;
+            const offsetLocalY = Vi * factor;
             const wx = ni.x + xi * cos - offsetLocalY * sin;
             const wy = ni.y + xi * sin + offsetLocalY * cos;
             const sc = worldToScreen(wx, wy);
@@ -723,7 +848,7 @@ function drawShearDiagram(ctx, nodeDict, scale) {
 }
 
 function drawAxialDiagram(ctx, nodeDict, scale) {
-    const factor = 0.8 * scale;
+    const factor = getDiagramNormFactor('axial', scale);
     if (!analysisResult || !Array.isArray(analysisResult.members)) return;
     analysisResult.members.forEach(m => {
         const origMem = frameModel.members.find(om => om.id === (m.member_id ?? m.id));
@@ -744,7 +869,7 @@ function drawAxialDiagram(ctx, nodeDict, scale) {
         ctx.strokeStyle = isTension ? '#34d399' : '#f87171';
         ctx.lineWidth = 2;
 
-        const offsetLocalY = N * factor / 40.0;
+        const offsetLocalY = N * factor;
         const p1 = worldToScreen(ni.x - offsetLocalY * sin, ni.y + offsetLocalY * cos);
         const p2 = worldToScreen(nj.x - offsetLocalY * sin, nj.y + offsetLocalY * cos);
         const pi = worldToScreen(ni.x, ni.y);
@@ -771,7 +896,23 @@ function drawAxialDiagram(ctx, nodeDict, scale) {
 }
 
 function drawDeflectedShape(ctx, nodeDict, scale) {
-    const defScale = 150.0 * scale; // Amplification factor for deflections
+    let maxDisp = 0;
+    if (Array.isArray(analysisResult?.displacements)) {
+        analysisResult.displacements.forEach(d => {
+            const mag = Math.hypot(d.u_x ?? d.ux ?? 0, d.u_y ?? d.uy ?? 0);
+            if (mag > maxDisp) maxDisp = mag;
+        });
+    }
+    let charDim = 6.0;
+    if (frameModel.nodes.length > 1) {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        frameModel.nodes.forEach(n => {
+            if (n.x < minX) minX = n.x; if (n.x > maxX) maxX = n.x;
+            if (n.y < minY) minY = n.y; if (n.y > maxY) maxY = n.y;
+        });
+        charDim = Math.max(maxX - minX, maxY - minY, 4.0);
+    }
+    const defScale = (maxDisp > 1e-6 ? ((charDim * 0.08) / maxDisp) : 100.0) * scale;
     const dispDict = {};
     if (Array.isArray(analysisResult?.displacements)) {
         analysisResult.displacements.forEach(d => { dispDict[d.node_id] = d; });
@@ -1093,6 +1234,7 @@ function handleCanvasHover(e) {
 // Model Table Management
 // -------------------------------------------------------------
 function switchDataTab(tab) {
+    readTablesToModel();
     activeDataTab = tab;
     ['nodes', 'members', 'loads', 'typical'].forEach(t => {
         const panel = document.getElementById(`panel-${t}`);
@@ -1255,14 +1397,18 @@ function readTablesToModel() {
 }
 
 function addRowCurrentTab() {
+    readTablesToModel();
     if (activeDataTab === 'nodes') {
         const nextId = frameModel.nodes.length;
         frameModel.nodes.push({ id: nextId, x: nextId * 2.0, y: 0.0, support: 'free', k_x: 0, k_y: 0, k_rot: 0 });
     } else if (activeDataTab === 'members') {
         const nextId = frameModel.members.length;
-        frameModel.members.push({ id: nextId, node_i: 0, node_j: 1, E: 200.0, A: 60.0, I: 12000.0, hinge_i: false, hinge_j: false });
+        const n0 = frameModel.nodes.length > 0 ? frameModel.nodes[0].id : 0;
+        const n1 = frameModel.nodes.length > 1 ? frameModel.nodes[1].id : 0;
+        frameModel.members.push({ id: nextId, node_i: n0, node_j: n1, E: 200.0, A: 60.0, I: 12000.0, hinge_i: false, hinge_j: false });
     } else if (activeDataTab === 'loads') {
-        frameModel.node_loads.push({ node_id: 0, F_x: 0.0, F_y: -20.0, M_z: 0.0 });
+        const n0 = frameModel.nodes.length > 0 ? frameModel.nodes[0].id : 0;
+        frameModel.node_loads.push({ node_id: n0, F_x: 0.0, F_y: -20.0, M_z: 0.0 });
     }
     renderModelTables();
     updateTypicalLoadsMemberSelect();
@@ -1270,6 +1416,7 @@ function addRowCurrentTab() {
 }
 
 function addNodeLoadRow() {
+    readTablesToModel();
     const targetNode = frameModel.nodes.length > 0 ? frameModel.nodes[0].id : 0;
     frameModel.node_loads.push({ node_id: targetNode, F_x: 0.0, F_y: -20.0, M_z: 0.0 });
     renderModelTables();
@@ -1278,6 +1425,7 @@ function addNodeLoadRow() {
 }
 
 function addMemberLoadRow() {
+    readTablesToModel();
     const targetMem = frameModel.members.length > 0 ? frameModel.members[0].id : 0;
     frameModel.member_loads.push({ member_id: targetMem, type: 'uniform', q_x: 0.0, q_y: -20.0 });
     renderModelTables();
@@ -1286,6 +1434,7 @@ function addMemberLoadRow() {
 }
 
 function deleteNode(idx) {
+    readTablesToModel();
     frameModel.nodes.splice(idx, 1);
     frameModel.nodes.forEach((n, i) => n.id = i);
     renderModelTables();
@@ -1294,6 +1443,7 @@ function deleteNode(idx) {
 }
 
 function deleteMember(idx) {
+    readTablesToModel();
     frameModel.members.splice(idx, 1);
     frameModel.members.forEach((m, i) => m.id = i);
     renderModelTables();

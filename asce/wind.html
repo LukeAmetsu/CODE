@@ -59,6 +59,19 @@
             </div>
         </div>
 
+        <!-- Banner de Suíte Unificada -->
+        <div class="mb-5 p-3 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 dark:from-blue-950/40 dark:via-indigo-950/40 dark:to-emerald-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                <span class="text-base">✨</span>
+                <span>
+                    <strong>Central Unificada de Cargas:</strong> Acesse a nova <a href="../gui/loads_studio.html?tab=wind" class="font-bold text-blue-600 dark:text-blue-400 underline hover:text-blue-800">Central de Cargas & Ações Estruturais</a> com cálculo de vento segundo a <strong>NBR 6123</strong> e ASCE 7.
+                </span>
+            </div>
+            <a href="../gui/loads_studio.html?tab=wind" class="font-bold text-[11px] px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white shrink-0 shadow-xs">
+                Abrir Central Unificada →
+            </a>
+        </div>
+
         <main id="calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
@@ -108,9 +121,8 @@
                         <h2>Building Properties</h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="basic_wind_speed" class="eng-label">Basic Wind Speed
-                                    (V)</label>
-                                <input type="number" id="basic_wind_speed" value="115" min="70" max="200">
+                                <label for="basic_wind_speed" class="eng-label">Basic Wind Speed ($V$) <span class="wind-v-unit text-xs text-blue-600 dark:text-blue-400">[mph]</span></label>
+                                <input type="number" id="basic_wind_speed" value="115" min="10" max="300">
                             </div>
                             <div>
                                 <label for="exposure_category" class="eng-label">Exposure
@@ -123,18 +135,18 @@
                             </div>
                             <div>
                                 <label for="mean_roof_height" class="eng-label">Mean Roof Height
-                                    (h)</label>
-                                <input type="number" id="mean_roof_height" value="50" min="1">
+                                    ($h$) <span class="wind-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
+                                <input type="number" id="mean_roof_height" value="50" min="0.1">
                             </div>
                             <div>
                                 <label for="building_length_L" class="eng-label">Building Length
-                                    (L)</label>
-                                <input type="number" id="building_length_L" value="100" min="1">
+                                    ($L$) <span class="wind-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
+                                <input type="number" id="building_length_L" value="100" min="0.1">
                             </div>
                             <div>
                                 <label for="building_width_B" class="eng-label">Building Width
-                                    (B)</label>
-                                <input type="number" id="building_width_B" value="60" min="1">
+                                    ($B$) <span class="wind-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
+                                <input type="number" id="building_width_B" value="60" min="0.1">
                             </div>
                             <div>
                                 <label for="enclosure_classification" class="eng-label">Enclosure
@@ -172,17 +184,17 @@
                                     data-ui-toggle-condition-value="Solid Equipment">
                                     <div>
                                         <label for="rooftop_equipment_height_hr" class="eng-label">Equipment Height
-                                            (h<sub>r</sub>)</label>
+                                            ($)</label>
                                         <input type="number" id="rooftop_equipment_height_hr" value="10">
                                     </div>
                                     <div>
                                         <label for="rooftop_equipment_width_Br" class="eng-label">Equipment Width
-                                            (B<sub>r</sub>, normal to wind)</label>
+                                            ($, normal to wind)</label>
                                         <input type="number" id="rooftop_equipment_width_Br" value="20">
                                     </div>
                                     <div>
                                         <label for="rooftop_equipment_length_Lr" class="eng-label">Equipment Length
-                                            (L<sub>r</sub>, parallel to wind)</label>
+                                            ($, parallel to wind)</label>
                                         <input type="number" id="rooftop_equipment_length_Lr" value="15">
                                     </div>
                                 </div>
@@ -191,13 +203,13 @@
                                     data-ui-toggle-condition-value="Open-Frame Scaffold">
                                     <div>
                                         <label for="rooftop_solidity_ratio" class="eng-label">Solidity Ratio
-                                            (ε)</label>
+                                            ($\epsilon$)</label>
                                         <input type="number" id="rooftop_solidity_ratio" value="0.5" min="0.01"
                                             max="0.99" step="0.01">
                                     </div>
                                     <div>
                                         <label for="rooftop_location_x" class="eng-label">Distance from Windward
-                                            Edge (x)</label>
+                                            Edge ($)</label>
                                         <input type="number" id="rooftop_location_x" value="10">
                                     </div>
                                 </div>
@@ -253,7 +265,7 @@
                             class="hidden mt-4 pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
                             <div>
                                 <label for="parapet_height_hp" class="eng-label">Parapet Height
-                                    (h<sub>p</sub>)</label>
+                                    ($)</label>
                                 <input type="number" id="parapet_height_hp" value="3">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height of the parapet above the
                                     roof surface.</p>
@@ -292,7 +304,7 @@
                                     <option value="Ballast">Ballast (Simplified)</option>
                                 </select>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Calculates pressure excluding internal pressure (p = q<sub>h</sub>GC<sub>p</sub>).
+                                    Calculates pressure excluding internal pressure ($p = q_h G C_p$).
                                 </p>
                             </div>
                         </div>
@@ -310,7 +322,7 @@
                         <div class="space-y-4">
                             <div>
                                 <label for="effective_wind_area" class="eng-label">Effective Wind
-                                    Area (A, ft² or m²)</label>
+                                    Area ($, ft² or m²)</label>
                                 <input type="number" id="effective_wind_area" value="10">
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Area of the component being
                                     considered. Typically 10 to 1000 sq ft.</p>
@@ -318,7 +330,7 @@
                         </div>
                     </div>
                     <div class="form-section hidden" id="tall-building-section">
-                        <h2>Tall Building Parameters (h > 60 ft)</h2>
+                        <h2>Tall Building Parameters ( > 60\text{ ft}$)</h2>
                         <div class="space-y-4">
                             <div data-ui-toggle-controller data-ui-toggle-target="#flexible-building-inputs"
                                 data-ui-toggle-condition-value="Flexible" data-ui-toggle-type="visibility">
@@ -333,7 +345,7 @@
                                 class="hidden pl-4 border-l-2 border-gray-300 dark:border-gray-600 space-y-4">
                                 <div>
                                     <label for="fundamental_period" class="eng-label">Fundamental
-                                        Period (T1, sec)</label>
+                                        Period ($, sec)</label>
                                     <input type="number" id="fundamental_period" value="1.0" min="0.1" max="10">
                                 </div>
                             </div>
@@ -367,11 +379,11 @@
                                 data-ui-toggle-condition-value="Open Signs/Frames">
                                 <div>
                                     <label for="solidity_ratio" class="eng-label">Solidity Ratio
-                                        (ε)</label>
+                                        ($\epsilon$)</label>
                                     <input type="number" id="solidity_ratio" value="0.5" min="0.01" max="0.99"
                                         step="0.01">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ratio of solid area to
-                                        gross area (A<sub>s</sub>/A<sub>g</sub>).</p>
+                                        gross area (/A_g$).</p>
                                 </div>
                                 <div>
                                     <label for="member_shape" class="eng-label">Member
@@ -385,7 +397,7 @@
                                 </div>
                                 <div id="round-member-options" class="hidden">
                                     <label for="member_diameter" class="eng-label">Typical Member
-                                        Diameter (b)</label>
+                                        Diameter ($)</label>
                                     <input type="number" id="member_diameter" value="0.5">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Diameter in feet or meters,
                                         depending on unit system.</p>
@@ -397,17 +409,17 @@
                                 data-ui-toggle-condition-value="Solid Freestanding Signs/Walls">
                                 <div>
                                     <label for="sign_width_B" class="eng-label">Sign Width
-                                        (B)</label>
+                                        ($)</label>
                                     <input type="number" id="sign_width_B" value="20">
                                 </div>
                                 <div>
                                     <label for="sign_height_s" class="eng-label">Sign Height
-                                        (s)</label>
+                                        ($)</label>
                                     <input type="number" id="sign_height_s" value="10">
                                 </div>
                                 <div>
                                     <label for="clearance_z" class="eng-label">Clearance from
-                                        Ground (z)</label>
+                                        Ground ($)</label>
                                     <input type="number" id="clearance_z" value="10">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Height from ground to
                                         bottom of sign.</p>
@@ -424,13 +436,13 @@
                                 </div>
                                 <div>
                                     <label for="chimney_diameter" class="eng-label">Width/Diameter
-                                        (D)</label>
+                                        ($)</label>
                                     <input type="number" id="chimney_diameter" value="10">
                                 </div>
                                 <div id="chimney-corner-radius-option" data-ui-toggle-target-for="structure_type"
                                     data-ui-toggle-condition-value="Chimneys, Tanks (Square),Chimneys, Tanks (Hexagonal)">
                                     <label for="corner_radius_r" class="eng-label">Corner Radius
-                                        (r)</label>
+                                        ($)</label>
                                     <input type="number" id="corner_radius_r" value="0">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Set to 0 for sharp corners.
                                     </p>
@@ -442,7 +454,7 @@
                                 data-ui-toggle-condition-value="Arched Roofs">
                                 <div>
                                     <label for="arched_roof_rise" class="eng-label">Roof Rise
-                                        (r)</label>
+                                        ($)</label>
                                     <input type="number" id="arched_roof_rise" value="15">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Vertical distance from
                                         spring line to roof crown.</p>
@@ -467,12 +479,12 @@
                                 </div>
                                 <div>
                                     <label for="tower_width" class="eng-label">Tower Face Width
-                                        (w)</label>
+                                        ($)</label>
                                     <input type="number" id="tower_width" value="10">
                                 </div>
                                 <div>
                                     <label for="tower_solidity_ratio" class="eng-label">Solidity
-                                        Ratio (ε)</label>
+                                        Ratio ($\epsilon$)</label>
                                     <input type="number" id="tower_solidity_ratio" value="0.3" min="0.01" max="0.99"
                                         step="0.01">
                                 </div>
@@ -487,12 +499,12 @@
                             </div>
                             <div>
                                 <label for="topographic_factor_Kzt" class="eng-label">Topo. Factor
-                                    (Kzt)</label>
+                                    ({zt}$)</label>
                                 <input type="number" id="topographic_factor_Kzt" value="1">
                             </div>
                             <div>
                                 <label for="gust_effect_factor_g" class="eng-label">Gust Effect
-                                    Factor (G)</label>
+                                    Factor ($)</label>
                                 <input type="number" id="gust_effect_factor_g" value="0.85">
                             </div>
                             <div>

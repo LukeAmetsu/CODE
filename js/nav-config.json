@@ -133,6 +133,11 @@
       "textKey": "analysis_loads",
       "subNav": [
         {
+          "key": "loads-studio",
+          "href": "gui/loads_studio.html",
+          "textKey": "loads_studio"
+        },
+        {
           "key": "frame-2d",
           "href": "gui/frame_2d.html",
           "textKey": "frame_2d"

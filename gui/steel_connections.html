@@ -272,13 +272,13 @@
                         <!-- Utilization & Capacity Cards -->
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div class="kpi-card text-center">
-                                <div id="conn-kpi-demand-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Esforço Sd</div>
+                                <div id="conn-kpi-demand-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Esforço $S_d$</div>
                                 <div id="conn-res-demand"
                                     class="text-lg font-extrabold text-blue-600 dark:text-blue-400 my-0.5">-</div>
                                 <div id="conn-res-demand-unit" class="text-[10px] text-[var(--color-text-secondary)]">kN</div>
                             </div>
                             <div class="kpi-card text-center">
-                                <div id="conn-kpi-cap-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Capacidade Rd</div>
+                                <div id="conn-kpi-cap-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Capacidade $R_d$</div>
                                 <div id="conn-res-capacity"
                                     class="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 my-0.5">-</div>
                                 <div id="conn-res-capacity-unit" class="text-[10px] text-[var(--color-text-secondary)]">kN</div>
@@ -287,7 +287,7 @@
                                 <div id="conn-kpi-ur-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Utilização</div>
                                 <div id="conn-res-ur"
                                     class="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 my-0.5">-</div>
-                                <div id="conn-res-ur-sub" class="text-[10px] text-[var(--color-text-secondary)]">Sd / Rd</div>
+                                <div id="conn-res-ur-sub" class="text-[10px] text-[var(--color-text-secondary)]">$S_d / R_d$</div>
                             </div>
                             <div class="kpi-card text-center">
                                 <div id="conn-kpi-status-title" class="text-[11px] text-[var(--color-text-secondary)] font-medium">Parecer Normativo</div>
@@ -308,8 +308,8 @@
                                         class="bg-[var(--color-bg-quaternary)] text-[var(--color-text-secondary)] uppercase">
                                         <tr>
                                             <th class="p-2.5">Modo de Ruptura / Verificação</th>
-                                            <th id="th-capacity" class="p-2.5">Capacidade Rd</th>
-                                            <th id="th-demand" class="p-2.5">Solicitação Sd</th>
+                                            <th id="th-capacity" class="p-2.5">Capacidade $R_d$</th>
+                                            <th id="th-demand" class="p-2.5">Solicitação $S_d$</th>
                                             <th class="p-2.5">Utilização</th>
                                             <th class="p-2.5 text-center">Status</th>
                                         </tr>

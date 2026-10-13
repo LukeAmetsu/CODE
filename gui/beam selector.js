@@ -510,6 +510,7 @@ function renderResults(data, demand) {
             </td>
         </tr>
     `).join('');
+    if (window.renderLatex) window.renderLatex(container);
 }
 
 var beamBatchResults = []; // Store batch results for detail view
@@ -567,6 +568,8 @@ function renderBatchResults(data) {
         `;
         tbody.appendChild(tr);
     });
+
+    if (window.renderLatex) window.renderLatex(container);
 
     // Scroll to batch results
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });

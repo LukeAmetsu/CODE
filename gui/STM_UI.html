@@ -67,7 +67,7 @@
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Análise de descontinuidades estruturais em concreto armado (vigas-parede, consolos e sapatas)
-                        pelo método da rigidez direta com verificação angular de bielas (&theta; &ge; 25&deg;).
+                        pelo método da rigidez direta com verificação angular de bielas ($\theta \ge 25^\circ$).
                     </p>
                 </div>
 
@@ -182,10 +182,8 @@
                                         <th class="p-2 w-14">X</th>
                                         <th class="p-2 w-14">Y</th>
                                         <th class="p-2 w-14">Z</th>
-                                        <th class="p-2 text-center w-24" title="Vínculos por eixo (X, Y, Z)">Apoios (X Y
-                                            Z)</th>
-                                        <th class="p-2 text-center" title="Cargas nodais nos eixos X, Y e Z (kN)">Cargas
-                                            [Fx, Fy, Fz] (kN)</th>
+                                        <th class="p-2 text-center w-24" title="Vínculos por eixo (X, Y, Z)">Apoios (X Y Z)</th>
+                                        <th class="p-2 text-center" title="Cargas nodais nos eixos X, Y e Z (kN)">Cargas [$F_x, F_y, F_z$] (kN)</th>
                                         <th class="p-2 w-8"></th>
                                     </tr>
                                 </thead>
@@ -195,7 +193,7 @@
                             </table>
                         </div>
                         <p class="text-[11px] text-gray-400 mt-2">Cargas gravitacionais no eixo Y devem ter sinal
-                            negativo (ex: Fy = -600 kN).</p>
+                            negativo (ex: $F_y = -600\text{ kN}$).</p>
                     </div>
 
                     <!-- Tabela de Barras (Bielas e Tirantes) -->
@@ -220,7 +218,7 @@
                                         <th class="p-2 w-14">De</th>
                                         <th class="p-2 w-14">Para</th>
                                         <th class="p-2">Tipo</th>
-                                        <th class="p-2 text-right">Força (kN)</th>
+                                        <th class="p-2 text-right">Força $N\text{ (kN)}$</th>
                                         <th class="p-2 w-8"></th>
                                     </tr>
                                 </thead>
@@ -246,7 +244,7 @@
                                 </h3>
                                 <p id="status-subtitle" class="text-xs text-emerald-700 dark:text-emerald-400">
                                     Todos os nós estão em equilíbrio estático e os ângulos entre bielas e tirantes
-                                    respeitam o limite normativo (&theta; &ge; 25&deg;).
+                                    respeitam o limite normativo ($\theta \ge 25^\circ$).
                                 </p>
                             </div>
                         </div>
@@ -262,8 +260,7 @@
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div
                             class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
-                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Biela Máx.
-                                (Compressão)</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Biela Máx. ($F_{cd}$)</span>
                             <div class="flex items-baseline justify-between mt-1">
                                 <span id="kpi-comp-val" class="text-lg font-bold text-rose-600 dark:text-rose-400">0.0
                                     kN</span>
@@ -275,8 +272,7 @@
 
                         <div
                             class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
-                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Tirante Máx.
-                                (Tração)</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Tirante Máx. ($F_{td}$)</span>
                             <div class="flex items-baseline justify-between mt-1">
                                 <span id="kpi-tens-val" class="text-lg font-bold text-blue-600 dark:text-blue-400">0.0
                                     kN</span>
@@ -287,8 +283,7 @@
 
                         <div
                             class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
-                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Ângulo Mínimo
-                                (&theta;)</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Ângulo Mínimo ($\theta_{\min}$)</span>
                             <div class="flex items-baseline justify-between mt-1">
                                 <span id="kpi-angle-val"
                                     class="text-lg font-bold text-gray-900 dark:text-white">--&deg;</span>
@@ -302,8 +297,7 @@
 
                         <div
                             class="kpi-card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 shadow-sm">
-                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Trabalho Total
-                                (W)</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400 block font-medium">Trabalho Total ($W$)</span>
                             <div class="flex items-baseline justify-between mt-1">
                                 <span id="kpi-energy-val"
                                     class="text-lg font-bold text-purple-600 dark:text-purple-400">0.0</span>
@@ -327,8 +321,7 @@
                                         Módulo de Otimização Estrutural (Princípio do Mínimo Trabalho)
                                     </h2>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        Otimização geométrica de nós conforme Critério de Schlaich e NBR 6118 (&theta;
-                                        &ge; 25&deg;)
+                                        Otimização geométrica de nós conforme Critério de Schlaich e NBR 6118 ($\theta \ge 25^\circ$)
                                     </p>
                                 </div>
                             </div>
@@ -354,7 +347,7 @@
                             </div>
                             <div>
                                 <label for="opt-min-angle-range" class="eng-label">
-                                    Ângulo Mínimo Normativo (&theta;<sub>min</sub>):
+                                    Ângulo Mínimo Normativo ($\theta_{\min}$):
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <input type="range" id="opt-min-angle-range" min="20" max="40" value="25" step="1"
@@ -378,8 +371,7 @@
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <div
                                     class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
-                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Trabalho Deformação
-                                        (W)</span>
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Trabalho Deformação ($W$)</span>
                                     <div class="flex items-baseline justify-between mt-0.5">
                                         <span id="opt-energy-reduction"
                                             class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">-0.0%</span>
@@ -399,8 +391,7 @@
                                 </div>
                                 <div
                                     class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
-                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Ângulo Mínimo
-                                        Final</span>
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Ângulo Mínimo Final ($\theta$)</span>
                                     <div class="flex items-baseline justify-between mt-0.5">
                                         <span id="opt-final-angle"
                                             class="text-base font-extrabold text-gray-900 dark:text-white">--&deg;</span>
@@ -410,8 +401,7 @@
                                 </div>
                                 <div
                                     class="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-100 dark:border-purple-900/40">
-                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Compressão
-                                        Máxima</span>
+                                    <span class="text-[11px] text-gray-500 dark:text-gray-400 block">Compressão Máxima ($F_{cd}$)</span>
                                     <div class="flex items-baseline justify-between mt-0.5">
                                         <span id="opt-final-comp"
                                             class="text-base font-extrabold text-rose-600 dark:text-rose-400">0.0

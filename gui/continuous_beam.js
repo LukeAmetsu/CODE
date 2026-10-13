@@ -214,6 +214,7 @@ function renderDetailingTable(res) {
             tbody.appendChild(trSupp);
         }
     });
+    if (window.renderLatex) window.renderLatex(tbody);
 }
 
 // -------------------------------------------------------------

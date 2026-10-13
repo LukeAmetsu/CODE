@@ -1,4 +1,9 @@
 import math
+from backend.calculators.pcalc_geometry import (
+    compute_polygon_properties,
+    mesh_arbitrary_section,
+    build_polygon_from_spec
+)
 
 # --- UTILS ---
 def safe_div(a, b, default=0):
@@ -51,6 +56,14 @@ class MaterialData:
             self.ec2 = ec2_permil / 1000.0
             self.ecu = ecu_permil / 1000.0
 
+        # Cracking / Tensile concrete parameters (NBR 6118 items 8.2.5 & 17.3.1)
+        if self.fck <= 50:
+            self.fctm = 0.3 * (self.fck ** (2.0 / 3.0)) # MPa
+        else:
+            self.fctm = 2.12 * math.log(1.0 + 0.11 * self.fck) # MPa
+        self.fctk_inf = 0.7 * self.fctm # MPa
+        self.fct_f = 1.2 * self.fctm # MPa (NBR 6118 item 17.3.1)
+
     @property
     def fcd(self):
         return (self.fck / 10.0) / self.gamac # kN/cm2
@@ -73,36 +86,92 @@ class MaterialData:
          # Java uses simple 0.85 * 5600 * sqrt(fck)
          return 0.85 * 5600.0 * math.sqrt(self.fck) / 10.0
 
+    @property
+    def fctm_kncm2(self):
+        return self.fctm / 10.0 # kN/cm2
+
+    @property
+    def fct_f_kncm2(self):
+        return self.fct_f / 10.0 # kN/cm2
+
 class SectionGeometry:
-    def __init__(self, type_sec, hx, hy, boundary, length):
-        self.type = type_sec # 'Retangular' or 'Circular'
-        self.hx = float(hx) # cm
-        self.hy = float(hy) # cm
+    def __init__(self, type_sec, hx=30.0, hy=50.0, boundary='pinned', length=400.0, **kwargs):
+        self.type = type_sec # 'Retangular', 'Circular', 'L', 'T', 'I', 'Vazada', 'Poligono'
+        self.hx = float(hx) if hx is not None else 30.0 # cm
+        self.hy = float(hy) if hy is not None else 50.0 # cm
         self.boundary = boundary # 'pinned', 'cantilever'
         self.length = float(length) # cm
+        self.kwargs = kwargs
         
         self.fibers = []
-        self.area_ac = 0
-        self.ix = 0
-        self.iy = 0
+        self.area_ac = 0.0
+        self.ix = 0.0
+        self.iy = 0.0
+        self.ixy = 0.0
+        self.xm = self.hx / 2.0
+        self.ym = self.hy / 2.0
+        self.i_min = 0.0
+        self.theta_p = 0.0
+        self.exterior = []
+        self.holes = []
+        self.is_arbitrary = False
 
         self._calc_properties()
 
     def _calc_properties(self):
-        if self.type == 'Circular':
+        stype = str(self.type).strip()
+        stype_lower = stype.lower()
+
+        # Check if arbitrary/parametric shape
+        is_standard_rect = stype in ('Retangular', 'retangular') and 'exterior' not in self.kwargs and 'vertices' not in self.kwargs
+        is_standard_circ = stype in ('Circular', 'circular') and 'exterior' not in self.kwargs and 'vertices' not in self.kwargs
+
+        if is_standard_circ:
             D = self.hx
-            self.area_ac = math.pi * (D/2)**2
+            self.area_ac = math.pi * (D / 2.0)**2
             self.ix = (math.pi * D**4) / 64.0
             self.iy = self.ix
-        else:
+            self.ixy = 0.0
+            self.xm = D / 2.0
+            self.ym = D / 2.0
+            self.i_min = D / 4.0
+        elif is_standard_rect:
             b = self.hx
             h = self.hy
             self.area_ac = b * h
             self.ix = (b * h**3) / 12.0
             self.iy = (h * b**3) / 12.0
+            self.ixy = 0.0
+            self.xm = b / 2.0
+            self.ym = h / 2.0
+            self.i_min = min(b, h) / math.sqrt(12.0)
+        else:
+            self.is_arbitrary = True
+            spec = {'section_type': stype, 'hx': self.hx, 'hy': self.hy, **self.kwargs}
+            ext, holes = build_polygon_from_spec(spec)
+            self.exterior = ext
+            self.holes = holes
+            props = compute_polygon_properties(ext, holes)
 
-    def discretize(self, nx=20, ny=20): # Lower res for speed in pure-python
+            self.area_ac = props['Ac']
+            self.ix = props['Ix']
+            self.iy = props['Iy']
+            self.ixy = props['Ixy']
+            self.xm = props['xm']
+            self.ym = props['ym']
+            self.hx = props['hx']
+            self.hy = props['hy']
+            self.i_min = props['i_min']
+            self.theta_p = props['theta_p']
+
+    def discretize(self, nx=20, ny=20, target_fibers=250):
         self.fibers = []
+
+        if self.is_arbitrary:
+            fibs, _ = mesh_arbitrary_section(self.exterior, self.holes, target_fibers=target_fibers)
+            self.fibers = fibs
+            return
+
         dx = self.hx / nx
         dy = self.hy / ny
         dA = dx * dy
@@ -127,6 +196,22 @@ class SectionGeometry:
                     y = start_y + (j * dy) + (dy / 2.0)
                     if (x*x + y*y) <= R2:
                         self.fibers.append({'x': x, 'y': y, 'dA': dA})
+
+    def get_boundary_points(self):
+        """Returns boundary vertices relative to section centroid (0, 0)."""
+        if self.is_arbitrary and self.exterior:
+            return [{'x': p[0] - self.xm, 'y': p[1] - self.ym} for p in self.exterior]
+        elif self.type == 'Circular':
+            R = self.hx / 2.0
+            n_pts = 36
+            return [{'x': R * math.cos(2.0 * math.pi * i / n_pts), 'y': R * math.sin(2.0 * math.pi * i / n_pts)} for i in range(n_pts)]
+        else:
+            return [
+                {'x': -self.hx / 2.0, 'y': -self.hy / 2.0},
+                {'x':  self.hx / 2.0, 'y': -self.hy / 2.0},
+                {'x':  self.hx / 2.0, 'y':  self.hy / 2.0},
+                {'x': -self.hx / 2.0, 'y':  self.hy / 2.0},
+            ]
 
 class ConcreteSection:
     def __init__(self, geometry, materials, bars):
@@ -218,7 +303,7 @@ def generate_interaction_surface(section, num_angles=36):
     ecu = -section.mat.ecu
     es_yield = 0.010 
     
-    corners = [
+    corners = section.geo.get_boundary_points() if hasattr(section.geo, 'get_boundary_points') else [
         {'x': -section.geo.hx/2, 'y': -section.geo.hy/2},
         {'x':  section.geo.hx/2, 'y': -section.geo.hy/2},
         {'x':  section.geo.hx/2, 'y':  section.geo.hy/2},
@@ -267,6 +352,166 @@ def generate_interaction_surface(section, num_angles=36):
             points['z'].append(N)
             
     return points
+
+# --- CRACKING ENVELOPE (ELS-W / ELS-F NBR 6118) ---
+
+def generate_cracking_surface(section, w_lim=0.3, criterion='wk_limit', num_angles=36, steps_n=20):
+    """
+    Generates 3D cracking envelope surface per NBR 6118 (ELS-W / ELS-F).
+    - 'mr_cracking': Cracking initiation moment Mr(N, theta) (Stage I -> Stage II transition).
+    - 'wk_limit': Stage II crack opening moment M_w(N, theta) reaching w_lim (mm).
+    """
+    corners = section.geo.get_boundary_points() if hasattr(section.geo, 'get_boundary_points') else [
+        {'x': -section.geo.hx / 2.0, 'y': -section.geo.hy / 2.0},
+        {'x':  section.geo.hx / 2.0, 'y': -section.geo.hy / 2.0},
+        {'x':  section.geo.hx / 2.0, 'y':  section.geo.hy / 2.0},
+        {'x': -section.geo.hx / 2.0, 'y':  section.geo.hy / 2.0},
+    ]
+    Ac = section.geo.area_ac
+    Ix = section.geo.ix
+    Iy = section.geo.iy
+    fctm = section.mat.fctm
+    fct_f_kncm2 = section.mat.fct_f_kncm2
+
+    diams = [b['diametro'] for b in section.bars] if section.bars else [16.0]
+    phi_avg = sum(diams) / len(diams) if diams else 16.0
+    Es_mpa = section.mat.Es * 1000.0
+    eta1 = 2.25
+    rho_r = 0.04
+
+    # Allowable steel stress for w_lim (NBR 6118 item 17.3.3.2)
+    sigma_s1 = math.sqrt((w_lim * 12.5 * eta1 * Es_mpa * fctm) / (3.0 * phi_avg)) if phi_avg > 0 else 0.0
+    sigma_s2 = (w_lim * 12.5 * eta1 * Es_mpa) / (phi_avg * (4.0 / rho_r + 45.0)) if phi_avg > 0 else 0.0
+    sigma_s_adm = min(max(sigma_s1, sigma_s2), 0.7 * section.mat.fyk)
+
+    # N range for service cracking envelope
+    N_tension_max = Ac * fct_f_kncm2
+    N_comp_max = -0.6 * Ac * (section.mat.fck / 10.0)
+
+    points = {'x': [], 'y': [], 'z': []}
+
+    for i in range(steps_n + 1):
+        N = N_tension_max + (i / steps_n) * (N_comp_max - N_tension_max)
+        sigma_N = N / Ac if Ac > 0 else 0.0
+
+        for j in range(num_angles):
+            theta = (j / num_angles) * 2.0 * math.pi
+            cosT = math.cos(theta)
+            sinT = math.sin(theta)
+
+            g_vals = [(p['y'] * cosT / Ix + p['x'] * sinT / Iy) for p in corners]
+            g_max = max(g_vals) if g_vals else 0.0
+
+            if g_max <= 1e-9:
+                M_cr = 0.0
+            else:
+                delta_sigma = fct_f_kncm2 - sigma_N
+                M_cr = (delta_sigma / g_max) / 100.0 if delta_sigma > 0 else 0.0
+
+            if criterion == 'mr_cracking':
+                M_target = M_cr
+            else:
+                As_total = sum([math.pi * ((b['diametro'] / 10.0) / 2.0) ** 2 for b in section.bars]) if section.bars else 1.0
+                As_eff = max(As_total * 0.4, 0.5)
+                u_corners = [p['y'] * cosT + p['x'] * sinT for p in corners]
+                h_eff = (max(u_corners) - min(u_corners)) if u_corners else 50.0
+                z_arm = max(0.7 * h_eff, 10.0)
+                delta_M_w = (As_eff * (sigma_s_adm / 10.0) * (z_arm / 100.0))
+                M_target = M_cr + delta_M_w
+
+            points['x'].append(M_target * cosT)
+            points['y'].append(M_target * sinT)
+            points['z'].append(N)
+
+    return points
+
+
+def verify_cracking(section, N_serv, Mx_serv, My_serv, w_lim=0.3):
+    """
+    Performs NBR 6118 ELS-W / ELS-F cracking verification for a service load state.
+    """
+    corners = section.geo.get_boundary_points() if hasattr(section.geo, 'get_boundary_points') else [
+        {'x': -section.geo.hx / 2.0, 'y': -section.geo.hy / 2.0},
+        {'x':  section.geo.hx / 2.0, 'y': -section.geo.hy / 2.0},
+        {'x':  section.geo.hx / 2.0, 'y':  section.geo.hy / 2.0},
+        {'x': -section.geo.hx / 2.0, 'y':  section.geo.hy / 2.0},
+    ]
+    Ac = section.geo.area_ac
+    Ix = section.geo.ix
+    Iy = section.geo.iy
+    fctm = section.mat.fctm
+    fct_f_kncm2 = section.mat.fct_f_kncm2
+
+    M_serv = math.sqrt(Mx_serv ** 2 + My_serv ** 2)
+    theta = math.atan2(My_serv, Mx_serv)
+    cosT = math.cos(theta)
+    sinT = math.sin(theta)
+
+    sigma_N = N_serv / Ac if Ac > 0 else 0.0
+    g_vals = [(p['y'] * cosT / Ix + p['x'] * sinT / Iy) for p in corners]
+    g_max = max(g_vals) if g_vals else 0.0
+
+    if g_max <= 1e-9:
+        M_cr = 999999.0
+    else:
+        delta_sigma = fct_f_kncm2 - sigma_N
+        M_cr = (delta_sigma / g_max) / 100.0 if delta_sigma > 0 else 0.0
+
+    diams = [b['diametro'] for b in section.bars] if section.bars else [16.0]
+    phi_avg = sum(diams) / len(diams) if diams else 16.0
+    Es_mpa = section.mat.Es * 1000.0
+    eta1 = 2.25
+    rho_r = 0.04
+
+    sigma_s1 = math.sqrt((w_lim * 12.5 * eta1 * Es_mpa * fctm) / (3.0 * phi_avg)) if phi_avg > 0 else 0.0
+    sigma_s2 = (w_lim * 12.5 * eta1 * Es_mpa) / (phi_avg * (4.0 / rho_r + 45.0)) if phi_avg > 0 else 0.0
+    sigma_s_adm = min(max(sigma_s1, sigma_s2), 0.7 * section.mat.fyk)
+
+    As_total = sum([math.pi * ((b['diametro'] / 10.0) / 2.0) ** 2 for b in section.bars]) if section.bars else 1.0
+    As_eff = max(As_total * 0.4, 0.5)
+    u_corners = [p['y'] * cosT + p['x'] * sinT for p in corners]
+    h_eff = (max(u_corners) - min(u_corners)) if u_corners else 50.0
+    z_arm = max(0.7 * h_eff, 10.0)
+
+    delta_M_w = (As_eff * (sigma_s_adm / 10.0) * (z_arm / 100.0))
+    M_w_lim = M_cr + delta_M_w
+
+    if M_serv <= M_cr:
+        stage = 'I'
+        wk = 0.0
+        status = 'Não Fissurado (Estádio I)'
+        is_ok = True
+        fs_crack = (M_cr / M_serv) if M_serv > 0.01 else 99.9
+        sigma_s = 0.0
+    else:
+        stage = 'II'
+        delta_M = M_serv - M_cr
+        sigma_s = (delta_M * 100.0) / (As_eff * z_arm) * 10.0
+        sigma_s = min(sigma_s, 0.85 * section.mat.fyk)
+
+        wk1 = (phi_avg / (12.5 * eta1)) * (sigma_s / Es_mpa) * (3.0 * sigma_s / fctm) if sigma_s > 0 else 0.0
+        wk2 = (phi_avg / (12.5 * eta1)) * (sigma_s / Es_mpa) * (4.0 / rho_r + 45.0) if sigma_s > 0 else 0.0
+        wk = min(wk1, wk2)
+
+        is_ok = (wk <= w_lim)
+        status = f"Atende (wk = {wk:.3f} mm <= {w_lim:.2f} mm)" if is_ok else f"Fissuração Excessiva (wk = {wk:.3f} mm > {w_lim:.2f} mm)"
+        fs_crack = (w_lim / wk) if wk > 1e-4 else 99.9
+
+    return {
+        'stage': stage,
+        'M_cr': M_cr,
+        'M_w_lim': M_w_lim,
+        'M_serv': M_serv,
+        'N_serv': N_serv,
+        'sigma_s': sigma_s,
+        'sigma_s_adm': sigma_s_adm,
+        'wk': wk,
+        'w_lim': w_lim,
+        'status': status,
+        'is_ok': is_ok,
+        'safety_factor': fs_crack
+    }
+
 
 # --- SOLVER & 2ND ORDER METHODS ---
 
@@ -538,12 +783,20 @@ def calculate_column(inputs):
         gamas=inputs.get('gamas', 1.15)
     )
     
-    geo = SectionGeometry(inputs['section_type'], inputs['hx'], inputs['hy'], inputs['boundary'], inputs['length'])
+    geo_kwargs = {k: v for k, v in inputs.items() if k not in ('section_type', 'hx', 'hy', 'boundary', 'length')}
+    geo = SectionGeometry(
+        inputs['section_type'],
+        inputs.get('hx', 30.0),
+        inputs.get('hy', 50.0),
+        inputs['boundary'],
+        inputs['length'],
+        **geo_kwargs
+    )
     geo.discretize()
     
     bars = []
-    xm = inputs['hx'] / 2.0
-    ym = inputs['hy'] / 2.0
+    xm = geo.xm
+    ym = geo.ym
     for b in inputs['bars']:
         bars.append({'x': b['x'] - xm, 'y': b['y'] - ym, 'diametro': b['diametro']})
         
@@ -594,9 +847,27 @@ def calculate_column(inputs):
             'M2d_y': 0,
             'info': '1st Order Only'
         }
-        
+
+    # Cracking Envelope (ELS-W / ELS-F NBR 6118)
+    enable_cracking = inputs.get('enable_cracking_envelope', True)
+    w_lim = float(inputs.get('cracking_w_lim', 0.3))
+    criterion = inputs.get('cracking_criterion', 'wk_limit')
+
+    cracking_surface = None
+    if enable_cracking:
+        cracking_surface = generate_cracking_surface(sec, w_lim=w_lim, criterion=criterion)
+
+    # Cracking verification for the load case (Service State)
+    gf_serv = float(inputs.get('gamma_f_serv', 1.0))
+    N_serv = load['n'] * gf_serv
+    Mx_serv = (res_2nd.get('Mtot_x', max(abs(M1xt), abs(M1xb)))) / gf
+    My_serv = (res_2nd.get('Mtot_y', max(abs(M1yt), abs(M1yb)))) / gf
+    cracking_check = verify_cracking(sec, N_serv, Mx_serv, My_serv, w_lim=w_lim)
+
     return {
         'surface': surface,
+        'cracking_surface': cracking_surface,
+        'cracking_results': cracking_check,
         'results': res_2nd,
         'slenderness': {'lambdaX': lambdaX, 'lambdaY': lambdaY}
     }

@@ -59,7 +59,7 @@
                         Vigas Contínuas de Concreto Armado (NBR 6118)
                     </h1>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Cálculo automático de envoltórias de esforço com alternância de cargas móveis (NBR 6118 item 11.8.2.4), redistribuição plástica (δ ≥ 0.75), detalhamento de armaduras longitudinais e estribos, ELS (abertura de fissuras wk e flechas diferidas), e quantitativo de materiais.
+                        Cálculo automático de envoltórias de esforço com alternância de cargas móveis (NBR 6118 item 11.8.2.4), redistribuição plástica ($\delta \ge 0.75$), detalhamento de armaduras longitudinais e estribos, ELS (abertura de fissuras $w_k$ e flechas diferidas), e quantitativo de materiais.
                     </p>
                 </div>
 
@@ -90,33 +90,33 @@
                         </h2>
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                                <label class="eng-label">Classe do Concreto (fck)</label>
+                                <label class="eng-label">Classe do Concreto ($f_{ck}$)</label>
                                 <select id="beam-fck" onchange="triggerBeamCalculation()" class="eng-input">
-                                    <option value="25">C25 (fck = 25 MPa)</option>
-                                    <option value="30" selected>C30 (fck = 30 MPa)</option>
-                                    <option value="35">C35 (fck = 35 MPa)</option>
-                                    <option value="40">C40 (fck = 40 MPa)</option>
-                                    <option value="50">C50 (fck = 50 MPa)</option>
+                                    <option value="25">C25 ($f_{ck} = 25\text{ MPa}$)</option>
+                                    <option value="30" selected>C30 ($f_{ck} = 30\text{ MPa}$)</option>
+                                    <option value="35">C35 ($f_{ck} = 35\text{ MPa}$)</option>
+                                    <option value="40">C40 ($f_{ck} = 40\text{ MPa}$)</option>
+                                    <option value="50">C50 ($f_{ck} = 50\text{ MPa}$)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="eng-label">Cobridor d' (cm)</label>
+                                <label class="eng-label">Cobridor $d'\text{ (cm)}$</label>
                                 <input type="number" id="beam-dprime" value="4.0" step="0.5" min="2.0" oninput="triggerBeamCalculation()" class="eng-input">
                             </div>
                             <div>
                                 <label class="eng-label">Classe de Agressividade (CAA)</label>
                                 <select id="beam-caa" onchange="triggerBeamCalculation()" class="eng-input">
-                                    <option value="II" selected>CAA II - Urbana (wk,lim = 0.3mm)</option>
-                                    <option value="III">CAA III - Marinha/Ind. (wk,lim = 0.2mm)</option>
+                                    <option value="II" selected>CAA II - Urbana ($w_{k,\text{lim}} = 0.3\text{ mm}$)</option>
+                                    <option value="III">CAA III - Marinha/Ind. ($w_{k,\text{lim}} = 0.2\text{ mm}$)</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="eng-label">Redistribuição nos Apoios (δ)</label>
+                                <label class="eng-label">Redistribuição nos Apoios ($\delta$)</label>
                                 <select id="beam-delta" onchange="triggerBeamCalculation()" class="eng-input">
-                                    <option value="1.0">Sem redistribuição (δ = 1.0)</option>
-                                    <option value="0.90" selected>10% Redistribuição (δ = 0.90)</option>
-                                    <option value="0.85">15% Redistribuição (δ = 0.85)</option>
-                                    <option value="0.75">Limite NBR 6118 (δ = 0.75)</option>
+                                    <option value="1.0">Sem redistribuição ($\delta = 1.0$)</option>
+                                    <option value="0.90" selected>10% Redistribuição ($\delta = 0.90$)</option>
+                                    <option value="0.85">15% Redistribuição ($\delta = 0.85$)</option>
+                                    <option value="0.75">Limite NBR 6118 ($\delta = 0.75$)</option>
                                 </select>
                             </div>
                         </div>
@@ -137,11 +137,11 @@
                                 <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase">
                                     <tr>
                                         <th class="p-2">Vão</th>
-                                        <th class="p-2">Vão L (m)</th>
-                                        <th class="p-2">Largura bw (cm)</th>
-                                        <th class="p-2">Altura h (cm)</th>
-                                        <th class="p-2">Carga Perm. g (kN/m)</th>
-                                        <th class="p-2">Sobrecarga q (kN/m)</th>
+                                        <th class="p-2">Vão $L\text{ (m)}$</th>
+                                        <th class="p-2">Largura $b_w\text{ (cm)}$</th>
+                                        <th class="p-2">Altura $h\text{ (cm)}$</th>
+                                        <th class="p-2">Carga Perm. $g\text{ (kN/m)}$</th>
+                                        <th class="p-2">Sobrecarga $q\text{ (kN/m)}$</th>
                                         <th class="p-2 text-center">Excluir</th>
                                     </tr>
                                 </thead>
@@ -187,7 +187,7 @@
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
                             <h3 class="text-base font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                <span>📈</span> Envoltória de Momentos Fletores (Md,max & Md,min) [kNm]
+                                <span>📈</span> Envoltória de Momentos Fletores ($M_{d,\max}$ & $M_{d,\min}$) [$\text{kNm}$]
                             </h3>
                             <div class="flex items-center gap-4 text-xs font-semibold">
                                 <span class="flex items-center gap-1 text-blue-600">
@@ -214,12 +214,12 @@
                                 <thead class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase">
                                     <tr>
                                         <th class="p-2.5">Região / Vão</th>
-                                        <th class="p-2.5">Momento Md</th>
-                                        <th class="p-2.5">As Necessária</th>
+                                        <th class="p-2.5">Momento $M_d$</th>
+                                        <th class="p-2.5">$A_s\text{ Necessária}$</th>
                                         <th class="p-2.5">Armação Comercial</th>
-                                        <th class="p-2.5">Estribos (Cortante)</th>
-                                        <th class="p-2.5">Fissuração (wk)</th>
-                                        <th class="p-2.5">Flecha Total</th>
+                                        <th class="p-2.5">Estribos ($V_{Sd}$)</th>
+                                        <th class="p-2.5">Fissuração ($w_k$)</th>
+                                        <th class="p-2.5">Flecha Total ($a_{\text{tot}}$)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-rebar-results" class="divide-y divide-gray-200 dark:divide-gray-700">

@@ -96,6 +96,8 @@ const DEFAULT_NAV_CONFIG = {
         { "key": "wind", "href": "asce/wind.html", "textKey": "wind" },
         { "key": "snow", "href": "asce/snow.html", "textKey": "snow" },
         { "key": "rain", "href": "asce/rain.html", "textKey": "rain" },
+        { "key": "tsunami", "href": "asce/tsunami.html", "textKey": "tsunami" },
+        { "key": "seismic", "href": "asce/seismic.html", "textKey": "seismic" },
         { "key": "combos", "href": "asce/combos.html", "textKey": "combinations" },
         { "key": "shed_matrix", "href": "gui/shed_matrix.html", "textKey": "shed_matrix" },
         { "key": "shed_span", "href": "gui/shed_span.html", "textKey": "shed_span" }
@@ -124,6 +126,12 @@ const DEFAULT_NAV_CONFIG = {
         { "key": "pdf-to-img", "href": "gui/pdf_tools.html?tool=pdf_to_img", "textKey": "pdf_to_img" },
         { "key": "img-to-pdf", "href": "gui/pdf_tools.html?tool=img_to_pdf", "textKey": "img_to_pdf" }
       ]
+    },
+    {
+      "key": "takeoff_database",
+      "href": "gui/takeoff_database.html",
+      "textKey": "takeoff_database",
+      "subNav": []
     }
   ]
 };
@@ -185,6 +193,10 @@ function ensureHeaderStyles() {
 async function injectHeader(config) {
     ensureHeaderStyles();
     const { activePage, pageTitle, headerPlaceholderId = 'header-placeholder', pathPrefix = './' } = config;
+    
+    // Automatically ensure KaTeX styles and auto-renderer are available across all apps
+    ensureKatexAutoLoaded(pathPrefix);
+
     const placeholder = document.getElementById(headerPlaceholderId);
     if (!placeholder) return;
 
@@ -803,3 +815,28 @@ async function injectFooter(config) {
 // Explicitly attach to window to prevent reference errors in other scripts
 window.injectHeader = injectHeader;
 window.injectFooter = injectFooter;
+
+/**
+ * Ensures KaTeX auto-renderer is loaded and executes mathematical rendering across DOM
+ */
+function ensureKatexAutoLoaded(pathPrefix) {
+    if (window.renderLatex) {
+        window.renderLatex();
+        return;
+    }
+    const cleanPrefix = (pathPrefix || '../').replace(/\/+$/, '') + '/';
+    if (!document.querySelector('script[src*="katex-auto.js"]')) {
+        const script = document.createElement('script');
+        script.src = `${cleanPrefix}js/katex-auto.js`;
+        script.onload = () => {
+            if (window.renderLatex) window.renderLatex();
+        };
+        document.head.appendChild(script);
+    }
+}
+
+// Global DOM ready listener to ensure KaTeX is initiated even if injectHeader is delayed
+document.addEventListener('DOMContentLoaded', () => {
+    ensureKatexAutoLoaded();
+});
+window.ensureKatexAutoLoaded = ensureKatexAutoLoaded;

@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 import os
 import sys
 
@@ -13,11 +12,25 @@ from backend.database import db
 # Serve static files from the project root (../)
 static_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 app = Flask(__name__, static_folder=static_path, static_url_path='')
-CORS(app) # Enable Cross-Origin Resource Sharing for local development
+
+# Resilient CORS setup (works with or without flask_cors package)
+try:
+    from flask_cors import CORS
+    CORS(app)
+except ImportError:
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        return response
+
+from backend.takeoff_db.cloud_api import create_flask_blueprint
+app.register_blueprint(create_flask_blueprint())
 
 @app.route('/')
 def index():
-    return "<h1>Engineering Tools Backend Running</h1><p>Go to <a href='/aisc/angle_support.html'>Angle Support Calculator</a></p><p>Go to <a href='/aisc/beam selector.html'>Beam Selector</a></p>"
+    return "<h1>Engineering Tools Backend Running</h1><p><a href='/gui/takeoff_database.html'><b>Base de Quantitativos & Orçamentos (Termelétricas e LT)</b></a></p><p><a href='/gui/index.html'>Central de Engenharia</a></p>"
 
 # Initialize DB on startup
 db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../aisc-shapes-database-v16.0.xlsx'))

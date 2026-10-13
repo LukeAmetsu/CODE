@@ -22,6 +22,7 @@ def calculate_combinations(inputs):
     R = float(inputs.get('combo_rain_load_r', 0))
     Sb = float(inputs.get('combo_balanced_snow_load_sb', 0))
     E = float(inputs.get('combo_seismic_load_e', 0))
+    Ts = float(inputs.get('combo_tsunami_load_ts', 0))
     
     # Wind Loads (Scenarios)
     # We will build scenarios dynamically similar to JS
@@ -70,7 +71,7 @@ def calculate_combinations(inputs):
     
     # 1. Base Combos (No Wind/Snow/Seismic variations, just static gravity)
     # Actually JS calculates base combos with S=0, W=0, E=0.
-    base_loads = {'D': D, 'L': L, 'Lr': Lr, 'R': R, 'S': 0, 'W': 0, 'E': 0, 'unit_system': unit_system}
+    base_loads = {'D': D, 'L': L, 'Lr': Lr, 'R': R, 'S': 0, 'W': 0, 'E': E, 'Ts': Ts, 'unit_system': unit_system}
     base_res = calculate_single_set(base_loads, strategy, load_level, method)
     results['base'] = base_res
     
@@ -89,6 +90,7 @@ def calculate_combinations(inputs):
             'Lr': Lr, 'R': R, 
             'S': scen['S'], 
             'E': E, 
+            'Ts': Ts,
             'unit_system': unit_system
         }
         
@@ -228,6 +230,8 @@ class ASCE7_16_Strategy:
         '5': [{'factor': 1.2, 'load': 'D'}, {'factor': 1.0, 'load': 'E'}, {'factor': 1.0, 'load': 'L'}, {'factor': 0.2, 'load': 'S'}],
         '6': [{'factor': 0.9, 'load': 'D'}, {'factor': 1.0, 'load': 'W'}],
         '7': [{'factor': 0.9, 'load': 'D'}, {'factor': 1.0, 'load': 'E'}],
+        'T1 (Tsunami)': [{'factor': 1.2, 'load': 'D'}, {'factor': 0.5, 'load': 'L'}, {'factor': 1.0, 'load': 'Ts'}, {'factor': 0.2, 'load': 'S'}],
+        'T2 (Tsunami)': [{'factor': 0.9, 'load': 'D'}, {'factor': 1.0, 'load': 'Ts'}],
     }
     
     asd_defs = {
@@ -240,7 +244,10 @@ class ASCE7_16_Strategy:
         '6a. D + 0.75L + 0.75(0.6W) + 0.75(Lr|S|R)': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'L'}, {'factor': 0.45, 'load': 'W'}, {'factor': 0.75, 'maxOf': ['Lr', 'S', 'R']}],
         '6b. D + 0.75L + 0.75(0.7E) + 0.75S': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'L'}, {'factor': 0.525, 'load': 'E'}, {'factor': 0.75, 'load': 'S'}],
         '7. 0.6D + 0.6W': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.6, 'load': 'W'}],
-        '8. 0.6D + 0.7E': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.7, 'load': 'E'}]
+        '8. 0.6D + 0.7E': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.7, 'load': 'E'}],
+        'T1. D + 0.75Ts': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'Ts'}],
+        'T2. D + 0.75L + 0.75Ts': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'L'}, {'factor': 0.75, 'load': 'Ts'}],
+        'T3. 0.6D + 0.75Ts': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.75, 'load': 'Ts'}]
     }
 
 class ASCE7_22_Strategy:
@@ -261,6 +268,8 @@ class ASCE7_22_Strategy:
         '5': [{'factor': 1.2, 'load': 'D'}, {'factor': 1.0, 'load': 'E'}, {'factor': 1.0, 'load': 'L'}, {'factor': 1.0, 'load': 'S'}],
         '6': [{'factor': 0.9, 'load': 'D'}, {'factor': 1.6, 'load': 'W'}],
         '7': [{'factor': 0.9, 'load': 'D'}, {'factor': 1.0, 'load': 'E'}],
+        'T1 (Tsunami)': [{'factor': 1.2, 'load': 'D'}, {'factor': 0.5, 'load': 'L'}, {'factor': 1.0, 'load': 'Ts'}, {'factor': 0.2, 'load': 'S'}],
+        'T2 (Tsunami)': [{'factor': 0.9, 'load': 'D'}, {'factor': 1.0, 'load': 'Ts'}],
     }
     
     asd_defs = {
@@ -272,5 +281,8 @@ class ASCE7_22_Strategy:
         '5b. D + 0.7E': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.7, 'load': 'E'}],
         '6. D + 0.75L + 0.75W + 0.75(Lr|0.7S|R)': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'L'}, {'factor': 0.75, 'load': 'W'}, {'factor': 0.75, 'maxOf': [{'load': 'Lr'}, {'factor': 0.7, 'load': 'S'}, {'load': 'R'}]}],
         '7. 0.6D + W': [{'factor': 0.6, 'load': 'D'}, {'factor': 1.0, 'load': 'W'}],
-        '8. 0.6D + 0.7E': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.7, 'load': 'E'}]
+        '8. 0.6D + 0.7E': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.7, 'load': 'E'}],
+        'T1. D + 0.75Ts': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'Ts'}],
+        'T2. D + 0.75L + 0.75Ts': [{'factor': 1.0, 'load': 'D'}, {'factor': 0.75, 'load': 'L'}, {'factor': 0.75, 'load': 'Ts'}],
+        'T3. 0.6D + 0.75Ts': [{'factor': 0.6, 'load': 'D'}, {'factor': 0.75, 'load': 'Ts'}]
     }

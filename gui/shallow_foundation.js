@@ -803,3 +803,77 @@ function runClientSideCalc(inputs) {
         }
     };
 }
+
+/**
+ * Copia o diagrama de pressões na base da sapata em 300 DPI com fundo branco para Word/PPT
+ */
+async function copyCanvasPressures(btn = null) {
+    const canvas = document.getElementById('canvas-pressures');
+    if (!canvas || canvas.width === 0) {
+        alert('Diagrama não disponível para cópia. Calcule a sapata primeiro.');
+        return;
+    }
+    const scale = 2.5;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = Math.round(canvas.width * scale);
+    offscreen.height = Math.round(canvas.height * scale);
+    const ctx = offscreen.getContext('2d');
+    // Fundo 100% transparente para colar no Word/PPT
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height);
+
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span>⏳</span> Copiando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const blob = await new Promise((res, rej) => offscreen.toBlob(b => b ? res(b) : rej(new Error('Erro ao gerar imagem')), 'image/png'));
+        let copied = false;
+        if (navigator.clipboard && window.ClipboardItem) {
+            try {
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                copied = true;
+            } catch (err) {
+                console.warn('Clipboard write error:', err);
+            }
+        }
+        if (copied) {
+            if (btn) {
+                btn.innerHTML = '<span>✅</span> Copiado (300 DPI)!';
+                btn.classList.add('ring-2', 'ring-emerald-400');
+                setTimeout(() => {
+                    btn.innerHTML = origHtml;
+                    btn.classList.remove('ring-2', 'ring-emerald-400');
+                    btn.disabled = false;
+                }, 2200);
+            }
+        } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'distribuicao_pressoes_sapata_300dpi.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            if (btn) {
+                btn.innerHTML = '<span>⬇</span> Imagem Baixada!';
+                setTimeout(() => {
+                    btn.innerHTML = origHtml;
+                    btn.disabled = false;
+                }, 2500);
+            }
+            alert('A área de transferência não permitiu gravação direta. O diagrama em alta definição foi baixado automaticamente como imagem PNG.');
+        }
+    } catch (e) {
+        alert('Erro ao copiar diagrama: ' + e.message);
+        if (btn) {
+            btn.innerHTML = origHtml;
+            btn.disabled = false;
+        }
+    }
+}
+

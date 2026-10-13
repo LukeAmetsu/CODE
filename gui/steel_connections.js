@@ -1089,6 +1089,7 @@ function renderChecksTable(checks, overallStatus) {
         `;
     });
     tbody.innerHTML = html;
+    if (window.renderLatex) window.renderLatex(tbody);
 }
 
 function renderConstructiveDetails(specs) {

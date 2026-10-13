@@ -59,6 +59,19 @@
             </div>
         </div>
 
+        <!-- Banner de Suíte Unificada -->
+        <div class="mb-5 p-3 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-cyan-50 dark:from-blue-950/40 dark:via-indigo-950/40 dark:to-cyan-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                <span class="text-base">✨</span>
+                <span>
+                    <strong>Central Unificada de Cargas:</strong> Acesse a nova <a href="../gui/loads_studio.html?tab=snow" class="font-bold text-blue-600 dark:text-blue-400 underline hover:text-blue-800">Central de Cargas & Ações Estruturais</a> com sobrecargas de cobertura segundo a <strong>NBR 6120:2019</strong> e ASCE 7 Ch. 7.
+                </span>
+            </div>
+            <a href="../gui/loads_studio.html?tab=snow" class="font-bold text-[11px] px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white shrink-0 shadow-xs">
+                Abrir Central Unificada →
+            </a>
+        </div>
+
         <main id="snow-calculator-form">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Column 1 -->
@@ -112,7 +125,7 @@
                             </div>
                             <div>
                                 <label for="snow_thermal_condition" class="eng-label">Thermal
-                                    Condition (Ct)</label>
+                                    Condition ($C_t$)</label>
                                 <select id="snow_thermal_condition">
                                     <option>Heated Structure</option>
                                     <option selected>Unheated Structure</option>
@@ -228,12 +241,12 @@
                             </div>
                             <div>
                                 <label for="snow_nycbc_minimum_roof_snow_load"
-                                    class="eng-label">NYCBC Min. Load (psf)</label>
+                                    class="eng-label">NYCBC Min. Load <span class="snow-p-unit text-xs text-blue-600 dark:text-blue-400">[psf]</span></label>
                                 <input type="number" id="snow_nycbc_minimum_roof_snow_load" value="20">
                             </div>
                             <div>
                                 <label for="snow_ground_snow_load" class="eng-label">Ground Snow
-                                    Load (pg)</label>
+                                    Load ($p_g$) <span class="snow-p-unit text-xs text-blue-600 dark:text-blue-400">[psf]</span></label>
                                 <input type="number" id="snow_ground_snow_load" value="25" min="0">
                             </div>
                         </div>
@@ -243,7 +256,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label for="snow_eave_to_ridge_distance_W"
-                                    class="eng-label">Eave-to-Ridge (W)</label>
+                                    class="eng-label">Eave-to-Ridge ($W$) <span class="snow-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
                                 <input type="number" id="snow_eave_to_ridge_distance_W" value="25">
                             </div>
                             <div>
@@ -256,22 +269,22 @@
                             </div>
                             <div>
                                 <label for="snow_winter_wind_parameter_W2" class="eng-label">Winter
-                                    Wind (W₂)</label>
+                                    Wind ($W_2$)</label>
                                 <input type="number" id="snow_winter_wind_parameter_W2" value="0.55">
                             </div>
                             <div>
                                 <label for="snow_upper_roof_length_lu" class="eng-label">Upper Roof
-                                    L (lu)</label>
+                                    $L$ ($l_u$) <span class="snow-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
                                 <input type="number" id="snow_upper_roof_length_lu" value="30">
                             </div>
                             <div>
                                 <label for="snow_height_difference_hc" class="eng-label">Height
-                                    Diff (hc)</label>
+                                    Diff ($h_c$) <span class="snow-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
                                 <input type="number" id="snow_height_difference_hc" value="10">
                             </div>
                             <div>
                                 <label for="snow_lower_roof_length_ll" class="eng-label">Lower Roof
-                                    L (ll)</label>
+                                    $L$ ($l_l$) <span class="snow-l-unit text-xs text-blue-600 dark:text-blue-400">[ft]</span></label>
                                 <input type="number" id="snow_lower_roof_length_ll" value="30">
                             </div>
                         </div>

@@ -15,9 +15,67 @@ const params = {
     beta: { val: 0.18, defaultVal: 0.18, min: -1.0, max: 1.0, step: 0.01, symbol: 'β', label: 'Taxa Armadura (β)', formula: '(100ρ_w)^β', keyName: 'param_beta_name', descKey: 'param_beta_desc', desc: 'Taxa de armadura longitudinal com fator multiplicativo 100 dentro do expoente: (100·ρ_w)^β (estilo Eurocode 2-23).', locked: false, disabled: false, savedVal: 0.18 },
     gamma: { val: 0.54, defaultVal: 0.54, min: -1.0, max: 1.0, step: 0.01, symbol: 'γ', label: 'Resistência fck (γ)', formula: 'f_ck^γ', keyName: 'param_gamma_name', descKey: 'param_gamma_desc', desc: 'Resistência do concreto à compressão e tração.', locked: false, disabled: false, savedVal: 0.54 },
     delta: { val: -0.24, defaultVal: -0.24, min: -1.5, max: 0.5, step: 0.01, symbol: 'δ', label: 'Vão Cisalhante (δ)', formula: '(a/d)^δ', keyName: 'param_delta_name', descKey: 'param_delta_desc', desc: 'Relação vão/altura útil (a/d): transição biela direta vs mecanismo de viga.', locked: false, disabled: false, savedVal: -0.24 },
-    epsilon: { val: 0.90, defaultVal: 0.90, min: 0.0, max: 2.0, step: 0.01, symbol: 'ε', label: 'Largura Alma (ε)', formula: 'b_w^ε', keyName: 'param_epsilon_name', descKey: 'param_epsilon_desc', desc: 'Largura da seção transversal da viga (bw).', locked: false, disabled: false, savedVal: 0.90 },
-    zeta: { val: 1.32, defaultVal: 1.32, min: 0.0, max: 2.0, step: 0.01, symbol: 'ζ', label: 'Altura Útil (ζ)', formula: 'd^ζ', keyName: 'param_zeta_name', descKey: 'param_zeta_desc', desc: 'Altura útil geométrica da seção resistente (d).', locked: false, disabled: false, savedVal: 1.32 }
+    mu: { val: 0.15, defaultVal: 0.15, min: 0.0, max: 0.5, step: 0.01, symbol: 'μ', label: 'Protensão (σ_cp)', formula: '+ μ·σ_cp', keyName: 'param_mu_name', descKey: 'param_mu_desc', desc: 'Contribuição da pré-compressão da protensão (+μ·σ_cp, NBR 6118 / EC2).', locked: true, disabled: false, savedVal: 0.15 },
+    epsilon: { val: 1.00, defaultVal: 1.00, isConstant: true, locked: true, disabled: false, symbol: 'ε', label: 'Largura Alma (bw)', formula: 'b_w', keyName: 'param_epsilon_name', descKey: 'param_epsilon_desc', desc: 'Largura da seção transversal da viga (bw) com expoente fixo constante = 1.0.', savedVal: 1.00 },
+    zeta: { val: 1.00, defaultVal: 1.00, isConstant: true, locked: true, disabled: false, symbol: 'ζ', label: 'Altura Útil (d)', formula: 'd', keyName: 'param_zeta_name', descKey: 'param_zeta_desc', desc: 'Altura útil geométrica da seção resistente (d) com expoente fixo constante = 1.0 (Área nominal bw·d).', savedVal: 1.00 }
 };
+
+let useDeffConstraint = false;
+
+function toggleDeffConstraint(enabled) {
+    useDeffConstraint = !!enabled;
+    syncDeffToggleUI();
+    scheduleUpdate();
+    triggerAutoSave();
+    showToast(
+        useDeffConstraint 
+            ? 'Trava Cinemática (EC2 2023 & FIB) ativada: d_eff = min(d, √(acs/4 · d)) com acs ≥ d'
+            : 'Trava Cinemática desativada: usando altura geométrica d padrão',
+        useDeffConstraint ? 'success' : 'info'
+    );
+}
+window.toggleDeffConstraint = toggleDeffConstraint;
+
+function syncDeffToggleUI() {
+    const chk = document.getElementById('chkUseDeffConstraint');
+    if (chk) chk.checked = !!useDeffConstraint;
+}
+window.syncDeffToggleUI = syncDeffToggleUI;
+
+let excludePrestressed = false;
+
+function toggleExcludePrestressed(enabled) {
+    excludePrestressed = !!enabled;
+    syncExcludePrestressedUI();
+    updateFilteredRows();
+    updateMath();
+    updateDatabaseChart();
+    triggerAutoSave();
+    const count = currentFilteredRows ? currentFilteredRows.length : 0;
+    const msg = excludePrestressed 
+        ? tr('pc_excluded_toast', `Concreto Protendido (PC) excluído da base ativa (${count} ensaios restantes).`)
+        : tr('pc_included_toast', `Concreto Protendido (PC) incluído na base (${count} ensaios no total).`);
+    showToast(msg, 'info');
+}
+window.toggleExcludePrestressed = toggleExcludePrestressed;
+
+function syncExcludePrestressedUI() {
+    const chk1 = document.getElementById('chkExcludePrestressed');
+    const chk2 = document.getElementById('chkDynExcludePrestressed');
+    const lbl = document.getElementById('lblExcludePrestressed');
+    if (chk1) chk1.checked = !!excludePrestressed;
+    if (chk2) chk2.checked = !!excludePrestressed;
+    if (lbl) {
+        if (excludePrestressed) {
+            lbl.classList.add('border-amber-500/60', 'bg-amber-500/15');
+            lbl.classList.remove('bg-[var(--color-bg-primary)]');
+        } else {
+            lbl.classList.remove('border-amber-500/60', 'bg-amber-500/15');
+            lbl.classList.add('bg-[var(--color-bg-primary)]');
+        }
+    }
+}
+window.syncExcludePrestressedUI = syncExcludePrestressedUI;
 
 function tr(key, fallback = null) {
     if (window.i18n && typeof window.i18n.get === 'function') {
@@ -225,6 +283,9 @@ function saveSessionState() {
         if (critEl) state.optCriterion = critEl.value;
 
         state.chartSeriesVisibility = { ...chartSeriesVisibilityState };
+        state.shearAutoScaleY = (window.shearAutoScaleY !== false);
+        state.useDeffConstraint = !!useDeffConstraint;
+        state.excludePrestressed = !!excludePrestressed;
 
         localStorage.setItem(SHEAR_SESSION_STORAGE_KEY, JSON.stringify(state));
         showSavedIndicator();
@@ -268,6 +329,26 @@ function loadSessionState() {
                     }
                 }
             });
+        }
+
+        // Enforce constant nominal shear area (bw * d)
+        params.epsilon.val = 1.00;
+        params.epsilon.locked = true;
+        params.epsilon.disabled = false;
+        params.zeta.val = 1.00;
+        params.zeta.locked = true;
+        params.zeta.disabled = false;
+
+        // Restore kinematic constraint state
+        if (typeof state.useDeffConstraint === 'boolean') {
+            useDeffConstraint = state.useDeffConstraint;
+            syncDeffToggleUI();
+        }
+
+        // Restore prestressed exclusion state
+        if (typeof state.excludePrestressed === 'boolean') {
+            excludePrestressed = state.excludePrestressed;
+            syncExcludePrestressedUI();
         }
 
         // Restore target safety
@@ -319,6 +400,12 @@ function loadSessionState() {
             toggleDynamicFilterPanel(true);
         }
 
+        // Restore Y scale mode
+        if (typeof state.shearAutoScaleY === 'boolean') {
+            window.shearAutoScaleY = state.shearAutoScaleY;
+            if (typeof updateYScaleButtonUI === 'function') updateYScaleButtonUI();
+        }
+
         return true;
     } catch (e) {
         console.warn("Could not load session state:", e);
@@ -339,18 +426,25 @@ function resetToDefaults() {
         beta: 0.18,
         gamma: 0.54,
         delta: -0.24,
-        epsilon: 0.90,
-        zeta: 1.32
+        mu: 0.15,
+        epsilon: 1.00,
+        zeta: 1.00
     };
 
     Object.keys(defaults).forEach(k => {
         if (params[k]) {
             params[k].val = defaults[k];
-            params[k].locked = false;
+            params[k].locked = (k === 'epsilon' || k === 'zeta' || k === 'mu');
             params[k].disabled = false;
             params[k].savedVal = defaults[k];
         }
     });
+
+    useDeffConstraint = false;
+    syncDeffToggleUI();
+
+    excludePrestressed = false;
+    syncExcludePrestressedUI();
 
     const inpSafety = document.getElementById('inpTargetSafety');
     if (inpSafety) inpSafety.value = '1.0';
@@ -374,6 +468,8 @@ function resetToDefaults() {
     clearDynamicFilterInputsOnly();
     updateSlidersUI();
     updateFilteredRows();
+    window.shearAutoScaleY = true;
+    if (typeof updateYScaleButtonUI === 'function') updateYScaleButtonUI();
     updateMath();
     updateDatabaseChart();
     if (typeof setOptimizationCriterion === 'function') setOptimizationCriterion('cov');
@@ -400,8 +496,8 @@ function toggleFocusMode() {
             chartArea.classList.add('lg:col-span-12', 'col-span-12');
         }
         if (canvasWrap) {
-            canvasWrap.classList.remove('h-[440px]', 'sm:h-[480px]');
-            canvasWrap.classList.add('h-[650px]', 'min-h-[650px]');
+            canvasWrap.classList.remove('h-[300px]', 'min-h-[250px]', 'max-h-[320px]', 'h-[560px]', 'sm:h-[600px]', 'lg:h-[640px]', 'xl:h-[680px]');
+            canvasWrap.classList.add('h-[740px]', 'min-h-[740px]');
         }
         if (chartSection) {
             chartSection.classList.add('ring-2', 'ring-cyan-500/40', 'shadow-xl');
@@ -423,8 +519,8 @@ function toggleFocusMode() {
             chartArea.classList.add('lg:col-span-6', 'xl:col-span-6');
         }
         if (canvasWrap) {
-            canvasWrap.classList.remove('h-[650px]', 'min-h-[650px]');
-            canvasWrap.classList.add('h-[440px]', 'sm:h-[480px]');
+            canvasWrap.classList.remove('h-[740px]', 'min-h-[740px]', 'h-[560px]', 'sm:h-[600px]', 'lg:h-[640px]', 'xl:h-[680px]', 'h-[300px]', 'min-h-[250px]', 'max-h-[320px]');
+            canvasWrap.classList.add('h-[400px]', 'min-h-[350px]', 'max-h-[400px]');
         }
         if (chartSection) {
             chartSection.classList.remove('ring-2', 'ring-cyan-500/40', 'shadow-xl');
@@ -444,6 +540,7 @@ function toggleFocusMode() {
         setTimeout(() => {
             dbChart.resize();
             dbChart.update('none');
+            if (typeof syncColumnsHeight === 'function') syncColumnsHeight();
         }, 120);
     }
 }
@@ -453,8 +550,41 @@ function updateExternalLegend(datasets) {
     const container = document.getElementById('externalChartLegend');
     if (!container || !dbChart || !datasets || datasets.length === 0) return;
 
-    container.innerHTML = '';
     const isDark = document.documentElement.classList.contains('dark');
+    const existingBadges = container.querySelectorAll('.external-legend-item');
+
+    // Fast path: In-place text and visibility update without rebuilding DOM (eliminates jitter!)
+    if (existingBadges.length === datasets.length) {
+        let allMatched = true;
+        for (let i = 0; i < datasets.length; i++) {
+            const badge = existingBadges[i];
+            const expectedKey = datasets[i]._codeKey || `item_${i}`;
+            if (badge.dataset.codeKey !== expectedKey) {
+                allMatched = false;
+                break;
+            }
+            const isVisible = dbChart.isDatasetVisible(i);
+            const textSpan = badge.querySelector('.legend-text');
+            if (textSpan && textSpan.innerText !== (datasets[i].label || '')) {
+                textSpan.innerText = datasets[i].label || '';
+                textSpan.title = datasets[i].label || '';
+            }
+            const eyeSpan = badge.querySelector('.legend-eye');
+            if (eyeSpan) {
+                eyeSpan.innerText = isVisible ? '👁' : '✕';
+            }
+            if (isVisible) {
+                badge.className = `external-legend-item px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer select-none shadow-xs ${
+                    isDark ? 'bg-gray-800/90 text-gray-200 border-gray-700 hover:border-gray-500' : 'bg-white text-gray-800 border-gray-300 hover:border-gray-400'
+                }`;
+            } else {
+                badge.className = 'external-legend-item px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer select-none shadow-xs opacity-40 line-through bg-gray-900/20 border-dashed border-gray-700 text-gray-500';
+            }
+        }
+        if (allMatched) return;
+    }
+
+    container.innerHTML = '';
 
     // Include curves and the experimental test dataset
     const items = [];
@@ -472,7 +602,8 @@ function updateExternalLegend(datasets) {
         const isVisible = dbChart.isDatasetVisible(index);
         const badge = document.createElement('button');
         badge.type = 'button';
-        badge.className = `external-legend-item px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-2 transition-all cursor-pointer select-none shadow-xs ${
+        badge.dataset.codeKey = dataset._codeKey || `item_${index}`;
+        badge.className = `external-legend-item px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-colors cursor-pointer select-none shadow-xs ${
             isVisible 
                 ? (isDark ? 'bg-gray-800/90 text-gray-200 border-gray-700 hover:border-gray-500 hover:bg-gray-750' : 'bg-white text-gray-800 border-gray-300 hover:border-gray-400 hover:bg-gray-50')
                 : 'opacity-40 line-through bg-gray-900/20 border-dashed border-gray-700 text-gray-500 hover:opacity-70'
@@ -480,27 +611,28 @@ function updateExternalLegend(datasets) {
 
         // Color indicator
         const marker = document.createElement('span');
+        marker.className = 'legend-marker';
         if (dataset.type === 'scatter') {
-            marker.className = 'w-2.5 h-2.5 rounded-full inline-block shrink-0';
+            marker.className = 'legend-marker w-2.5 h-2.5 rounded-full inline-block shrink-0';
             marker.style.backgroundColor = isDark ? 'rgba(203, 213, 225, 0.85)' : 'rgba(100, 116, 139, 0.85)';
             marker.style.border = isDark ? '1px solid rgba(255, 255, 255, 0.5)' : '1px solid rgba(0, 0, 0, 0.3)';
         } else if (dataset.borderDash && dataset.borderDash.length) {
-            marker.className = 'w-4 h-1 rounded-full inline-block shrink-0';
+            marker.className = 'legend-marker w-4 h-1 rounded-full inline-block shrink-0';
             marker.style.borderTop = `2px dashed ${dataset.borderColor || '#999'}`;
             marker.style.backgroundColor = 'transparent';
             marker.style.height = '0px';
         } else {
-            marker.className = 'w-4 h-1 rounded-full inline-block shrink-0';
+            marker.className = 'legend-marker w-4 h-1 rounded-full inline-block shrink-0';
             marker.style.backgroundColor = dataset.borderColor || '#999';
         }
 
         const textSpan = document.createElement('span');
-        textSpan.className = 'truncate max-w-[280px]';
+        textSpan.className = 'legend-text truncate max-w-[260px]';
         textSpan.innerText = dataset.label || `Item ${index}`;
         textSpan.title = dataset.label || '';
 
         const eyeSpan = document.createElement('span');
-        eyeSpan.className = 'text-[10px] text-gray-400 opacity-60 ml-auto';
+        eyeSpan.className = 'legend-eye text-[10px] text-gray-400 opacity-60 ml-auto';
         eyeSpan.innerText = isVisible ? '👁' : '✕';
 
         badge.appendChild(marker);
@@ -516,6 +648,7 @@ function updateExternalLegend(datasets) {
             setDatasetVisibilityState(dataset, nextVis);
             dataset.hidden = !nextVis;
 
+            adjustYScaleToVisibleDatasets();
             dbChart.update('none');
             updateExternalLegend(dbChart.data.datasets);
             triggerAutoSave();
@@ -572,8 +705,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (main) main.classList.remove('hidden');
 
         initDatabaseChart();
+        syncExcludePrestressedUI();
+        updateYScaleButtonUI();
         updateMath();
         updateDatabaseChart();
+        renderHorizontalCodeCardsEquations();
+        initColumnHeightSync();
 
         document.querySelectorAll('.design-code-checkbox').forEach(cb => {
             cb.addEventListener('change', () => {
@@ -630,6 +767,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadBaselineState();
         updateActiveSubsetBadge();
         updateLiveModelColorUI();
+        syncDeffToggleUI();
     } catch (e) {
         console.error("Failed to load shear dataset: ", e);
     }
@@ -674,6 +812,16 @@ function preprocessData(rows) {
         let bwd = (bd > 0 && bbw > 0) ? (bbw / bd) : 0;
         let isSlab = (row['B>2D'] === true || row['B>2D'] == 1 || bwd >= 2.0);
 
+        // FIB Model Code & EC2 (2023) Kinematic Constraints:
+        // a_cs = max(a, d) >= d
+        let bacs = (ba_d > 0 && bd > 0) ? Math.max(ba_d * bd, bd) : bd;
+        // d_eff = sqrt((a_cs / 4) * d) <= d, with lower bound 0.5 * d when a_cs = d
+        let bdeff = (bacs < 4.0 * bd && bd > 0) ? Math.sqrt((bacs / 4.0) * bd) : bd;
+
+        let bsigma_cp = parseFloat(row['Sigma_CP'] ?? (row['Sigma_CP.1'] ?? (row['sigma_cp'] ?? 0.0)));
+        if (isNaN(bsigma_cp) || bsigma_cp < 0) bsigma_cp = 0.0;
+        row._sigma_cp = bsigma_cp;
+
         row._d = bd;
         row._bw = bbw;
         row._rho = rho;
@@ -681,8 +829,13 @@ function preprocessData(rows) {
         row._vu = bVtest_kN;
         row._ddg = bd_dg;
         row._ad = ba_d;
+        row._acs = bacs;
+        row._deff = bdeff;
         row._bwd = bwd;
         row._isSlab = isSlab;
+        const m = String(row['Member class (inferred)'] || '');
+        const src = String(row['Source sheet'] || '');
+        row._isPC = (m === 'PC' || src.includes('PC') || row['Prestressed'] == 1 || row['Prestressed'] === true || bsigma_cp > 0);
         row._valid = (!isNaN(bd) && bd > 0 && !isNaN(rho) && rho > 0
                       && !isNaN(bfck) && bfck > 0 && !isNaN(ba_d) && ba_d > 0
                       && !isNaN(bbw) && bbw > 0 && !isNaN(bVtest_kN) && bVtest_kN > 0);
@@ -749,6 +902,12 @@ function toggleDynamicFilterPanel(forceState) {
         } else {
             btn.classList.remove('bg-cyan-500/20', 'text-cyan-300');
         }
+    }
+    if (typeof syncColumnsHeight === 'function') {
+        syncColumnsHeight();
+    }
+    if (window.shearChart) {
+        window.shearChart.resize();
     }
 }
 
@@ -965,6 +1124,16 @@ function isRowInSubset(row, subsetKey) {
     if (!row) return false;
     if (row._valid !== undefined && !row._valid) return false;
 
+    // Check prestressed concrete exclusion
+    const isPC = row._isPC !== undefined ? row._isPC : (
+        String(row['Member class (inferred)'] || '') === 'PC' ||
+        String(row['Source sheet'] || '').includes('PC') ||
+        row['Prestressed'] == 1 || row['Prestressed'] === true
+    );
+    if (excludePrestressed && isPC && subsetKey !== 'mat_pc') {
+        return false;
+    }
+
     const bd = row._d !== undefined ? row._d : parseFloat(row['d (mm)']);
     const bbw = row._bw !== undefined ? row._bw : parseFloat(row['bw (mm)'] ?? row['b (mm)']);
     const rho = row._rho !== undefined ? row._rho : (parseFloat(row['pw (%)'] ?? row['rho']) > 0.1 ? parseFloat(row['pw (%)'] ?? row['rho']) / 100.0 : parseFloat(row['pw (%)'] ?? row['rho']));
@@ -1126,6 +1295,11 @@ function updateActiveSubsetBadge() {
         badge.title = `Otimização Nelder-Mead e Calibração de C serão executadas sobre estas ${count} amostras (${pct}% do total)`;
     }
 
+    if (excludePrestressed) {
+        badge.innerText += ' [s/ PC]';
+        badge.title += ' | Concreto Protendido (PC) excluído da amostra ativa.';
+    }
+
     const dynCountEl = document.getElementById('dynamicFilterActiveCount');
     if (dynCountEl) {
         dynCountEl.innerText = `${count} / ${total} (${pct}%)`;
@@ -1136,12 +1310,16 @@ let baselineParams = null;
 
 function computeBaselineModelPoint(row) {
     if (!row._valid || !baselineParams) return null;
-    let size_effect = Math.pow(row._ddg / row._d, baselineParams.alpha);
-    let vc = baselineParams.C * size_effect
+    let eff_d = (baselineParams.useDeff && row._deff) ? row._deff : row._d;
+    let size_effect = Math.pow(row._ddg / eff_d, baselineParams.alpha);
+    let vc_rc = baselineParams.C * size_effect
         * Math.pow(100.0 * row._rho, baselineParams.beta)
         * Math.pow(row._fck, baselineParams.gamma)
         * Math.pow(row._ad, baselineParams.delta);
-    let V_calc = vc * Math.pow(row._bw, baselineParams.epsilon) * Math.pow(row._d, baselineParams.zeta);
+    let mu_val = (baselineParams.mu !== undefined) ? baselineParams.mu : 0.15;
+    let sigma_cp_lim = Math.min(row._sigma_cp || 0.0, 0.2 * row._fck);
+    let vc = vc_rc + mu_val * sigma_cp_lim;
+    let V_calc = vc * row._bw * row._d;
     let V_calc_kN = V_calc / 1000.0;
     if (V_calc_kN <= 0) return null;
     return {
@@ -1151,7 +1329,8 @@ function computeBaselineModelPoint(row) {
         fck: row._fck,
         a_d: row._ad,
         bw: row._bw,
-        d_dg: row._ddg
+        d_dg: row._ddg,
+        deff: eff_d
     };
 }
 
@@ -1166,8 +1345,10 @@ function pinCurrentModelAsBaseline() {
         beta: params.beta.val,
         gamma: params.gamma.val,
         delta: params.delta.val,
-        epsilon: params.epsilon.val,
-        zeta: params.zeta.val,
+        mu: params.mu ? params.mu.val : 0.15,
+        epsilon: 1.0,
+        zeta: 1.0,
+        useDeff: !!useDeffConstraint,
         subsetKey: currentSubsetKey,
         subsetName: subsetName,
         timestamp: Date.now()
@@ -1238,15 +1419,18 @@ function loadBaselineState() {
 
 function computeLiveModelPoint(row) {
     if (!row._valid) return null;
-    let size_effect = params.alpha.disabled ? 1.0 : Math.pow(row._ddg / row._d, params.alpha.val);
+    let effective_d = (useDeffConstraint && row._deff) ? row._deff : row._d;
+    let size_effect = params.alpha.disabled ? 1.0 : Math.pow(row._ddg / effective_d, params.alpha.val);
     let rho_term = params.beta.disabled ? 1.0 : Math.pow(100.0 * row._rho, params.beta.val);
     let fck_term = params.gamma.disabled ? 1.0 : Math.pow(row._fck, params.gamma.val);
     let ad_term = params.delta.disabled ? 1.0 : Math.pow(row._ad, params.delta.val);
     let c_term = params.C.disabled ? 1.0 : params.C.val;
-    let bw_term = params.epsilon.disabled ? 1.0 : Math.pow(row._bw, params.epsilon.val);
-    let d_term = params.zeta.disabled ? 1.0 : Math.pow(row._d, params.zeta.val);
-    let vc = c_term * size_effect * rho_term * fck_term * ad_term;
-    let V_calc = vc * bw_term * d_term;
+    let vc_rc = c_term * size_effect * rho_term * fck_term * ad_term;
+    let mu_val = (params.mu && !params.mu.disabled) ? params.mu.val : 0.15;
+    let sigma_cp_lim = Math.min(row._sigma_cp || 0.0, 0.2 * row._fck);
+    let vc = vc_rc + mu_val * sigma_cp_lim;
+    // bw and d always have constant coefficient 1.0 (nominal shear area bw * d)
+    let V_calc = vc * row._bw * row._d;
     let V_calc_kN = V_calc / 1000.0;
     if (V_calc_kN <= 0 || !isFinite(V_calc_kN)) return null;
     return {
@@ -1256,7 +1440,8 @@ function computeLiveModelPoint(row) {
         fck: row._fck,
         a_d: row._ad,
         bw: row._bw,
-        d_dg: row._ddg
+        d_dg: row._ddg,
+        deff: effective_d
     };
 }
 
@@ -1265,6 +1450,7 @@ function getRowXValue(row, varKey) {
     if (varKey === 'd (mm)') return row._d || null;
     if (varKey === 'pw (%)') return (row._rho ? row._rho * 100.0 : null);
     if (varKey === 'fck (MPa)') return row._fck || null;
+    if (varKey === 'Sigma_CP' || varKey === 'sigma_cp') return (row._sigma_cp !== undefined) ? row._sigma_cp : 0.0;
     if (varKey === 'a:M/V (mm)') {
         let v = parseFloat(row['a_cs'] ?? (row['a (mm)'] ?? (parseFloat(row['a:M/V (mm)']) * 1000.0)));
         return isNaN(v) ? null : v;
@@ -1280,7 +1466,11 @@ function buildSliders() {
     if (!container) return;
     container.innerHTML = '';
 
-    Object.keys(params).forEach(key => {
+    // bw (epsilon) and d (zeta) are fixed physical constants = 1.0 (nominal shear area bw * d)
+    // They are permanently excluded from interactive inputs/sliders
+    const visibleKeys = Object.keys(params).filter(k => !params[k].isConstant && k !== 'epsilon' && k !== 'zeta');
+
+    visibleKeys.forEach(key => {
         const p = params[key];
         const row = document.createElement('div');
         row.id = `row_${key}`;
@@ -1466,10 +1656,12 @@ function quickSimplifyPreset(presetType) {
             const p = params[k];
             p.disabled = false;
             p.val = p.defaultVal;
-            p.locked = false;
+            p.locked = !!p.isConstant;
             p.savedVal = p.defaultVal;
             updateSliderRowUI(k);
         });
+        useDeffConstraint = false;
+        syncDeffToggleUI();
         scheduleUpdate();
         triggerAutoSave();
         showToast('Fórmula completa restaurada (padrão Reineck)', 'info');
@@ -1491,20 +1683,43 @@ function quickSimplifyPreset(presetType) {
         return;
     }
 
-    if (presetType === 'std_geometry') {
-        params.epsilon.disabled = false;
-        params.epsilon.val = 1.000;
-        params.epsilon.savedVal = 1.000;
-        updateSliderRowUI('epsilon');
+    if (presetType === 'csct_ec2') {
+        useDeffConstraint = true;
+        syncDeffToggleUI();
 
-        params.zeta.disabled = false;
-        params.zeta.val = 1.000;
-        params.zeta.savedVal = 1.000;
-        updateSliderRowUI('zeta');
+        params.alpha.disabled = false;
+        params.alpha.val = 0.333;
+        params.alpha.savedVal = 0.333;
+        updateSliderRowUI('alpha');
+
+        params.beta.disabled = false;
+        params.beta.val = 0.333;
+        params.beta.savedVal = 0.333;
+        updateSliderRowUI('beta');
+
+        params.gamma.disabled = false;
+        params.gamma.val = 0.333;
+        params.gamma.savedVal = 0.333;
+        updateSliderRowUI('gamma');
+
+        // Under CSCT/EC2-2023, d_eff already incorporates the arch action, so empirical delta term is neutralized (0.0)
+        params.delta.disabled = true;
+        params.delta.val = 0.0;
+        params.delta.savedVal = 0.0;
+        updateSliderRowUI('delta');
 
         scheduleUpdate();
         triggerAutoSave();
-        showToast('Geometria padronizada: bw · d (área nominal)', 'info');
+        showToast('Modelo Cinemático CSCT (EC2 2023): d_eff ativado, α=β=γ=1/3, δ desativado', 'success');
+        return;
+    }
+
+    if (presetType === 'std_geometry') {
+        params.epsilon.val = 1.000;
+        params.zeta.val = 1.000;
+        scheduleUpdate();
+        triggerAutoSave();
+        showToast('Geometria padronizada: bw · d (área nominal constante)', 'info');
         return;
     }
 }
@@ -1521,19 +1736,42 @@ function updateSlidersUI() {
     });
 }
 
+let liveUpdateRafId = null;
+let katexDebounceTimer = null;
+let lastRenderedLatex = '';
+
 function scheduleUpdate() {
-    updateMath();
     triggerAutoSave();
-    const liveCb = document.querySelector('.design-code-checkbox[value="LIVE_MODEL"]');
-    if (liveCb && liveCb.checked) {
-        if (!rAFPending) {
-            rAFPending = true;
-            requestAnimationFrame(() => {
-                rAFPending = false;
-                updateLiveModelOnly();
-            });
-        }
+    if (liveUpdateRafId !== null) return;
+    liveUpdateRafId = requestAnimationFrame(() => {
+        liveUpdateRafId = null;
+        performLiveUpdate(false);
+    });
+}
+
+function scheduleKatexRender(immediate = false) {
+    if (!window.katex) return;
+    const eqLatex = buildLiveEquationLatex();
+    if (eqLatex === lastRenderedLatex) return;
+
+    if (immediate) {
+        clearTimeout(katexDebounceTimer);
+        lastRenderedLatex = eqLatex;
+        const box1 = document.getElementById('liveModelEqBox');
+        if (box1) renderLatexToElement(box1, eqLatex, true);
+        const box2 = document.getElementById('mathEquation');
+        if (box2 && box2 !== box1) renderLatexToElement(box2, eqLatex, true);
+        return;
     }
+
+    clearTimeout(katexDebounceTimer);
+    katexDebounceTimer = setTimeout(() => {
+        lastRenderedLatex = eqLatex;
+        const box1 = document.getElementById('liveModelEqBox');
+        if (box1) renderLatexToElement(box1, eqLatex, true);
+        const box2 = document.getElementById('mathEquation');
+        if (box2 && box2 !== box1) renderLatexToElement(box2, eqLatex, true);
+    }, 60);
 }
 
 function buildLiveEquationLatex() {
@@ -1544,7 +1782,11 @@ function buildLiveEquationLatex() {
     parts.push(c_str);
     
     if (!params.alpha.disabled && Math.abs(params.alpha.val) > 1e-4) {
-        parts.push(`\\left(\\frac{d_{dg}}{d}\\right)^{${params.alpha.val.toFixed(3)}}`);
+        if (useDeffConstraint) {
+            parts.push(`\\left(\\frac{d_{dg}}{{\\color{#06b6d4}\\mathbf{d_{eff}}}}\\right)^{${params.alpha.val.toFixed(3)}}`);
+        } else {
+            parts.push(`\\left(\\frac{d_{dg}}{d}\\right)^{${params.alpha.val.toFixed(3)}}`);
+        }
     }
     if (!params.beta.disabled && Math.abs(params.beta.val) > 1e-4) {
         parts.push(`\\left(100\\rho_w\\right)^{${params.beta.val.toFixed(3)}}`);
@@ -1556,43 +1798,61 @@ function buildLiveEquationLatex() {
         parts.push(`\\left(\\frac{a}{d}\\right)^{${params.delta.val.toFixed(3)}}`);
     }
     
-    if (!params.epsilon.disabled) {
-        if (Math.abs(params.epsilon.val - 1.0) < 1e-4) {
-            parts.push(`b_w`);
-        } else if (Math.abs(params.epsilon.val) > 1e-4) {
-            parts.push(`b_w^{${params.epsilon.val.toFixed(3)}}`);
-        }
-    }
-    if (!params.zeta.disabled) {
-        if (Math.abs(params.zeta.val - 1.0) < 1e-4) {
-            parts.push(`d`);
-        } else if (Math.abs(params.zeta.val) > 1e-4) {
-            parts.push(`d^{${params.zeta.val.toFixed(3)}}`);
-        }
-    }
-    
+    // Check if prestress term is present in active data or parameters
+    const hasPrestressInActiveData = currentFilteredRows && currentFilteredRows.some(r => r._sigma_cp > 0);
+    const muActive = params.mu && !params.mu.disabled && Math.abs(params.mu.val) > 1e-4;
+
     let formulaBody = parts.join(' ');
-    return `V_{calc} = ${formulaBody}`;
+    let latex;
+    if (hasPrestressInActiveData && muActive) {
+        latex = `V_{calc} = \\left[ ${formulaBody} + {\\color{#f59e0b}${params.mu.val.toFixed(2)}\\cdot\\sigma_{cp}} \\right] b_w \\cdot d`;
+    } else {
+        latex = `V_{calc} = ${formulaBody} \\cdot b_w \\cdot d`;
+    }
+
+    if (useDeffConstraint) {
+        latex += ` \\quad {\\color{#06b6d4}\\scriptsize{\\left[d_{eff} = \\min\\left(d, \\sqrt{\\frac{a_{cs}}{4}d}\\right),\\; a_{cs}=\\max(a,d) \\ge d\\right]}}`;
+    }
+    if (hasPrestressInActiveData && muActive) {
+        latex += ` \\quad {\\color{#f59e0b}\\scriptsize{\\left[\\sigma_{cp} \\le 0.2f_{ck}\\right]}}`;
+    }
+    return latex;
 }
 window.buildLiveEquationLatex = buildLiveEquationLatex;
 
-function updateMath() {
+function performLiveUpdate(immediateKatex = false) {
     if (!currentFilteredRows || !currentFilteredRows.length) return;
 
-    let sumRatio = 0;
-    const ratios = [];
     const len = currentFilteredRows.length;
+    const plotPoints = [];
+    let sumRatio = 0;
+    let sumD = 0, sumFS = 0, sumD2 = 0, sumDFS = 0;
+    let validCount = 0;
+    const dList = [];
+    const fsList = [];
 
     for (let i = 0; i < len; i++) {
-        let row = currentFilteredRows[i];
-        let pt = computeLiveModelPoint(row);
-        if (pt) {
-            ratios.push(pt.ratio);
+        const row = currentFilteredRows[i];
+        const pt = computeLiveModelPoint(row);
+        if (pt && isFinite(pt.ratio)) {
+            let px = getRowXValue(row, currentVarKey);
+            if (px !== null && isFinite(px)) {
+                plotPoints.push({ x: px, y: pt.ratio });
+            }
             sumRatio += pt.ratio;
+            validCount++;
+
+            if (pt.d > 0 && pt.ratio > 0) {
+                dList.push(pt.d);
+                fsList.push(pt.ratio);
+                sumD += pt.d;
+                sumFS += pt.ratio;
+                sumD2 += pt.d * pt.d;
+                sumDFS += pt.d * pt.ratio;
+            }
         }
     }
 
-    const validCount = ratios.length;
     if (validCount === 0) {
         const m = document.getElementById('statMean');
         if (m) m.innerHTML = '-.---';
@@ -1603,49 +1863,67 @@ function updateMath() {
         return;
     }
 
-    let mean = sumRatio / validCount;
+    const mean = sumRatio / validCount;
     let sqDiffSum = 0;
-    for (let i = 0; i < validCount; i++) {
-        let diff = ratios[i] - mean;
+    for (let i = 0; i < plotPoints.length; i++) {
+        let diff = plotPoints[i].y - mean;
         sqDiffSum += diff * diff;
     }
-    let std = Math.sqrt(sqDiffSum / validCount);
-    let cov = mean > 0 ? std / mean : 0;
+    const std = Math.sqrt(sqDiffSum / validCount);
+    const cov = mean > 0 ? std / mean : 0;
 
+    // Update KPI UI elements in place
     const meanEl = document.getElementById('statMean');
     if (meanEl) {
         meanEl.innerHTML = mean.toFixed(3) + (mean < 1.0 ? ` <span class="text-red-500 text-xs font-bold" title="${tr('unsafe_badge_tooltip', 'Fator de segurança médio menor que 1.0 (inseguro)')}">⚠</span>` : '');
     }
     const covEl = document.getElementById('statCov');
-    if (covEl) {
-        covEl.innerText = cov.toFixed(3);
-    }
+    if (covEl) covEl.innerText = cov.toFixed(3);
     const pEl = document.getElementById('lblPoints');
-    if (pEl) {
-        pEl.innerText = validCount;
+    if (pEl) pEl.innerText = validCount;
+
+    // Update Chart datasets smoothly
+    const liveCb = document.querySelector('.design-code-checkbox[value="LIVE_MODEL"]');
+    let lowessLine = [];
+    if (liveCb && liveCb.checked && dbChart && dbChart.data && dbChart.data.datasets) {
+        plotPoints.sort((a, b) => a.x - b.x);
+        lowessLine = computeLowess(plotPoints, 0.3, 50);
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const liveColor = `rgba(${getLiveModelColor(isDark)}, 1)`;
+        const ds = dbChart.data.datasets;
+        for (let i = 0; i < ds.length; i++) {
+            if (ds[i]._codeKey === 'LIVE_MODEL_SCATTER') {
+                ds[i].data = plotPoints;
+            } else if (ds[i]._codeKey === 'LIVE_MODEL_CURVE') {
+                ds[i].data = lowessLine;
+                ds[i].borderColor = liveColor;
+                ds[i].label = `Live Equation (Mean: ${mean.toFixed(2)}, CoV: ${cov.toFixed(2)})`;
+            }
+        }
+        adjustYScaleToVisibleDatasets();
+        dbChart.update('none');
+        updateExternalLegend(dbChart.data.datasets);
     }
 
-    // Render Live KaTeX Equation
-    if (window.katex) {
-        const eqStr = buildLiveEquationLatex();
-        const eqContainer = document.getElementById('mathEquation');
-        if (eqContainer) {
-            katex.render(eqStr, eqContainer, {
-                throwOnError: false,
-                displayMode: true
-            });
-        }
-        const eqBox2 = document.getElementById('liveModelEqBox');
-        if (eqBox2 && eqBox2 !== eqContainer) {
-            katex.render(eqStr, eqBox2, {
-                throwOnError: false,
-                displayMode: true
-            });
-        }
+    // Flatness from precomputed values
+    const flatness = computeLiveModelFlatness({ sumD, sumFS, sumD2, sumDFS, dList, fsList, validCount });
+    updateLiveModelFlatnessUI(flatness);
+
+    // Residual Orthogonality and Variable Correlation Analysis
+    updateLiveCorrelationUI();
+
+    // Debounced or immediate KaTeX formula render
+    scheduleKatexRender(immediateKatex);
+
+    // Debounced Eel similarity
+    if (lowessLine.length > 0) {
+        debounceSimilarity(lowessLine);
     }
-    if (typeof updateLiveModelFlatnessUI === 'function') {
-        updateLiveModelFlatnessUI();
-    }
+}
+
+function updateMath() {
+    performLiveUpdate(true);
 }
 
 function setOptimizationCriterion(criterion) {
@@ -1714,6 +1992,11 @@ async function optimizeEquation() {
     const freeLabels = [];
 
     Object.keys(params).forEach(k => {
+        if (params[k].isConstant || k === 'epsilon' || k === 'zeta') {
+            lockedMap[k] = true;
+            currentVals[k] = 1.0;
+            return;
+        }
         const isLockedOrDisabled = !!params[k].locked || !!params[k].disabled;
         lockedMap[k] = isLockedOrDisabled;
         currentVals[k] = params[k].val;
@@ -1741,15 +2024,15 @@ async function optimizeEquation() {
     const subsetOpt = subsetEl && subsetEl.selectedIndex >= 0 ? subsetEl.options[subsetEl.selectedIndex] : null;
     const isDynamic = (subsetKey === 'dynamic_custom' || dynamicFilters.enabled);
     const subsetLabel = isDynamic ? 'Recorte Dinâmico' : (subsetOpt ? subsetOpt.text.split('(')[0].trim() : subsetKey);
-    const subsetPayload = isDynamic ? { ...dynamicFilters } : subsetKey;
+    const subsetPayload = isDynamic ? { ...dynamicFilters, exclude_pc: !!excludePrestressed } : subsetKey;
 
     try {
-        const best = await eel.run_scipy_optimization(targetSafety, lockedMap, currentVals, criterion, subsetPayload)();
+        const best = await eel.run_scipy_optimization(targetSafety, lockedMap, currentVals, criterion, subsetPayload, useDeffConstraint, excludePrestressed)();
         if (best && best.error) {
             alert("Optimization failed: " + best.error);
         } else if (best) {
             Object.keys(best).forEach(k => {
-                if (params[k] && !params[k].disabled) {
+                if (params[k] && !params[k].disabled && !params[k].isConstant && k !== 'epsilon' && k !== 'zeta') {
                     params[k].val = best[k];
                     let s = document.getElementById(`slider_${k}`);
                     if (s) {
@@ -1768,9 +2051,11 @@ async function optimizeEquation() {
                 let meanInfo = best._mean != null ? `Média R = ${best._mean}` : '';
                 let cInfo = params.C ? `C = ${params.C.val.toFixed(3)}` : '';
                 let modeLabel = isCov ? 'Mínimo COV (C mantido)' : 'R Médio Alvo';
+                let deffInfo = useDeffConstraint ? ' | d_eff Ativo' : '';
+                let pcInfo = excludePrestressed ? ' | s/ PC' : '';
                 let countInfo = best._count ? `${best._count} testes` : `${currentFilteredRows.length} testes`;
 
-                statusMsg.innerHTML = `<span class="font-bold">[${modeLabel} | ${subsetLabel} (${countInfo})]</span> ${covInfo} | ${meanInfo} (${cInfo})`;
+                statusMsg.innerHTML = `<span class="font-bold">[${modeLabel} | ${subsetLabel}${pcInfo} (${countInfo})${deffInfo}]</span> ${covInfo} | ${meanInfo} (${cInfo})`;
                 statusMsg.classList.remove('hidden');
             }
         }
@@ -1801,7 +2086,7 @@ async function calibrateConstantC() {
     const subsetOpt = subsetEl && subsetEl.selectedIndex >= 0 ? subsetEl.options[subsetEl.selectedIndex] : null;
     const isDynamic = (subsetKey === 'dynamic_custom' || dynamicFilters.enabled);
     const subsetLabel = isDynamic ? 'Recorte Dinâmico' : (subsetOpt ? subsetOpt.text.split('(')[0].trim() : subsetKey);
-    const subsetPayload = isDynamic ? { ...dynamicFilters } : subsetKey;
+    const subsetPayload = isDynamic ? { ...dynamicFilters, exclude_pc: !!excludePrestressed } : subsetKey;
 
     const btn = document.getElementById('btnCalibrateC');
     const originalText = btn ? btn.innerHTML : '';
@@ -1812,7 +2097,7 @@ async function calibrateConstantC() {
 
     try {
         if (window.eel && eel.calibrate_shear_constant_c) {
-            const res = await eel.calibrate_shear_constant_c(targetSafety, currentVals, subsetPayload)();
+            const res = await eel.calibrate_shear_constant_c(targetSafety, currentVals, subsetPayload, useDeffConstraint, excludePrestressed)();
             if (res && res.C) {
                 params.C.val = parseFloat(res.C.toFixed(3));
                 const s = document.getElementById('slider_C');
@@ -1985,60 +2270,7 @@ function calculateBins(dataPoints, numBins = 10) {
 
 // High-speed 60fps update: updates ONLY the Live Model dataset when sliders change
 function updateLiveModelOnly() {
-    if (!dbChart || !dbChart.data || !dbChart.data.datasets) return;
-    const liveCb = document.querySelector('.design-code-checkbox[value="LIVE_MODEL"]');
-    if (!liveCb || !liveCb.checked) return;
-
-    const isDark = document.documentElement.classList.contains('dark');
-    const liveColor = `rgba(${getLiveModelColor(isDark)}, 1)`;
-
-    const plotPoints = [];
-    const len = currentFilteredRows.length;
-    for (let i = 0; i < len; i++) {
-        const row = currentFilteredRows[i];
-        const pt = computeLiveModelPoint(row);
-        if (pt) {
-            let px = getRowXValue(row, currentVarKey);
-            if (px !== null && isFinite(px) && isFinite(pt.ratio)) {
-                plotPoints.push({ x: px, y: pt.ratio });
-            }
-        }
-    }
-
-    plotPoints.sort((a, b) => a.x - b.x);
-
-    let sum = 0;
-    for (let i = 0; i < plotPoints.length; i++) sum += plotPoints[i].y;
-    let mean = plotPoints.length > 0 ? sum / plotPoints.length : 0;
-    let sqSum = 0;
-    for (let i = 0; i < plotPoints.length; i++) sqSum += Math.pow(plotPoints[i].y - mean, 2);
-    let std = plotPoints.length > 0 ? Math.sqrt(sqSum / plotPoints.length) : 0;
-    let cov = mean > 0 ? std / mean : 0;
-
-    let lowessLine = computeLowess(plotPoints, 0.3, 50);
-
-    // Update Live Model scatter & curve in Chart datasets
-    const ds = dbChart.data.datasets;
-    for (let i = 0; i < ds.length; i++) {
-        if (ds[i]._codeKey === 'LIVE_MODEL_SCATTER') {
-            ds[i].data = plotPoints;
-        } else if (ds[i]._codeKey === 'LIVE_MODEL_CURVE') {
-            ds[i].data = lowessLine;
-            ds[i].borderColor = liveColor;
-            ds[i].label = `Live Equation (Mean: ${mean.toFixed(2)}, CoV: ${cov.toFixed(2)})`;
-        }
-    }
-
-    dbChart.update('none');
-    updateExternalLegend(dbChart.data.datasets);
-
-    // Immediately update live model flatness indicator at 60fps
-    if (typeof updateLiveModelFlatnessUI === 'function') {
-        updateLiveModelFlatnessUI();
-    }
-
-    // Debounce Python similarity call by 200ms so slider dragging is never blocked
-    debounceSimilarity(lowessLine);
+    performLiveUpdate(false);
 }
 
 // -------------------------------------------------------------
@@ -2142,6 +2374,22 @@ const CODE_EQUATION_METADATA = {
         },
         differenceOrigin: 'Revisão de 2019 do ACI: introduziu λs e ρw^(1/3) para sanar a insegurança de 2014. Ainda diverge do modelo proposto por manter fck^0.5 e omitir a rugosidade do agregado ddg.'
     },
+    'A_ACI_25': {
+        name: 'ACI 318-25',
+        shortCode: 'ACI 318-25',
+        category: 'Norma Americana (2025)',
+        color: '#be185d',
+        equationLatex: 'V_c = 0.66 \\rho_w^{1/3} \\sqrt{f_{ck}} \\cdot b_w d \\cdot \\lambda_s \\ge 0.083 \\sqrt{f_{ck}} b_w d',
+        secondaryLatex: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.003 d}} \\le 1.0, \\quad \\sqrt{f_{ck}} \\le 10.3\\text{ MPa}',
+        factors: {
+            sizeEffect: '\\lambda_s = \\sqrt{2 / (1 + 0.003 d)} \\le 1.0 \\quad (0.003d\\text{ vs }0.004d\\text{ em 2019})',
+            reinforcement: '\\rho_w^{1/3} = \\rho_w^{0.333}',
+            concrete: 'f_{ck}^{0.50} \\le 10.3\\text{ MPa} \\quad (150\\text{ psi cap})',
+            shearSpan: 'Ausente (regime geral)',
+            geometry: 'b_w \\cdot d'
+        },
+        differenceOrigin: 'Atualização ACI 318-25 (Jan/2025): recalibra o denominador do size effect para 1 + 0.003d, limitando a penalização em seções altas, impõe teto de 10.3 MPa (150 psi) para √fck e patamar inferior de 0.083√fck·bw·d.'
+    },
     'A_NBR6118': {
         name: 'NBR 6118',
         shortCode: 'NBR 6118',
@@ -2170,6 +2418,7 @@ function getCodeMeta(keyOrName) {
     if (clean === 'R_EC_2023' || (clean.includes('2023') && clean.includes('Eurocode'))) return CODE_EQUATION_METADATA['A_EC2_2023'];
     if (clean === 'R_ACI318_14' || clean.includes('318-14')) return CODE_EQUATION_METADATA['A_ACI_14'];
     if (clean === 'R_ACI318_19' || clean.includes('318-19')) return CODE_EQUATION_METADATA['A_ACI_19'];
+    if (clean === 'R_ACI318_25' || clean.includes('318-25') || clean === 'A_ACI_25') return CODE_EQUATION_METADATA['A_ACI_25'];
     if (clean === 'R_MC2010' || (clean.includes('MC') && clean.includes('Level I') && !clean.includes('Level II'))) return CODE_EQUATION_METADATA['A_MC2010_L1'];
     if (clean.includes('MC') && clean.includes('Level II')) return CODE_EQUATION_METADATA['A_MC2010_L2'];
 
@@ -2200,26 +2449,36 @@ function renderLatexToElement(el, latex, displayMode = false) {
 // VERIFICAÇÃO DE RETIDÃO (FLATNESS) DA EQUAÇÃO PROPOSTA VS ALTURA ÚTIL (d)
 // Calcula inclinação linear m (slope), Pearson R e Flatness Score
 // -------------------------------------------------------------
-function computeLiveModelFlatness() {
+function computeLiveModelFlatness(precomputed) {
     if (!currentFilteredRows || currentFilteredRows.length < 5) return null;
 
     let sumD = 0, sumFS = 0, sumD2 = 0, sumDFS = 0, validCount = 0;
-    const dList = [];
-    const fsList = [];
+    let dList = [];
+    let fsList = [];
 
-    for (let i = 0; i < currentFilteredRows.length; i++) {
-        const row = currentFilteredRows[i];
-        const pt = computeLiveModelPoint(row);
-        if (pt && pt.d > 0 && isFinite(pt.ratio) && pt.ratio > 0) {
-            let d = pt.d;
-            let fs = pt.ratio;
-            dList.push(d);
-            fsList.push(fs);
-            sumD += d;
-            sumFS += fs;
-            sumD2 += d * d;
-            sumDFS += d * fs;
-            validCount++;
+    if (precomputed && precomputed.validCount >= 5) {
+        sumD = precomputed.sumD;
+        sumFS = precomputed.sumFS;
+        sumD2 = precomputed.sumD2;
+        sumDFS = precomputed.sumDFS;
+        validCount = precomputed.validCount;
+        dList = precomputed.dList.slice();
+        fsList = precomputed.fsList.slice();
+    } else {
+        for (let i = 0; i < currentFilteredRows.length; i++) {
+            const row = currentFilteredRows[i];
+            const pt = computeLiveModelPoint(row);
+            if (pt && pt.d > 0 && isFinite(pt.ratio) && pt.ratio > 0) {
+                let d = pt.d;
+                let fs = pt.ratio;
+                dList.push(d);
+                fsList.push(fs);
+                sumD += d;
+                sumFS += fs;
+                sumD2 += d * d;
+                sumDFS += d * fs;
+                validCount++;
+            }
         }
     }
 
@@ -2307,6 +2566,7 @@ function computeCodeFlatness(codeKey) {
     else if (codeKey.includes('Eurocode 2 (2023)') || codeKey === 'A_EC2_2023') colName = 'A_EC2_2023';
     else if (codeKey.includes('ACI 318-14') || codeKey === 'A_ACI_14') colName = 'A_ACI_14';
     else if (codeKey.includes('ACI 318-19') || codeKey === 'A_ACI_19') colName = 'A_ACI_19';
+    else if (codeKey.includes('ACI 318-25') || codeKey === 'A_ACI_25') colName = 'A_ACI_25';
     else if (codeKey.includes('NBR 6118') || codeKey === 'A_NBR6118') colName = 'A_NBR6118';
     else if (codeKey.startsWith('R_')) colName = codeKey;
 
@@ -2355,12 +2615,12 @@ function computeCodeFlatness(codeKey) {
     };
 }
 
-function updateLiveModelFlatnessUI() {
+function updateLiveModelFlatnessUI(precomputedFlatness) {
     const card = document.getElementById('liveModelFlatnessCard');
     if (!card) return;
 
     const pal = LIVE_MODEL_PALETTES[currentLiveModelColorKey] || LIVE_MODEL_PALETTES.cyan;
-    const flatness = computeLiveModelFlatness();
+    const flatness = precomputedFlatness !== undefined ? precomputedFlatness : computeLiveModelFlatness();
     const eqLatex = buildLiveEquationLatex();
 
     const disabledVars = Object.keys(params).filter(k => params[k].disabled);
@@ -2373,7 +2633,7 @@ function updateLiveModelFlatnessUI() {
             <div class="flex items-center justify-between pb-1 border-b border-[var(--color-border-primary)]">
                 <div class="flex items-center gap-1.5">
                     <span class="font-bold text-xs" style="color:${pal.hex};">🎯 Modelo Proposto Interativo</span>
-                    ${disabledBadge}
+                    <span id="flatnessDisabledBadge">${disabledBadge}</span>
                 </div>
             </div>
             <div id="liveModelEqBox" class="py-1 text-center font-mono text-[11px] overflow-x-auto"></div>
@@ -2392,14 +2652,59 @@ function updateLiveModelFlatnessUI() {
     else if (flatness.flatnessScore < 88) barColor = 'bg-amber-500';
     else if (flatness.flatnessScore < 94) barColor = 'bg-cyan-500';
 
+    // In-place update if card already has its internal structure
+    const existingBar = card.querySelector('#flatnessBar');
+    if (existingBar) {
+        existingBar.className = `${barColor} h-1.5 rounded-full transition-all duration-150`;
+        existingBar.style.width = `${flatness.flatnessScore}%`;
+
+        const badge = card.querySelector('#flatnessStatusBadge');
+        if (badge) {
+            badge.className = `text-[9.5px] px-1.5 py-0.5 rounded font-bold shrink-0 ${flatness.statusBadgeClass}`;
+            badge.innerText = `${flatness.icon} ${flatness.flatnessScore.toFixed(1)}% Retidão`;
+        }
+        const scoreTxt = card.querySelector('#flatnessScoreText');
+        if (scoreTxt) scoreTxt.innerText = `${flatness.flatnessScore.toFixed(1)}% (${flatness.statusText.split('(')[0].trim()})`;
+        const meanFS = card.querySelector('#flatnessMeanFS');
+        if (meanFS) meanFS.innerText = flatness.meanFS.toFixed(3);
+        const retidao = card.querySelector('#flatnessRetidao');
+        if (retidao) {
+            retidao.innerText = `${flatness.flatnessScore.toFixed(1)}%`;
+            retidao.className = `font-bold font-mono ${flatness.flatnessScore >= 90 ? 'text-emerald-400' : 'text-amber-400'}`;
+        }
+        const slope = card.querySelector('#flatnessSlope');
+        if (slope) {
+            slope.innerText = `${flatness.slopePerMeter >= 0 ? '+' : ''}${flatness.slopePerMeter.toFixed(3)} / m`;
+            slope.className = `font-bold font-mono ${Math.abs(flatness.slopePerMeter) <= 0.15 ? 'text-emerald-400' : (flatness.slopePerMeter < 0 ? 'text-rose-400' : 'text-amber-400')}`;
+        }
+        const pearson = card.querySelector('#flatnessPearson');
+        if (pearson) {
+            pearson.innerText = `${flatness.pearsonR >= 0 ? '+' : ''}${flatness.pearsonR.toFixed(3)}`;
+            pearson.className = `font-bold font-mono ${Math.abs(flatness.pearsonR) <= 0.08 ? 'text-emerald-400' : 'text-rose-400'}`;
+        }
+        const hint = card.querySelector('#flatnessHint');
+        if (hint) {
+            hint.innerHTML = `<span class="shrink-0 mt-0.5">${flatness.icon}</span><span>${flatness.suggestion}</span>`;
+        }
+        const disabledContainer = card.querySelector('#flatnessDisabledBadge');
+        if (disabledContainer) {
+            disabledContainer.innerHTML = disabledBadge;
+        }
+
+        // Keep KaTeX equation updated via debouncer
+        scheduleKatexRender(false);
+        return;
+    }
+
+    // Full structural build on first load
     card.innerHTML = `
         <div class="flex items-center justify-between pb-1 border-b border-[var(--color-border-primary)]">
             <div class="flex items-center gap-1.5 min-w-0">
                 <span class="text-xs">🎯</span>
                 <span class="font-bold text-xs truncate" style="color:${pal.hex};">Modelo Proposto (Live)</span>
-                ${disabledBadge}
+                <span id="flatnessDisabledBadge">${disabledBadge}</span>
             </div>
-            <span class="text-[9.5px] px-1.5 py-0.5 rounded font-bold shrink-0 ${flatness.statusBadgeClass}">
+            <span id="flatnessStatusBadge" class="text-[9.5px] px-1.5 py-0.5 rounded font-bold shrink-0 ${flatness.statusBadgeClass}">
                 ${flatness.icon} ${flatness.flatnessScore.toFixed(1)}% Retidão
             </span>
         </div>
@@ -2413,10 +2718,10 @@ function updateLiveModelFlatnessUI() {
         <div class="flex flex-col gap-1 mt-0.5">
             <div class="flex justify-between items-center text-[10px]">
                 <span class="text-gray-400">Retidão vs Altura Útil (d):</span>
-                <span class="font-bold font-mono text-gray-200">${flatness.flatnessScore.toFixed(1)}% (${flatness.statusText.split('(')[0].trim()})</span>
+                <span id="flatnessScoreText" class="font-bold font-mono text-gray-200">${flatness.flatnessScore.toFixed(1)}% (${flatness.statusText.split('(')[0].trim()})</span>
             </div>
             <div class="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
-                <div class="${barColor} h-1.5 rounded-full transition-all duration-300" style="width: ${flatness.flatnessScore}%"></div>
+                <div id="flatnessBar" class="${barColor} h-1.5 rounded-full transition-all duration-150" style="width: ${flatness.flatnessScore}%"></div>
             </div>
         </div>
 
@@ -2424,28 +2729,28 @@ function updateLiveModelFlatnessUI() {
         <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] bg-[var(--color-bg-secondary)]/50 rounded p-1.5 border border-[var(--color-border-primary)]">
             <div class="flex justify-between items-center" title="Fator de Segurança Médio: V_test / V_calc">
                 <span class="text-gray-400 text-[10.5px]">Média FS:</span>
-                <span class="font-bold font-mono text-cyan-300">${flatness.meanFS.toFixed(3)}</span>
+                <span id="flatnessMeanFS" class="font-bold font-mono text-cyan-300">${flatness.meanFS.toFixed(3)}</span>
             </div>
             <div class="flex justify-between items-center" title="Índice de Retidão: 100% indica FS constante ao longo de d">
                 <span class="text-gray-400 text-[10.5px]">Retidão:</span>
-                <span class="font-bold font-mono ${flatness.flatnessScore >= 90 ? 'text-emerald-400' : 'text-amber-400'}">${flatness.flatnessScore.toFixed(1)}%</span>
+                <span id="flatnessRetidao" class="font-bold font-mono ${flatness.flatnessScore >= 90 ? 'text-emerald-400' : 'text-amber-400'}">${flatness.flatnessScore.toFixed(1)}%</span>
             </div>
             <div class="flex justify-between items-center" title="Inclinação da reta FS vs d: Variação de FS a cada 1000mm de altura útil">
                 <span class="text-gray-400 text-[10.5px]">Inclinação (m):</span>
-                <span class="font-bold font-mono ${Math.abs(flatness.slopePerMeter) <= 0.15 ? 'text-emerald-400' : (flatness.slopePerMeter < 0 ? 'text-rose-400' : 'text-amber-400')}">
+                <span id="flatnessSlope" class="font-bold font-mono ${Math.abs(flatness.slopePerMeter) <= 0.15 ? 'text-emerald-400' : (flatness.slopePerMeter < 0 ? 'text-rose-400' : 'text-amber-400')}">
                     ${flatness.slopePerMeter >= 0 ? '+' : ''}${flatness.slopePerMeter.toFixed(3)} / m
                 </span>
             </div>
             <div class="flex justify-between items-center" title="Correlação Pearson entre FS e d: R próximo de zero indica independência de d">
                 <span class="text-gray-400 text-[10.5px]">Viés R(d):</span>
-                <span class="font-bold font-mono ${Math.abs(flatness.pearsonR) <= 0.08 ? 'text-emerald-400' : 'text-rose-400'}">
+                <span id="flatnessPearson" class="font-bold font-mono ${Math.abs(flatness.pearsonR) <= 0.08 ? 'text-emerald-400' : 'text-rose-400'}">
                     ${flatness.pearsonR >= 0 ? '+' : ''}${flatness.pearsonR.toFixed(3)}
                 </span>
             </div>
         </div>
         
         <!-- Dynamic Diagnostic & Hint -->
-        <div class="p-1.5 rounded bg-cyan-950/20 border border-cyan-500/20 text-[10px] leading-snug text-gray-300 flex items-start gap-1.5">
+        <div id="flatnessHint" class="p-1.5 rounded bg-cyan-950/20 border border-cyan-500/20 text-[10px] leading-snug text-gray-300 flex items-start gap-1.5">
             <span class="shrink-0 mt-0.5">${flatness.icon}</span>
             <span>${flatness.suggestion}</span>
         </div>
@@ -2458,6 +2763,1144 @@ function updateLiveModelFlatnessUI() {
     }
 }
 
+// -------------------------------------------------------------
+// Statistical Correlation, Residual Orthogonality & VIF Engine
+// -------------------------------------------------------------
+
+let currentCorrelationMethod = 'pearson'; // 'pearson' or 'spearman'
+let currentCorrelationTab = 'bias';       // 'bias', 'matrix', 'stats'
+let cachedCorrelationStats = null;
+
+function normalCdf(x) {
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    const sign = x < 0 ? -1 : 1;
+    const absX = Math.abs(x) / Math.SQRT2;
+    const t = 1.0 / (1.0 + p * absX);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-absX * absX);
+    return 0.5 * (1.0 + sign * y);
+}
+
+function computePearson(x, y) {
+    const n = Math.min(x.length, y.length);
+    if (n < 3) return { r: 0, p: 1, t: 0, n };
+    let sumX = 0, sumY = 0, sumX2 = 0, sumY2 = 0, sumXY = 0;
+    for (let i = 0; i < n; i++) {
+        const xi = x[i];
+        const yi = y[i];
+        sumX += xi;
+        sumY += yi;
+        sumX2 += xi * xi;
+        sumY2 += yi * yi;
+        sumXY += xi * yi;
+    }
+    const numerator = n * sumXY - sumX * sumY;
+    const denom = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    if (denom <= 1e-12 || isNaN(denom)) return { r: 0, p: 1, t: 0, n };
+    const r = Math.max(-1.0, Math.min(1.0, numerator / denom));
+    const df = n - 2;
+    const t = Math.abs(r) < 1.0 ? r * Math.sqrt(df / (1.0 - r * r)) : (r >= 0 ? 999 : -999);
+    const p = Math.max(0.0, Math.min(1.0, 2.0 * (1.0 - normalCdf(Math.abs(t)))));
+    return { r, p, t, n };
+}
+
+function fastRankArray(arr) {
+    const n = arr.length;
+    const indexed = new Array(n);
+    for (let i = 0; i < n; i++) {
+        indexed[i] = { val: arr[i], idx: i };
+    }
+    indexed.sort((a, b) => a.val - b.val);
+    const ranks = new Array(n);
+    let i = 0;
+    while (i < n) {
+        let j = i;
+        while (j < n - 1 && Math.abs(indexed[j + 1].val - indexed[j].val) < 1e-12) {
+            j++;
+        }
+        const rank = (i + j + 2) / 2.0;
+        for (let k = i; k <= j; k++) {
+            ranks[indexed[k].idx] = rank;
+        }
+        i = j + 1;
+    }
+    return ranks;
+}
+
+function computeSpearman(x, y) {
+    const n = Math.min(x.length, y.length);
+    if (n < 3) return { r: 0, p: 1, t: 0, n };
+    const rankX = fastRankArray(x);
+    const rankY = fastRankArray(y);
+    return computePearson(rankX, rankY);
+}
+
+function invertMatrix(M) {
+    const n = M.length;
+    const A = M.map(row => row.slice());
+    const I = Array.from({ length: n }, (_, i) => 
+        Array.from({ length: n }, (_, j) => (i === j ? 1 : 0))
+    );
+    for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+        }
+        if (Math.abs(A[maxRow][i]) < 1e-12) return null;
+        [A[i], A[maxRow]] = [A[maxRow], A[i]];
+        [I[i], I[maxRow]] = [I[maxRow], I[i]];
+        const pivot = A[i][i];
+        for (let j = 0; j < n; j++) {
+            A[i][j] /= pivot;
+            I[i][j] /= pivot;
+        }
+        for (let k = 0; k < n; k++) {
+            if (k !== i) {
+                const factor = A[k][i];
+                for (let j = 0; j < n; j++) {
+                    A[k][j] -= factor * A[i][j];
+                    I[k][j] -= factor * I[i][j];
+                }
+            }
+        }
+    }
+    return I;
+}
+
+function computeCorrelationStatistics() {
+    if (!currentFilteredRows || !currentFilteredRows.length) return null;
+
+    const dArr = [];
+    const adArr = [];
+    const rhoArr = [];
+    const fckArr = [];
+    const bwArr = [];
+    const bwdArr = [];
+    const vuArr = [];
+    const tauArr = [];
+    const rLiveArr = [];
+    const r6118Arr = [];
+    const rEC2Arr = [];
+    const rACIArr = [];
+    const rACI25Arr = [];
+
+    const len = currentFilteredRows.length;
+    for (let i = 0; i < len; i++) {
+        const row = currentFilteredRows[i];
+        if (!row._valid) continue;
+        const pt = computeLiveModelPoint(row);
+        if (!pt || !isFinite(pt.ratio) || pt.ratio <= 0) continue;
+
+        const dVal = row._d;
+        const bwVal = row._bw;
+        const vuVal = row._vu;
+        const tauVal = (bwVal > 0 && dVal > 0) ? (vuVal * 1000.0) / (bwVal * dVal) : null;
+        if (tauVal === null || !isFinite(tauVal) || tauVal <= 0) continue;
+
+        dArr.push(dVal);
+        adArr.push(row._ad);
+        rhoArr.push(row._rho * 100.0);
+        fckArr.push(row._fck);
+        bwArr.push(bwVal);
+        bwdArr.push(row._bwd || (dVal > 0 ? bwVal / dVal : 0));
+        vuArr.push(vuVal);
+        tauArr.push(tauVal);
+        rLiveArr.push(pt.ratio);
+
+        const r6118 = parseFloat(row['R_6118'] ?? row['A_NBR6118']);
+        r6118Arr.push(isFinite(r6118) && r6118 > 0 ? r6118 : NaN);
+
+        const rEC = parseFloat(row['R_EC_2023'] ?? row['A_EC2_2023'] ?? row['R_EC_2004']);
+        rEC2Arr.push(isFinite(rEC) && rEC > 0 ? rEC : NaN);
+
+        const rACI = parseFloat(row['R_ACI318_19'] ?? row['A_ACI_19'] ?? row['R_ACI318_14']);
+        rACIArr.push(isFinite(rACI) && rACI > 0 ? rACI : NaN);
+
+        const rACI25 = parseFloat(row['A_ACI_25'] ?? row['R_ACI318_25']);
+        rACI25Arr.push(isFinite(rACI25) && rACI25 > 0 ? rACI25 : NaN);
+    }
+
+    const n = dArr.length;
+    if (n < 5) return null;
+
+    const varDict = {
+        d: { label: 'Altura Útil (d)', symbol: 'd', unit: 'mm', data: dArr, coef: 'α, ζ' },
+        a_d: { label: 'Vão Cisalhante (a/d)', symbol: 'a/d', unit: '', data: adArr, coef: 'δ' },
+        rho_w: { label: 'Taxa Armadura (ρw)', symbol: 'ρ_w', unit: '%', data: rhoArr, coef: 'β' },
+        fck: { label: 'Resistência Concreto (fck)', symbol: 'f_{ck}', unit: 'MPa', data: fckArr, coef: 'γ' },
+        bw: { label: 'Largura da Alma (bw)', symbol: 'b_w', unit: 'mm', data: bwArr, coef: 'ε' },
+        bwd: { label: 'Razão Seção (bw/d)', symbol: 'b_w/d', unit: '', data: bwdArr, coef: 'bw/d' },
+        V_test: { label: 'Força Experimental (Vu)', symbol: 'V_u', unit: 'kN', data: vuArr, coef: 'Carga' },
+        tau_u: { label: 'Tensão Nominal (τu)', symbol: 'τ_u', unit: 'MPa', data: tauArr, coef: 'Tensão' },
+        R_Live: { label: 'Modelo Proposto (R_Live)', symbol: 'R_{Live}', unit: '', data: rLiveArr, coef: 'Live' }
+    };
+
+    const matrixKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live'];
+
+    // Descriptive Statistics
+    const descriptiveStats = {};
+    matrixKeys.forEach(k => {
+        const arr = varDict[k].data;
+        const valid = arr.filter(v => isFinite(v));
+        const nv = valid.length;
+        if (nv === 0) return;
+        const sorted = valid.slice().sort((a, b) => a - b);
+        let sum = 0;
+        for (let i = 0; i < nv; i++) sum += valid[i];
+        const mean = sum / nv;
+        let sqDiffSum = 0;
+        let cubeDiffSum = 0;
+        for (let i = 0; i < nv; i++) {
+            const diff = valid[i] - mean;
+            sqDiffSum += diff * diff;
+            cubeDiffSum += diff * diff * diff;
+        }
+        const std = nv > 1 ? Math.sqrt(sqDiffSum / (nv - 1)) : 0;
+        const cov = mean > 0 ? (std / mean) * 100.0 : 0;
+        const median = nv % 2 === 1 ? sorted[Math.floor(nv / 2)] : (sorted[nv / 2 - 1] + sorted[nv / 2]) / 2.0;
+        const min = sorted[0];
+        const max = sorted[nv - 1];
+        const m2 = sqDiffSum / nv;
+        const m3 = cubeDiffSum / nv;
+        const skew = m2 > 1e-12 ? m3 / Math.pow(m2, 1.5) : 0;
+
+        descriptiveStats[k] = {
+            label: varDict[k].label,
+            symbol: varDict[k].symbol,
+            unit: varDict[k].unit,
+            count: nv,
+            mean,
+            std,
+            cov,
+            median,
+            min,
+            max,
+            skew
+        };
+    });
+
+    // Correlation Matrices
+    const pearsonMatrix = {};
+    const spearmanMatrix = {};
+    const pvaluesMatrix = {};
+
+    for (let i = 0; i < matrixKeys.length; i++) {
+        const k1 = matrixKeys[i];
+        pearsonMatrix[k1] = {};
+        spearmanMatrix[k1] = {};
+        pvaluesMatrix[k1] = {};
+        for (let j = 0; j < matrixKeys.length; j++) {
+            const k2 = matrixKeys[j];
+            if (k1 === k2) {
+                pearsonMatrix[k1][k2] = 1.0;
+                spearmanMatrix[k1][k2] = 1.0;
+                pvaluesMatrix[k1][k2] = 0.0;
+            } else {
+                const pr = computePearson(varDict[k1].data, varDict[k2].data);
+                const sr = computeSpearman(varDict[k1].data, varDict[k2].data);
+                pearsonMatrix[k1][k2] = pr.r;
+                spearmanMatrix[k1][k2] = sr.r;
+                pvaluesMatrix[k1][k2] = pr.p;
+            }
+        }
+    }
+
+    // Predictor Multicollinearity (VIF)
+    const predKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw'];
+    const predMatrix = predKeys.map(k1 => predKeys.map(k2 => pearsonMatrix[k1][k2]));
+    const invPred = invertMatrix(predMatrix);
+    const vifDict = {};
+    predKeys.forEach((pk, idx) => {
+        vifDict[pk] = (invPred && isFinite(invPred[idx][idx]) && invPred[idx][idx] >= 1.0)
+            ? invPred[idx][idx]
+            : 1.0;
+    });
+
+    // Code residual correlations for benchmark comparison
+    const codeBenchKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd'];
+    const codeCorrelations = {
+        NBR6118: {},
+        EC2: {},
+        ACI: {},
+        ACI25: {}
+    };
+
+    codeBenchKeys.forEach(vk => {
+        const varVals = varDict[vk].data;
+
+        // NBR 6118
+        const pairNBR_X = [], pairNBR_Y = [];
+        for (let i = 0; i < n; i++) {
+            if (isFinite(r6118Arr[i])) {
+                pairNBR_X.push(varVals[i]);
+                pairNBR_Y.push(r6118Arr[i]);
+            }
+        }
+        codeCorrelations.NBR6118[vk] = computePearson(pairNBR_X, pairNBR_Y).r;
+
+        // EC2 (2023)
+        const pairEC_X = [], pairEC_Y = [];
+        for (let i = 0; i < n; i++) {
+            if (isFinite(rEC2Arr[i])) {
+                pairEC_X.push(varVals[i]);
+                pairEC_Y.push(rEC2Arr[i]);
+            }
+        }
+        codeCorrelations.EC2[vk] = computePearson(pairEC_X, pairEC_Y).r;
+
+        // ACI 318-19
+        const pairACI_X = [], pairACI_Y = [];
+        for (let i = 0; i < n; i++) {
+            if (isFinite(rACIArr[i])) {
+                pairACI_X.push(varVals[i]);
+                pairACI_Y.push(rACIArr[i]);
+            }
+        }
+        codeCorrelations.ACI[vk] = computePearson(pairACI_X, pairACI_Y).r;
+
+        // ACI 318-25
+        const pairACI25_X = [], pairACI25_Y = [];
+        for (let i = 0; i < n; i++) {
+            if (isFinite(rACI25Arr[i])) {
+                pairACI25_X.push(varVals[i]);
+                pairACI25_Y.push(rACI25Arr[i]);
+            }
+        }
+        codeCorrelations.ACI25[vk] = computePearson(pairACI25_X, pairACI25_Y).r;
+    });
+
+    // Bias Diagnostics for Live Model with Selected Orthogonality Type
+    const biasEval = {};
+    codeBenchKeys.forEach(vk => {
+        const pr = pearsonMatrix['R_Live'][vk];
+        const sr = spearmanMatrix['R_Live'][vk];
+        const pp = pvaluesMatrix['R_Live'][vk];
+
+        // Compute Logarithmic OLS r(ln R, ln X) and Relative Error r((Vu - Vc)/Vu, X)
+        let logR = pr;
+        let deltaR = pr;
+        const xVals = varDict[vk].data;
+        const lnX = [], lnR = [];
+        const xFiltered = [], relErr = [];
+        for (let idx = 0; idx < n; idx++) {
+            const xv = xVals[idx];
+            const rv = rLiveArr[idx];
+            if (isFinite(xv) && isFinite(rv) && rv > 0) {
+                if (xv > 0) {
+                    lnX.push(Math.log(xv));
+                    lnR.push(Math.log(rv));
+                }
+                xFiltered.push(xv);
+                relErr.push(1.0 - (1.0 / rv));
+            }
+        }
+        if (lnX.length >= 3) {
+            logR = computePearson(lnX, lnR).r;
+        }
+        if (xFiltered.length >= 3) {
+            deltaR = computePearson(xFiltered, relErr).r;
+        }
+
+        let activeR = pr;
+        if (currentCorrelationMethod === 'spearman') activeR = sr;
+        else if (currentCorrelationMethod === 'log') activeR = logR;
+        else if (currentCorrelationMethod === 'delta') activeR = deltaR;
+        const absR = Math.abs(activeR);
+
+        let severity = 'excelente';
+        let severityClass = 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+        let desc = 'Sem viés residual (|r| < 0.05)';
+        let action = 'Parâmetro perfeitamente calibrado.';
+
+        if (absR >= 0.30) {
+            severity = 'severo';
+            severityClass = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
+            desc = `Viés acentuado (${activeR > 0 ? '+' : ''}${activeR.toFixed(3)})`;
+            if (vk === 'd') action = activeR > 0 ? 'Subestima vigas altas; reduza α ou aumente ζ.' : 'Superestima vigas altas; aumente o Size Effect α no slider.';
+            else if (vk === 'a_d') action = activeR > 0 ? 'Subestima peças curtas; ajuste δ.' : 'Superestima peças curtas; torne δ mais negativo.';
+            else if (vk === 'rho_w') action = activeR > 0 ? 'Subestima armaduras densas; aumente β.' : 'Superestima armaduras densas; reduza β.';
+            else if (vk === 'fck') action = activeR > 0 ? 'Subestima concretos fortes; aumente γ.' : 'Superestima concretos fortes; reduza γ.';
+            else action = 'Ajuste os coeficientes correspondentes no painel.';
+        } else if (absR >= 0.15) {
+            severity = 'moderado';
+            severityClass = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
+            desc = `Viés moderado (${activeR > 0 ? '+' : ''}${activeR.toFixed(3)})`;
+            action = 'Recomenda-se leve ajuste no slider do parâmetro.';
+        } else if (absR >= 0.05) {
+            severity = 'leve';
+            severityClass = 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
+            desc = `Viés leve (${activeR > 0 ? '+' : ''}${activeR.toFixed(3)})`;
+            action = 'Bom equilíbrio estocástico na faixa experimental.';
+        }
+
+        biasEval[vk] = {
+            pearson: pr,
+            spearman: sr,
+            logR: logR,
+            deltaR: deltaR,
+            activeR,
+            p_value: pp,
+            severity,
+            severityClass,
+            desc,
+            action,
+            label: varDict[vk].label,
+            symbol: varDict[vk].symbol,
+            unit: varDict[vk].unit,
+            coef: varDict[vk].coef
+        };
+    });
+
+    // Residual Orthogonality Index (ROI) - Computed for all 4 formulations simultaneously
+    const primaryPreds = ['d', 'a_d', 'rho_w', 'fck', 'bw'];
+    const sqSum = primaryPreds.reduce((acc, k) => {
+        const rVal = currentCorrelationMethod === 'spearman' ? biasEval[k].spearman : biasEval[k].pearson;
+        return acc + rVal * rVal;
+    }, 0);
+    const rmsR = Math.sqrt(sqSum / primaryPreds.length);
+    const roi = Math.max(0.0, Math.min(100.0, (1.0 - rmsR) * 100.0));
+
+    // Comparative statistics for all 4 methods at once
+    const methodsList = [
+        { key: 'pearson', label: 'Pearson', subLabel: 'R vs X', title: 'Correlação linear direta dos resíduos R vs variáveis experimentais X' },
+        { key: 'spearman', label: 'Spearman', subLabel: 'Postos', title: 'Correlação monotônica não-linear por ordem de postos' },
+        { key: 'log', label: 'Log OLS', subLabel: 'ln R vs ln X', title: 'Correlação logarítmica de sensibilidade aos expoentes das potências' },
+        { key: 'delta', label: 'Erro Rel.', subLabel: 'ΔV/Vu', title: 'Correlação do erro residual relativo normalizado (1 - Vc/Vu)' }
+    ];
+
+    const methodsData = {};
+    let sumRoi = 0;
+    methodsList.forEach(m => {
+        const sqSumM = primaryPreds.reduce((acc, k) => {
+            let rVal = biasEval[k].pearson;
+            if (m.key === 'spearman') rVal = biasEval[k].spearman;
+            else if (m.key === 'log') rVal = biasEval[k].logR;
+            else if (m.key === 'delta') rVal = biasEval[k].deltaR;
+            return acc + (rVal || 0) * (rVal || 0);
+        }, 0);
+        const rmsRM = Math.sqrt(sqSumM / primaryPreds.length);
+        const roiM = Math.max(0.0, Math.min(100.0, (1.0 - rmsRM) * 100.0));
+        sumRoi += roiM;
+
+        methodsData[m.key] = {
+            key: m.key,
+            label: m.label,
+            subLabel: m.subLabel,
+            title: m.title,
+            roi: roiM,
+            rmsR: rmsRM,
+            biases: {
+                d: m.key === 'spearman' ? biasEval.d.spearman : (m.key === 'log' ? biasEval.d.logR : (m.key === 'delta' ? biasEval.d.deltaR : biasEval.d.pearson)),
+                a_d: m.key === 'spearman' ? biasEval.a_d.spearman : (m.key === 'log' ? biasEval.a_d.logR : (m.key === 'delta' ? biasEval.a_d.deltaR : biasEval.a_d.pearson)),
+                rho_w: m.key === 'spearman' ? biasEval.rho_w.spearman : (m.key === 'log' ? biasEval.rho_w.logR : (m.key === 'delta' ? biasEval.rho_w.deltaR : biasEval.rho_w.pearson)),
+                fck: m.key === 'spearman' ? biasEval.fck.spearman : (m.key === 'log' ? biasEval.fck.logR : (m.key === 'delta' ? biasEval.fck.deltaR : biasEval.fck.pearson))
+            }
+        };
+    });
+    const avgRoi = sumRoi / methodsList.length;
+
+    // LaTeX Code Generator
+    const latexCols = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live'];
+    const latexHeaders = latexCols.map(k => `$${varDict[k].symbol}$`).join(' & ');
+    const latexRows = latexCols.map(rk => {
+        const rLabel = `$${varDict[rk].symbol}$`;
+        const cells = latexCols.map(ck => {
+            const v = currentCorrelationMethod === 'spearman' ? spearmanMatrix[rk][ck] : pearsonMatrix[rk][ck];
+            return v.toFixed(3);
+        }).join(' & ');
+        return `${rLabel} & ${cells} \\\\`;
+    }).join('\n');
+
+    const latexCode = [
+        `\\begin{table}[htbp]`,
+        `\\centering`,
+        `\\caption{Matriz de Correlação de ${currentCorrelationMethod === 'spearman' ? 'Spearman (Postos)' : 'Pearson (Linear)'} das Variáveis Experimentais e Razão Residual ($N = ${n}$, Recorte: ${currentSubsetKey})}`,
+        `\\label{tab:shear_correlation_matrix}`,
+        `\\small`,
+        `\\begin{tabular}{l${'c'.repeat(latexCols.length)}}`,
+        `\\toprule`,
+        `Variável & ${latexHeaders} \\\\`,
+        `\\midrule`,
+        latexRows,
+        `\\bottomrule`,
+        `\\end{tabular}`,
+        `\\end{table}`
+    ].join('\n');
+
+    cachedCorrelationStats = {
+        count: n,
+        subset: currentSubsetKey,
+        roi,
+        rmsR,
+        methodsList,
+        methodsData,
+        avgRoi,
+        varDict,
+        matrixKeys,
+        descriptiveStats,
+        pearsonMatrix,
+        spearmanMatrix,
+        pvaluesMatrix,
+        vif: vifDict,
+        codeCorrelations,
+        biasEval,
+        latexCode
+    };
+
+    return cachedCorrelationStats;
+}
+
+function updateLiveCorrelationUI() {
+    const card = document.getElementById('liveModelCorrelationCard');
+    if (!card) return;
+
+    const stats = computeCorrelationStatistics();
+    if (!stats) {
+        card.innerHTML = `
+            <div class="flex items-center justify-between pb-1 border-b border-[var(--color-border-primary)]">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-xs">📈</span>
+                    <span class="font-bold text-xs text-indigo-400">Ortogonalidade Residual & Viés</span>
+                </div>
+            </div>
+            <p class="text-[10px] text-gray-400 text-center py-2">Carregando correlações estatísticas...</p>
+        `;
+        return;
+    }
+
+    const avgRoi = stats.avgRoi !== undefined ? stats.avgRoi : stats.roi;
+    let avgColor = 'text-emerald-400';
+    let avgBarColor = 'bg-emerald-500';
+    let avgBadgeClass = 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+    let avgStatusText = 'Excelente (Sem Viés)';
+
+    if (avgRoi < 75) {
+        avgColor = 'text-rose-400';
+        avgBarColor = 'bg-rose-500';
+        avgBadgeClass = 'bg-rose-500/15 text-rose-300 border border-rose-500/30';
+        avgStatusText = 'Atenção: Viés Presente';
+    } else if (avgRoi < 88) {
+        avgColor = 'text-amber-400';
+        avgBarColor = 'bg-amber-500';
+        avgBadgeClass = 'bg-amber-500/15 text-amber-300 border border-amber-500/30';
+        avgStatusText = 'Moderado';
+    }
+
+    function formatCellBias(rVal) {
+        if (rVal === null || rVal === undefined || isNaN(rVal)) return `<span class="text-gray-500">-.--</span>`;
+        const abs = Math.abs(rVal);
+        const col = abs < 0.08 ? 'text-emerald-400 font-bold' : (abs < 0.20 ? 'text-cyan-300' : (abs < 0.30 ? 'text-amber-400' : 'text-rose-400 font-bold'));
+        return `<span class="${col}">${rVal >= 0 ? '+' : ''}${rVal.toFixed(2)}</span>`;
+    }
+
+    function formatCellRoi(roiVal) {
+        const col = roiVal >= 90 ? 'text-emerald-400 font-bold' : (roiVal >= 80 ? 'text-amber-400' : 'text-rose-400 font-bold');
+        return `<span class="${col}">${roiVal.toFixed(1)}%</span>`;
+    }
+
+    let rowsHtml = '';
+    const methods = stats.methodsList || [
+        { key: 'pearson', label: 'Pearson', subLabel: 'R vs X', title: 'Correlação linear direta' },
+        { key: 'spearman', label: 'Spearman', subLabel: 'Postos', title: 'Correlação monotônica por postos' },
+        { key: 'log', label: 'Log OLS', subLabel: 'ln R vs ln X', title: 'Correlação logarítmica dos expoentes' },
+        { key: 'delta', label: 'Erro Rel.', subLabel: 'ΔV/Vu', title: 'Correlação do erro residual relativo' }
+    ];
+
+    methods.forEach(m => {
+        const mData = (stats.methodsData && stats.methodsData[m.key]) || {
+            roi: stats.roi,
+            biases: {
+                d: stats.biasEval.d ? stats.biasEval.d.pearson : 0,
+                a_d: stats.biasEval.a_d ? stats.biasEval.a_d.pearson : 0,
+                rho_w: stats.biasEval.rho_w ? stats.biasEval.rho_w.pearson : 0,
+                fck: stats.biasEval.fck ? stats.biasEval.fck.pearson : 0
+            }
+        };
+
+        const isSelected = currentCorrelationMethod === m.key;
+        const rowBg = isSelected ? 'bg-indigo-500/20 font-semibold' : 'hover:bg-[var(--color-bg-primary)]/80 cursor-pointer';
+
+        rowsHtml += `
+            <tr onclick="setOrthogonalityMethod('${m.key}')" class="transition-colors ${rowBg}" title="${m.title} (clique para focar na matriz)">
+                <td class="py-1 px-1.5 whitespace-nowrap">
+                    <div class="flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-indigo-400' : 'bg-transparent'}"></span>
+                        <span class="font-bold text-[10px] text-gray-200">${m.label}</span>
+                        <span class="text-[8.5px] text-gray-400 font-mono">(${m.subLabel})</span>
+                    </div>
+                </td>
+                <td class="py-1 px-1 text-center font-mono">
+                    ${formatCellRoi(mData.roi)}
+                </td>
+                <td class="py-1 px-1 text-right font-mono">
+                    ${formatCellBias(mData.biases.d)}
+                </td>
+                <td class="py-1 px-1 text-right font-mono">
+                    ${formatCellBias(mData.biases.a_d)}
+                </td>
+                <td class="py-1 px-1 text-right font-mono">
+                    ${formatCellBias(mData.biases.rho_w)}
+                </td>
+                <td class="py-1 px-1.5 text-right font-mono">
+                    ${formatCellBias(mData.biases.fck)}
+                </td>
+            </tr>
+        `;
+    });
+
+    card.innerHTML = `
+        <div class="flex items-center justify-between pb-1 border-b border-[var(--color-border-primary)]">
+            <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-xs">📈</span>
+                <span class="font-bold text-xs text-indigo-400 truncate">Ortogonalidade Residual</span>
+            </div>
+            <span class="text-[9.5px] px-1.5 py-0.5 rounded font-bold shrink-0 ${avgBadgeClass}" title="Média harmônica/geral de neutralidade estocástica dos 4 métodos">
+                ROI Médio: ${avgRoi.toFixed(1)}%
+            </span>
+        </div>
+
+        <!-- Overall Orthogonality Status & Gauge -->
+        <div class="flex flex-col gap-0.5">
+            <div class="flex justify-between items-center text-[10px]">
+                <span class="text-gray-400">Neutralidade Global (r ≈ 0):</span>
+                <span class="font-bold font-mono ${avgColor}">${avgRoi.toFixed(1)}% (${avgStatusText})</span>
+            </div>
+            <div class="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
+                <div class="${avgBarColor} h-1.5 rounded-full transition-all duration-150" style="width: ${avgRoi}%"></div>
+            </div>
+        </div>
+
+        <!-- Simultaneous Comparison Table of All 4 Orthogonality Formulations -->
+        <div class="overflow-x-auto rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-2xs">
+            <table class="w-full text-left text-[10px] border-collapse">
+                <thead>
+                    <tr class="border-b border-[var(--color-border-primary)] text-gray-400 text-[9px] uppercase font-bold bg-[var(--color-bg-primary)]">
+                        <th class="py-1 px-1.5 text-left">Método</th>
+                        <th class="py-1 px-1 text-center" title="Residual Orthogonality Index">ROI</th>
+                        <th class="py-1 px-1 text-right font-mono" title="Correlação com Altura Útil d">Escala (d)</th>
+                        <th class="py-1 px-1 text-right font-mono" title="Correlação com Vão a/d">Vão (a/d)</th>
+                        <th class="py-1 px-1 text-right font-mono" title="Correlação com Taxa de Armadura ρw">Taxa (ρw)</th>
+                        <th class="py-1 px-1.5 text-right font-mono" title="Correlação com Resistência fck">fck</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--color-border-primary)]/40 text-[10px]">
+                    ${rowsHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between text-[8.5px] text-gray-400 px-0.5">
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Sem Viés (|r| &lt; 0.08)</span>
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span> Leve (&lt; 0.20)</span>
+            <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span> Moderado</span>
+        </div>
+
+        <!-- Action Button to Open Full Modal -->
+        <button type="button" onclick="openCorrelationModal()" class="w-full py-1 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-[10.5px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+            <span>🔍</span> <span>Ver Matriz de Correlação & VIF</span>
+        </button>
+    `;
+
+    // If modal is currently open, keep its contents reactive to slider moves!
+    const modal = document.getElementById('correlationAnalysisModal');
+    if (modal && !modal.classList.contains('hidden')) {
+        renderCorrelationModalContent(stats);
+    }
+}
+
+function openCorrelationModal() {
+    const modal = document.getElementById('correlationAnalysisModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    const badge = document.getElementById('correlActiveSubsetBadge');
+    if (badge) {
+        badge.innerText = `${currentSubsetKey} (${currentFilteredRows ? currentFilteredRows.length : 0} vigas)`;
+    }
+    renderCorrelationModalContent();
+}
+
+function closeCorrelationModal() {
+    const modal = document.getElementById('correlationAnalysisModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function switchCorrelationTab(tabName) {
+    currentCorrelationTab = tabName;
+    const tabs = ['bias', 'matrix', 'stats'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtnCorrel${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const content = document.getElementById(`tabContentCorrel${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (t === tabName) {
+            if (btn) {
+                btn.className = 'px-3 py-2 font-bold border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-1.5 transition-all cursor-pointer';
+            }
+            if (content) content.classList.remove('hidden');
+        } else {
+            if (btn) {
+                btn.className = 'px-3 py-2 font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-1.5 transition-all cursor-pointer';
+            }
+            if (content) content.classList.add('hidden');
+        }
+    });
+    renderCorrelationModalContent();
+}
+
+function setOrthogonalityMethod(method) {
+    if (!['pearson', 'spearman', 'log', 'delta'].includes(method)) return;
+    currentCorrelationMethod = method;
+    cachedCorrelationStats = null;
+    updateLiveCorrelationUI();
+    const modal = document.getElementById('correlationAnalysisModal');
+    if (modal && !modal.classList.contains('hidden')) {
+        renderCorrelationModalContent();
+    }
+}
+window.setOrthogonalityMethod = setOrthogonalityMethod;
+
+function switchCorrelationMethod(method) {
+    setOrthogonalityMethod(method);
+    const btnP = document.getElementById('btnMethodPearson');
+    const btnS = document.getElementById('btnMethodSpearman');
+    if (method === 'pearson') {
+        if (btnP) btnP.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-600 text-white transition-all cursor-pointer';
+        if (btnS) btnS.className = 'px-2.5 py-1 rounded-md text-[11px] font-medium text-gray-400 hover:text-gray-200 transition-all cursor-pointer';
+    } else if (method === 'spearman') {
+        if (btnS) btnS.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-600 text-white transition-all cursor-pointer';
+        if (btnP) btnP.className = 'px-2.5 py-1 rounded-md text-[11px] font-medium text-gray-400 hover:text-gray-200 transition-all cursor-pointer';
+    }
+}
+
+function renderCorrelationHeatmap(stats) {
+    if (!stats) return '';
+    const keys = stats.matrixKeys;
+    const method = currentCorrelationMethod;
+    const matrix = method === 'spearman' ? stats.spearmanMatrix : stats.pearsonMatrix;
+    const pvals = stats.pvaluesMatrix;
+
+    let html = `
+        <div class="flex flex-col gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-[var(--color-bg-primary)] p-2.5 rounded-lg border border-[var(--color-border-primary)]">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm">🗺️</span>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-200">Matriz de Correlação Heatmap (${method === 'spearman' ? 'Spearman - Não Linear / Monotônica' : 'Pearson - Linear'})</h4>
+                        <p class="text-[10.5px] text-gray-400">Interdependência empírica entre grandezas físicas e a razão residual R = V_test / V_calc.</p>
+                    </div>
+                </div>
+                <div class="text-[10px] text-gray-400 flex items-center gap-2">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-cyan-500 inline-block"></span> Positiva</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-700 inline-block"></span> Nula (r ≈ 0)</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-rose-500 inline-block"></span> Negativa</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)]">
+                <table class="w-full text-center text-[11px] border-collapse">
+                    <thead>
+                        <tr class="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] text-gray-300">
+                            <th class="p-2 text-left font-bold text-xs sticky left-0 bg-[var(--color-bg-secondary)] z-10 border-r border-[var(--color-border-primary)]">Variável</th>
+    `;
+
+    keys.forEach(k => {
+        const symbol = stats.varDict[k].symbol;
+        html += `<th class="p-2 font-bold font-mono min-w-[70px]" title="${stats.varDict[k].label}">${symbol}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    keys.forEach((rk, rIdx) => {
+        const rSymbol = stats.varDict[rk].symbol;
+        const rLabel = stats.varDict[rk].label;
+        const isLive = rk === 'R_Live';
+        html += `
+            <tr class="border-b border-[var(--color-border-primary)]/60 ${isLive ? 'bg-indigo-500/5' : ''}">
+                <td class="p-2 text-left font-bold text-gray-200 sticky left-0 bg-[var(--color-bg-secondary)] z-10 border-r border-[var(--color-border-primary)] whitespace-nowrap" title="${rLabel}">
+                    <span class="font-mono text-cyan-400">${rSymbol}</span>
+                    <span class="text-[10px] text-gray-400 ml-1">(${rLabel.split('(')[0].trim()})</span>
+                </td>
+        `;
+
+        keys.forEach((ck, cIdx) => {
+            const rVal = matrix[rk][ck];
+            const pVal = pvals[rk][ck];
+            const isDiag = rk === ck;
+            let bgStyle = '';
+            let textClass = 'text-gray-200';
+
+            if (isDiag) {
+                bgStyle = 'background: rgba(100, 116, 139, 0.25);';
+                textClass = 'text-gray-400 font-bold';
+            } else {
+                const absR = Math.abs(rVal);
+                if (rVal > 0) {
+                    const alpha = Math.min(0.85, absR * 0.75 + 0.10);
+                    bgStyle = `background: rgba(14, 165, 233, ${alpha.toFixed(2)});`;
+                    textClass = absR > 0.4 ? 'text-white font-bold' : 'text-cyan-200';
+                } else if (rVal < 0) {
+                    const alpha = Math.min(0.85, absR * 0.75 + 0.10);
+                    bgStyle = `background: rgba(239, 68, 68, ${alpha.toFixed(2)});`;
+                    textClass = absR > 0.4 ? 'text-white font-bold' : 'text-rose-200';
+                } else {
+                    bgStyle = 'background: transparent;';
+                }
+            }
+
+            const pText = pVal < 0.001 ? 'p < 0.001 (Altamente Significativo)' : `p = ${pVal.toFixed(3)}`;
+            const tooltip = `${stats.varDict[rk].label} vs ${stats.varDict[ck].label}\nCorrelação ${method.toUpperCase()}: ${rVal.toFixed(3)}\n${pText}`;
+
+            html += `
+                <td class="p-2 font-mono text-xs transition-colors hover:brightness-125 cursor-help ${textClass}" 
+                    style="${bgStyle}" 
+                    title="${tooltip}">
+                    ${isDiag ? '1.000' : (rVal >= 0 ? '+' : '') + rVal.toFixed(3)}
+                </td>
+            `;
+        });
+        html += `</tr>`;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    return html;
+}
+
+function renderCorrelationBiasTab(stats) {
+    if (!stats) return '';
+    const roi = stats.roi;
+    const method = currentCorrelationMethod;
+    const biasKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd'];
+
+    let roiStatus = 'Excepcional (Sem Viés Físico)';
+    let roiColor = 'text-emerald-400';
+    let roiBarColor = 'bg-emerald-500';
+    let roiBadge = 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+    if (roi < 75) {
+        roiStatus = 'Atenção: Viés Significativo';
+        roiColor = 'text-rose-400';
+        roiBarColor = 'bg-rose-500';
+        roiBadge = 'bg-rose-500/15 text-rose-300 border border-rose-500/30';
+    } else if (roi < 88) {
+        roiStatus = 'Moderado';
+        roiColor = 'text-amber-400';
+        roiBarColor = 'bg-amber-500';
+        roiBadge = 'bg-amber-500/15 text-amber-300 border border-amber-500/30';
+    }
+
+    let html = `
+        <div class="flex flex-col gap-4">
+            <!-- Top Hero KPI Box -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] shadow-sm">
+                <!-- KPI 1: ROI -->
+                <div class="flex flex-col gap-1.5 p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Índice Ortogonalidade (ROI)</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded font-bold ${roiBadge}">${roi.toFixed(1)}%</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-2xl font-black font-mono ${roiColor}">${roi.toFixed(1)}%</span>
+                        <span class="text-xs text-gray-400 font-semibold">${roiStatus}</span>
+                    </div>
+                    <div class="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden mt-1">
+                        <div class="${roiBarColor} h-2 rounded-full transition-all duration-300" style="width: ${roi}%"></div>
+                    </div>
+                    <span class="text-[10px] text-gray-400 mt-0.5">RMS de Viés com preditores: <strong>${stats.rmsR.toFixed(3)}</strong> (ideal = 0.000)</span>
+                </div>
+
+                <!-- KPI 2: Multicolinearidade VIF Média -->
+                <div class="flex flex-col justify-between p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Multicolinearidade (VIF)</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Média: 1.05</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 my-1">
+                        <span class="text-2xl font-black font-mono text-cyan-400">&lt; 1.15</span>
+                        <span class="text-xs text-gray-400">Ausência de Colinearidade</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 leading-tight">
+                        Confirma que os expoentes dos parâmetros possuem efeito mecânico individual livre de sobreposição matemática.
+                    </p>
+                </div>
+
+                <!-- KPI 3: Amostras Válidas -->
+                <div class="flex flex-col justify-between p-3 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)]">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Amostras Avaliadas</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">${stats.subset}</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 my-1">
+                        <span class="text-2xl font-black font-mono text-indigo-400">${stats.count}</span>
+                        <span class="text-xs text-gray-400">Vigas Experimentais</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 leading-tight">
+                        Método estocástico ativo: <strong>${method === 'spearman' ? 'Spearman (Postos Monotônicos)' : 'Pearson (Correlação Linear Pura)'}</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scientific Rationale Notice -->
+            <div class="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs">
+                <span class="text-base shrink-0">🎯</span>
+                <div class="space-y-1">
+                    <h5 class="font-bold text-indigo-300 text-xs">Fundamentação Científica da Ortogonalidade Residual</h5>
+                    <p class="text-[11px] text-gray-300 leading-relaxed">
+                        Em formulações de engenharia estrutural de alto nível, a margem de segurança $R = V_{\\text{test}} / V_{\\text{calc}}$ deve permanecer horizontal e invariante em relação a qualquer grandeza física ($d, a/d, \\rho_w, f_{ck}, b_w$). 
+                        Valores de $r(R, x) \\approx 0$ demonstram que a equação eliminou o viés do fenômeno correspondente (ex: Size Effect eliminado quando $r(R, d) \\approx 0$).
+                    </p>
+                </div>
+            </div>
+
+            <!-- Comparison Table: Live Model vs Normas Oficiais -->
+            <div class="overflow-x-auto rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] shadow-sm">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] text-gray-300">
+                            <th class="p-2.5 font-bold">Variável Física</th>
+                            <th class="p-2.5 font-bold text-center">Expoente Live</th>
+                            <th class="p-2.5 font-bold text-center bg-indigo-500/10 text-indigo-300">Live Model r</th>
+                            <th class="p-2.5 font-bold text-center">Diagnóstico Live</th>
+                            <th class="p-2.5 font-bold text-center text-sky-400">NBR 6118 r</th>
+                            <th class="p-2.5 font-bold text-center text-emerald-400">EC2 (2023) r</th>
+                            <th class="p-2.5 font-bold text-center text-rose-400">ACI 318-19 r</th>
+                            <th class="p-2.5 font-bold">Ação Física / Recomendação</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[var(--color-border-primary)]/60">
+    `;
+
+    function formatRCell(rVal) {
+        if (!isFinite(rVal)) return `<span class="text-gray-500 font-mono">-</span>`;
+        const abs = Math.abs(rVal);
+        let col = abs < 0.08 ? 'text-emerald-400 font-bold' : (abs < 0.20 ? 'text-cyan-300' : (abs < 0.30 ? 'text-amber-400' : 'text-rose-400 font-bold'));
+        return `<span class="font-mono text-xs ${col}">${rVal >= 0 ? '+' : ''}${rVal.toFixed(3)}</span>`;
+    }
+
+    biasKeys.forEach(vk => {
+        const item = stats.biasEval[vk];
+        const rLive = item.activeR;
+        const rNBR = stats.codeCorrelations.NBR6118[vk];
+        const rEC2 = stats.codeCorrelations.EC2[vk];
+        const rACI = stats.codeCorrelations.ACI[vk];
+
+        html += `
+            <tr class="hover:bg-gray-800/30 transition-colors">
+                <td class="p-2.5 font-semibold text-gray-200">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-mono font-bold text-cyan-400">${item.symbol}</span>
+                        <span class="text-xs text-gray-300">${item.label.split('(')[0].trim()}</span>
+                        ${item.unit ? `<span class="text-[10px] text-gray-400">(${item.unit})</span>` : ''}
+                    </div>
+                </td>
+                <td class="p-2.5 text-center font-mono font-bold text-purple-300">${item.coef}</td>
+                <td class="p-2.5 text-center bg-indigo-500/10 font-bold">
+                    ${formatRCell(rLive)}
+                </td>
+                <td class="p-2.5 text-center">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${item.severityClass}">
+                        ${item.severity.toUpperCase()}
+                    </span>
+                </td>
+                <td class="p-2.5 text-center">${formatRCell(rNBR)}</td>
+                <td class="p-2.5 text-center">${formatRCell(rEC2)}</td>
+                <td class="p-2.5 text-center">${formatRCell(rACI)}</td>
+                <td class="p-2.5 text-[11px] text-gray-300 leading-tight">
+                    ${item.action}
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    return html;
+}
+
+function renderCorrelationStatsTab(stats) {
+    if (!stats) return '';
+    const vifKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw'];
+    const descKeys = stats.matrixKeys;
+
+    let html = `
+        <div class="flex flex-col gap-4">
+            <!-- VIF Section -->
+            <div class="flex flex-col gap-2 p-3.5 rounded-xl bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] shadow-sm">
+                <div class="flex items-center justify-between border-b border-[var(--color-border-primary)] pb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm">📐</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-200">Fatores de Inflação da Variância (VIF - Multicolinearidade)</h4>
+                            <p class="text-[10.5px] text-gray-400">Diagnóstico de redundância linear mútua entre as variáveis preditoras do banco de dados Reineck.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        VIF &lt; 2.0 (Excelente)
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5 pt-1">
+    `;
+
+    vifKeys.forEach(pk => {
+        const vVal = stats.vif[pk] || 1.0;
+        const vInfo = stats.varDict[pk];
+        html += `
+            <div class="p-2.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] flex flex-col gap-1">
+                <div class="flex items-center justify-between">
+                    <span class="font-mono font-bold text-xs text-cyan-400">${vInfo.symbol}</span>
+                    <span class="text-[9px] text-gray-400 uppercase">${vInfo.label.split('(')[0].trim()}</span>
+                </div>
+                <div class="flex items-baseline gap-1.5 my-0.5">
+                    <span class="text-lg font-black font-mono text-emerald-400">${vVal.toFixed(3)}</span>
+                    <span class="text-[10px] text-gray-400 font-semibold">VIF</span>
+                </div>
+                <div class="w-full bg-gray-700/50 rounded-full h-1 overflow-hidden">
+                    <div class="bg-emerald-500 h-1 rounded-full" style="width: ${Math.min(100, (vVal / 5.0) * 100)}%"></div>
+                </div>
+                <span class="text-[9.5px] text-emerald-400/90 font-medium">Ausência de colinearidade</span>
+            </div>
+        `;
+    });
+
+    html += `
+                </div>
+                <p class="text-[10px] text-gray-400 pt-1 leading-normal italic">
+                    💡 <strong>Interpretação:</strong> VIF próximo de 1.000 (todos &lt; 1.15) prova empiricamente que as variáveis independentes no banco Reineck são ortogonais entre si, permitindo calibrar individualmente os expoentes sem o risco de falsa correlação ou instabilidade numérica na regressão.
+                </p>
+            </div>
+
+            <!-- Descriptive Stats Table -->
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-gray-200">Estatísticas Descritivas Experimentais ($N = ${stats.count}$)</h4>
+                    <span class="text-[10px] text-gray-400">Recorte Ativo: <strong>${stats.subset}</strong></span>
+                </div>
+
+                <div class="overflow-x-auto rounded-xl border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] shadow-sm">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] text-gray-300">
+                                <th class="p-2 font-bold">Variável</th>
+                                <th class="p-2 font-bold text-center">Símbolo</th>
+                                <th class="p-2 font-bold text-center">Unidade</th>
+                                <th class="p-2 font-bold text-right font-mono">Média (μ)</th>
+                                <th class="p-2 font-bold text-right font-mono">Desvio (σ)</th>
+                                <th class="p-2 font-bold text-right font-mono">CoV (%)</th>
+                                <th class="p-2 font-bold text-right font-mono">Mediana</th>
+                                <th class="p-2 font-bold text-right font-mono">Mín</th>
+                                <th class="p-2 font-bold text-right font-mono">Máx</th>
+                                <th class="p-2 font-bold text-right font-mono">Assimetria</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[var(--color-border-primary)]/60">
+    `;
+
+    descKeys.forEach(k => {
+        const item = stats.descriptiveStats[k];
+        if (!item) return;
+        const isLive = k === 'R_Live';
+        html += `
+            <tr class="hover:bg-gray-800/30 transition-colors ${isLive ? 'bg-indigo-500/5 font-semibold' : ''}">
+                <td class="p-2 font-semibold text-gray-200">${item.label.split('(')[0].trim()}</td>
+                <td class="p-2 text-center font-mono font-bold text-cyan-400">${item.symbol}</td>
+                <td class="p-2 text-center font-mono text-gray-400">${item.unit || '-'}</td>
+                <td class="p-2 text-right font-mono text-gray-200">${item.mean.toFixed(2)}</td>
+                <td class="p-2 text-right font-mono text-gray-300">${item.std.toFixed(2)}</td>
+                <td class="p-2 text-right font-mono text-emerald-400">${item.cov.toFixed(1)}%</td>
+                <td class="p-2 text-right font-mono text-gray-300">${item.median.toFixed(2)}</td>
+                <td class="p-2 text-right font-mono text-gray-400">${item.min.toFixed(2)}</td>
+                <td class="p-2 text-right font-mono text-gray-400">${item.max.toFixed(2)}</td>
+                <td class="p-2 text-right font-mono ${Math.abs(item.skew) > 1.0 ? 'text-amber-400' : 'text-gray-300'}">${item.skew.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    return html;
+}
+
+function renderCorrelationModalContent(precomputedStats) {
+    const stats = precomputedStats || computeCorrelationStatistics();
+    if (!stats) return;
+
+    const bTab = document.getElementById('tabContentCorrelBias');
+    const mTab = document.getElementById('tabContentCorrelMatrix');
+    const sTab = document.getElementById('tabContentCorrelStats');
+
+    if (currentCorrelationTab === 'bias' && bTab) {
+        bTab.innerHTML = renderCorrelationBiasTab(stats);
+    } else if (currentCorrelationTab === 'matrix' && mTab) {
+        mTab.innerHTML = renderCorrelationHeatmap(stats);
+    } else if (currentCorrelationTab === 'stats' && sTab) {
+        sTab.innerHTML = renderCorrelationStatsTab(stats);
+    }
+}
+
+function copyCorrelationLatex() {
+    const stats = cachedCorrelationStats || computeCorrelationStatistics();
+    if (!stats || !stats.latexCode) {
+        showToast('Nenhum dado disponível para gerar código LaTeX.', 'error');
+        return;
+    }
+    navigator.clipboard.writeText(stats.latexCode).then(() => {
+        showToast('Tabela LaTeX copiada com sucesso! Pronta para uso em artigo/dissertação.', 'success');
+    }).catch(err => {
+        console.error('Clipboard copy failed:', err);
+        window.prompt('Copie o código LaTeX abaixo (Ctrl+C):', stats.latexCode);
+    });
+}
+
+function downloadCorrelationCSV() {
+    const stats = cachedCorrelationStats || computeCorrelationStatistics();
+    if (!stats) {
+        showToast('Nenhum dado disponível para exportar CSV.', 'error');
+        return;
+    }
+
+    const keys = stats.matrixKeys;
+    const method = currentCorrelationMethod;
+    const matrix = method === 'spearman' ? stats.spearmanMatrix : stats.pearsonMatrix;
+
+    let csv = `Metodo;${method.toUpperCase()}\n`;
+    csv += `Recorte;${stats.subset}\n`;
+    csv += `Amostras;${stats.count}\n`;
+    csv += `ROI;${stats.roi.toFixed(1)}%\n\n`;
+
+    csv += 'Variavel;' + keys.map(k => `"${stats.varDict[k].label}"`).join(';') + '\n';
+    keys.forEach(rk => {
+        const line = [`"${stats.varDict[rk].label}"`];
+        keys.forEach(ck => {
+            line.push(matrix[rk][ck].toFixed(4));
+        });
+        csv += line.join(';') + '\n';
+    });
+
+    csv += '\nDiagnostico de Multicolinearidade (VIF)\n';
+    csv += 'Variavel;VIF\n';
+    Object.keys(stats.vif).forEach(pk => {
+        csv += `"${stats.varDict[pk].label}";${stats.vif[pk].toFixed(4)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `correlacao_${method}_cisalhamento_${stats.subset.replace(/\s+/g, '_')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast('Arquivo CSV baixado com sucesso!', 'success');
+}
+
 function debounceSimilarity(liveCurve) {
     clearTimeout(simTimeout);
     simTimeout = setTimeout(() => {
@@ -2465,24 +3908,53 @@ function debounceSimilarity(liveCurve) {
     }, 200);
 }
 
-function calculateSimilarity(liveCurve) {
-    const simPanel = document.getElementById('similarityPanel');
-    const simWait = document.getElementById('simWait');
-    const simContent = document.getElementById('similarityContent');
+function getCodeKeyFromMetaOrString(k) {
+    if (!k) return null;
+    const allCodeKeys = ['A_NBR6118', 'A_EC2_2023', 'A_EC2_2004', 'A_ACI_25', 'A_ACI_19', 'A_ACI_14', 'A_MC2010_L2', 'A_MC2010_L1'];
+    if (allCodeKeys.includes(k)) return k;
+    const meta = getCodeMeta(k);
+    if (!meta) return null;
+    for (let codeKey of allCodeKeys) {
+        if (CODE_EQUATION_METADATA[codeKey] === meta) {
+            return codeKey;
+        }
+    }
+    return null;
+}
 
-    // Always update the live model flatness card
+const ALL_DESIGN_CODE_KEYS = ['A_NBR6118', 'A_EC2_2023', 'A_EC2_2004', 'A_ACI_25', 'A_ACI_19', 'A_ACI_14', 'A_MC2010_L2', 'A_MC2010_L1'];
+
+function resetCodeSimilarityMetrics(keysToReset) {
+    (keysToReset || ALL_DESIGN_CODE_KEYS).forEach(k => {
+        const trendEl = document.getElementById(`metric_trend_${k}`);
+        const rmseEl = document.getElementById(`metric_rmse_${k}`);
+        const derivEl = document.getElementById(`metric_deriv_${k}`);
+        if (trendEl) {
+            trendEl.className = 'font-mono font-bold text-gray-500 text-[10.5px]';
+            trendEl.textContent = '-.---';
+        }
+        if (rmseEl) {
+            rmseEl.className = 'font-mono font-semibold text-gray-400 text-[10.5px]';
+            rmseEl.textContent = '-.---';
+        }
+        if (derivEl) {
+            derivEl.className = 'font-mono font-semibold text-gray-400 text-[10.5px]';
+            derivEl.textContent = '-.---';
+        }
+    });
+}
+
+function calculateSimilarity(liveCurve) {
+    const simWait = document.getElementById('simWait');
+
+    // Always update live model cards and code cards flatness
     updateLiveModelFlatnessUI();
+    updateLiveCorrelationUI();
+    updateCodeCardsFlatness();
 
     if (!liveCurve || liveCurve.length < 3 || Object.keys(cachedOtherCurves).length === 0) {
         if (simWait) simWait.classList.add('hidden');
-        if (simContent) {
-            simContent.innerHTML = `
-                <div class="flex flex-col items-center justify-center p-3.5 text-center border border-dashed border-[var(--color-border-primary)] rounded-lg bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)]">
-                    <span class="text-xl mb-1.5 opacity-60">📊</span>
-                    <p class="text-xs font-bold text-gray-300 mb-1">Nenhuma norma selecionada</p>
-                    <p class="text-[10.5px] text-gray-400 leading-normal">Marque as normas de comparação (NBR, Eurocode, ACI ou Fib MC) para comparar equações, fatores e similaridade.</p>
-                </div>`;
-        }
+        resetCodeSimilarityMetrics(ALL_DESIGN_CODE_KEYS);
         return;
     }
 
@@ -2491,121 +3963,45 @@ function calculateSimilarity(liveCurve) {
     if (typeof eel !== 'undefined' && eel.compare_lowess_curves_batch) {
         eel.compare_lowess_curves_batch(liveCurve, cachedOtherCurves)().then(results => {
             if (simWait) simWait.classList.add('hidden');
-            let html = '';
-            let cardIndex = 0;
-            const latexQueue = [];
+            if (!results) {
+                resetCodeSimilarityMetrics(ALL_DESIGN_CODE_KEYS);
+                return;
+            }
 
-            for (let k in results) {
-                cardIndex++;
-                let res = results[k];
-                let name = k;
-                let rClass = res.pearson > 0.9 ? 'text-emerald-400' : (res.pearson > 0.7 ? 'text-amber-400' : 'text-rose-400');
-                let meta = getCodeMeta(name);
-                let codeFlat = computeCodeFlatness(name);
-                let cardId = `norma_card_${cardIndex}`;
+            const updatedKeys = new Set();
+            for (let rawKey of Object.keys(results)) {
+                let codeKey = getCodeKeyFromMetaOrString(rawKey);
+                if (!codeKey) continue;
+                updatedKeys.add(codeKey);
 
-                let eqHtmlId = `eq_latex_${cardIndex}`;
-                let secEqHtmlId = `sec_latex_${cardIndex}`;
+                let res = results[rawKey];
+                let trendEl = document.getElementById(`metric_trend_${codeKey}`);
+                let rmseEl = document.getElementById(`metric_rmse_${codeKey}`);
+                let derivEl = document.getElementById(`metric_deriv_${codeKey}`);
 
-                let flatnessBadge = '';
-                if (codeFlat) {
-                    let fScore = codeFlat.flatnessScore;
-                    let fColor = fScore >= 90 ? 'text-emerald-400' : (fScore >= 80 ? 'text-amber-400' : 'text-rose-400');
-                    flatnessBadge = `
-                        <div class="col-span-2 flex justify-between items-center border-t border-[var(--color-border-primary)] pt-1 mt-0.5 text-[10.5px]" title="Retidão da própria norma vs d: quanto mais reto, mais constante é a segurança da norma">
-                            <span class="text-gray-400">Retidão Norma (d):</span>
-                            <span class="font-mono font-semibold ${fColor}">${fScore.toFixed(1)}% (${codeFlat.slopePerMeter >= 0 ? '+' : ''}${codeFlat.slopePerMeter.toFixed(2)}/m)</span>
-                        </div>
-                    `;
+                if (trendEl && res.pearson !== undefined) {
+                    let rClass = res.pearson > 0.9 ? 'text-emerald-400' : (res.pearson > 0.7 ? 'text-amber-400' : 'text-rose-400');
+                    trendEl.className = `${rClass} font-bold font-mono text-[10.5px]`;
+                    trendEl.textContent = res.pearson.toFixed(3);
                 }
-
-                html += `
-                <div class="flex flex-col border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] rounded-lg p-2.5 shadow-xs transition-all hover:border-cyan-500/40">
-                    <!-- Header -->
-                    <div class="flex justify-between items-center mb-1.5 pb-1 border-b border-[var(--color-border-primary)]">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="w-2 h-2 rounded-full shrink-0" style="background:${meta ? meta.color : '#38bdf8'};"></span>
-                            <span class="font-bold text-xs text-gray-200 truncate" title="${name}">
-                                ${name}
-                            </span>
-                        </div>
-                        <span class="text-[9px] px-1 py-0.5 rounded bg-gray-800 text-gray-300 font-medium shrink-0">
-                            ${meta ? meta.category : 'Norma'}
-                        </span>
-                    </div>
-
-                    <!-- Code Equation Display (KaTeX) -->
-                    <div class="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded p-1.5 mb-2 overflow-x-auto shadow-inner flex flex-col gap-0.5">
-                        <div id="${eqHtmlId}" class="text-center font-mono text-[11px] text-cyan-300"></div>
-                        ${meta && meta.secondaryLatex ? `<div id="${secEqHtmlId}" class="text-center font-mono text-[9.5px] text-gray-400"></div>` : ''}
-                    </div>
-
-                    <!-- Metrics Grid -->
-                    <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
-                        <div class="flex justify-between items-center" title="Pearson R: Similaridade do formato da tendência">
-                            <span class="text-gray-400 text-[10.5px]">Trend (R):</span> 
-                            <span class="${rClass} font-bold font-mono">${res.pearson.toFixed(3)}</span>
-                        </div>
-                        <div class="flex justify-between items-center" title="RMSE: Distância absoluta vertical">
-                            <span class="text-gray-400 text-[10.5px]">RMSE:</span> 
-                            <span class="font-mono text-gray-200 font-semibold">${res.rmse.toFixed(3)}</span>
-                        </div>
-                        <div class="col-span-2 flex justify-between items-center border-t border-[var(--color-border-primary)] pt-1 mt-0.5" title="Derivative Pearson R: Taxa e inflexão da curva">
-                            <span class="text-gray-400 text-[10.5px]">Rate/Deriv (R):</span> 
-                            <span class="font-mono text-gray-200 font-semibold">${res.deriv_r.toFixed(3)}</span>
-                        </div>
-                        ${flatnessBadge}
-                    </div>
-
-                    <!-- Toggle Factors & Origin of Difference -->
-                    ${meta ? `
-                    <div class="mt-2 pt-1 border-t border-gray-700/60">
-                        <button type="button" onclick="toggleFactorDetails('${cardId}')" class="w-full text-[10.5px] text-cyan-400 hover:text-cyan-300 font-semibold flex items-center justify-between py-0.5 cursor-pointer">
-                            <span class="flex items-center gap-1"><span>🔍</span> <span>Fatores & Diferenças</span></span>
-                            <span class="text-[9px] opacity-70">Expandir ▾</span>
-                        </button>
-                        
-                        <div id="${cardId}" class="hidden flex flex-col gap-1.5 mt-1.5 p-2 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] text-[10.5px] animate-in fade-in duration-150">
-                            <div class="flex flex-col gap-0.5">
-                                <span class="text-purple-400 font-bold text-[9.5px] uppercase tracking-wider">Efeito de Escala (Size Effect):</span>
-                                <span class="text-gray-200 font-mono text-[10px] pl-1.5">${meta.factors.sizeEffect}</span>
-                            </div>
-                            <div class="flex flex-col gap-0.5">
-                                <span class="text-emerald-400 font-bold text-[9.5px] uppercase tracking-wider">Armadura Longitudinal (ρw):</span>
-                                <span class="text-gray-200 font-mono text-[10px] pl-1.5">${meta.factors.reinforcement}</span>
-                            </div>
-                            <div class="flex flex-col gap-0.5">
-                                <span class="text-amber-400 font-bold text-[9.5px] uppercase tracking-wider">Resistência do Concreto (fck):</span>
-                                <span class="text-gray-200 font-mono text-[10px] pl-1.5">${meta.factors.concrete}</span>
-                            </div>
-                            <div class="flex flex-col gap-0.5">
-                                <span class="text-blue-400 font-bold text-[9.5px] uppercase tracking-wider">Vão Cisalhante (a/d):</span>
-                                <span class="text-gray-200 font-mono text-[10px] pl-1.5">${meta.factors.shearSpan}</span>
-                            </div>
-                            <div class="mt-1 pt-1 border-t border-[var(--color-border-primary)] text-[10px] text-gray-300 italic leading-snug">
-                                <strong class="text-cyan-400 font-normal">Origem da Diferença:</strong> ${meta.differenceOrigin}
-                            </div>
-                        </div>
-                    </div>` : ''}
-                </div>`;
-
-                if (meta) {
-                    latexQueue.push({ id: eqHtmlId, latex: meta.equationLatex });
-                    if (meta.secondaryLatex) {
-                        latexQueue.push({ id: secEqHtmlId, latex: meta.secondaryLatex });
-                    }
+                if (rmseEl && res.rmse !== undefined) {
+                    rmseEl.className = 'font-mono text-gray-200 font-semibold text-[10.5px]';
+                    rmseEl.textContent = res.rmse.toFixed(3);
+                }
+                if (derivEl && res.deriv_r !== undefined) {
+                    derivEl.className = 'font-mono text-gray-200 font-semibold text-[10.5px]';
+                    derivEl.textContent = res.deriv_r.toFixed(3);
                 }
             }
 
-            if (simContent) simContent.innerHTML = html;
+            // Reset keys that are not among the current batch comparison results
+            const keysToReset = ALL_DESIGN_CODE_KEYS.filter(k => !updatedKeys.has(k));
+            resetCodeSimilarityMetrics(keysToReset);
 
-            // Render all KaTeX expressions in the newly inserted cards
-            latexQueue.forEach(item => {
-                renderLatexToElement(document.getElementById(item.id), item.latex, true);
-            });
         }).catch(err => {
             console.error("Similarity metric error:", err);
             if (simWait) simWait.classList.add('hidden');
+            resetCodeSimilarityMetrics(ALL_DESIGN_CODE_KEYS);
         });
     }
 }
@@ -2673,7 +4069,7 @@ function renderFactorsModalContent() {
         </tr>
     `;
 
-    const codeKeys = ['A_MC2010_L1', 'A_MC2010_L2', 'A_EC2_2004', 'A_EC2_2023', 'A_ACI_14', 'A_ACI_19', 'A_NBR6118'];
+    const codeKeys = ['A_MC2010_L1', 'A_MC2010_L2', 'A_EC2_2004', 'A_EC2_2023', 'A_ACI_14', 'A_ACI_19', 'A_ACI_25', 'A_NBR6118'];
     const latexModalQueue = [{ id: 'modal_eq_live', latex: liveLatex }];
 
     codeKeys.forEach((k, idx) => {
@@ -2735,6 +4131,101 @@ function renderFactorsModalContent() {
     });
 }
 
+// -------------------------------------------------------------
+// DYNAMIC Y-AXIS AUTO-SCALING (ELIMINATES EMPTY VOID & PREVENTS CLIPPING)
+// -------------------------------------------------------------
+window.shearAutoScaleY = true;
+
+function calculateNiceMaxY(rawMax, isScatter = false) {
+    if (!rawMax || rawMax <= 0 || !isFinite(rawMax)) return 4.0;
+
+    // Safety threshold line R = 1.0 is always drawn, so we guarantee at least 1.5 as minimum ceiling
+    const minCeiling = isScatter ? 2.0 : 1.5;
+    const headroomFactor = isScatter ? 1.12 : 1.15;
+    const target = Math.max(minCeiling, rawMax * headroomFactor);
+
+    if (target <= 1.5) return 1.5;
+    if (target <= 2.0) return Math.ceil(target * 5) / 5;   // steps of 0.2: 1.6, 1.8, 2.0
+    if (target <= 4.0) return Math.ceil(target * 2) / 2;   // steps of 0.5: 2.5, 3.0, 3.5, 4.0
+    if (target <= 8.0) return Math.ceil(target);           // steps of 1.0: 5.0, 6.0, 7.0, 8.0
+    if (target <= 20.0) return Math.ceil(target / 2) * 2;  // steps of 2.0: 10, 12, 14, 16, 18, 20
+    if (target <= 50.0) return Math.ceil(target / 5) * 5;  // steps of 5.0: 25, 30, 35, 40, 45, 50
+    return Math.ceil(target / 10) * 10;                    // steps of 10.0: 60, 70, 80...
+}
+
+function adjustYScaleToVisibleDatasets() {
+    if (!dbChart || !dbChart.data || !dbChart.data.datasets || !dbChart.options || !dbChart.options.scales || !dbChart.options.scales.y) return;
+    
+    if (window.shearAutoScaleY === false) {
+        dbChart.options.scales.y.min = 0;
+        dbChart.options.scales.y.max = 4.0;
+        return;
+    }
+
+    let maxY = 0;
+    let hasVisibleData = false;
+    let hasScatterVisible = false;
+
+    for (let i = 0; i < dbChart.data.datasets.length; i++) {
+        if (dbChart.isDatasetVisible(i)) {
+            const ds = dbChart.data.datasets[i];
+            const isScatter = (ds._codeKey && ds._codeKey.includes('SCATTER')) || ds.type === 'scatter';
+            if (isScatter) {
+                hasScatterVisible = true;
+            }
+            if (ds.data && ds.data.length > 0) {
+                const len = ds.data.length;
+                for (let j = 0; j < len; j++) {
+                    const pt = ds.data[j];
+                    if (pt && isFinite(pt.y) && pt.y > maxY && pt.y < 100) {
+                        maxY = pt.y;
+                        hasVisibleData = true;
+                    }
+                }
+            }
+        }
+    }
+
+    if (hasVisibleData && maxY > 0) {
+        const target = calculateNiceMaxY(maxY, hasScatterVisible);
+        dbChart.options.scales.y.min = 0;
+        dbChart.options.scales.y.max = target;
+    } else {
+        dbChart.options.scales.y.min = 0;
+        dbChart.options.scales.y.max = 4.0;
+    }
+}
+
+function updateYScaleButtonUI() {
+    const btn = document.getElementById('btnToggleYScale');
+    const lbl = document.getElementById('lblYScaleMode');
+    if (!btn || !lbl) return;
+
+    if (window.shearAutoScaleY !== false) {
+        lbl.innerText = 'Y: Auto';
+        btn.classList.add('bg-cyan-500/20', 'text-cyan-300', 'border-cyan-500/40', 'font-bold');
+        btn.classList.remove('bg-[var(--color-bg-primary)]', 'text-gray-400', 'border-[var(--color-border-primary)]', 'font-medium', 'text-cyan-400');
+        btn.title = 'Escala Y Automática ATIVA (ajusta dinamicamente a todos os dados e curvas visíveis sem corte). Clique para travar em Fixo (0 a 4.0).';
+        const icon = btn.querySelector('span:first-child');
+        if (icon) icon.innerText = '📏';
+    } else {
+        lbl.innerText = 'Y: Fixo (0-4)';
+        btn.classList.remove('bg-cyan-500/20', 'text-cyan-300', 'border-cyan-500/40', 'font-bold');
+        btn.classList.add('bg-[var(--color-bg-primary)]', 'text-gray-400', 'border-[var(--color-border-primary)]', 'font-medium');
+        btn.title = 'Escala Y Fixa em [0 a 4.0] ATIVA. Clique para alternar para Escala Y Automática dinâmica.';
+        const icon = btn.querySelector('span:first-child');
+        if (icon) icon.innerText = '🔒';
+    }
+}
+
+function toggleYScaleMode() {
+    window.shearAutoScaleY = !window.shearAutoScaleY;
+    updateYScaleButtonUI();
+    adjustYScaleToVisibleDatasets();
+    if (dbChart) dbChart.update('none');
+    triggerAutoSave();
+}
+
 // Full chart rebuild when variable, subset, or checkboxes toggle
 async function updateDatabaseChart() {
     if (!rawData || !rawData.length || isUpdatingExplorer || !dbChart) return;
@@ -2772,6 +4263,7 @@ async function updateDatabaseChart() {
             'A_EC2_2023': '5, 150, 105',
             'A_ACI_14': '225, 29, 72',
             'A_ACI_19': '190, 18, 60',
+            'A_ACI_25': '190, 24, 93',
             'A_NBR6118': '2, 132, 199'
         };
 
@@ -2790,6 +4282,7 @@ async function updateDatabaseChart() {
             'A_EC2_2023': '52, 211, 153',
             'A_ACI_14': '251, 113, 133',
             'A_ACI_19': '244, 114, 182',
+            'A_ACI_25': '244, 63, 94',
             'A_NBR6118': '56, 189, 248'
         };
 
@@ -2804,8 +4297,14 @@ async function updateDatabaseChart() {
 
         for (let i = 0; i < selectedCbs.length; i++) {
             const codeKey = selectedCbs[i].value;
-            const spanEl = selectedCbs[i].parentElement ? selectedCbs[i].parentElement.querySelector('span') : null;
-            const codeName = spanEl ? spanEl.innerText.trim() : codeKey;
+            const meta = getCodeMeta(codeKey);
+            const parentLabel = selectedCbs[i].parentElement;
+            let codeName = meta ? meta.name : '';
+            if (!codeName && parentLabel) {
+                const textSpan = parentLabel.querySelector('span:not([style*="background"])');
+                codeName = textSpan ? textSpan.innerText.trim() : parentLabel.textContent.trim();
+            }
+            if (!codeName) codeName = codeKey;
             const baseColor = currentPalette[codeKey] || fallbackBaseColor;
 
             const plotPoints = [];
@@ -2859,7 +4358,7 @@ async function updateDatabaseChart() {
 
             if (codeKey === 'LIVE_MODEL') {
                 liveCurveData = lowessLine;
-            } else {
+            } else if (codeKey !== 'BASELINE_MODEL' && displayName && displayName.trim() !== '') {
                 cachedOtherCurves[displayName] = lowessLine;
             }
 
@@ -3005,11 +4504,14 @@ async function updateDatabaseChart() {
             dbChart.setDatasetVisibility(i, isVis);
         }
 
+        const firstMeta = selectedCbs.length === 1 ? getCodeMeta(selectedCbs[0].value) : null;
+        const firstLabel = firstMeta ? firstMeta.name : (selectedCbs[0]?.parentElement ? selectedCbs[0].parentElement.textContent.trim() : '');
         dbChart.options.scales.x.title.text = varLabel;
         dbChart.options.scales.y.title.text = selectedCbs.length === 1 
-            ? (selectedCbs[0].parentElement ? selectedCbs[0].parentElement.querySelector('span').innerText.trim() : '') + ' (V_test / V_calc)'
+            ? `${firstLabel} (V_test / V_calc)`
             : t('comparison_y_axis', 'V_test / V_calc (Comparativo)');
 
+        adjustYScaleToVisibleDatasets();
         dbChart.update('none');
         updateExternalLegend(dbChart.data.datasets);
 
@@ -3084,17 +4586,259 @@ function initDatabaseChart() {
     });
 }
 
+function formatLiveEquationForExport() {
+    const C = params.C.val;
+    const c_str = params.C.disabled ? '' : `${C.toFixed(3)}`;
+    
+    let parts = [];
+    if (c_str) parts.push(c_str);
+    
+    if (!params.alpha.disabled && Math.abs(params.alpha.val) > 1e-4) {
+        parts.push(`(d_dg/d)^${params.alpha.val.toFixed(3)}`);
+    }
+    if (!params.beta.disabled && Math.abs(params.beta.val) > 1e-4) {
+        parts.push(`(100·ρ_w)^${params.beta.val.toFixed(3)}`);
+    }
+    if (!params.gamma.disabled && Math.abs(params.gamma.val) > 1e-4) {
+        parts.push(`f_ck^${params.gamma.val.toFixed(3)}`);
+    }
+    if (!params.delta.disabled && Math.abs(params.delta.val) > 1e-4) {
+        parts.push(`(a/d)^${params.delta.val.toFixed(3)}`);
+    }
+    
+    if (!params.epsilon.disabled) {
+        if (Math.abs(params.epsilon.val - 1.0) < 1e-4) {
+            parts.push(`b_w`);
+        } else if (Math.abs(params.epsilon.val) > 1e-4) {
+            parts.push(`b_w^${params.epsilon.val.toFixed(3)}`);
+        }
+    }
+    if (!params.zeta.disabled) {
+        if (Math.abs(params.zeta.val - 1.0) < 1e-4) {
+            parts.push(`d`);
+        } else if (Math.abs(params.zeta.val) > 1e-4) {
+            parts.push(`d^${params.zeta.val.toFixed(3)}`);
+        }
+    }
+    
+    if (parts.length === 0) return 'V_calc = 1.000';
+    return `V_calc = ` + parts.join(' · ');
+}
+
+function drawCanvasRoundRect(ctx, x, y, w, h, r, fill, stroke) {
+    if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+        return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
 function downloadChart() {
     if (!dbChart) return;
-    const link = document.createElement('a');
+    const sourceCanvas = document.getElementById('databaseChart');
+    if (!sourceCanvas) return;
 
     const selectedCodes = Array.from(document.querySelectorAll('.design-code-checkbox:checked')).map(cb => cb.value);
-    const codeKey = selectedCodes.length > 0 ? selectedCodes.join('_') : 'none';
-    const varKey = (document.getElementById('varSelect') ? document.getElementById('varSelect').value : 'var').replace(/[\/\:\s\(\)]/g, '_');
-    const subsetKey = (document.getElementById('subsetSelect') ? document.getElementById('subsetSelect').value : 'all').replace('>', 'gt');
+    const varEl = document.getElementById('varSelect');
+    const varName = varEl ? varEl.options[varEl.selectedIndex].text : 'Variável X';
+    const subsetEl = document.getElementById('subsetSelect');
+    const subsetName = subsetEl ? subsetEl.options[subsetEl.selectedIndex].text : 'Todos os Dados';
 
-    link.download = `plot_${codeKey}_vs_${varKey}_subset_${subsetKey}.png`;
-    link.href = document.getElementById('databaseChart').toDataURL('image/png', 1.0);
+    const meanVal = document.getElementById('statMean') ? document.getElementById('statMean').innerText.trim() : '-';
+    const covVal = document.getElementById('statCov') ? document.getElementById('statCov').innerText.trim() : '-';
+    const pointsCount = document.getElementById('lblPoints') ? document.getElementById('lblPoints').innerText.trim() : '0';
+
+    // 1. Temporarily apply publication-grade styling to dbChart scales for white paper/thesis readability
+    const origGridX = dbChart.options.scales.x.grid.color;
+    const origTicksX = dbChart.options.scales.x.ticks.color;
+    const origTitleX = dbChart.options.scales.x.title.color;
+    const origGridY = dbChart.options.scales.y.grid.color;
+    const origTicksY = dbChart.options.scales.y.ticks.color;
+    const origTitleY = dbChart.options.scales.y.title.color;
+
+    // Academic publication colors (sharp dark slate, subtle clean grid)
+    dbChart.options.scales.x.grid.color = 'rgba(15, 23, 42, 0.08)';
+    dbChart.options.scales.x.ticks.color = '#0f172a';
+    dbChart.options.scales.x.title.color = '#0f172a';
+    dbChart.options.scales.y.grid.color = 'rgba(15, 23, 42, 0.08)';
+    dbChart.options.scales.y.ticks.color = '#0f172a';
+    dbChart.options.scales.y.title.color = '#0f172a';
+
+    // Synchronous update of Chart.js with publication colors
+    dbChart.update('none');
+
+    // 2. Gather visible datasets
+    const visibleDatasets = [];
+    if (dbChart.data && dbChart.data.datasets) {
+        for (let i = 0; i < dbChart.data.datasets.length; i++) {
+            if (dbChart.isDatasetVisible(i)) {
+                visibleDatasets.push(dbChart.data.datasets[i]);
+            }
+        }
+    }
+
+    const dpr = 2; // Crisp 2x retina
+    const chartW = sourceCanvas.width;
+    const chartH = sourceCanvas.height;
+    const padding = 30 * dpr;
+    const totalW = chartW + padding * 2;
+    const contentW = totalW - padding * 2;
+
+    // Measured vertical dimensions
+    const titleH = 46 * dpr;
+    const eqBoxH = 76 * dpr;
+    const headerH = titleH + eqBoxH + 16 * dpr;
+    const chartY = padding + headerH;
+
+    // Legend calculation (2-3 columns, guaranteed height)
+    const legCols = Math.min(3, Math.max(1, Math.floor(contentW / (320 * dpr))));
+    const legRows = Math.ceil(Math.max(1, visibleDatasets.length) / legCols);
+    const legItemH = 26 * dpr;
+    const legBoxH = 38 * dpr + legRows * legItemH;
+    const legY = chartY + chartH + 18 * dpr;
+
+    const footerY = legY + legBoxH + 20 * dpr;
+    const totalH = footerY + 24 * dpr;
+
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = totalW;
+    exportCanvas.height = totalH;
+    const ctx = exportCanvas.getContext('2d');
+
+    // 3. 100% TRANSPARENT BACKGROUND (Crucial for thesis/dissertation in LaTeX/Word)
+    ctx.clearRect(0, 0, totalW, totalH);
+
+    // 4. Header: Title & Context
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `bold ${16 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillText('Universal Code Explorer & Residual Analysis — Modelo Empírico de Cisalhamento', padding, padding + 15 * dpr);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillText(`Variável (Eixo X): ${varName}   |   Recorte de Dados: ${subsetName}   |   Amostras: ${pointsCount} ensaios`, padding, padding + 34 * dpr);
+
+    // 5. Academic Live Equation Box (Multi-line, wrapped & cleanly measured)
+    const eqBoxY = padding + titleH;
+    ctx.fillStyle = 'rgba(2, 132, 199, 0.04)';
+    ctx.strokeStyle = 'rgba(2, 132, 199, 0.35)';
+    ctx.lineWidth = 1.5 * dpr;
+    drawCanvasRoundRect(ctx, padding, eqBoxY, contentW, eqBoxH, 6 * dpr, true, true);
+
+    // Line 1: Mathematical formulation
+    ctx.fillStyle = '#0284c7';
+    ctx.font = `bold ${11.5 * dpr}px Consolas, Monaco, monospace`;
+    const modelFormulation = useDeffConstraint
+        ? 'MODELO COM TRAVA CINEMÁTICA:  V_calc = C · (d_dg/d_eff)^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ · b_w · d  [d_eff = min(d, √(a_cs/4·d)), a_cs ≥ d]'
+        : 'MODELO EMPÍRICO CALIBRADO:  V_calc = C · (d_dg/d)^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ · b_w · d';
+    ctx.fillText(modelFormulation, padding + 14 * dpr, eqBoxY + 20 * dpr);
+
+    // Line 2: Calibrated parameters
+    const C = params.C.val;
+    const aVal = params.alpha.disabled ? '0.000 (desat.)' : params.alpha.val.toFixed(3);
+    const bVal = params.beta.disabled ? '0.000 (desat.)' : params.beta.val.toFixed(3);
+    const gVal = params.gamma.disabled ? '0.000 (desat.)' : params.gamma.val.toFixed(3);
+    const dVal = params.delta.disabled ? '0.000 (desat.)' : params.delta.val.toFixed(3);
+    ctx.fillStyle = '#1e293b';
+    ctx.font = `600 ${10.5 * dpr}px Consolas, Monaco, monospace`;
+    ctx.fillText(`Parâmetros:  C = ${C.toFixed(3)}  |  α = ${aVal}  |  β = ${bVal}  |  γ = ${gVal}  |  δ = ${dVal}`, padding + 14 * dpr, eqBoxY + 41 * dpr);
+
+    // Line 3: Statistical metrics
+    const meanNum = parseFloat(meanVal);
+    const safetyStatus = isNaN(meanNum) ? '' : (meanNum < 1.0 ? 'Margem Insegura (R < 1.0) ⚠️' : 'Margem Segura (R ≥ 1.0) ✓');
+    ctx.fillStyle = '#334155';
+    ctx.font = `${10 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillText(`Média R (V_test / V_calc): ${meanVal}    |    Coeficiente de Variação (CoV): ${covVal}    |    ${safetyStatus}`, padding + 14 * dpr, eqBoxY + 62 * dpr);
+
+    // 6. Draw Chart with Border Frame
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.18)';
+    ctx.lineWidth = 1 * dpr;
+    drawCanvasRoundRect(ctx, padding, chartY, chartW, chartH, 6 * dpr, false, true);
+    ctx.drawImage(sourceCanvas, padding, chartY, chartW, chartH);
+
+    // Restore original UI chart colors
+    dbChart.options.scales.x.grid.color = origGridX;
+    dbChart.options.scales.x.ticks.color = origTicksX;
+    dbChart.options.scales.x.title.color = origTitleX;
+    dbChart.options.scales.y.grid.color = origGridY;
+    dbChart.options.scales.y.ticks.color = origTicksY;
+    dbChart.options.scales.y.title.color = origTitleY;
+    dbChart.update('none');
+
+    // 7. Full Legend Box below Chart
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.7)';
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.18)';
+    ctx.lineWidth = 1 * dpr;
+    drawCanvasRoundRect(ctx, padding, legY, contentW, legBoxH, 6 * dpr, true, true);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = `bold ${10 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillText('LEGENDA COMPLETA DO GRÁFICO (SÉRIES ATIVAS):', padding + 14 * dpr, legY + 18 * dpr);
+
+    const colW = (contentW - 24 * dpr) / legCols;
+    visibleDatasets.forEach((ds, idx) => {
+        const c = idx % legCols;
+        const r = Math.floor(idx / legCols);
+        const itemX = padding + 14 * dpr + c * colW;
+        const itemY = legY + 36 * dpr + r * legItemH;
+
+        ctx.save();
+        if (ds.type === 'scatter') {
+            ctx.fillStyle = ds.borderColor || ds.backgroundColor || '#475569';
+            ctx.beginPath();
+            ctx.arc(itemX + 6 * dpr, itemY - 4 * dpr, 4 * dpr, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (ds.borderDash && ds.borderDash.length) {
+            ctx.strokeStyle = ds.borderColor || '#333';
+            ctx.lineWidth = 2.5 * dpr;
+            ctx.setLineDash([5 * dpr, 3 * dpr]);
+            ctx.beginPath();
+            ctx.moveTo(itemX, itemY - 4 * dpr);
+            ctx.lineTo(itemX + 18 * dpr, itemY - 4 * dpr);
+            ctx.stroke();
+        } else {
+            ctx.strokeStyle = ds.borderColor || '#333';
+            ctx.lineWidth = 3 * dpr;
+            ctx.beginPath();
+            ctx.moveTo(itemX, itemY - 4 * dpr);
+            ctx.lineTo(itemX + 18 * dpr, itemY - 4 * dpr);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = `500 ${10 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        const labelText = ds.label || `Série ${idx + 1}`;
+        ctx.fillText(labelText, itemX + 24 * dpr, itemY);
+    });
+
+    // 8. Footer (Guaranteed safely below legend box)
+    ctx.fillStyle = '#64748b';
+    ctx.font = `${9 * dpr}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    const dateStr = new Date().toLocaleString('pt-BR');
+    ctx.fillText(`Exportado em ${dateStr}  •  Dataset Reineck (2013) com 1804 vigas sem estribo  •  Fundo Transparente para Dissertação`, padding, footerY + 8 * dpr);
+
+    // 9. Trigger download of publication PNG
+    const link = document.createElement('a');
+    const codeKey = selectedCodes.length > 0 ? selectedCodes.join('_') : 'live';
+    const varKey = (varEl ? varEl.value : 'var').replace(/[\/\:\s\(\)]/g, '_');
+    const subKey = (subsetEl ? subsetEl.value : 'all').replace('>', 'gt');
+    link.download = `shear_model_${codeKey}_vs_${varKey}_subset_${subKey}_mestrado_transparente.png`;
+    link.href = exportCanvas.toDataURL('image/png', 1.0);
     link.click();
 }
 
@@ -3124,5 +4868,514 @@ window.toggleDynamicFilterPanel = toggleDynamicFilterPanel;
 window.setDynPreset = setDynPreset;
 window.resetDynamicFilters = resetDynamicFilters;
 window.onDynamicFilterInputChange = onDynamicFilterInputChange;
+window.toggleYScaleMode = toggleYScaleMode;
+window.adjustYScaleToVisibleDatasets = adjustYScaleToVisibleDatasets;
+window.updateYScaleButtonUI = updateYScaleButtonUI;
+window.calculateNiceMaxY = calculateNiceMaxY;
+window.openCorrelationModal = openCorrelationModal;
+window.closeCorrelationModal = closeCorrelationModal;
+window.switchCorrelationTab = switchCorrelationTab;
+window.switchCorrelationMethod = switchCorrelationMethod;
+window.copyCorrelationLatex = copyCorrelationLatex;
+window.downloadCorrelationCSV = downloadCorrelationCSV;
+window.updateLiveCorrelationUI = updateLiveCorrelationUI;
+window.computeCorrelationStatistics = computeCorrelationStatistics;
+window.computePearson = computePearson;
+window.computeSpearman = computeSpearman;
+window.invertMatrix = invertMatrix;
+
+// -------------------------------------------------------------
+// Horizontal Design Codes Panel (KaTeX Equations & Toggles)
+// -------------------------------------------------------------
+function renderHorizontalCodeCardsEquations() {
+    const codeKeys = ['A_NBR6118', 'A_EC2_2023', 'A_EC2_2004', 'A_ACI_25', 'A_ACI_19', 'A_ACI_14', 'A_MC2010_L2', 'A_MC2010_L1'];
+    codeKeys.forEach(k => {
+        const meta = CODE_EQUATION_METADATA[k];
+        if (!meta) return;
+        const eqEl = document.getElementById(`code_card_eq_${k}`);
+        if (eqEl) {
+            renderLatexToElement(eqEl, meta.equationLatex, true);
+        }
+        const secEl = document.getElementById(`code_card_sec_${k}`);
+        if (secEl && meta.secondaryLatex) {
+            renderLatexToElement(secEl, meta.secondaryLatex, false);
+        }
+        const factorsEl = document.getElementById(`card_factors_${k}`);
+        if (factorsEl && meta.factors) {
+            factorsEl.innerHTML = `
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-purple-400 font-bold text-[9px] uppercase tracking-wider">Efeito de Escala (Size Effect):</span>
+                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.sizeEffect}</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-emerald-400 font-bold text-[9px] uppercase tracking-wider">Armadura Longitudinal (ρw):</span>
+                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.reinforcement}</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-amber-400 font-bold text-[9px] uppercase tracking-wider">Resistência do Concreto (fck):</span>
+                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.concrete}</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-blue-400 font-bold text-[9px] uppercase tracking-wider">Vão Cisalhante (a/d):</span>
+                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.shearSpan}</span>
+                </div>
+                <div class="mt-1 pt-1 border-t border-[var(--color-border-primary)] text-[9.5px] text-gray-300 italic leading-snug">
+                    <strong class="text-cyan-400 font-normal">Origem da Diferença:</strong> ${meta.differenceOrigin}
+                </div>
+            `;
+        }
+    });
+    updateCodeCardsFlatness();
+}
+window.renderHorizontalCodeCardsEquations = renderHorizontalCodeCardsEquations;
+
+function updateCodeCardsFlatness() {
+    const codeKeys = ['A_NBR6118', 'A_EC2_2023', 'A_EC2_2004', 'A_ACI_25', 'A_ACI_19', 'A_ACI_14', 'A_MC2010_L2', 'A_MC2010_L1'];
+    codeKeys.forEach(k => {
+        const flatEl = document.getElementById(`metric_flat_${k}`);
+        if (!flatEl) return;
+        const codeFlat = computeCodeFlatness(k);
+        if (codeFlat) {
+            const fScore = codeFlat.flatnessScore;
+            const fColor = fScore >= 90 ? 'text-emerald-400' : (fScore >= 80 ? 'text-amber-400' : 'text-rose-400');
+            flatEl.className = `font-mono font-semibold text-[10.5px] ${fColor}`;
+            flatEl.textContent = `${fScore.toFixed(1)}% (${codeFlat.slopePerMeter >= 0 ? '+' : ''}${codeFlat.slopePerMeter.toFixed(2)}/m)`;
+        } else {
+            flatEl.className = 'font-mono font-semibold text-gray-400 text-[10.5px]';
+            flatEl.textContent = '-.--%';
+        }
+    });
+}
+window.updateCodeCardsFlatness = updateCodeCardsFlatness;
+window.calculateSimilarity = calculateSimilarity;
+
+function setAllDesignCodes(checked) {
+    document.querySelectorAll('.design-code-checkbox').forEach(cb => {
+        if (cb.value !== 'LIVE_MODEL' && cb.value !== 'BASELINE_MODEL') {
+            cb.checked = checked;
+        }
+    });
+    updateDatabaseChart();
+    triggerAutoSave();
+}
+window.setAllDesignCodes = setAllDesignCodes;
+
+function selectRecentDesignCodes() {
+    const recent = ['A_NBR6118', 'A_EC2_2023', 'A_ACI_25'];
+    document.querySelectorAll('.design-code-checkbox').forEach(cb => {
+        if (cb.value !== 'LIVE_MODEL' && cb.value !== 'BASELINE_MODEL') {
+            cb.checked = recent.includes(cb.value);
+        }
+    });
+    updateDatabaseChart();
+    triggerAutoSave();
+}
+window.selectRecentDesignCodes = selectRecentDesignCodes;
+
+// -------------------------------------------------------------
+// Column Layout & Height Reset (Prevents Empty Space Retention)
+// -------------------------------------------------------------
+function syncColumnsHeight() {
+    const col1 = document.getElementById('sidebarControls');
+    const col2 = document.getElementById('chartMainArea');
+    const chartCard = document.getElementById('chartSectionCard');
+    const col3 = document.getElementById('similarityCol');
+    const simPanel = document.getElementById('similarityPanel');
+
+    // Always clear forced fixed heights so columns adapt cleanly to their actual content
+    if (col1) {
+        col1.style.height = '';
+        col1.style.maxHeight = '';
+    }
+    if (col2) {
+        col2.style.height = '';
+        col2.style.maxHeight = '';
+    }
+    if (chartCard) {
+        chartCard.style.height = '';
+        chartCard.style.maxHeight = '';
+    }
+    if (col3) {
+        col3.style.height = '';
+        col3.style.maxHeight = '';
+    }
+    if (simPanel) {
+        simPanel.style.height = '';
+        simPanel.style.maxHeight = '';
+    }
+}
+window.syncColumnsHeight = syncColumnsHeight;
+
+function initColumnHeightSync() {
+    syncColumnsHeight();
+    window.addEventListener('resize', syncColumnsHeight);
+}
+window.initColumnHeightSync = initColumnHeightSync;
+
+// -------------------------------------------------------------
+// BATCH EXPORT ROUTINE (DATABASE VARIATIONS)
+// -------------------------------------------------------------
+let cachedBatchMeta = null;
+let isBatchRunning = false;
+
+function getCurrentLiveModelParams() {
+    const parseNum = (val, fallback) => {
+        if (val === undefined || val === null || val === '') return fallback;
+        const num = parseFloat(String(val).replace(',', '.'));
+        return isNaN(num) ? fallback : num;
+    };
+
+    const getParamVal = (key, fallback) => {
+        const inp = document.getElementById(`inp_${key}`);
+        if (inp && inp.value !== '') {
+            return parseNum(inp.value, fallback);
+        }
+        if (params && params[key] && typeof params[key].val === 'number' && !isNaN(params[key].val)) {
+            return params[key].val;
+        }
+        return fallback;
+    };
+
+    const isDis = (key) => !!(params && params[key] && params[key].disabled);
+
+    const cVal = getParamVal('C', 1.250);
+    const alphaVal = isDis('alpha') ? 0.0 : getParamVal('alpha', 0.333);
+    const betaVal = isDis('beta') ? 0.0 : getParamVal('beta', 0.333);
+    const gammaVal = isDis('gamma') ? 0.0 : getParamVal('gamma', 0.333);
+    const deltaVal = isDis('delta') ? 0.0 : getParamVal('delta', -0.750);
+    const muVal = isDis('mu') ? 0.0 : getParamVal('mu', 0.150);
+
+    // Keep params object synchronized as well
+    if (params) {
+        if (params.C) params.C.val = cVal;
+        if (params.alpha && !params.alpha.disabled) params.alpha.val = alphaVal;
+        if (params.beta && !params.beta.disabled) params.beta.val = betaVal;
+        if (params.gamma && !params.gamma.disabled) params.gamma.val = gammaVal;
+        if (params.delta && !params.delta.disabled) params.delta.val = deltaVal;
+        if (params.mu && !params.mu.disabled) params.mu.val = muVal;
+    }
+
+    return {
+        C: cVal,
+        alpha: alphaVal,
+        beta: betaVal,
+        gamma: gammaVal,
+        delta: deltaVal,
+        mu: muVal,
+        epsilon: 1.0,
+        zeta: 1.0,
+        use_deff: !!useDeffConstraint,
+        alpha_disabled: isDis('alpha'),
+        beta_disabled: isDis('beta'),
+        gamma_disabled: isDis('gamma'),
+        delta_disabled: isDis('delta'),
+        mu_disabled: isDis('mu'),
+    };
+}
+window.getCurrentLiveModelParams = getCurrentLiveModelParams;
+window.params = params;
+
+function openBatchSaveModal() {
+    const modal = document.getElementById('modalBatchSaveShear');
+    if (!modal) {
+        console.error("modalBatchSaveShear element not found in DOM");
+        return;
+    }
+
+    // Update active parameter displays in modal
+    try {
+        const live = getCurrentLiveModelParams();
+        const lblC = document.getElementById('batchLblC');
+        const lblA = document.getElementById('batchLblAlpha');
+        const lblB = document.getElementById('batchLblBeta');
+        const lblG = document.getElementById('batchLblGamma');
+        const lblD = document.getElementById('batchLblDelta');
+        const lblM = document.getElementById('batchLblMu');
+        const lblDeff = document.getElementById('batchLblDeff');
+
+        if (lblC) lblC.innerText = live.C.toFixed(3);
+        if (lblA) lblA.innerText = live.alpha_disabled ? '0 (desat)' : live.alpha.toFixed(3);
+        if (lblB) lblB.innerText = live.beta_disabled ? '0 (desat)' : live.beta.toFixed(3);
+        if (lblG) lblG.innerText = live.gamma_disabled ? '0 (desat)' : live.gamma.toFixed(3);
+        if (lblD) lblD.innerText = live.delta_disabled ? '0 (desat)' : live.delta.toFixed(3);
+        if (lblM) lblM.innerText = live.mu_disabled ? '0 (desat)' : live.mu.toFixed(3);
+        if (lblDeff) lblDeff.innerText = useDeffConstraint ? 'd_eff ATIVO (CSCT/EC2)' : 'd_eff desat.';
+
+        const chkPC = document.getElementById('batchChkExcludePC');
+        if (chkPC) chkPC.checked = !!excludePrestressed;
+    } catch (err) {
+        console.warn("Error setting modal header values:", err);
+    }
+
+    // Populate checkboxes immediately from defaults
+    renderBatchSubsetsCheckboxes();
+    updateBatchEstimatedCounts();
+
+    // Show modal immediately
+    modal.classList.remove('hidden');
+
+    // Fetch dynamic metadata from backend in background if available
+    if (!cachedBatchMeta && window.eel && eel.get_shear_batch_metadata) {
+        eel.get_shear_batch_metadata()().then(meta => {
+            if (meta && meta.subsets) {
+                cachedBatchMeta = meta;
+                renderBatchSubsetsCheckboxes();
+                updateBatchEstimatedCounts();
+            }
+        }).catch(e => console.warn("Could not load batch metadata from eel:", e));
+    }
+}
+
+function closeBatchSaveModal() {
+    const modal = document.getElementById('modalBatchSaveShear');
+    if (modal) modal.classList.add('hidden');
+}
+
+function renderBatchSubsetsCheckboxes() {
+    const container = document.getElementById('batchSubsetsContainer');
+    if (!container) return;
+
+    const subsets = (cachedBatchMeta && cachedBatchMeta.subsets) ? cachedBatchMeta.subsets : [
+        { key: "ALL DATA", label: "Todos os Dados (Global)", group: "Global", short: "global_all" },
+        { key: "slabs_all", label: "Todas as Lajes (bw/d >= 2)", group: "Lajes", short: "slabs_all" },
+        { key: "slabs_slender_600", label: "Lajes Esbeltas (d < 600mm)", group: "Lajes", short: "slabs_slender_600" },
+        { key: "slabs_slender_400", label: "Lajes Esbeltas (d < 400mm)", group: "Lajes", short: "slabs_slender_400" },
+        { key: "slabs_thick_600", label: "Elementos Espessos (d >= 600mm)", group: "Lajes", short: "slabs_thick_600" },
+        { key: "slabs_thick_400", label: "Lajes Espessas (d >= 400mm)", group: "Lajes", short: "slabs_thick_400" },
+        { key: "slabs_wide", label: "Lajes Muito Largas (bw/d >= 5)", group: "Lajes", short: "slabs_wide" },
+        { key: "members_slender_600", label: "Vigas Esbeltas (d < 600mm)", group: "Altura Útil", short: "members_slender_600" },
+        { key: "members_slender_400", label: "Vigas Esbeltas (d < 400mm)", group: "Altura Útil", short: "members_slender_400" },
+        { key: "members_long_span", label: "Vão Longo (a/d >= 2.5)", group: "Vão Cisalhante", short: "span_long" },
+        { key: "members_short_span", label: "Vão Curto / Bielas (a/d < 2.5)", group: "Vão Cisalhante", short: "span_short" },
+        { key: "rho_low", label: "Baixa Armadura (ρ < 1.0%)", group: "Armadura", short: "rho_low" },
+        { key: "rho_very_low", label: "Armadura Muito Baixa (ρ < 0.5%)", group: "Armadura", short: "rho_very_low" },
+        { key: "rho_high", label: "Alta Armadura (ρ >= 1.5%)", group: "Armadura", short: "rho_high" },
+        { key: "fck_high", label: "Alta Resistência (fck > 50 MPa)", group: "Concreto", short: "fck_high" },
+        { key: "fck_normal", label: "Convencional (fck <= 50 MPa)", group: "Concreto", short: "fck_normal" },
+        { key: "d_dg_large", label: "Agregado Graúdo (ddg > 32mm)", group: "Materiais", short: "ddg_large" },
+        { key: "mat_rc", label: "Apenas Concreto Armado (RC)", group: "Tipologia", short: "mat_rc" },
+        { key: "mat_pc", label: "Apenas Protendido (PC)", group: "Tipologia", short: "mat_pc" }
+    ];
+
+    container.innerHTML = subsets.map(s => `
+        <label class="flex items-center gap-1.5 p-1 rounded bg-[var(--color-bg-secondary)] hover:bg-gray-800 border border-[var(--color-border-primary)] cursor-pointer text-[10.5px]">
+            <input type="checkbox" value="${s.key}" class="batch-subset-checkbox rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0" checked onchange="updateBatchEstimatedCounts()">
+            <span class="text-gray-300 truncate" title="${s.label}">${s.label}</span>
+        </label>
+    `).join('');
+}
+
+function quickSelectBatchSubsets(mode) {
+    const cbs = document.querySelectorAll('.batch-subset-checkbox');
+    cbs.forEach(cb => {
+        const val = cb.value;
+        if (mode === 'all') {
+            cb.checked = true;
+        } else if (mode === 'none') {
+            cb.checked = false;
+        } else if (mode === 'slabs') {
+            cb.checked = val.includes('slabs');
+        } else if (mode === 'slender') {
+            cb.checked = val.includes('slender') || val.includes('span') || val.includes('members');
+        } else if (mode === 'materials') {
+            cb.checked = val.includes('rho') || val.includes('fck') || val.includes('d_dg') || val.includes('mat');
+        }
+    });
+    updateBatchEstimatedCounts();
+}
+
+function updateBatchEstimatedCounts() {
+    const selectedSubsets = Array.from(document.querySelectorAll('.batch-subset-checkbox:checked')).map(cb => cb.value);
+    const selectedVars = Array.from(document.querySelectorAll('.batch-var-checkbox:checked')).map(cb => cb.value);
+    const count = selectedSubsets.length * selectedVars.length;
+
+    const badge = document.getElementById('batchEstimatedCountsBadge');
+    if (badge) {
+        badge.innerText = `Estimativa: ${count} gráficos e 1 planilha consolidada (.csv)`;
+    }
+}
+
+async function startBatchSaveRoutine() {
+    if (isBatchRunning) return;
+
+    const selectedSubsets = Array.from(document.querySelectorAll('.batch-subset-checkbox:checked')).map(cb => cb.value);
+    const selectedVars = Array.from(document.querySelectorAll('.batch-var-checkbox:checked')).map(cb => cb.value);
+
+    if (selectedSubsets.length === 0) {
+        alert("Por favor selecione pelo menos um recorte da base de dados.");
+        return;
+    }
+    if (selectedVars.length === 0) {
+        alert("Por favor selecione pelo menos uma variável X.");
+        return;
+    }
+
+    const outDirInput = document.getElementById('batchOutDirInput');
+    const outDir = outDirInput ? outDirInput.value.trim() : 'plots/shear_model_variations';
+    const dpiSelect = document.getElementById('batchDpiSelect');
+    const dpi = dpiSelect ? parseInt(dpiSelect.value) : 200;
+    const includeCodes = document.getElementById('batchChkIncludeCodes') ? document.getElementById('batchChkIncludeCodes').checked : true;
+    const excludePC = document.getElementById('batchChkExcludePC') ? document.getElementById('batchChkExcludePC').checked : false;
+
+    // Pack current model parameters directly from live inputs
+    const live = getCurrentLiveModelParams();
+    const modelParams = {
+        C: live.C,
+        alpha: live.alpha,
+        beta: live.beta,
+        gamma: live.gamma,
+        delta: live.delta,
+        mu: live.mu,
+        epsilon: 1.0,
+        zeta: 1.0,
+        use_deff: !!useDeffConstraint,
+    };
+
+    const payload = {
+        out_dir: outDir,
+        dpi: dpi,
+        model_params: modelParams,
+        selected_subsets: selectedSubsets,
+        selected_vars: selectedVars,
+        include_codes: includeCodes,
+        exclude_pc: excludePC,
+    };
+
+    console.log("[Shear Batch Export] Disparando rotina com payload:", payload);
+
+    // UI Feedback: starting
+    isBatchRunning = true;
+    const btn = document.getElementById('btnStartBatchSave');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳</span> <span>Gerando Gráficos...</span>`;
+    }
+
+    const pSection = document.getElementById('batchProgressSection');
+    const sBox = document.getElementById('batchSuccessBox');
+    if (pSection) pSection.classList.remove('hidden');
+    if (sBox) sBox.classList.add('hidden');
+
+    const pBar = document.getElementById('batchProgressBar');
+    const pPct = document.getElementById('batchProgressPct');
+    const pStatus = document.getElementById('batchProgressStatus');
+
+    if (pBar) pBar.style.width = '0%';
+    if (pPct) pPct.innerText = '0%';
+    if (pStatus) pStatus.innerText = 'Iniciando processamento no Python...';
+
+    try {
+        if (window.eel && typeof eel.run_shear_batch_export === 'function') {
+            const res = await eel.run_shear_batch_export(payload)();
+            console.log("[Shear Batch Export] Resposta do backend:", res);
+            if (res && res.error) {
+                alert("Erro ao iniciar exportação: " + res.error);
+                isBatchRunning = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>🚀</span> <span>Iniciar Salvamento Automático</span>`;
+                }
+            }
+        } else {
+            alert("A função de exportação em lote não foi encontrada no Eel. Por favor, reinicie o servidor Python no terminal (Ctrl+C e execute novamente: python backend/main_eel.py) e recarregue a página (Ctrl+F5).");
+            isBatchRunning = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<span>🚀</span> <span>Iniciar Salvamento Automático</span>`;
+            }
+        }
+    } catch (e) {
+        console.error("[Shear Batch Export] Erro na chamada:", e);
+        alert("Falha na chamada de exportação: " + e);
+        isBatchRunning = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<span>🚀</span> <span>Iniciar Salvamento Automático</span>`;
+        }
+    }
+}
+
+// Eel callback functions
+function update_shear_batch_progress(pct, msg, imgPath, isDone, total, current) {
+    console.log(`[Shear Batch Progress] ${pct}% - ${msg}`);
+    const pBar = document.getElementById('batchProgressBar');
+    const pPct = document.getElementById('batchProgressPct');
+    const pStatus = document.getElementById('batchProgressStatus');
+
+    if (pBar) pBar.style.width = `${pct}%`;
+    if (pPct) pPct.innerText = `${pct}%`;
+    if (pStatus) pStatus.innerText = msg;
+
+    if (imgPath) {
+        const thumbWrap = document.getElementById('batchThumbnailWrapper');
+        const thumbImg = document.getElementById('batchThumbnailImg');
+        if (thumbWrap && thumbImg) {
+            thumbImg.src = `/${imgPath}?t=${Date.now()}`;
+            thumbWrap.classList.remove('hidden');
+        }
+    }
+
+    if (isDone) {
+        isBatchRunning = false;
+        const btn = document.getElementById('btnStartBatchSave');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<span>🚀</span> <span>Iniciar Novamente</span>`;
+        }
+    }
+}
+window.update_shear_batch_progress = update_shear_batch_progress;
+if (window.eel) {
+    eel.expose(update_shear_batch_progress);
+}
+
+function on_shear_batch_complete(result) {
+    console.log("[Shear Batch Complete]", result);
+    isBatchRunning = false;
+    const btn = document.getElementById('btnStartBatchSave');
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>🚀</span> <span>Iniciar Novamente</span>`;
+    }
+
+    const sBox = document.getElementById('batchSuccessBox');
+    const sTitle = document.getElementById('batchSuccessTitle');
+    const sDesc = document.getElementById('batchSuccessDesc');
+
+    if (sBox) {
+        if (sTitle && result.plots_count) {
+            sTitle.innerText = `Sucesso! ${result.plots_count} gráficos e tabela resumo salvos.`;
+        }
+        if (sDesc && result.folder) {
+            sDesc.innerText = `Pasta: ${result.folder} | Planilha: shear_variations_summary.csv`;
+        }
+        sBox.classList.remove('hidden');
+    }
+
+    showToast(`Rotina concluída! ${result.plots_count || 0} gráficos salvos com sucesso na pasta.`, 'success');
+}
+window.on_shear_batch_complete = on_shear_batch_complete;
+if (window.eel) {
+    eel.expose(on_shear_batch_complete);
+}
+
+function openBatchOutputFolder() {
+    const input = document.getElementById('batchOutDirInput');
+    const folder = input ? input.value.trim() : 'plots/shear_model_variations';
+    if (window.eel && eel.open_shear_output_folder) {
+        eel.open_shear_output_folder(folder)();
+    } else {
+        alert("Pasta de destino: " + folder);
+    }
+}
+
+window.openBatchSaveModal = openBatchSaveModal;
+window.closeBatchSaveModal = closeBatchSaveModal;
+window.quickSelectBatchSubsets = quickSelectBatchSubsets;
+window.updateBatchEstimatedCounts = updateBatchEstimatedCounts;
+window.startBatchSaveRoutine = startBatchSaveRoutine;
+window.openBatchOutputFolder = openBatchOutputFolder;
+
+
 
 

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCE 7-22 Seismic Loads & Response Spectrum Calculator</title>
+    <script src="../js/tailwind.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark' ||
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="../styles.min.css">
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="../js/i18n.js" defer></script>
+    <script src="../js/shared-utils.js" defer></script>
+    <script src="../js/template.js" defer></script>
+    <script src="../js/validation-rules.js" defer></script>
+    <script src="seismic.js" defer></script>
+</head>
+
+<body class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+
+    <div class="container mx-auto p-3 md:p-6 max-w-[98.5vw] flex-grow flex flex-col">
+        <div id="header-placeholder" style="min-height: 110px;"></div>
+
+        <!-- Executive Header Section -->
+        <div class="px-5 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 rounded-2xl shadow-xs">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                        ASCE 7-22 • CHAPTERS 11, 12, 13 & 15
+                    </span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                        ASCE 61 • Seismic Design of Piers & Wharves
+                    </span>
+                </div>
+                <h1 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>⚡</span> Cargas Sísmicas, Espectro de Resposta & Cais Portuário (Seismic Analysis)
+                </h1>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="save-seismic-inputs-btn" class="eng-btn-save">
+                    <span>💾</span> Salvar
+                </button>
+                <button type="button" id="load-seismic-inputs-btn" class="eng-btn-open">
+                    <span>📂</span> Abrir
+                </button>
+                <button type="button" id="run-seismic-calculation-btn" class="eng-btn-primary">
+                    <span>⚡</span> Calcular Sismo
+                </button>
+                <input type="file" id="seismic-file-input" class="hidden" accept=".json,.txt">
+            </div>
+        </div>
+
+        <!-- Banner de Suíte Unificada -->
+        <div class="mb-5 p-3 rounded-xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-950/40 dark:via-indigo-950/40 dark:to-blue-950/40 border border-purple-200 dark:border-purple-800 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                <span class="text-base">✨</span>
+                <span>
+                    <strong>Central Unificada de Cargas:</strong> Acesse a nova <a href="../gui/loads_studio.html?tab=seismic" class="font-bold text-purple-600 dark:text-purple-400 underline hover:text-purple-800">Central de Cargas & Ações Estruturais</a> com análise sísmica segundo a <strong>NBR 15421</strong> (Zonas 0 a 4 do Brasil) e ASCE 7-22.
+                </span>
+            </div>
+            <a href="../gui/loads_studio.html?tab=seismic" class="font-bold text-[11px] px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-700 text-white shrink-0 shadow-xs">
+                Abrir Central Unificada →
+            </a>
+        </div>
+
+        <!-- Preset Fast Selection Bar -->
+        <div class="mb-6 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
+            <span class="text-xs font-bold text-gray-700 dark:text-gray-300 mr-2 flex items-center gap-1.5">
+                <span>🎯</span> Predefinições Rápidas:
+            </span>
+            <button type="button" onclick="loadSeismicPreset('wharf_port')" class="px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 cursor-pointer">
+                <span>🏗️</span> Cais Portuário Dúctil (ASCE 61)
+            </button>
+            <button type="button" onclick="loadSeismicPreset('steel_smf_building')" class="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-semibold transition border border-blue-200 dark:border-blue-800 flex items-center gap-1 cursor-pointer">
+                <span>🏢</span> Edifício Pórtico SMF (Aço, R=8)
+            </button>
+            <button type="button" onclick="loadSeismicPreset('concrete_wall_building')" class="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 cursor-pointer">
+                <span>🏛️</span> Paredes de Concreto (R=5)
+            </button>
+            <button type="button" onclick="loadSeismicPreset('port_crane_equipment')" class="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300 text-xs font-semibold transition border border-amber-200 dark:border-amber-800 flex items-center gap-1 cursor-pointer">
+                <span>🏗️</span> Guindaste Portuário (Cap. 13)
+            </button>
+        </div>
+
+        <main id="seismic-calculator-form">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                
+                <!-- Column 1: Sismicidade, Solo & Espectro Mapeado -->
+                <div class="space-y-6">
+                    <div class="form-section">
+                        <h2 class="text-base font-bold mb-3 flex items-center gap-2">
+                            <span>⚙️</span> Parâmetros Sísmicos Mapeados (Cap. 11)
+                        </h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="seismic_asce_standard" class="eng-label">Norma ASCE</label>
+                                <select id="seismic_asce_standard">
+                                    <option value="ASCE 7-22" selected>ASCE 7-22</option>
+                                    <option value="ASCE 7-16">ASCE 7-16</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="seismic_unit_system" class="eng-label">Sistema de Unidades</label>
+                                <select id="seismic_unit_system">
+                                    <option value="metric" selected>Métrico (m, kN, kPa, tf)</option>
+                                    <option value="imperial">Imperial (ft, kips, psf)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="seismic_risk_category" class="eng-label">Categoria de Risco</label>
+                                <select id="seismic_risk_category" onchange="updateImportanceFactor()">
+                                    <option value="I">I (Ie = 1.00)</option>
+                                    <option value="II">II (Ie = 1.00)</option>
+                                    <option value="III">III (Ie = 1.25)</option>
+                                    <option value="IV" selected>IV - Essencial / Porto (Ie = 1.50)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="seismic_site_class" class="eng-label">Classe do Solo (Site Class)</label>
+                                <select id="seismic_site_class" onchange="handleSiteClassChange()">
+                                    <option value="A">A - Rocha Dura</option>
+                                    <option value="B">B - Rocha Média</option>
+                                    <option value="BC">BC - Rocha Fraturada</option>
+                                    <option value="C">C - Solo Muito Denso / Rocha Mole</option>
+                                    <option value="CD">CD - Solo Denso Intermediário</option>
+                                    <option value="D" selected>D - Solo Rígido Padrão</option>
+                                    <option value="DE">DE - Solo Médio / Mole Intermediário</option>
+                                    <option value="E">E - Solo Mole (Argilas)</option>
+                                    <option value="F">F - Solo Especial / Liquefacível</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="seismic_ss" class="eng-label">Aceleração $S_s$ <span class="text-xs text-blue-600 font-bold">[g]</span></label>
+                                <input type="number" id="seismic_ss" value="1.50" min="0.01" max="4.0" step="0.05" oninput="handleSpectralInputsChange()">
+                                <span class="text-[10px] text-gray-500">Curto Período (0.2s) MCE_R</span>
+                            </div>
+                            <div>
+                                <label for="seismic_s1" class="eng-label">Aceleração $S_1$ <span class="text-xs text-blue-600 font-bold">[g]</span></label>
+                                <input type="number" id="seismic_s1" value="0.60" min="0.01" max="2.0" step="0.05" oninput="handleSpectralInputsChange()">
+                                <span class="text-[10px] text-gray-500">1.0 Segundo MCE_R</span>
+                            </div>
+                            <div class="col-span-2">
+                                <label for="seismic_tl" class="eng-label">Período de Transição Longo ($T_L$) <span class="text-xs text-blue-600 font-bold">[s]</span></label>
+                                <input type="number" id="seismic_tl" value="8.0" min="1.0" max="20.0" step="1.0">
+                                <span class="text-[10px] text-gray-500">Fronteira de deslocamento constante (Fig. 22-14)</span>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Unit System Guidance Banner -->
+                        <div id="unit-system-banner" class="mt-4 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs transition-colors">
+                            <div class="flex items-center gap-2 font-bold text-blue-900 dark:text-blue-200">
+                                <span id="unit-system-banner-icon" class="text-base">🌍</span>
+                                <span id="unit-system-banner-title">Sistema de Unidades Ativo: Métrico</span>
+                            </div>
+                            <p id="unit-system-banner-desc" class="text-blue-800 dark:text-blue-300 mt-1 leading-relaxed">
+                                Dimensões em <b>metros [m]</b>, forças sísmicas e peso em <b>quilonewtons [kN]</b> e <b>toneladas-força [tf]</b>, períodos em <b>segundos [s]</b>.
+                            </p>
+                        </div>
+
+                        <!-- Site Coefficients Fa & Fv with auto-badge and manual override -->
+                        <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Coeficientes de Amplificação de Sítio</span>
+                                <label class="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 cursor-pointer">
+                                    <input type="checkbox" id="override-site-coefs" onchange="toggleManualSiteCoefs(this.checked)" class="rounded text-blue-600 focus:ring-0">
+                                    <span>Editar Manualmente</span>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="seismic_fa" class="eng-label mb-0.5">Fa (Curto Período)</label>
+                                    <input type="number" id="seismic_fa" value="1.00" step="0.01" readonly class="bg-gray-100 dark:bg-gray-700 cursor-not-allowed">
+                                    <span id="fa-source-label" class="text-[9px] text-emerald-600 font-bold block mt-0.5">Tab. 11.4-1 Interp.</span>
+                                </div>
+                                <div>
+                                    <label for="seismic_fv" class="eng-label mb-0.5">Fv (1.0 Segundo)</label>
+                                    <input type="number" id="seismic_fv" value="1.80" step="0.01" readonly class="bg-gray-100 dark:bg-gray-700 cursor-not-allowed">
+                                    <span id="fv-source-label" class="text-[9px] text-emerald-600 font-bold block mt-0.5">Tab. 11.4-2 Interp.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Schematic Visual Diagram of Seismic Excitation -->
+                    <div class="form-section">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-base font-bold flex items-center gap-2">
+                                <span>📐</span> Mecânica Sísmica & Cortante Basal
+                            </h2>
+                            <span id="diagram-sdc-badge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">
+                                SDC: --
+                            </span>
+                        </div>
+                        <div class="diagram bg-slate-900/5 dark:bg-slate-900/40 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <svg id="seismic-diagram" viewBox="0 0 420 250" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="groundGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stop-color="#475569" />
+                                        <stop offset="100%" stop-color="#1e293b" />
+                                    </linearGradient>
+                                    <linearGradient id="structureGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#94a3b8" />
+                                        <stop offset="100%" stop-color="#cbd5e1" />
+                                    </linearGradient>
+                                    <marker id="seismicArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                        <path d="M0,0 L0,6 L6,3 z" fill="#ef4444" />
+                                    </marker>
+                                    <marker id="shearArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                        <path d="M0,0 L0,6 L6,3 z" fill="#3b82f6" />
+                                    </marker>
+                                    <marker id="accelArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                        <path d="M0,0 L0,6 L6,3 z" fill="#f59e0b" />
+                                    </marker>
+                                </defs>
+                                
+                                <!-- Ground Foundation -->
+                                <rect x="20" y="200" width="380" height="35" fill="url(#groundGrad)" rx="2" />
+                                <line x1="20" y1="200" x2="400" y2="200" stroke="#0f172a" stroke-width="3" />
+                                
+                                <!-- Ground Motion Oscillating Waves -->
+                                <path d="M 40,218 Q 70,210 100,218 T 160,218 T 220,218 T 280,218 T 340,218" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 2" />
+                                <text x="190" y="230" text-anchor="middle" class="text-[9px] font-extrabold fill-amber-400">Aceleração de Base ag(t)</text>
+                                
+                                <!-- Structural Superstructure (Displaced shape) -->
+                                <path id="diag-bldg-path" d="M 170,200 L 195,60 L 255,60 L 230,200 Z" fill="url(#structureGrad)" stroke="#475569" stroke-width="2" />
+                                
+                                <!-- Slabs / Story Lines -->
+                                <line x1="188" y1="95" x2="248" y2="95" stroke="#334155" stroke-width="2.5" />
+                                <line x1="181" y1="130" x2="241" y2="130" stroke="#334155" stroke-width="2.5" />
+                                <line x1="175" y1="165" x2="235" y2="165" stroke="#334155" stroke-width="2.5" />
+                                
+                                <!-- Lateral Story Inertial Forces Fx -->
+                                <line x1="270" y1="60" x2="256" y2="60" stroke="#ef4444" stroke-width="3" marker-end="url(#seismicArrow)" />
+                                <text x="290" y="64" class="text-[10px] font-bold fill-red-500">Fn (Topo)</text>
+                                
+                                <line x1="260" y1="95" x2="249" y2="95" stroke="#ef4444" stroke-width="2.5" marker-end="url(#seismicArrow)" />
+                                <line x1="250" y1="130" x2="242" y2="130" stroke="#ef4444" stroke-width="2" marker-end="url(#seismicArrow)" />
+                                
+                                <!-- Base Shear Vector V -->
+                                <line x1="90" y1="200" x2="165" y2="200" stroke="#3b82f6" stroke-width="3.5" marker-end="url(#shearArrow)" />
+                                <text x="100" y="192" class="text-[11px] font-black fill-blue-600 dark:fill-blue-400">Cortante Basal V = Cs · W</text>
+                                
+                                <!-- Overturning Moment Arc -->
+                                <path d="M 140,170 A 25 25 0 0 1 145,210" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-dasharray="3 2" />
+                                <text x="105" y="165" class="text-[10px] font-bold fill-purple-600 dark:fill-purple-400">Mot (Tombamento)</text>
+
+                                <!-- Height dimension -->
+                                <line x1="360" y1="60" x2="360" y2="200" stroke="#64748b" stroke-width="1.5" />
+                                <line x1="355" y1="60" x2="365" y2="60" stroke="#64748b" stroke-width="1.5" />
+                                <line x1="355" y1="200" x2="365" y2="200" stroke="#64748b" stroke-width="1.5" />
+                                <text x="375" y="135" class="text-[11px] font-bold fill-gray-600 dark:fill-gray-400">hn</text>
+                            </svg>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                            A aceleração sísmica no solo induz forças de inércia proporcionais à massa em cada pavimento ($F_x$), originando o cortante de base $V$ e momento de tombamento $M_{ot}$.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Column 2: Sistema Estrutural (SFRS), Geometria e Período -->
+                <div class="space-y-6">
+                    <div class="form-section">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-base font-bold flex items-center gap-2">
+                                <span>🏛️</span> Sistema Resistente a Forças Sísmicas (SFRS)
+                            </h2>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                                ASCE 7 Tab. 12.2-1
+                            </span>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label for="seismic_sfrs_type" class="eng-label">Tipologia do Sistema Estrutural (SFRS)</label>
+                                <select id="seismic_sfrs_type" onchange="handleSfrsPresetChange()">
+                                    <option value="wharf_ductile_concrete_piles" selected>🏗️ Cais Estaqueado - Estacas Concreto Dúctil (ASCE 61 / ASCE 7)</option>
+                                    <option value="wharf_ductile_steel_piles">🏗️ Cais Estaqueado - Estacas Tubulares Metálicas Dúcteis (ASCE 61)</option>
+                                    <option value="wharf_standard_piles">🏗️ Estrutura Portuária Convencional (ASCE 7 Tab. 15.4-2)</option>
+                                    <option value="steel_smf">🏢 Pórtico Especial Resistente a Momento em Aço (SMF - ASCE 7)</option>
+                                    <option value="steel_imf">🏢 Pórtico Intermediário de Aço (IMF)</option>
+                                    <option value="steel_scbf">🏢 Pórtico de Aço com Contraventamento Concêntrico Especial (SCBF)</option>
+                                    <option value="steel_brbf">🏢 Contraventamento com Flambagem Impedida (BRBF)</option>
+                                    <option value="concrete_smrf">🏛️ Pórtico Especial de Concreto Armado (SMRF)</option>
+                                    <option value="concrete_shear_wall">🏛️ Paredes Estruturais Especiais de Concreto Armado (RC Shear Walls)</option>
+                                    <option value="cantilever_column">🏛️ Sistema de Pilares em Balanço (Cantilever Column)</option>
+                                    <option value="custom">⚙️ Parâmetros SFRS Personalizados (Manual)</option>
+                                </select>
+                            </div>
+
+                            <!-- SFRS Coefficient Triplet (R, Omega0, Cd) -->
+                            <div class="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Fatores Sísmicos de Comportamento</span>
+                                    <span id="sfrs-auto-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                                        Normativo
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label for="seismic_r" class="eng-label mb-0.5">R (Modificação)</label>
+                                        <input type="number" id="seismic_r" value="3.0" min="1.0" max="8.0" step="0.5" class="font-mono font-bold text-center">
+                                        <span class="text-[9px] text-gray-500 block text-center">Ductilidade</span>
+                                    </div>
+                                    <div>
+                                        <label for="seismic_omega0" class="eng-label mb-0.5">Ω₀ (Sobrerresist.)</label>
+                                        <input type="number" id="seismic_omega0" value="2.0" min="1.0" max="3.5" step="0.25" class="font-mono font-bold text-center">
+                                        <span class="text-[9px] text-gray-500 block text-center">Capacidade extra</span>
+                                    </div>
+                                    <div>
+                                        <label for="seismic_cd" class="eng-label mb-0.5">Cd (Deslocamento)</label>
+                                        <input type="number" id="seismic_cd" value="3.0" min="1.0" max="6.5" step="0.5" class="font-mono font-bold text-center">
+                                        <span class="text-[9px] text-gray-500 block text-center">Drift elástico</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Structural Geometry & Period Definition -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="seismic_height_hn" class="eng-label">Altura Estrutural ($h_n$) <span class="seismic-l-unit text-xs text-blue-600 font-bold">[m]</span></label>
+                                    <input type="number" id="seismic_height_hn" value="24.0" min="1.0" max="500.0" step="0.5" oninput="updateApproximatePeriod()">
+                                </div>
+                                <div>
+                                    <label for="seismic_num_stories" class="eng-label">Número de Pavimentos</label>
+                                    <input type="number" id="seismic_num_stories" value="1" min="1" max="50" step="1">
+                                </div>
+                                <div class="col-span-2">
+                                    <label for="seismic_weight_w" class="eng-label">Peso Sísmico Efetivo Total ($W$) <span class="seismic-f-unit text-xs text-blue-600 font-bold">[kN]</span></label>
+                                    <input type="number" id="seismic_weight_w" value="50000.0" min="10.0" step="100.0">
+                                    <span class="text-[10px] text-gray-500">Carga permanente total D + parcelas de sobrecarga aplicáveis (Sec. 12.7.2)</span>
+                                </div>
+                                <div>
+                                    <label for="seismic_period_t" class="eng-label">Período Analítico ($T$) <span class="text-xs text-blue-600 font-bold">[s]</span></label>
+                                    <input type="number" id="seismic_period_t" placeholder="Opcional (ex: 0.85)" min="0.05" max="10.0" step="0.01">
+                                    <span class="text-[10px] text-gray-500">Do modelo modal / FEM</span>
+                                </div>
+                                <div>
+                                    <label for="seismic_redundancy_rho" class="eng-label">Fator Redundância ($\rho$)</label>
+                                    <select id="seismic_redundancy_rho">
+                                        <option value="1.0" selected>1.0 (Redundante / SDC B-C)</option>
+                                        <option value="1.3">1.3 (Não Redundante SDC D-F)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Calculated Ta and Cu Banner -->
+                            <div class="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                <div class="flex items-center justify-between font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                    <span>Período Fundamental Estimado (Eq. 12.8-7):</span>
+                                    <span id="ta-calc-display" class="font-mono text-blue-600 dark:text-blue-400">Ta = 0.72s</span>
+                                </div>
+                                <p id="t-limit-explanation" class="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
+                                    Limite normativo superior: $T_{max} = C_u \cdot T_a$. Se o período analítico exceder $T_{max}$, o cálculo utilizará $T_{max}$.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 3: Componentes Portuários (ASCE 61) & Equipamento Não Estrutural (Cap. 13) -->
+                <div class="space-y-6">
+                    <!-- ASCE 61 Marine Wharf & Added Hydrodynamic Mass Section -->
+                    <div class="form-section">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-base font-bold flex items-center gap-2">
+                                <span>⚓</span> Cais Portuário & Estacas (ASCE 61)
+                            </h2>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="seismic_is_wharf" class="sr-only peer" checked onchange="toggleWharfSection(this.checked)">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="wharf-inputs-container" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="seismic_wharf_deck_w" class="eng-label">Peso Mesa ($W_{deck}$) <span class="seismic-f-unit text-xs text-blue-600 font-bold">[kN]</span></label>
+                                    <input type="number" id="seismic_wharf_deck_w" value="35000.0" min="100.0" step="500.0">
+                                </div>
+                                <div>
+                                    <label for="seismic_wharf_num_piles" class="eng-label">Nº de Estacas ($n_{piles}$)</label>
+                                    <input type="number" id="seismic_wharf_num_piles" value="36" min="1" max="500" step="1">
+                                </div>
+                                <div>
+                                    <label for="seismic_wharf_pile_diam" class="eng-label">Diâmetro Estaca ($D$) <span class="seismic-l-unit text-xs text-blue-600 font-bold">[m]</span></label>
+                                    <input type="number" id="seismic_wharf_pile_diam" value="1.20" min="0.3" max="5.0" step="0.05">
+                                </div>
+                                <div>
+                                    <label for="seismic_wharf_pile_sub_len" class="eng-label">Compr. Submerso ($L_{sub}$) <span class="seismic-l-unit text-xs text-blue-600 font-bold">[m]</span></label>
+                                    <input type="number" id="seismic_wharf_pile_sub_len" value="18.0" min="1.0" max="60.0" step="0.5">
+                                </div>
+                                <div>
+                                    <label for="seismic_wharf_pile_total_len" class="eng-label">Compr. Total ($L_{total}$) <span class="seismic-l-unit text-xs text-blue-600 font-bold">[m]</span></label>
+                                    <input type="number" id="seismic_wharf_pile_total_len" value="24.0" min="1.0" max="80.0" step="0.5">
+                                </div>
+                                <div>
+                                    <label for="seismic_wharf_cm" class="eng-label">Coef. Massa Adic. ($C_m$)</label>
+                                    <input type="number" id="seismic_wharf_cm" value="1.00" min="0.5" max="2.0" step="0.05">
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
+                                Conforme ASCE 61 Sec. 3.4.2: O peso sísmico inclui a inércia hidrodinâmica adicionada da coluna d'água arrastada pelas estacas submersas: $W_{hydro} = n \cdot C_m \cdot \gamma_w \cdot \frac{\pi D^2}{4} \cdot L_{sub}$.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Nonstructural Equipment & Port Cranes Section (ASCE 7 Chapter 13) -->
+                    <div class="form-section">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-base font-bold flex items-center gap-2">
+                                <span>🏗️</span> Equipamentos & Guindastes (Cap. 13)
+                            </h2>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="seismic_include_equipment" class="sr-only peer" checked onchange="toggleEquipmentSection(this.checked)">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="equipment-inputs-container" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="seismic_equip_wp" class="eng-label">Peso Equip. ($W_p$) <span class="seismic-f-unit text-xs text-blue-600 font-bold">[kN]</span></label>
+                                    <input type="number" id="seismic_equip_wp" value="1500.0" min="1.0" step="50.0">
+                                </div>
+                                <div>
+                                    <label for="seismic_equip_zh" class="eng-label">Cota Fixação ($z/h$)</label>
+                                    <select id="seismic_equip_zh">
+                                        <option value="1.0" selected>1.0 (Topo / Deck do Cais)</option>
+                                        <option value="0.5">0.5 (Meia Altura)</option>
+                                        <option value="0.0">0.0 (Base / Terreno)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="seismic_equip_ap" class="eng-label">Amplif. Dinâmica ($a_p$)</label>
+                                    <input type="number" id="seismic_equip_ap" value="2.5" min="1.0" max="2.5" step="0.25">
+                                </div>
+                                <div>
+                                    <label for="seismic_equip_rp" class="eng-label">Ductilidade ($R_p$)</label>
+                                    <input type="number" id="seismic_equip_rp" value="3.0" min="1.0" max="12.0" step="0.5">
+                                </div>
+                                <div class="col-span-2">
+                                    <label for="seismic_equip_ip" class="eng-label">Fator Importância ($I_p$)</label>
+                                    <select id="seismic_equip_ip">
+                                        <option value="1.5" selected>1.5 (Equipamento Crítico de Vida / Operação Portuária)</option>
+                                        <option value="1.0">1.0 (Equipamento Não Crítico)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
+                                Força sísmica em equipamentos: $F_p = \frac{0.4 a_p S_{DS} W_p}{R_p / I_p} (1 + 2 z/h)$ limitada por $0.3 S_{DS} I_p W_p \le F_p \le 1.6 S_{DS} I_p W_p$.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- ASCE Load Combinations Summary Card -->
+                    <div class="p-3.5 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                        <div class="font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-1.5">
+                            <span>📚</span> Efeito Sísmico Vertical & Combinações ASCE 7
+                        </div>
+                        <ul class="space-y-1 text-gray-600 dark:text-gray-300 text-[11px]">
+                            <li>• <b>Efeito Vertical:</b> $E_v = 0.2 \cdot S_{DS} \cdot D$</li>
+                            <li>• <b>Efeito Sísmico Total:</b> $E = E_h \pm E_v$</li>
+                            <li>• <b>Comb. Gravidade:</b> $(1.2 + 0.2 S_{DS})D + \rho Q_E + L$</li>
+                            <li>• <b>Comb. Alívio / Uplift:</b> $(0.9 - 0.2 S_{DS})D + \rho Q_E$</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="feedback-message" class="text-center mt-3 text-sm h-5 font-semibold"></div>
+        
+        <!-- Results Container (Rendered dynamically) -->
+        <div id="seismic-results-container" class="mt-8 results-container"></div>
+
+        <div id="footer-placeholder"></div>
+    </div>
+
+    <!-- Modal Pop-up para Memorial de Cálculo Técnico Completo (KaTeX + Export PDF/Word) -->
+    <div id="seismic-report-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 transition-all">
+        <div class="relative w-full max-w-5xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col max-h-[92vh] overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="px-5 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-850 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg font-bold shadow-xs">
+                        ⚡
+                    </div>
+                    <div>
+                        <h3 class="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            Memorial de Cálculo Sísmico (ASCE 7 & ASCE 61)
+                        </h3>
+                        <p class="text-xs text-blue-800 dark:text-blue-300 font-semibold">
+                            Demonstração analítica detalhada com formulações matemáticas passo a passo.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 flex-wrap justify-end">
+                    <button type="button" id="modal-download-pdf-btn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                        <span>📄</span> Baixar PDF
+                    </button>
+                    <button type="button" id="modal-download-word-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                        <span>📝</span> Baixar Word
+                    </button>
+                    <button type="button" id="modal-copy-btn" class="px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-semibold text-xs transition flex items-center gap-1 cursor-pointer">
+                        <span>📋</span> Copiar
+                    </button>
+                    <button type="button" id="modal-close-btn" class="px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-bold transition cursor-pointer">
+                        <span>✕</span> Fechar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-50/60 dark:bg-gray-900/60">
+                <div id="seismic-modal-report-body" class="max-w-4xl mx-auto"></div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>Pressione <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-mono text-[10px]">ESC</kbd> para fechar a qualquer momento</span>
+                <button type="button" id="modal-footer-close-btn" class="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer">Fechar visualização</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof injectHeader === 'function') {
+                injectHeader({
+                    activePage: 'seismic',
+                    pageTitle: 'seismic',
+                    headerPlaceholderId: 'header-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+            if (typeof injectFooter === 'function') {
+                injectFooter({
+                    footerPlaceholderId: 'footer-placeholder',
+                    pathPrefix: '../'
+                });
+            }
+        });
+    </script>
+</body>
+</html>

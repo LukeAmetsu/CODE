@@ -757,12 +757,12 @@ function updateCharts(res) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor, font: { size: 11 } } },
+                    legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } },
                     tooltip: { callbacks: { label: ctx => `N_SPT: ${ctx.parsed.y} golpes (Prof: ${ctx.label} m)` } }
                 },
                 scales: {
-                    x: { title: { display: true, text: 'Profundidade (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor } },
-                    y: { title: { display: true, text: 'N_SPT (golpes)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    x: { title: { display: true, text: 'Profundidade (m)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: { title: { display: true, text: 'N_SPT (golpes)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
                 }
             }
         });
@@ -787,12 +787,12 @@ function updateCharts(res) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor, font: { size: 10 } } },
+                    legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } },
                     tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} tf` } }
                 },
                 scales: {
-                    x: { title: { display: true, text: 'Profundidade da Ponta (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor } },
-                    y: { title: { display: true, text: 'Capacidade Admissível (tf)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    x: { title: { display: true, text: 'Profundidade da Ponta (m)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: { title: { display: true, text: 'Capacidade Admissível (tf)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
                 }
             }
         });
@@ -818,12 +818,12 @@ function updateCharts(res) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor, font: { size: 10 } } },
+                    legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' }, padding: 12 } },
                     tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toLocaleString('pt-BR', {maximumFractionDigits: 0})} kN/m/m`, title: ctx => `Prof: ${ctx[0].label} m` } }
                 },
                 scales: {
-                    y: { title: { display: true, text: 'Profundidade (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
-                    x: { title: { display: true, text: 'Rigidez por metro (kN/m/m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    y: { title: { display: true, text: 'Profundidade (m)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
+                    x: { title: { display: true, text: 'Rigidez por metro (kN/m/m)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
                 }
             }
         });
@@ -869,12 +869,12 @@ function updateCharts(res) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor, font: { size: 10 } } },
+                    legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } },
                     tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)} kPa`, title: ctx => `Prof: ${ctx[0].label} m` } }
                 },
                 scales: {
-                    y: { title: { display: true, text: 'Profundidade no Muro (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
-                    x: { title: { display: true, text: 'Pressão Ativa σa (kPa)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    y: { title: { display: true, text: 'Profundidade no Muro (m)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
+                    x: { title: { display: true, text: 'Pressão Ativa σa (kPa)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
                 }
             }
         });
@@ -917,12 +917,12 @@ function updateCharts(res) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor, font: { size: 10 } } },
+                    legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } },
                     tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.x.toFixed(2)} kPa`, title: ctx => `Prof: ${ctx[0].label} m` } }
                 },
                 scales: {
-                    y: { title: { display: true, text: 'Profundidade no Muro (m)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
-                    x: { title: { display: true, text: 'Pressão Passiva σp (kPa)', color: textColor, font: { size: 11 } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    y: { title: { display: true, text: 'Profundidade no Muro (m)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, reverse: true },
+                    x: { title: { display: true, text: 'Pressão Passiva σp (kPa)', color: textColor, font: { size: 12, weight: 'bold' } }, ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
                 }
             }
         });
@@ -996,143 +996,408 @@ function toggleSpringsTableModal() {
 }
 
 /**
- * Renderiza um gráfico Chart.js em alta resolução (300 DPI equivalente, 3x)
- * com fundo 100% transparente e paleta contrastante especial para colar no Word.
+ * Renderiza um gráfico Chart.js em altíssima resolução nativa (300 DPI / 1920x1080)
+ * com 100% de fundo transparente, fontes vetoriais ampliadas e perfeitamente legíveis para Word/PowerPoint,
+ * e traçados anti-aliased espessos e nítidos.
  */
-function createHighResChartCanvas(chartInstance, forWord = true) {
-    if (!chartInstance) return null;
-    const origCanvas = chartInstance.canvas;
-    const scale = 3.0; // ~300 DPI
-    const w = Math.round(origCanvas.width * scale);
-    const h = Math.round(origCanvas.height * scale);
+function createHighResChartCanvas(chartOrCanvas, scale = 2.5, chartTitle = '') {
+    let origCanvas = null;
+    let chartInstance = null;
 
-    const offscreen = document.createElement('canvas');
-    offscreen.width = w;
-    offscreen.height = h;
-    const octx = offscreen.getContext('2d');
-
-    // Clona configuração
-    const origConfig = chartInstance.config;
-    const configCopy = JSON.parse(JSON.stringify({
-        type: origConfig.type,
-        data: origConfig.data,
-        options: origConfig.options
-    }));
-
-    // Se for para Word (folha branca), garantir textos contrastantes
-    const textColor = forWord ? '#0f172a' : (document.documentElement.classList.contains('dark') ? '#94a3b8' : '#334155');
-    const gridColor = forWord ? 'rgba(148, 163, 184, 0.45)' : (document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0');
-
-    if (configCopy.options) {
-        configCopy.options.animation = false;
-        configCopy.options.responsive = false;
-        configCopy.options.maintainAspectRatio = false;
-
-        // Escalar fontes e linhas
-        if (configCopy.options.plugins?.legend?.labels) {
-            configCopy.options.plugins.legend.labels.color = textColor;
-            configCopy.options.plugins.legend.labels.font = { size: 11 * scale, weight: 'bold' };
+    if (chartOrCanvas && chartOrCanvas.canvas) {
+        chartInstance = chartOrCanvas;
+        origCanvas = chartOrCanvas.canvas;
+    } else if (typeof chartOrCanvas === 'string') {
+        origCanvas = document.getElementById(chartOrCanvas);
+        if (typeof Chart !== 'undefined' && Chart.getChart) {
+            chartInstance = Chart.getChart(origCanvas);
         }
+    } else if (chartOrCanvas instanceof HTMLCanvasElement) {
+        origCanvas = chartOrCanvas;
+        if (typeof Chart !== 'undefined' && Chart.getChart) {
+            chartInstance = Chart.getChart(origCanvas);
+        }
+    }
 
-        ['x', 'y'].forEach(axis => {
-            if (configCopy.options.scales?.[axis]) {
-                const sc = configCopy.options.scales[axis];
-                if (sc.title) {
-                    sc.title.color = textColor;
-                    sc.title.font = { size: 12 * scale, weight: 'bold' };
+    if (!origCanvas || origCanvas.width === 0 || origCanvas.height === 0) {
+        return null;
+    }
+
+    // Identifica ou refina o título descritivo do gráfico caso não informado
+    const cId = origCanvas.id || '';
+    if (!chartTitle) {
+        if (cId === 'chartSprings') chartTitle = 'Molas Dinâmicas e Estáticas por Metro — Kz / Kh (kN/m/m)';
+        else if (cId === 'chartNspt') chartTitle = 'Perfil N_SPT vs Profundidade';
+        else if (cId === 'chartCapacity') chartTitle = 'Capacidade de Carga Admissível: Aoki-Velloso vs Décourt (tf)';
+        else if (cId === 'chartEarthPressureActive') chartTitle = 'Diagrama de Empuxo Ativo — Rankine & Coulomb (kPa)';
+        else if (cId === 'chartEarthPressurePassive') chartTitle = 'Diagrama de Empuxo Passivo — Rankine & Coulomb (kPa)';
+        else if (chartInstance?.config?.options?.plugins?.title?.text) {
+            chartTitle = chartInstance.config.options.plugins.title.text;
+        }
+    }
+
+    // Dimensões em alta definição (padrão 1920x1080 para visualização nítida no Word/PPT)
+    const baseW = origCanvas.clientWidth || origCanvas.width || 640;
+    const baseH = origCanvas.clientHeight || origCanvas.height || 260;
+    const targetW = Math.max(Math.round(baseW * scale), 1920);
+    const targetH = Math.max(Math.round(baseH * scale), 1080);
+
+    // Tipografia proporcional otimizada para inserção no Word (~15-16cm na página A4)
+    // No Word, uma imagem de 1920px sofre redução de ~3.2x, portanto fontes precisam ser robustas
+    const titleFontSize = Math.max(Math.round(targetW * 0.020), 38);       // ~38px (equivale a ~12pt bold no Word)
+    const legendFontSize = Math.max(Math.round(targetW * 0.015), 28);      // ~28px (equivale a ~9pt bold no Word)
+    const axisTitleFontSize = Math.max(Math.round(targetW * 0.0145), 28);  // ~28px (equivale a ~9pt bold no Word)
+    const tickFontSize = Math.max(Math.round(targetW * 0.0115), 22);       // ~22px (equivale a ~7pt no Word)
+    const textColor = '#0f172a'; // Slate-900: alto contraste sobre fundo transparente/branco
+    const gridColor = 'rgba(148, 163, 184, 0.40)'; // Slate-400 suave para visual limpo
+
+    // Tenta renderização nativa vetorial através do Chart.js para máxima nitidez
+    if (chartInstance && chartInstance.config) {
+        try {
+            const origConfig = chartInstance.config;
+
+            // Cria container temporário no DOM para o Chart.js medir dimensões reais
+            const container = document.createElement('div');
+            container.style.cssText = `position:fixed;left:-99999px;top:-99999px;width:${targetW}px;height:${targetH}px;visibility:hidden;pointer-events:none;z-index:-9999;`;
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = targetW;
+            offCanvas.height = targetH;
+            offCanvas.style.width = `${targetW}px`;
+            offCanvas.style.height = `${targetH}px`;
+            container.appendChild(offCanvas);
+            document.body.appendChild(container);
+
+            // Escala datasets (linhas mais espessas e pontos destacados para impressão / Word)
+            const clonedDatasets = (origConfig.data?.datasets || []).map((ds, idx) => {
+                const copy = { ...ds };
+                if (copy.data) copy.data = [...copy.data];
+                // Preserva se o dataset estiver oculto pelo usuário
+                if (chartInstance && typeof chartInstance.isDatasetVisible === 'function') {
+                    copy.hidden = !chartInstance.isDatasetVisible(idx);
                 }
-                if (sc.ticks) {
-                    sc.ticks.color = textColor;
-                    sc.ticks.font = { size: 10 * scale };
+                copy.borderWidth = Math.max((copy.borderWidth || 2.0) * 2.2, 5.0);
+                if (copy.pointRadius !== undefined && copy.pointRadius > 0) {
+                    copy.pointRadius = Math.max(copy.pointRadius * 2.2, 8);
+                } else if (copy.pointRadius === 0) {
+                    copy.pointRadius = 0;
+                } else {
+                    copy.pointRadius = 7;
                 }
-                if (sc.grid) {
-                    sc.grid.color = gridColor;
-                    sc.grid.lineWidth = 1.0 * scale;
+                if (copy.pointHoverRadius) copy.pointHoverRadius = copy.pointRadius + 2;
+                if (copy.borderDash) copy.borderDash = copy.borderDash.map(d => d * 2.0);
+                return copy;
+            });
+
+            // Configuração vetorial de alta definição para Word / PowerPoint
+            const clonedOptions = {
+                ...(origConfig.options || {}),
+                animation: false,
+                responsive: false,
+                maintainAspectRatio: false,
+                devicePixelRatio: 1,
+                layout: {
+                    padding: {
+                        top: 14,
+                        bottom: 22,
+                        left: 24,
+                        right: 32
+                    }
+                },
+                plugins: {
+                    ...(origConfig.options?.plugins || {}),
+                    tooltip: { enabled: false },
+                    title: {
+                        display: Boolean(chartTitle),
+                        text: chartTitle || '',
+                        color: textColor,
+                        font: {
+                            size: titleFontSize,
+                            weight: 'bold',
+                            family: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif"
+                        },
+                        padding: {
+                            top: 16,
+                            bottom: 20
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'center',
+                        labels: {
+                            color: textColor,
+                            font: {
+                                size: legendFontSize,
+                                weight: 'bold',
+                                family: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif"
+                            },
+                            boxWidth: 44,
+                            boxHeight: 20,
+                            padding: 24,
+                            usePointStyle: false
+                        }
+                    }
                 }
+            };
+
+            if (clonedOptions.scales) {
+                const scalesCopy = {};
+                for (const [axisKey, axisConfig] of Object.entries(clonedOptions.scales)) {
+                    scalesCopy[axisKey] = {
+                        ...axisConfig,
+                        title: {
+                            ...(axisConfig.title || {}),
+                            display: true,
+                            text: axisConfig.title?.text || (axisKey === 'y' ? 'Profundidade (m)' : 'Valores'),
+                            color: textColor,
+                            font: {
+                                size: axisTitleFontSize,
+                                weight: 'bold',
+                                family: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif"
+                            },
+                            padding: { top: 14, bottom: 14 }
+                        },
+                        ticks: {
+                            ...(axisConfig.ticks || {}),
+                            color: '#1e293b',
+                            font: {
+                                size: tickFontSize,
+                                weight: '600',
+                                family: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif"
+                            },
+                            padding: 10
+                        },
+                        grid: {
+                            ...(axisConfig.grid || {}),
+                            color: gridColor,
+                            lineWidth: 1.5
+                        }
+                    };
+                }
+                clonedOptions.scales = scalesCopy;
             }
-        });
+
+            // Renderiza no offCanvas com fundo 100% transparente
+            const offChart = new Chart(offCanvas, {
+                type: origConfig.type,
+                data: {
+                    labels: origConfig.data?.labels ? [...origConfig.data.labels] : [],
+                    datasets: clonedDatasets
+                },
+                options: clonedOptions
+            });
+
+            offChart.update('none');
+
+            // Clona o conteúdo renderizado para o canvas final ANTES de destruir a instância
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = targetW;
+            finalCanvas.height = targetH;
+            const fctx = finalCanvas.getContext('2d');
+            fctx.drawImage(offCanvas, 0, 0);
+
+            // Limpa instância e remove do DOM
+            offChart.destroy();
+            document.body.removeChild(container);
+
+            return finalCanvas;
+        } catch (renderErr) {
+            console.warn('Re-renderização vetorial offscreen falhou, usando fallback interpolado:', renderErr);
+            const staleContainer = document.querySelector('div[style*="-99999px"]');
+            if (staleContainer && staleContainer.parentNode) {
+                staleContainer.parentNode.removeChild(staleContainer);
+            }
+        }
     }
 
-    // Escalar espessura das linhas das séries e raios de pontos
-    if (configCopy.data?.datasets) {
-        configCopy.data.datasets.forEach(ds => {
-            if (ds.borderWidth) ds.borderWidth = ds.borderWidth * scale;
-            if (ds.pointRadius) ds.pointRadius = ds.pointRadius * scale;
-            if (ds.borderDash) ds.borderDash = ds.borderDash.map(d => d * scale);
-        });
+    // Fallback com interpolação de alta qualidade e inclusão de título
+    const fallbackCanvas = document.createElement('canvas');
+    fallbackCanvas.width = targetW;
+    fallbackCanvas.height = targetH;
+    const ctx = fallbackCanvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(origCanvas, 0, 0, targetW, targetH);
+    if (chartTitle) {
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${titleFontSize}px 'Segoe UI', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(chartTitle, targetW / 2, 50);
     }
 
-    // Renderiza instância isolada no offscreen
-    const offChart = new Chart(octx, configCopy);
-    offChart.render();
-    offChart.destroy();
-
-    return offscreen;
+    return fallbackCanvas;
 }
 
 /**
- * Copia um gráfico Chart.js para a área de transferência em 300 DPI com fundo transparente
- * especialmente calibrado para colar direto no Microsoft Word.
+ * Copia um gráfico Chart.js para a área de transferência em altíssima resolução (300 DPI / 1920x1080)
+ * com título, legenda e eixos grandes e nítidos para Word / PowerPoint / WhatsApp (Ctrl + V).
  */
-async function copyChartForWord(chartInstance, chartTitle = 'Gráfico') {
-    if (!chartInstance) {
-        alert('Gráfico não disponível para cópia.');
+async function copyChartForWord(chartOrCanvas, chartTitle = 'Gráfico', btnElement = null) {
+    const btn = btnElement || (window.event?.target?.closest('button'));
+    let origCanvas = null;
+
+    if (chartOrCanvas && chartOrCanvas.canvas) {
+        origCanvas = chartOrCanvas.canvas;
+    } else if (typeof chartOrCanvas === 'string') {
+        origCanvas = document.getElementById(chartOrCanvas);
+    } else if (chartOrCanvas instanceof HTMLCanvasElement) {
+        origCanvas = chartOrCanvas;
+    }
+
+    // Se a instância for nula (ex: antes de calcular), tenta encontrar pelo canvas correspondente
+    if (!origCanvas && chartTitle) {
+        const titleLower = chartTitle.toLowerCase();
+        if (titleLower.includes('mola')) origCanvas = document.getElementById('chartSprings');
+        else if (titleLower.includes('nspt') || titleLower.includes('perfil')) origCanvas = document.getElementById('chartNspt');
+        else if (titleLower.includes('capacidade')) origCanvas = document.getElementById('chartCapacity');
+        else if (titleLower.includes('ativo')) origCanvas = document.getElementById('chartEarthPressureActive');
+        else if (titleLower.includes('passivo')) origCanvas = document.getElementById('chartEarthPressurePassive');
+    }
+
+    if (!origCanvas || origCanvas.width === 0 || origCanvas.height === 0) {
+        alert('Gráfico não disponível para cópia. Calcule as fundações primeiro.');
         return;
     }
 
-    const offscreen = createHighResChartCanvas(chartInstance, true);
-    if (!offscreen) return;
+    // Expande para título descritivo de alta qualidade caso venha abreviado
+    let formattedTitle = chartTitle;
+    const titleLower = (chartTitle || '').toLowerCase();
+    const cId = origCanvas?.id || '';
+
+    if (cId === 'chartSprings' || titleLower.includes('mola')) {
+        formattedTitle = 'Molas Dinâmicas e Estáticas por Metro — Kz / Kh (kN/m/m)';
+    } else if (cId === 'chartNspt' || titleLower.includes('nspt') || titleLower.includes('perfil')) {
+        formattedTitle = 'Perfil N_SPT vs Profundidade';
+    } else if (cId === 'chartCapacity' || titleLower.includes('capacidade')) {
+        formattedTitle = 'Capacidade de Carga Admissível: Aoki-Velloso vs Décourt (tf)';
+    } else if (cId === 'chartEarthPressureActive' || titleLower.includes('ativo')) {
+        formattedTitle = 'Diagrama de Empuxo Ativo — Rankine & Coulomb (kPa)';
+    } else if (cId === 'chartEarthPressurePassive' || titleLower.includes('passivo')) {
+        formattedTitle = 'Diagrama de Empuxo Passivo — Rankine & Coulomb (kPa)';
+    }
+
+    const offscreen = createHighResChartCanvas(chartOrCanvas || origCanvas, 2.5, formattedTitle);
+    if (!offscreen) {
+        alert('Não foi possível processar a imagem do gráfico.');
+        return;
+    }
+
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<span>⏳</span> Copiando HD...';
+        btn.disabled = true;
+    }
 
     try {
-        offscreen.toBlob(async (blob) => {
-            if (!blob) {
-                alert('Não foi possível gerar a imagem.');
-                return;
+        const blob = await new Promise((resolve, reject) => {
+            offscreen.toBlob((b) => {
+                if (b) resolve(b);
+                else reject(new Error('Falha ao gerar o arquivo de imagem PNG transparente.'));
+            }, 'image/png');
+        });
+
+        let copied = false;
+        if (navigator.clipboard && window.ClipboardItem) {
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                copied = true;
+            } catch (clipErr) {
+                console.warn('navigator.clipboard.write falhou:', clipErr);
             }
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            const btn = event?.target?.closest('button');
+        }
+
+        if (copied) {
             if (btn) {
-                const orig = btn.innerHTML;
-                btn.innerHTML = '<span>✅</span> Copiado p/ Word (300 DPI)!';
+                btn.innerHTML = '<span>✅</span> Copiado para Word!';
                 btn.classList.add('ring-2', 'ring-emerald-400');
                 setTimeout(() => {
-                    btn.innerHTML = orig;
+                    btn.innerHTML = origHtml;
                     btn.classList.remove('ring-2', 'ring-emerald-400');
+                    btn.disabled = false;
                 }, 2200);
             }
-        }, 'image/png');
+        } else {
+            // Fallback: se o navegador/webview bloquear a gravação direta
+            const safeName = (formattedTitle || 'grafico').toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${safeName}_300dpi.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            if (btn) {
+                btn.innerHTML = '<span>⬇</span> Imagem Baixada!';
+                setTimeout(() => {
+                    btn.innerHTML = origHtml;
+                    btn.disabled = false;
+                }, 2500);
+            }
+            alert(`A área de transferência não permitiu gravação direta. A imagem de alta definição (300 DPI) com fundo transparente foi baixada como "${safeName}_300dpi.png".`);
+        }
     } catch (e) {
-        console.warn('Clipboard API com ClipboardItem falhou, tentando fallback download:', e);
-        // Fallback: baixar a imagem transparente
-        downloadChartHighRes(chartInstance, `${chartTitle.toLowerCase().replace(/\s+/g, '_')}_300dpi.png`, true);
-        alert(`O navegador bloqueou a cópia direta no clipboard. A imagem de alta resolução com fundo transparente foi baixada automaticamente para você inserir no Word.`);
+        console.error('Erro ao copiar gráfico:', e);
+        alert('Erro ao copiar imagem: ' + e.message);
+        if (btn) {
+            btn.innerHTML = origHtml;
+            btn.disabled = false;
+        }
     }
 }
 
 /**
- * Baixa um gráfico Chart.js como PNG de alta resolução (300 DPI, transparente ou com fundo).
+ * Baixa um gráfico Chart.js como PNG de alta resolução (300 DPI) com fundo transparente.
  */
-function downloadChartHighRes(chartInstance, filename = 'grafico_300dpi.png', transparent = true) {
-    if (!chartInstance) {
-        alert('Gráfico não disponível.');
+function downloadChartHighRes(chartOrCanvas, filename = 'grafico_300dpi.png', transparent = true, chartTitle = '') {
+    let origCanvas = null;
+    if (chartOrCanvas && chartOrCanvas.canvas) {
+        origCanvas = chartOrCanvas.canvas;
+    } else if (typeof chartOrCanvas === 'string') {
+        origCanvas = document.getElementById(chartOrCanvas);
+    } else if (chartOrCanvas instanceof HTMLCanvasElement) {
+        origCanvas = chartOrCanvas;
+    }
+
+    if (!origCanvas && filename) {
+        const fn = filename.toLowerCase();
+        if (fn.includes('mola')) origCanvas = document.getElementById('chartSprings');
+        else if (fn.includes('nspt')) origCanvas = document.getElementById('chartNspt');
+        else if (fn.includes('capacidade')) origCanvas = document.getElementById('chartCapacity');
+        else if (fn.includes('ativo')) origCanvas = document.getElementById('chartEarthPressureActive');
+        else if (fn.includes('passivo')) origCanvas = document.getElementById('chartEarthPressurePassive');
+    }
+
+    if (!origCanvas || origCanvas.width === 0 || origCanvas.height === 0) {
+        alert('Gráfico não disponível para download. Calcule as fundações primeiro.');
         return;
     }
-    const offscreen = createHighResChartCanvas(chartInstance, true);
-    if (!offscreen) return;
 
-    let targetCanvas = offscreen;
-    if (!transparent) {
-        const bgCanvas = document.createElement('canvas');
-        bgCanvas.width = offscreen.width;
-        bgCanvas.height = offscreen.height;
-        const bctx = bgCanvas.getContext('2d');
-        bctx.fillStyle = '#ffffff';
-        bctx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-        bctx.drawImage(offscreen, 0, 0);
-        targetCanvas = bgCanvas;
+    let formattedTitle = chartTitle;
+    const fn = (filename || '').toLowerCase();
+    const cId = origCanvas?.id || '';
+
+    if (!formattedTitle) {
+        if (cId === 'chartSprings' || fn.includes('mola')) {
+            formattedTitle = 'Molas Dinâmicas e Estáticas por Metro — Kz / Kh (kN/m/m)';
+        } else if (cId === 'chartNspt' || fn.includes('nspt')) {
+            formattedTitle = 'Perfil N_SPT vs Profundidade';
+        } else if (cId === 'chartCapacity' || fn.includes('capacidade')) {
+            formattedTitle = 'Capacidade de Carga Admissível: Aoki-Velloso vs Décourt (tf)';
+        } else if (cId === 'chartEarthPressureActive' || fn.includes('ativo')) {
+            formattedTitle = 'Diagrama de Empuxo Ativo — Rankine & Coulomb (kPa)';
+        } else if (cId === 'chartEarthPressurePassive' || fn.includes('passivo')) {
+            formattedTitle = 'Diagrama de Empuxo Passivo — Rankine & Coulomb (kPa)';
+        }
     }
 
-    const url = targetCanvas.toDataURL('image/png');
+    const offscreen = createHighResChartCanvas(chartOrCanvas || origCanvas, 2.5, formattedTitle);
+    if (!offscreen) return;
+
+    const url = offscreen.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;

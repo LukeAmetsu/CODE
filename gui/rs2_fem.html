@@ -793,11 +793,9 @@
                                     <th class="px-3 py-1 border-r border-gray-300 dark:border-slate-600">Material Name
                                     </th>
                                     <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Color</th>
-                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Unit Weight
-                                        (kN/m3)</th>
-                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Cohesion (kPa)
-                                    </th>
-                                    <th class="px-2 py-1">Phi (°)</th>
+                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Unit Weight $\gamma$ (kN/m³)</th>
+                                    <th class="px-2 py-1 border-r border-gray-300 dark:border-slate-600">Cohesion $c$ (kPa)</th>
+                                    <th class="px-2 py-1">Phi $\phi$ (°)</th>
                                 </tr>
                             </thead>
                             <tbody id="slide-materials-tbody"
@@ -1094,12 +1092,12 @@
                                     <th class="p-2.5">Cor</th>
                                     <th class="p-2.5">Nome do Solo</th>
                                     <th class="p-2.5">Modelo Constitutivo</th>
-                                    <th class="p-2.5">γ (kN/m³)</th>
-                                    <th class="p-2.5">E (kPa)</th>
-                                    <th class="p-2.5">ν</th>
-                                    <th class="p-2.5">c (kPa)</th>
-                                    <th class="p-2.5">φ (°)</th>
-                                    <th class="p-2.5">σ_t (kPa)</th>
+                                    <th class="p-2.5">$\gamma$ (kN/m³)</th>
+                                    <th class="p-2.5">$E$ (kPa)</th>
+                                    <th class="p-2.5">$\nu$</th>
+                                    <th class="p-2.5">$c$ (kPa)</th>
+                                    <th class="p-2.5">$\phi$ (°)</th>
+                                    <th class="p-2.5">$\sigma_t$ (kPa)</th>
                                     <th class="p-2.5 text-center">SSR</th>
                                     <th class="p-2.5 text-center">Ações</th>
                                 </tr>
@@ -1536,8 +1534,8 @@
                             <label class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Tipo de Campo:</label>
                             <select id="field_stress_type" onchange="toggleFieldStressTypeUI()"
                                 class="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs py-1 px-2 font-semibold text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500">
-                                <option value="gravity" selected>Gravitacional (γ·H & K₀)</option>
-                                <option value="constant">Constante (σ₁ / σ₃ / Ângulo - Túneis)</option>
+                                <option value="gravity" selected>Gravitacional ($\gamma \cdot H$ e $K_0$)</option>
+                                <option value="constant">Constante ($\sigma_1 / \sigma_3$ / Ângulo - Túneis)</option>
                             </select>
                         </div>
                     </div>
@@ -1547,17 +1545,16 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                             <div>
                                 <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Razão de Tensões
-                                    Laterais In-Situ K₀</label>
+                                    Laterais In-Situ $K_0$</label>
                                 <input type="number" id="k0_ratio" value="0.55" step="0.05" min="0.2" max="2.5"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
-                                <span class="text-[10px] text-gray-400 mt-1 block">σ_h = K₀ · σ_v (Jaky: 1 - sin φ ≈
-                                    0.55)</span>
+                                <span class="text-[10px] text-gray-400 mt-1 block">$\sigma_h = K_0 \cdot \sigma_v$ (Jaky: $1 - \sin \phi \approx 0.55$)</span>
                             </div>
                             <div class="flex items-center pt-5">
                                 <label
                                     class="flex items-center gap-2 cursor-pointer font-medium text-xs text-gray-700 dark:text-gray-300">
                                     <input type="checkbox" id="gravity_toggle" checked class="w-4 h-4 text-blue-600 rounded">
-                                    <span>Gravity Turn-On (Peso Próprio Geostático γ · H)</span>
+                                    <span>Gravity Turn-On (Peso Próprio Geostático $\gamma \cdot H$)</span>
                                 </label>
                             </div>
                         </div>
@@ -1567,25 +1564,25 @@
                     <div id="field_stress_constant_panel" class="hidden space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                             <div>
-                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">σ₁ Principal Maior (kPa)</label>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">$\sigma_1$ Principal Maior (kPa)</label>
                                 <input type="number" id="field_stress_s1" value="20000" step="1000" min="0"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
                                 <span class="text-[10px] text-gray-400 mt-0.5 block">Ex: 20 MPa = 20.000 kPa</span>
                             </div>
                             <div>
-                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">σ₃ Principal Menor (kPa)</label>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">$\sigma_3$ Principal Menor (kPa)</label>
                                 <input type="number" id="field_stress_s3" value="10000" step="1000" min="0"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
                                 <span class="text-[10px] text-gray-400 mt-0.5 block">Ex: 10 MPa = 10.000 kPa</span>
                             </div>
                             <div>
-                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">σ_z Fora do Plano (kPa)</label>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">$\sigma_z$ Fora do Plano (kPa)</label>
                                 <input type="number" id="field_stress_sz" value="10000" step="1000" min="0"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
                                 <span class="text-[10px] text-gray-400 mt-0.5 block">Tensão Out-of-Plane</span>
                             </div>
                             <div>
-                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Ângulo de σ₁ (°)</label>
+                                <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Ângulo de $\sigma_1$ (°)</label>
                                 <input type="number" id="field_stress_angle" value="30" step="5" min="-90" max="90"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-mono font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500">
                                 <span class="text-[10px] text-gray-400 mt-0.5 block">Graus c/ horizontal (anti-horário)</span>
@@ -1659,9 +1656,9 @@
                                 title="Quando ativado, a resistência à tração (tension cut-off) também é reduzida proporcionalmente por SRF (padrão RS2 / ADONIS)">
                                 <input type="checkbox" id="ssr_reduce_tension" checked
                                     class="w-4 h-4 text-emerald-600 rounded">
-                                <span>Reduzir Resistência à Tração σ_t com SRF</span>
+                                <span>Reduzir Resistência à Tração $\sigma_t$ com SRF</span>
                             </label>
-                            <span class="text-[10px] text-gray-400 mt-1">σ_t,f = σ_t / SRF em cada iteração de busca do
+                            <span class="text-[10px] text-gray-400 mt-1">$\sigma_{t,f} = \sigma_t / \text{SRF}$ em cada iteração de busca do
                                 FS.</span>
                         </div>
                     </div>
@@ -1680,7 +1677,7 @@
                                 no Talude</span>
                         </div>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400">
-                            Apenas elementos contidos nesta janela geométrica sofrerão redução de c e φ. Sapatas ou
+                            Apenas elementos contidos nesta janela geométrica sofrerão redução de $c$ e $\phi$. Sapatas ou
                             solos distantes mantêm resistência integral, idêntico ao Phase2.
                         </p>
                         <div id="ssr-search-inputs-row"
@@ -1777,7 +1774,7 @@
                             <span>Ativar Linha Freática Piezométrica (Water Table)</span>
                         </label>
                         <div class="flex items-center gap-1.5 text-xs text-cyan-800 dark:text-cyan-300">
-                            <span class="font-medium">Peso Específico γ_w:</span>
+                            <span class="font-medium">Peso Específico $\gamma_w$:</span>
                             <input type="number" id="wt_gamma" value="9.81" step="0.1"
                                 class="w-16 p-1 rounded border border-cyan-300 dark:border-cyan-700 bg-white dark:bg-gray-800 text-xs font-mono font-bold text-center">
                             <span class="font-mono text-[11px]">kN/m³</span>
@@ -1794,7 +1791,7 @@
                 <div class="space-y-2">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <span class="font-bold text-xs text-gray-800 dark:text-gray-200">Pontos da Superfície Freática
-                            [X, Y]:</span>
+                            [$X, Y$]:</span>
                         <div class="flex items-center gap-2">
                             <button type="button" onclick="applyWaterTablePreset('toe_to_crest')"
                                 class="text-[11px] bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 border border-cyan-200 dark:border-cyan-800 px-2 py-1 rounded font-semibold cursor-pointer">
@@ -1818,8 +1815,8 @@
                                 class="bg-gray-50 dark:bg-gray-750 text-[10px] text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                                 <tr>
                                     <th class="p-2.5 text-center">#</th>
-                                    <th class="p-2.5">Coordenada X (m)</th>
-                                    <th class="p-2.5">Cota Y_freático (m)</th>
+                                    <th class="p-2.5">Coordenada $X$ (m)</th>
+                                    <th class="p-2.5">Cota $Y_{\text{freático}}$ (m)</th>
                                     <th class="p-2.5 text-center">Ações</th>
                                 </tr>
                             </thead>
@@ -1874,7 +1871,7 @@
                                 Surcharges</span>
                         </h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Cargas verticais distribuídas q (kN/m²) em trechos da crista ou talude por fase construtiva
+                            Cargas verticais distribuídas $q$ (kN/m²) em trechos da crista ou talude por fase construtiva
                         </p>
                     </div>
                 </div>
@@ -1886,7 +1883,7 @@
             <div class="flex-grow overflow-y-auto overflow-x-hidden p-5 space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <p class="text-xs text-gray-600 dark:text-gray-300 flex-1 min-w-0 pr-2">
-                        Adicione sobrecargas distribuídas com intensidade q e trecho de aplicação [X1, X2], e selecione
+                        Adicione sobrecargas distribuídas com intensidade $q$ e trecho de aplicação [$X_1, X_2$], e selecione
                         em quais fases atuam.
                     </p>
                     <div class="flex items-center gap-2 shrink-0">
@@ -1908,9 +1905,9 @@
                             class="bg-gray-50 dark:bg-gray-750 text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-wider font-semibold border-b border-gray-200 dark:border-gray-700">
                             <tr>
                                 <th class="p-2.5 text-center">#</th>
-                                <th class="p-2.5">Carga q (kN/m²)</th>
-                                <th class="p-2.5">X1 Início (m)</th>
-                                <th class="p-2.5">X2 Fim (m)</th>
+                                <th class="p-2.5">Carga $q$ (kN/m²)</th>
+                                <th class="p-2.5">$X_1$ Início (m)</th>
+                                <th class="p-2.5">$X_2$ Fim (m)</th>
                                 <th class="p-2.5">Fases de Aplicação</th>
                                 <th class="p-2.5 text-center">Ações</th>
                             </tr>
@@ -2001,15 +1998,15 @@
                             <tr>
                                 <th class="p-2.5 text-center">#</th>
                                 <th class="p-2.5">Nome</th>
-                                <th class="p-2.5">X1 Início (m)</th>
-                                <th class="p-2.5">X2 Fim (m)</th>
-                                <th class="p-2.5">Y Topo (m)</th>
-                                <th class="p-2.5">Espessura h (m)</th>
-                                <th class="p-2.5" title="Resistência característica do concreto (NBR 6118)">fck (MPa)</th>
-                                <th class="p-2.5 text-center" title="Rigidez estimada NBR 6118: E = 5600√fck">Rigidez E</th>
-                                <th class="p-2.5">Carga q (kPa)</th>
+                                <th class="p-2.5">$X_1$ Início (m)</th>
+                                <th class="p-2.5">$X_2$ Fim (m)</th>
+                                <th class="p-2.5">$Y_{\text{topo}}$ (m)</th>
+                                <th class="p-2.5">Espessura $h$ (m)</th>
+                                <th class="p-2.5" title="Resistência característica do concreto (NBR 6118)">$f_{ck}$ (MPa)</th>
+                                <th class="p-2.5 text-center" title="Rigidez estimada NBR 6118: E = 5600√fck">Rigidez $E$</th>
+                                <th class="p-2.5">Carga $q$ (kPa)</th>
                                 <th class="p-2.5" title="Fase construtiva em que a cava é escavada e o concreto da sapata é instalado">Fase Instalação</th>
-                                <th class="p-2.5" title="Fase construtiva em que a sobrecarga q passa a atuar sobre a sapata">Fase Carga (q)</th>
+                                <th class="p-2.5" title="Fase construtiva em que a sobrecarga q passa a atuar sobre a sapata">Fase Carga ($q$)</th>
                                 <th class="p-2.5 text-center">Pads</th>
                                 <th class="p-2.5 text-center">Condição / Cava</th>
                                 <th class="p-2.5 text-center">Ações</th>
@@ -2027,10 +2024,10 @@
                         <span>💡</span> Como o Phase2 e o RS2 tratam sapatas na análise geotécnica:
                     </p>
                     <p>
-                        1. <strong>Rigidez Estrutural & Distribuição:</strong> O bloco de concreto armado da sapata é modelado com módulo de elasticidade elevado (E = 25 GPa, ν = 0.20), transmitindo a carga com rigidez estrutural uniforme sobre o solo de fundação.
+                        1. <strong>Rigidez Estrutural & Distribuição:</strong> O bloco de concreto armado da sapata é modelado com módulo de elasticidade elevado ($E = 25\text{ GPa}, \nu = 0.20$), transmitindo a carga com rigidez estrutural uniforme sobre o solo de fundação.
                     </p>
                     <p>
-                        2. <strong>Escavação de Sobrecarga & Contenção Lateral:</strong> Quando a cota de topo da sapata está abaixo do nível do solo (Y_topo &lt; Y_solo), o software remove automaticamente o solo acima da sapata (cava de fundação) e aplica contenção lateral travando deslocamentos horizontais (Ux = 0, Uy livre) nas faces verticais da escavação.
+                        2. <strong>Escavação de Sobrecarga & Contenção Lateral:</strong> Quando a cota de topo da sapata está abaixo do nível do solo ($Y_{\text{topo}} < Y_{\text{solo}}$), o software remove automaticamente o solo acima da sapata (cava de fundação) e aplica contenção lateral travando deslocamentos horizontais ($U_x = 0, U_y$ livre) nas faces verticais da escavação.
                     </p>
                     <p>
                         3. <strong>Participação no SSR:</strong> O concreto da sapata possui <code
@@ -2039,8 +2036,8 @@
                         segurança do maciço.
                     </p>
                     <p>
-                        2. <strong>Deslocamento Incremental de Ruptura:</strong> No estágio SSR, o Phase2 subtrai o
-                        recalque prévio acumulado da sapata (<span class="font-mono">Δu = u_SSR - u_ant</span>),
+                        4. <strong>Deslocamento Incremental de Ruptura:</strong> No estágio SSR, o Phase2 subtrai o
+                        recalque prévio acumulado da sapata ($\Delta u = u_{\text{SSR}} - u_{\text{ant}}$),
                         destacando puramente o mecanismo cinemático de escorregamento do talude.
                     </p>
                 </div>

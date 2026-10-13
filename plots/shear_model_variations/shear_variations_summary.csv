@@ -1,0 +1,115 @@
+﻿Subset,Subset_Label,Group,Variable_X,Variable_Symbol,Count,Mean_R,STD_R,CoV_pct,P05_Fractile,P10_Fractile,Median_R,Unsafe_pct,C,Alpha,Beta,Gamma,Delta,Mu,Use_Deff,Filename,Exclude_PC
+ALL DATA,Todos os Dados (Global),Global,d (mm),d,1804,1.559,0.5382,34.52,0.9063,1.0304,1.4618,8.43,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_global_all.png,False
+ALL DATA,Todos os Dados (Global),Global,a_d,a/d,1804,1.559,0.5382,34.52,0.9063,1.0304,1.4618,8.43,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_global_all.png,False
+ALL DATA,Todos os Dados (Global),Global,pw (%),100\rho_w,1804,1.559,0.5382,34.52,0.9063,1.0304,1.4618,8.43,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_global_all.png,False
+ALL DATA,Todos os Dados (Global),Global,fck (MPa),f_{ck},1804,1.559,0.5382,34.52,0.9063,1.0304,1.4618,8.43,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_global_all.png,False
+ALL DATA,Todos os Dados (Global),Global,bw (mm),b_w,1804,1.559,0.5382,34.52,0.9063,1.0304,1.4618,8.43,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_global_all.png,False
+ALL DATA,Todos os Dados (Global),Global,Sigma_CP,\sigma_{cp},1804,1.559,0.5382,34.52,0.9063,1.0304,1.4618,8.43,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_global_all.png,False
+slabs_all,Todas as Lajes (bw/d >= 2.0),Lajes,d (mm),d,98,1.5751,0.4034,25.61,1.0343,1.083,1.5303,3.06,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_slabs_all.png,False
+slabs_all,Todas as Lajes (bw/d >= 2.0),Lajes,a_d,a/d,98,1.5751,0.4034,25.61,1.0343,1.083,1.5303,3.06,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_slabs_all.png,False
+slabs_all,Todas as Lajes (bw/d >= 2.0),Lajes,pw (%),100\rho_w,98,1.5751,0.4034,25.61,1.0343,1.083,1.5303,3.06,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_slabs_all.png,False
+slabs_all,Todas as Lajes (bw/d >= 2.0),Lajes,fck (MPa),f_{ck},98,1.5751,0.4034,25.61,1.0343,1.083,1.5303,3.06,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_slabs_all.png,False
+slabs_all,Todas as Lajes (bw/d >= 2.0),Lajes,bw (mm),b_w,98,1.5751,0.4034,25.61,1.0343,1.083,1.5303,3.06,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_slabs_all.png,False
+slabs_all,Todas as Lajes (bw/d >= 2.0),Lajes,Sigma_CP,\sigma_{cp},98,1.5751,0.4034,25.61,1.0343,1.083,1.5303,3.06,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_slabs_all.png,False
+slabs_slender_600,"Lajes Esbeltas (bw/d >= 2, d < 600 mm)",Lajes,d (mm),d,96,1.5863,0.4,25.22,1.0543,1.1357,1.5374,3.12,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_slabs_slender_600.png,False
+slabs_slender_600,"Lajes Esbeltas (bw/d >= 2, d < 600 mm)",Lajes,a_d,a/d,96,1.5863,0.4,25.22,1.0543,1.1357,1.5374,3.12,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_slabs_slender_600.png,False
+slabs_slender_600,"Lajes Esbeltas (bw/d >= 2, d < 600 mm)",Lajes,pw (%),100\rho_w,96,1.5863,0.4,25.22,1.0543,1.1357,1.5374,3.12,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_slabs_slender_600.png,False
+slabs_slender_600,"Lajes Esbeltas (bw/d >= 2, d < 600 mm)",Lajes,fck (MPa),f_{ck},96,1.5863,0.4,25.22,1.0543,1.1357,1.5374,3.12,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_slabs_slender_600.png,False
+slabs_slender_600,"Lajes Esbeltas (bw/d >= 2, d < 600 mm)",Lajes,bw (mm),b_w,96,1.5863,0.4,25.22,1.0543,1.1357,1.5374,3.12,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_slabs_slender_600.png,False
+slabs_slender_600,"Lajes Esbeltas (bw/d >= 2, d < 600 mm)",Lajes,Sigma_CP,\sigma_{cp},96,1.5863,0.4,25.22,1.0543,1.1357,1.5374,3.12,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_slabs_slender_600.png,False
+slabs_slender_400,"Lajes Esbeltas (bw/d >= 2, d < 400 mm)",Lajes,d (mm),d,88,1.5933,0.4128,25.91,1.0462,1.1181,1.5433,3.41,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_slabs_slender_400.png,False
+slabs_slender_400,"Lajes Esbeltas (bw/d >= 2, d < 400 mm)",Lajes,a_d,a/d,88,1.5933,0.4128,25.91,1.0462,1.1181,1.5433,3.41,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_slabs_slender_400.png,False
+slabs_slender_400,"Lajes Esbeltas (bw/d >= 2, d < 400 mm)",Lajes,pw (%),100\rho_w,88,1.5933,0.4128,25.91,1.0462,1.1181,1.5433,3.41,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_slabs_slender_400.png,False
+slabs_slender_400,"Lajes Esbeltas (bw/d >= 2, d < 400 mm)",Lajes,fck (MPa),f_{ck},88,1.5933,0.4128,25.91,1.0462,1.1181,1.5433,3.41,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_slabs_slender_400.png,False
+slabs_slender_400,"Lajes Esbeltas (bw/d >= 2, d < 400 mm)",Lajes,bw (mm),b_w,88,1.5933,0.4128,25.91,1.0462,1.1181,1.5433,3.41,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_slabs_slender_400.png,False
+slabs_slender_400,"Lajes Esbeltas (bw/d >= 2, d < 400 mm)",Lajes,Sigma_CP,\sigma_{cp},88,1.5933,0.4128,25.91,1.0462,1.1181,1.5433,3.41,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_slabs_slender_400.png,False
+slabs_thick_600,Elementos Espessos (d >= 600 mm),Lajes / Espessura,d (mm),d,154,1.6069,0.6669,41.5,0.8362,0.9419,1.4328,14.29,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_slabs_thick_600.png,False
+slabs_thick_600,Elementos Espessos (d >= 600 mm),Lajes / Espessura,a_d,a/d,154,1.6069,0.6669,41.5,0.8362,0.9419,1.4328,14.29,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_slabs_thick_600.png,False
+slabs_thick_600,Elementos Espessos (d >= 600 mm),Lajes / Espessura,pw (%),100\rho_w,154,1.6069,0.6669,41.5,0.8362,0.9419,1.4328,14.29,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_slabs_thick_600.png,False
+slabs_thick_600,Elementos Espessos (d >= 600 mm),Lajes / Espessura,fck (MPa),f_{ck},154,1.6069,0.6669,41.5,0.8362,0.9419,1.4328,14.29,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_slabs_thick_600.png,False
+slabs_thick_600,Elementos Espessos (d >= 600 mm),Lajes / Espessura,bw (mm),b_w,154,1.6069,0.6669,41.5,0.8362,0.9419,1.4328,14.29,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_slabs_thick_600.png,False
+slabs_thick_600,Elementos Espessos (d >= 600 mm),Lajes / Espessura,Sigma_CP,\sigma_{cp},154,1.6069,0.6669,41.5,0.8362,0.9419,1.4328,14.29,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_slabs_thick_600.png,False
+slabs_thick_400,"Lajes Espessas (bw/d >= 2, d >= 400 mm)",Lajes,d (mm),d,10,1.4149,0.2749,19.43,1.0356,1.0708,1.3721,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_slabs_thick_400.png,False
+slabs_thick_400,"Lajes Espessas (bw/d >= 2, d >= 400 mm)",Lajes,a_d,a/d,10,1.4149,0.2749,19.43,1.0356,1.0708,1.3721,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_slabs_thick_400.png,False
+slabs_thick_400,"Lajes Espessas (bw/d >= 2, d >= 400 mm)",Lajes,pw (%),100\rho_w,10,1.4149,0.2749,19.43,1.0356,1.0708,1.3721,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_slabs_thick_400.png,False
+slabs_thick_400,"Lajes Espessas (bw/d >= 2, d >= 400 mm)",Lajes,fck (MPa),f_{ck},10,1.4149,0.2749,19.43,1.0356,1.0708,1.3721,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_slabs_thick_400.png,False
+slabs_thick_400,"Lajes Espessas (bw/d >= 2, d >= 400 mm)",Lajes,bw (mm),b_w,10,1.4149,0.2749,19.43,1.0356,1.0708,1.3721,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_slabs_thick_400.png,False
+slabs_thick_400,"Lajes Espessas (bw/d >= 2, d >= 400 mm)",Lajes,Sigma_CP,\sigma_{cp},10,1.4149,0.2749,19.43,1.0356,1.0708,1.3721,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_slabs_thick_400.png,False
+slabs_wide,Lajes Muito Largas (bw/d >= 5.0),Lajes,d (mm),d,3,1.1974,0.168,14.03,1.0322,1.0577,1.2616,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_slabs_wide.png,False
+slabs_wide,Lajes Muito Largas (bw/d >= 5.0),Lajes,a_d,a/d,3,1.1974,0.168,14.03,1.0322,1.0577,1.2616,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_slabs_wide.png,False
+slabs_wide,Lajes Muito Largas (bw/d >= 5.0),Lajes,pw (%),100\rho_w,3,1.1974,0.168,14.03,1.0322,1.0577,1.2616,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_slabs_wide.png,False
+slabs_wide,Lajes Muito Largas (bw/d >= 5.0),Lajes,fck (MPa),f_{ck},3,1.1974,0.168,14.03,1.0322,1.0577,1.2616,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_slabs_wide.png,False
+slabs_wide,Lajes Muito Largas (bw/d >= 5.0),Lajes,bw (mm),b_w,3,1.1974,0.168,14.03,1.0322,1.0577,1.2616,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_slabs_wide.png,False
+slabs_wide,Lajes Muito Largas (bw/d >= 5.0),Lajes,Sigma_CP,\sigma_{cp},3,1.1974,0.168,14.03,1.0322,1.0577,1.2616,0.0,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_slabs_wide.png,False
+members_slender_600,Elementos Esbeltos (d < 600 mm),Altura Útil,d (mm),d,1650,1.5546,0.5246,33.74,0.926,1.0349,1.4646,7.88,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_members_slender_600.png,False
+members_slender_600,Elementos Esbeltos (d < 600 mm),Altura Útil,a_d,a/d,1650,1.5546,0.5246,33.74,0.926,1.0349,1.4646,7.88,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_members_slender_600.png,False
+members_slender_600,Elementos Esbeltos (d < 600 mm),Altura Útil,pw (%),100\rho_w,1650,1.5546,0.5246,33.74,0.926,1.0349,1.4646,7.88,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_members_slender_600.png,False
+members_slender_600,Elementos Esbeltos (d < 600 mm),Altura Útil,fck (MPa),f_{ck},1650,1.5546,0.5246,33.74,0.926,1.0349,1.4646,7.88,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_members_slender_600.png,False
+members_slender_600,Elementos Esbeltos (d < 600 mm),Altura Útil,bw (mm),b_w,1650,1.5546,0.5246,33.74,0.926,1.0349,1.4646,7.88,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_members_slender_600.png,False
+members_slender_600,Elementos Esbeltos (d < 600 mm),Altura Útil,Sigma_CP,\sigma_{cp},1650,1.5546,0.5246,33.74,0.926,1.0349,1.4646,7.88,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_members_slender_600.png,False
+members_slender_400,Elementos Esbeltos (d < 400 mm),Altura Útil,d (mm),d,1374,1.5132,0.4763,31.48,0.9061,1.0278,1.4387,8.44,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_members_slender_400.png,False
+members_slender_400,Elementos Esbeltos (d < 400 mm),Altura Útil,a_d,a/d,1374,1.5132,0.4763,31.48,0.9061,1.0278,1.4387,8.44,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_members_slender_400.png,False
+members_slender_400,Elementos Esbeltos (d < 400 mm),Altura Útil,pw (%),100\rho_w,1374,1.5132,0.4763,31.48,0.9061,1.0278,1.4387,8.44,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_members_slender_400.png,False
+members_slender_400,Elementos Esbeltos (d < 400 mm),Altura Útil,fck (MPa),f_{ck},1374,1.5132,0.4763,31.48,0.9061,1.0278,1.4387,8.44,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_members_slender_400.png,False
+members_slender_400,Elementos Esbeltos (d < 400 mm),Altura Útil,bw (mm),b_w,1374,1.5132,0.4763,31.48,0.9061,1.0278,1.4387,8.44,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_members_slender_400.png,False
+members_slender_400,Elementos Esbeltos (d < 400 mm),Altura Útil,Sigma_CP,\sigma_{cp},1374,1.5132,0.4763,31.48,0.9061,1.0278,1.4387,8.44,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_members_slender_400.png,False
+members_long_span,Vão Longo / Flexão (a/d >= 2.5),Vão Cisalhante,d (mm),d,1262,1.5182,0.438,28.85,0.9803,1.0595,1.4407,6.34,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_span_long.png,False
+members_long_span,Vão Longo / Flexão (a/d >= 2.5),Vão Cisalhante,a_d,a/d,1262,1.5182,0.438,28.85,0.9803,1.0595,1.4407,6.34,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_span_long.png,False
+members_long_span,Vão Longo / Flexão (a/d >= 2.5),Vão Cisalhante,pw (%),100\rho_w,1262,1.5182,0.438,28.85,0.9803,1.0595,1.4407,6.34,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_span_long.png,False
+members_long_span,Vão Longo / Flexão (a/d >= 2.5),Vão Cisalhante,fck (MPa),f_{ck},1262,1.5182,0.438,28.85,0.9803,1.0595,1.4407,6.34,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_span_long.png,False
+members_long_span,Vão Longo / Flexão (a/d >= 2.5),Vão Cisalhante,bw (mm),b_w,1262,1.5182,0.438,28.85,0.9803,1.0595,1.4407,6.34,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_span_long.png,False
+members_long_span,Vão Longo / Flexão (a/d >= 2.5),Vão Cisalhante,Sigma_CP,\sigma_{cp},1262,1.5182,0.438,28.85,0.9803,1.0595,1.4407,6.34,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_span_long.png,False
+members_short_span,Vão Curto / Bielas (a/d < 2.5),Vão Cisalhante,d (mm),d,542,1.6541,0.7108,42.97,0.7732,0.9259,1.5372,13.28,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_span_short.png,False
+members_short_span,Vão Curto / Bielas (a/d < 2.5),Vão Cisalhante,a_d,a/d,542,1.6541,0.7108,42.97,0.7732,0.9259,1.5372,13.28,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_span_short.png,False
+members_short_span,Vão Curto / Bielas (a/d < 2.5),Vão Cisalhante,pw (%),100\rho_w,542,1.6541,0.7108,42.97,0.7732,0.9259,1.5372,13.28,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_span_short.png,False
+members_short_span,Vão Curto / Bielas (a/d < 2.5),Vão Cisalhante,fck (MPa),f_{ck},542,1.6541,0.7108,42.97,0.7732,0.9259,1.5372,13.28,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_span_short.png,False
+members_short_span,Vão Curto / Bielas (a/d < 2.5),Vão Cisalhante,bw (mm),b_w,542,1.6541,0.7108,42.97,0.7732,0.9259,1.5372,13.28,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_span_short.png,False
+members_short_span,Vão Curto / Bielas (a/d < 2.5),Vão Cisalhante,Sigma_CP,\sigma_{cp},542,1.6541,0.7108,42.97,0.7732,0.9259,1.5372,13.28,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_span_short.png,False
+rho_low,Baixa Armadura (rho < 1.0%),Armadura,d (mm),d,489,1.577,0.6405,40.62,0.8557,1.0401,1.4136,7.98,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_rho_low.png,False
+rho_low,Baixa Armadura (rho < 1.0%),Armadura,a_d,a/d,489,1.577,0.6405,40.62,0.8557,1.0401,1.4136,7.98,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_rho_low.png,False
+rho_low,Baixa Armadura (rho < 1.0%),Armadura,pw (%),100\rho_w,489,1.577,0.6405,40.62,0.8557,1.0401,1.4136,7.98,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_rho_low.png,False
+rho_low,Baixa Armadura (rho < 1.0%),Armadura,fck (MPa),f_{ck},489,1.577,0.6405,40.62,0.8557,1.0401,1.4136,7.98,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_rho_low.png,False
+rho_low,Baixa Armadura (rho < 1.0%),Armadura,bw (mm),b_w,489,1.577,0.6405,40.62,0.8557,1.0401,1.4136,7.98,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_rho_low.png,False
+rho_low,Baixa Armadura (rho < 1.0%),Armadura,Sigma_CP,\sigma_{cp},489,1.577,0.6405,40.62,0.8557,1.0401,1.4136,7.98,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_rho_low.png,False
+rho_very_low,Armadura Muito Baixa (rho < 0.5%),Armadura,d (mm),d,117,1.5774,0.5109,32.39,0.9984,1.0928,1.438,5.13,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_rho_very_low.png,False
+rho_very_low,Armadura Muito Baixa (rho < 0.5%),Armadura,a_d,a/d,117,1.5774,0.5109,32.39,0.9984,1.0928,1.438,5.13,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_rho_very_low.png,False
+rho_very_low,Armadura Muito Baixa (rho < 0.5%),Armadura,pw (%),100\rho_w,117,1.5774,0.5109,32.39,0.9984,1.0928,1.438,5.13,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_rho_very_low.png,False
+rho_very_low,Armadura Muito Baixa (rho < 0.5%),Armadura,fck (MPa),f_{ck},117,1.5774,0.5109,32.39,0.9984,1.0928,1.438,5.13,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_rho_very_low.png,False
+rho_very_low,Armadura Muito Baixa (rho < 0.5%),Armadura,bw (mm),b_w,117,1.5774,0.5109,32.39,0.9984,1.0928,1.438,5.13,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_rho_very_low.png,False
+rho_very_low,Armadura Muito Baixa (rho < 0.5%),Armadura,Sigma_CP,\sigma_{cp},117,1.5774,0.5109,32.39,0.9984,1.0928,1.438,5.13,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_rho_very_low.png,False
+rho_high,Alta Armadura (rho >= 1.5%),Armadura,d (mm),d,979,1.5673,0.4871,31.08,0.9416,1.033,1.4881,7.76,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_rho_high.png,False
+rho_high,Alta Armadura (rho >= 1.5%),Armadura,a_d,a/d,979,1.5673,0.4871,31.08,0.9416,1.033,1.4881,7.76,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_rho_high.png,False
+rho_high,Alta Armadura (rho >= 1.5%),Armadura,pw (%),100\rho_w,979,1.5673,0.4871,31.08,0.9416,1.033,1.4881,7.76,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_rho_high.png,False
+rho_high,Alta Armadura (rho >= 1.5%),Armadura,fck (MPa),f_{ck},979,1.5673,0.4871,31.08,0.9416,1.033,1.4881,7.76,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_rho_high.png,False
+rho_high,Alta Armadura (rho >= 1.5%),Armadura,bw (mm),b_w,979,1.5673,0.4871,31.08,0.9416,1.033,1.4881,7.76,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_rho_high.png,False
+rho_high,Alta Armadura (rho >= 1.5%),Armadura,Sigma_CP,\sigma_{cp},979,1.5673,0.4871,31.08,0.9416,1.033,1.4881,7.76,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_rho_high.png,False
+fck_high,Alta Resistência (fck > 50 MPa),Concreto,d (mm),d,261,1.5704,0.6313,40.2,0.8831,0.9778,1.3994,13.79,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_fck_high.png,False
+fck_high,Alta Resistência (fck > 50 MPa),Concreto,a_d,a/d,261,1.5704,0.6313,40.2,0.8831,0.9778,1.3994,13.79,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_fck_high.png,False
+fck_high,Alta Resistência (fck > 50 MPa),Concreto,pw (%),100\rho_w,261,1.5704,0.6313,40.2,0.8831,0.9778,1.3994,13.79,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_fck_high.png,False
+fck_high,Alta Resistência (fck > 50 MPa),Concreto,fck (MPa),f_{ck},261,1.5704,0.6313,40.2,0.8831,0.9778,1.3994,13.79,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_fck_high.png,False
+fck_high,Alta Resistência (fck > 50 MPa),Concreto,bw (mm),b_w,261,1.5704,0.6313,40.2,0.8831,0.9778,1.3994,13.79,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_fck_high.png,False
+fck_high,Alta Resistência (fck > 50 MPa),Concreto,Sigma_CP,\sigma_{cp},261,1.5704,0.6313,40.2,0.8831,0.9778,1.3994,13.79,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_fck_high.png,False
+fck_normal,Concreto Convencional (fck <= 50 MPa),Concreto,d (mm),d,1543,1.5571,0.521,33.46,0.9123,1.0437,1.469,7.52,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_fck_normal.png,False
+fck_normal,Concreto Convencional (fck <= 50 MPa),Concreto,a_d,a/d,1543,1.5571,0.521,33.46,0.9123,1.0437,1.469,7.52,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_fck_normal.png,False
+fck_normal,Concreto Convencional (fck <= 50 MPa),Concreto,pw (%),100\rho_w,1543,1.5571,0.521,33.46,0.9123,1.0437,1.469,7.52,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_fck_normal.png,False
+fck_normal,Concreto Convencional (fck <= 50 MPa),Concreto,fck (MPa),f_{ck},1543,1.5571,0.521,33.46,0.9123,1.0437,1.469,7.52,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_fck_normal.png,False
+fck_normal,Concreto Convencional (fck <= 50 MPa),Concreto,bw (mm),b_w,1543,1.5571,0.521,33.46,0.9123,1.0437,1.469,7.52,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_fck_normal.png,False
+fck_normal,Concreto Convencional (fck <= 50 MPa),Concreto,Sigma_CP,\sigma_{cp},1543,1.5571,0.521,33.46,0.9123,1.0437,1.469,7.52,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_fck_normal.png,False
+d_dg_large,Agregado Graúdo (d_dg > 32 mm),Materiais,d (mm),d,943,1.5273,0.5096,33.37,0.8698,1.0268,1.4374,8.8,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_ddg_large.png,False
+d_dg_large,Agregado Graúdo (d_dg > 32 mm),Materiais,a_d,a/d,943,1.5273,0.5096,33.37,0.8698,1.0268,1.4374,8.8,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_ddg_large.png,False
+d_dg_large,Agregado Graúdo (d_dg > 32 mm),Materiais,pw (%),100\rho_w,943,1.5273,0.5096,33.37,0.8698,1.0268,1.4374,8.8,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_ddg_large.png,False
+d_dg_large,Agregado Graúdo (d_dg > 32 mm),Materiais,fck (MPa),f_{ck},943,1.5273,0.5096,33.37,0.8698,1.0268,1.4374,8.8,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_ddg_large.png,False
+d_dg_large,Agregado Graúdo (d_dg > 32 mm),Materiais,bw (mm),b_w,943,1.5273,0.5096,33.37,0.8698,1.0268,1.4374,8.8,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_ddg_large.png,False
+d_dg_large,Agregado Graúdo (d_dg > 32 mm),Materiais,Sigma_CP,\sigma_{cp},943,1.5273,0.5096,33.37,0.8698,1.0268,1.4374,8.8,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_ddg_large.png,False
+mat_rc,Apenas Concreto Armado (RC),Tipologia,d (mm),d,1663,1.5764,0.5354,33.96,0.9466,1.0385,1.4751,7.64,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_mat_rc.png,False
+mat_rc,Apenas Concreto Armado (RC),Tipologia,a_d,a/d,1663,1.5764,0.5354,33.96,0.9466,1.0385,1.4751,7.64,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_mat_rc.png,False
+mat_rc,Apenas Concreto Armado (RC),Tipologia,pw (%),100\rho_w,1663,1.5764,0.5354,33.96,0.9466,1.0385,1.4751,7.64,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_mat_rc.png,False
+mat_rc,Apenas Concreto Armado (RC),Tipologia,fck (MPa),f_{ck},1663,1.5764,0.5354,33.96,0.9466,1.0385,1.4751,7.64,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_mat_rc.png,False
+mat_rc,Apenas Concreto Armado (RC),Tipologia,bw (mm),b_w,1663,1.5764,0.5354,33.96,0.9466,1.0385,1.4751,7.64,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_mat_rc.png,False
+mat_rc,Apenas Concreto Armado (RC),Tipologia,Sigma_CP,\sigma_{cp},1663,1.5764,0.5354,33.96,0.9466,1.0385,1.4751,7.64,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_mat_rc.png,False
+mat_pc,Apenas Concreto Protendido (PC),Tipologia,d (mm),d,141,1.3548,0.5311,39.2,0.4782,0.6347,1.3207,17.73,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_d_mm_mat_pc.png,False
+mat_pc,Apenas Concreto Protendido (PC),Tipologia,a_d,a/d,141,1.3548,0.5311,39.2,0.4782,0.6347,1.3207,17.73,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_ad_mat_pc.png,False
+mat_pc,Apenas Concreto Protendido (PC),Tipologia,pw (%),100\rho_w,141,1.3548,0.5311,39.2,0.4782,0.6347,1.3207,17.73,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_rho_w_mat_pc.png,False
+mat_pc,Apenas Concreto Protendido (PC),Tipologia,fck (MPa),f_{ck},141,1.3548,0.5311,39.2,0.4782,0.6347,1.3207,17.73,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_fck_mat_pc.png,False
+mat_pc,Apenas Concreto Protendido (PC),Tipologia,bw (mm),b_w,141,1.3548,0.5311,39.2,0.4782,0.6347,1.3207,17.73,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_bw_mat_pc.png,False
+mat_pc,Apenas Concreto Protendido (PC),Tipologia,Sigma_CP,\sigma_{cp},141,1.3548,0.5311,39.2,0.4782,0.6347,1.3207,17.73,1.25,0.333,0.333,0.333,-0.75,0.25,True,shear_sigma_cp_mat_pc.png,False

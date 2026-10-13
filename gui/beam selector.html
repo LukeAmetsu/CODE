@@ -43,7 +43,7 @@
               data-i18n="beam_selector_desc_long"
             >
               Finds the lightest W-shape based on Unbraced Length
-              (L<sub>b</sub>) and Required Moment (M<sub>u</sub>). Calculates
+              ($L_b$) and Required Moment ($M_u$). Calculates
               capacities per AISC 360-16/22 Chapter F.
             </p>
           </div>
@@ -78,8 +78,8 @@
                   id="design_method"
                   class="eng-input"
                 >
-                  <option value="LRFD" selected>LRFD (&phi; = 0.9)</option>
-                  <option value="ASD">ASD (&Omega; = 1.67)</option>
+                  <option value="LRFD" selected>LRFD ($\phi = 0.9$)</option>
+                  <option value="ASD">ASD ($\Omega = 1.67$)</option>
                   <option value="OSHA">OSHA (F.S. = 4.0)</option>
                 </select>
               </div>
@@ -87,7 +87,7 @@
                 <label
                   class="eng-label"
                   data-i18n="steel_yield_fy"
-                  >Steel Yield (F<sub>y</sub>)</label
+                  >Steel Yield ($F_y$)</label
                 >
                 <div class="flex gap-2">
                   <input
@@ -130,7 +130,7 @@
                 <label
                   class="eng-label"
                   data-i18n="unbraced_length_lb"
-                  >Unbraced Length (L<sub>b</sub>)</label
+                  >Unbraced Length ($L_b$)</label
                 >
                 <div class="flex gap-2">
                   <input
@@ -154,7 +154,7 @@
                 <label
                   class="eng-label"
                   data-i18n="moment_gradient_cb"
-                  >Moment Gradient (C<sub>b</sub>)</label
+                  >Moment Gradient ($C_b$)</label
                 >
                 <input
                   type="text"
@@ -252,7 +252,7 @@
                       </div>
                     </div>
                     <div>
-                      <label class="eng-label">Brace Angle (&theta;)</label>
+                      <label class="eng-label">Brace Angle ($\theta$)</label>
                       <div class="flex gap-1">
                         <input type="text" id="brace_theta" value="45" class="w-full p-1 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" />
                         <span class="flex items-center text-[10px] text-gray-500">&deg;</span>
@@ -328,7 +328,7 @@
                 <span
                   class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 whitespace-nowrap"
                   data-i18n="prop_deflection"
-                  >Prop. Deflection (L/240)</span
+                  >Prop. Deflection ($L/240$)</span
                 >
               </label>
             </div>
@@ -432,13 +432,13 @@
                     class="px-3 py-2 font-semibold"
                     data-i18n="unbraced_length_lb"
                   >
-                    Unbraced Len Lb (ft)
+                    Unbraced Len $L_b$ (ft)
                   </th>
                   <th
                     class="px-3 py-2 font-semibold"
                     data-i18n="moment_gradient_cb"
                   >
-                    Moment Grad Cb
+                    Moment Grad $C_b$
                   </th>
                   <th class="px-3 py-2 w-10"></th>
                 </tr>
@@ -601,16 +601,16 @@
                     <th class="px-6 py-3">Ratio (D/C)</th>
                     <th class="px-6 py-3">Defl. (in)</th>
                     <th class="px-6 py-3" title="Available Plastic Moment">
-                      M<sub>p</sub> (k-ft)
+                      $M_p$ (k-ft)
                     </th>
                     <th class="px-6 py-3" title="Available Yield Moment">
-                      M<sub>r</sub> (k-ft)
+                      $M_r$ (k-ft)
                     </th>
                     <th class="px-6 py-3">
-                      L<sub>p</sub> / L<sub>r</sub> (ft)
+                      $L_p / L_r$ (ft)
                     </th>
                     <th class="px-6 py-3" title="Moment of Inertia">
-                      I<sub>x</sub> (in⁴)
+                      $I_x$ (in⁴)
                     </th>
                   </tr>
                 </thead>

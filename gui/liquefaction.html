@@ -63,7 +63,7 @@
                         </span>
                     </div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Avaliação de gatilho de liquefação induzida por abalos sísmicos com base em ensaios SPT, correção por teor de finos FC, tensões de confinamento e magnitude sísmica Mw.
+                        Avaliação de gatilho de liquefação induzida por abalos sísmicos com base em ensaios SPT, correção por teor de finos $FC$, tensões de confinamento e magnitude sísmica $M_w$.
                     </p>
                 </div>
 
@@ -125,23 +125,23 @@
                                 <div class="space-y-4 text-sm">
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label class="eng-label">Nível d'Água NA (m)</label>
+                                            <label class="eng-label">Nível d'Água $NA\text{ (m)}$</label>
                                             <input type="number" id="prof_na" value="3.5" step="0.1" min="0" class="eng-input">
                                         </div>
                                         <div>
-                                            <label class="eng-label">γ Solo (kN/m³)</label>
+                                            <label class="eng-label">$\gamma\text{ Solo (kN/m³)}$</label>
                                             <input type="number" id="prof_gamma" value="19.0" step="0.5" min="10" class="eng-input">
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label class="eng-label">Teor de Finos FC (%)</label>
+                                        <label class="eng-label">Teor de Finos $FC\text{ (\%)}$</label>
                                         <input type="number" id="prof_fc" value="10.0" step="1" min="0" max="100" class="eng-input">
                                     </div>
 
                                     <!-- N1(60) Range -->
                                     <div>
-                                        <label class="eng-label">Faixa N1(60) [Mín, Méd, Máx]</label>
+                                        <label class="eng-label">Faixa $N_{1,60}\text{ [Mín, Méd, Máx]}$</label>
                                         <div class="grid grid-cols-3 gap-2">
                                             <input type="number" id="prof_n1_min" value="27" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mínimo">
                                             <input type="number" id="prof_n1_med" value="33" step="1" min="1" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Médio">
@@ -151,7 +151,7 @@
 
                                     <!-- Aceleração a0 -->
                                     <div>
-                                        <label class="eng-label">Aceleração a0 / a_max (g) [Mín, Máx]</label>
+                                        <label class="eng-label">Aceleração $a_0 / a_{\max}\text{ (g) [Mín, Máx]}$</label>
                                         <div class="grid grid-cols-2 gap-2">
                                             <input type="number" id="prof_a0_min" value="0.55" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Mínimo">
                                             <input type="number" id="prof_a0_max" value="0.70" step="0.05" min="0.05" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="a0 Máximo">
@@ -160,7 +160,7 @@
 
                                     <!-- Magnitude Mw -->
                                     <div>
-                                        <label class="eng-label">Magnitude Mw [Mín, Méd, Máx]</label>
+                                        <label class="eng-label">Magnitude $M_w\text{ [Mín, Méd, Máx]}$</label>
                                         <div class="grid grid-cols-3 gap-2">
                                             <input type="number" id="prof_mw_min" value="6.0" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Mínimo">
                                             <input type="number" id="prof_mw_med" value="7.5" step="0.5" min="5.0" max="9.5" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 text-center" title="Mw Médio">
@@ -175,7 +175,7 @@
                                             <input type="number" id="prof_max_depth" value="20.0" step="1.0" min="5.0" class="eng-input">
                                         </div>
                                         <div>
-                                            <label class="eng-label">Passo Δz (m)</label>
+                                            <label class="eng-label">Passo $\Delta z\text{ (m)}$</label>
                                             <input type="number" id="prof_depth_step" value="0.5" step="0.1" min="0.2" class="eng-input">
                                         </div>
                                     </div>
@@ -190,7 +190,7 @@
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                                        <span>📈</span> Fator de Segurança (FS) vs Profundidade (m)
+                                        <span>📈</span> Fator de Segurança ($FS$) vs Profundidade ($z$)
                                     </h3>
                                     <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg text-xs font-semibold">
                                         <button type="button" id="btn-chart-view-chartjs" onclick="toggleProfileChartMode('chartjs')" class="px-2.5 py-1 rounded-md bg-white dark:bg-gray-800 shadow-xs text-blue-600 dark:text-blue-400 font-bold transition-all">
@@ -216,25 +216,25 @@
                         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700 h-full flex flex-col justify-between">
                             <div>
                                 <h3 class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                    <span>📌</span> Matriz de Cenários e Menor FS
+                                    <span>📌</span> Matriz de Cenários e Menor $FS$
                                 </h3>
                                 <div class="flex flex-col gap-3 text-xs">
                                     <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                                         <div class="font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center justify-between">
-                                            <span id="scen-title-a0min">Cenário a0 = 0.55g (Mín)</span>
+                                            <span id="scen-title-a0min">Cenário $a_0 = 0.55g\text{ (Mín)}$</span>
                                         </div>
-                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0min-min" class="text-emerald-600">FS 1.223 @ 9m</strong></div>
-                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0min-med" class="text-emerald-600">FS 2.002 @ 9m</strong></div>
-                                        <div class="flex justify-between py-1"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0min-max" class="text-emerald-600">FS 3.289 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>$N_1\text{ Mín } (M_w = 6.0)$:</span> <strong id="scen-a0min-min" class="text-emerald-600">FS 1.223 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>$N_1\text{ Méd } (M_w = 7.5)$:</span> <strong id="scen-a0min-med" class="text-emerald-600">FS 2.002 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1"><span>$N_1\text{ Máx } (M_w = 8.5)$:</span> <strong id="scen-a0min-max" class="text-emerald-600">FS 3.289 @ 9m</strong></div>
                                     </div>
 
                                     <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
                                         <div class="font-bold text-red-600 dark:text-red-400 mb-2 flex items-center justify-between">
-                                            <span id="scen-title-a0max">Cenário a0 = 0.70g (Máx)</span>
+                                            <span id="scen-title-a0max">Cenário $a_0 = 0.70g\text{ (Máx)}$</span>
                                         </div>
-                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Mín (Mw 6.0):</span> <strong id="scen-a0max-min" class="text-red-600 font-black">FS 0.961 @ 9m</strong></div>
-                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>N1 Méd (Mw 7.5):</span> <strong id="scen-a0max-med" class="text-emerald-600">FS 1.573 @ 9m</strong></div>
-                                        <div class="flex justify-between py-1"><span>N1 Máx (Mw 8.5):</span> <strong id="scen-a0max-max" class="text-emerald-600">FS 2.585 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>$N_1\text{ Mín } (M_w = 6.0)$:</span> <strong id="scen-a0max-min" class="text-red-600 font-black">FS 0.961 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1 border-b border-gray-200/60 dark:border-gray-600/50"><span>$N_1\text{ Méd } (M_w = 7.5)$:</span> <strong id="scen-a0max-med" class="text-emerald-600">FS 1.573 @ 9m</strong></div>
+                                        <div class="flex justify-between py-1"><span>$N_1\text{ Máx } (M_w = 8.5)$:</span> <strong id="scen-a0max-max" class="text-emerald-600">FS 2.585 @ 9m</strong></div>
                                     </div>
                                 </div>
                             </div>
@@ -263,17 +263,17 @@
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                             <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Razão de Sensibilidade</div>
                             <div id="tab-stat-ratio" class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">17.8x</div>
-                            <div class="text-[11px] text-gray-500 mt-0.5">Variação do Solo (N1) governa expressivamente vs Sismo (a0)</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Variação do Solo ($N_1$) governa expressivamente vs Sismo ($a_0$)</div>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Impacto Médio do Solo (N1)</div>
-                            <div id="tab-stat-delta-n1" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">ΔFS = 1.508</div>
-                            <div class="text-[11px] text-gray-500 mt-0.5">Ganho de segurança ao variar N1 mín (27) → máx (58)</div>
+                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Impacto Médio do Solo ($N_1$)</div>
+                            <div id="tab-stat-delta-n1" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">$\Delta FS = 1.508$</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Ganho de segurança ao variar $N_1\text{ mín (27)} \to \text{máx (58)}$</div>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Impacto Aceleração Sísmica (a0)</div>
-                            <div id="tab-stat-delta-a0" class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">ΔFS = 0.085</div>
-                            <div class="text-[11px] text-gray-500 mt-0.5">Sensibilidade marginal com a0 mín (0.55g) → máx (0.70g)</div>
+                            <div class="text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">Impacto Aceleração Sísmica ($a_0$)</div>
+                            <div id="tab-stat-delta-a0" class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">$\Delta FS = 0.085$</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">Sensibilidade marginal com $a_0\text{ mín (0.55g)} \to \text{máx (0.70g)}$</div>
                         </div>
                     </div>
 
@@ -397,19 +397,19 @@
                         <table class="min-w-full text-xs text-left">
                             <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 sticky top-0 uppercase font-semibold">
                                 <tr>
-                                    <th class="py-2.5 px-3">Prof (m)</th>
-                                    <th class="py-2.5 px-3">σv (kPa)</th>
-                                    <th class="py-2.5 px-3">u (kPa)</th>
-                                    <th class="py-2.5 px-3">σv' (kPa)</th>
-                                    <th class="py-2.5 px-3">rd</th>
-                                    <th class="py-2.5 px-3">CSR (a0 mín)</th>
-                                    <th class="py-2.5 px-3">CSR (a0 máx)</th>
-                                    <th class="py-2.5 px-3">FS-a0mín-mín</th>
-                                    <th class="py-2.5 px-3">FS-a0mín-méd</th>
-                                    <th class="py-2.5 px-3">FS-a0mín-máx</th>
-                                    <th class="py-2.5 px-3 font-bold text-red-600 dark:text-red-400">FS-a0máx-mín</th>
-                                    <th class="py-2.5 px-3">FS-a0máx-méd</th>
-                                    <th class="py-2.5 px-3">FS-a0máx-máx</th>
+                                    <th class="py-2.5 px-3">$z\text{ (m)}$</th>
+                                    <th class="py-2.5 px-3">$\sigma_v\text{ (kPa)}$</th>
+                                    <th class="py-2.5 px-3">$u\text{ (kPa)}$</th>
+                                    <th class="py-2.5 px-3">$\sigma'_v\text{ (kPa)}$</th>
+                                    <th class="py-2.5 px-3">$r_d$</th>
+                                    <th class="py-2.5 px-3">$CSR(a_{0,\min})$</th>
+                                    <th class="py-2.5 px-3">$CSR(a_{0,\max})$</th>
+                                    <th class="py-2.5 px-3">$FS(a_{0,\min}, N_{1,\min})$</th>
+                                    <th class="py-2.5 px-3">$FS(a_{0,\min}, N_{1,\text{méd}})$</th>
+                                    <th class="py-2.5 px-3">$FS(a_{0,\min}, N_{1,\max})$</th>
+                                    <th class="py-2.5 px-3 font-bold text-red-600 dark:text-red-400">$FS(a_{0,\max}, N_{1,\min})$</th>
+                                    <th class="py-2.5 px-3">$FS(a_{0,\max}, N_{1,\text{méd}})$</th>
+                                    <th class="py-2.5 px-3">$FS(a_{0,\max}, N_{1,\max})$</th>
                                 </tr>
                             </thead>
                             <tbody id="profile-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -431,26 +431,26 @@
                             </h3>
                             <div class="space-y-4 text-sm">
                                 <div>
-                                    <label class="eng-label">Aceleração a_max (g)</label>
+                                    <label class="eng-label">Aceleração $a_{\max}\text{ (g)}$</label>
                                     <input type="number" id="layer_def_amax" value="0.55" step="0.05" min="0.05" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-amber-600">
                                 </div>
                                 <div>
-                                    <label class="eng-label">Magnitude Mw</label>
+                                    <label class="eng-label">Magnitude $M_w$</label>
                                     <input type="number" id="layer_def_mw" value="7.5" step="0.1" min="5.0" max="9.5" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-bold text-blue-600">
                                 </div>
                                 <div>
-                                    <label class="eng-label">NA Padrão (m)</label>
+                                    <label class="eng-label">$NA\text{ Padrão (m)}$</label>
                                     <input type="number" id="layer_def_na" value="3.5" step="0.1" min="0" class="eng-input">
                                 </div>
                                 <div>
-                                    <label class="eng-label">γ Padrão (kN/m³)</label>
+                                    <label class="eng-label">$\gamma\text{ Padrão (kN/m³)}$</label>
                                     <input type="number" id="layer_def_gamma" value="19.0" step="0.5" min="10" class="eng-input">
                                 </div>
                                 <div class="col-span-2">
                                     <label class="eng-label">Formulação de Verificação</label>
                                     <select id="layer_formulation" class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 font-semibold text-xs text-blue-700 dark:text-blue-300">
-                                        <option value="nceer" selected>NCEER / Youd & Idriss (Canônico: Kσ na Resistência)</option>
-                                        <option value="spreadsheet">Planilha LZC-3 (Legado: Kσ no denom. do CSR)</option>
+                                        <option value="nceer" selected>NCEER / Youd & Idriss (Canônico: $K_\sigma$ na Resistência)</option>
+                                        <option value="spreadsheet">Planilha LZC-3 (Legado: $K_\sigma$ no denom. do $CSR$)</option>
                                     </select>
                                 </div>
                             </div>
@@ -481,7 +481,7 @@
                         <!-- Chart: CSR vs CRR -->
                         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
                             <h3 class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                <span>⚖️</span> Comparativo Demanda Sísmica (CSR) vs Resistência (CRR)
+                                <span>⚖️</span> Comparativo Demanda Sísmica ($CSR$) vs Resistência ($CRR$)
                             </h3>
                             <div class="h-64">
                                 <canvas id="chartCsrCrr"></canvas>
@@ -496,7 +496,7 @@
                                         <span>📝</span> Ensaio SPT por Camada de Sondagem
                                     </h3>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        Edite a cota, índice N1(60), teor de finos FC (%) e veja o Fator de Segurança instantâneo.
+                                        Edite a cota, índice $N_{1,60}$, teor de finos $FC\text{ (\%)}$ e veja o Fator de Segurança instantâneo.
                                     </p>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -513,15 +513,15 @@
                                 <table class="min-w-full text-xs text-left">
                                     <thead class="bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 sticky top-0 uppercase font-semibold">
                                         <tr>
-                                            <th class="py-2.5 px-3">Prof. (m)</th>
-                                            <th class="py-2.5 px-3">N1(60)</th>
-                                            <th class="py-2.5 px-3">FC (%)</th>
-                                            <th class="py-2.5 px-3">σv' (kPa)</th>
-                                            <th class="py-2.5 px-3">(N1)60cs</th>
-                                            <th class="py-2.5 px-3">CSR</th>
-                                            <th class="py-2.5 px-3">CRR_7.5</th>
-                                            <th class="py-2.5 px-3 font-bold text-blue-600 dark:text-blue-400" title="FS segundo formulação canônica NCEER">FS (NCEER)</th>
-                                            <th class="py-2.5 px-3 font-semibold text-gray-500" title="FS reproduzindo a planilha de referência LZC-3">FS (Planilha)</th>
+                                            <th class="py-2.5 px-3">$z\text{ (m)}$</th>
+                                            <th class="py-2.5 px-3">$N_{1,60}$</th>
+                                            <th class="py-2.5 px-3">$FC\text{ (\%)}$</th>
+                                            <th class="py-2.5 px-3">$\sigma'_v\text{ (kPa)}$</th>
+                                            <th class="py-2.5 px-3">$(N_1)_{60,cs}$</th>
+                                            <th class="py-2.5 px-3">$CSR$</th>
+                                            <th class="py-2.5 px-3">$CRR_{7.5}$</th>
+                                            <th class="py-2.5 px-3 font-bold text-blue-600 dark:text-blue-400" title="FS segundo formulação canônica NCEER">$FS\text{ (NCEER)}$</th>
+                                            <th class="py-2.5 px-3 font-semibold text-gray-500" title="FS reproduzindo a planilha de referência LZC-3">$FS\text{ (Planilha)}$</th>
                                             <th class="py-2.5 px-3 text-center">Diagnóstico</th>
                                             <th class="py-2.5 px-3 text-center">Ações</th>
                                         </tr>
