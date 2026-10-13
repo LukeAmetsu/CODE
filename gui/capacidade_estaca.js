@@ -1382,42 +1382,153 @@ function renderSoundingCharts() {
             }
         });
     }
+
+    // 3. Chart 3: Sounding Capacity Radm(z) for active borehole
+    const ctxCap = document.getElementById("chart-sounding-capacity");
+    if (ctxCap) {
+        if (chartSoundingCapacityInst) chartSoundingCapacityInst.destroy();
+
+        const p48 = sData.capacities?.["pile_48in"];
+        const p54 = sData.capacities?.["pile_54in"];
+        const p60 = sData.capacities?.["pile_60in"];
+
+        const maxRadm48 = p48?.max_radm || (p48?.radm?.length ? Math.max(...p48.radm) : 0);
+        const maxRadm54 = p54?.max_radm || (p54?.radm?.length ? Math.max(...p54.radm) : 0);
+        const maxRadm60 = p60?.max_radm || (p60?.radm?.length ? Math.max(...p60.radm) : 0);
+
+        const pill48 = document.getElementById("pill-cap-p48");
+        if (pill48) pill48.innerText = `1.2m máx: ${Math.round(maxRadm48).toLocaleString('pt-BR')} kN`;
+        const pill54 = document.getElementById("pill-cap-p54");
+        if (pill54) pill54.innerText = `1.3m máx: ${Math.round(maxRadm54).toLocaleString('pt-BR')} kN`;
+        const pill60 = document.getElementById("pill-cap-p60");
+        if (pill60) pill60.innerText = `1.5m máx: ${Math.round(maxRadm60).toLocaleString('pt-BR')} kN`;
+
+        const datasetsCap = [];
+        if (p48 && p48.depths && p48.radm) {
+            datasetsCap.push({
+                label: "Ø 1.2 m (48\")",
+                data: p48.depths.map((d, i) => ({ x: p48.radm[i], y: d })),
+                borderColor: PALETTE.blue,
+                borderWidth: 2.2,
+                pointRadius: 0,
+                tension: 0.1
+            });
+        }
+        if (p54 && p54.depths && p54.radm) {
+            datasetsCap.push({
+                label: "Ø 1.3 m (54\")",
+                data: p54.depths.map((d, i) => ({ x: p54.radm[i], y: d })),
+                borderColor: PALETTE.emerald,
+                borderWidth: 2.2,
+                pointRadius: 0,
+                tension: 0.1
+            });
+        }
+        if (p60 && p60.depths && p60.radm) {
+            datasetsCap.push({
+                label: "Ø 1.5 m (60\")",
+                data: p60.depths.map((d, i) => ({ x: p60.radm[i], y: d })),
+                borderColor: PALETTE.amber,
+                borderWidth: 2.2,
+                pointRadius: 0,
+                tension: 0.1
+            });
+        }
+
+        const targetKn = projectData.target_load_kn || 10000;
+        const maxDepthProfile = depths.length > 0 ? Math.max(...depths) : 60;
+        datasetsCap.push({
+            label: `Carga Alvo (${Math.round(targetKn).toLocaleString('pt-BR')} kN)`,
+            data: [{ x: targetKn, y: 0 }, { x: targetKn, y: maxDepthProfile }],
+            borderColor: PALETTE.rose,
+            borderWidth: 1.8,
+            borderDash: [6, 4],
+            pointRadius: 0
+        });
+
+        chartSoundingCapacityInst = new Chart(ctxCap, {
+            type: "line",
+            data: { datasets: datasetsCap },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                            title: (items) => `Profundidade: ${items[0]?.parsed?.y !== undefined ? items[0].parsed.y.toFixed(1) : ''} m`,
+                            label: (item) => ` ${item.dataset.label}: ${item.parsed.x !== undefined ? Math.round(item.parsed.x).toLocaleString('pt-BR') + ' kN' : item.raw}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: "linear",
+                        title: { display: true, text: "Capacidade Admissível Radm (kN)", font: { weight: "bold", size: 11 } },
+                        grid: { color: "rgba(156, 163, 175, 0.15)" }
+                    },
+                    y: {
+                        type: "linear",
+                        reverse: true,
+                        title: { display: true, text: "Profundidade (m)", font: { weight: "bold", size: 12 } },
+                        ticks: {
+                            stepSize: 10,
+                            callback: (val) => `${val} m`,
+                            font: { size: 11, weight: "600" }
+                        },
+                        grid: { color: "rgba(156, 163, 175, 0.20)" }
+                    }
+                }
+            }
+        });
+    }
 }
 
 // Funções de Controle de Layout e Altura dos Gráficos Geotécnicos
 function setSoundingChartsLayout(mode) {
     const grid = document.getElementById("sounding-charts-grid");
+    const cardCap = document.getElementById("card-sounding-capacity");
     const btn2Col = document.getElementById("btn-layout-2col");
+    const btn3Col = document.getElementById("btn-layout-3col");
     const btn1Col = document.getElementById("btn-layout-1col");
     if (!grid) return;
 
+    const activeBtnClass = "px-2.5 py-1 text-xs font-bold rounded-lg border border-blue-600 bg-blue-600 text-white shadow-xs transition-all";
+    const inactiveBtnClass = "px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all";
+
     if (mode === "1col") {
         grid.className = "grid grid-cols-1 gap-6";
-        if (btn1Col) {
-            btn1Col.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-blue-600 bg-blue-600 text-white shadow-xs transition-all";
-        }
-        if (btn2Col) {
-            btn2Col.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all";
-        }
+        if (cardCap) cardCap.classList.remove("hidden");
+        if (btn1Col) btn1Col.className = activeBtnClass;
+        if (btn2Col) btn2Col.className = inactiveBtnClass;
+        if (btn3Col) btn3Col.className = inactiveBtnClass;
+    } else if (mode === "3col") {
+        grid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6";
+        if (cardCap) cardCap.classList.remove("hidden");
+        if (btn3Col) btn3Col.className = activeBtnClass;
+        if (btn2Col) btn2Col.className = inactiveBtnClass;
+        if (btn1Col) btn1Col.className = inactiveBtnClass;
     } else {
+        // Modo Padrão: 2 colunas
         grid.className = "grid grid-cols-1 lg:grid-cols-2 gap-6";
-        if (btn2Col) {
-            btn2Col.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-blue-600 bg-blue-600 text-white shadow-xs transition-all";
-        }
-        if (btn1Col) {
-            btn1Col.className = "px-2.5 py-1 text-xs font-bold rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all";
-        }
+        if (cardCap) cardCap.classList.add("hidden");
+        if (btn2Col) btn2Col.className = activeBtnClass;
+        if (btn3Col) btn3Col.className = inactiveBtnClass;
+        if (btn1Col) btn1Col.className = inactiveBtnClass;
     }
 
     setTimeout(() => {
         if (chartStratigraphyInst) chartStratigraphyInst.resize();
         if (chartStrengthsInst) chartStrengthsInst.resize();
+        if (chartSoundingCapacityInst) chartSoundingCapacityInst.resize();
     }, 100);
 }
 
 function setSoundingChartsHeight(heightPx) {
     const c1 = document.getElementById("chart-wrap-stratigraphy");
     const c2 = document.getElementById("chart-wrap-strengths");
+    const c3 = document.getElementById("chart-wrap-capacity");
     if (c1) {
         c1.style.height = `${heightPx}px`;
         c1.style.minHeight = `${heightPx}px`;
@@ -1426,8 +1537,12 @@ function setSoundingChartsHeight(heightPx) {
         c2.style.height = `${heightPx}px`;
         c2.style.minHeight = `${heightPx}px`;
     }
+    if (c3) {
+        c3.style.height = `${heightPx}px`;
+        c3.style.minHeight = `${heightPx}px`;
+    }
 
-    const heights = [500, 650, 800];
+    const heights = [600, 750, 900];
     heights.forEach(h => {
         const btn = document.getElementById(`btn-height-${h}`);
         if (btn) {
@@ -1442,7 +1557,112 @@ function setSoundingChartsHeight(heightPx) {
     setTimeout(() => {
         if (chartStratigraphyInst) chartStratigraphyInst.resize();
         if (chartStrengthsInst) chartStrengthsInst.resize();
+        if (chartSoundingCapacityInst) chartSoundingCapacityInst.resize();
     }, 100);
+}
+
+// EXPORTAÇÃO E CÓPIA DE GRÁFICOS COM FUNDO TRANSPARENTE
+async function copyChartToClipboardTransparent(canvasId, btn) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        showToast("Gráfico não encontrado.", "error");
+        return;
+    }
+
+    try {
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                showToast("Erro ao processar imagem transparente.", "error");
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && window.ClipboardItem) {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ "image/png": blob })
+                    ]);
+                    showToast("Gráfico copiado com fundo transparente! Pronto para colar (Ctrl+V).", "success");
+                    if (btn) {
+                        const originalHtml = btn.innerHTML;
+                        btn.innerHTML = `<span>✓</span> Copiado!`;
+                        btn.classList.add("bg-emerald-600", "text-white", "border-emerald-600");
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            btn.classList.remove("bg-emerald-600", "text-white", "border-emerald-600");
+                        }, 2000);
+                    }
+                } else {
+                    downloadChartTransparent(canvasId, `${canvasId}_transparente.png`);
+                    showToast("Área de transferência restrita. Arquivo PNG transparente baixado automaticamente!", "info");
+                }
+            } catch (err) {
+                console.warn("Clipboard API falhou, acionando download:", err);
+                downloadChartTransparent(canvasId, `${canvasId}_transparente.png`);
+                showToast("Imagem PNG transparente baixada com sucesso!", "info");
+            }
+        }, "image/png");
+    } catch (e) {
+        console.error("Erro ao exportar gráfico transparente:", e);
+        showToast("Falha ao exportar gráfico.", "error");
+    }
+}
+
+function downloadChartTransparent(canvasId, customName) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    try {
+        const link = document.createElement("a");
+        link.download = customName || `${canvasId}_transparente.png`;
+        link.href = canvas.toDataURL("image/png");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Download do PNG transparente concluído!", "success");
+    } catch (e) {
+        console.error("Erro no download transparente:", e);
+        showToast("Erro ao baixar PNG.", "error");
+    }
+}
+
+function showToast(message, type = "info") {
+    let container = document.getElementById("toast-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toast-container";
+        container.className = "fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none";
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    const bgColors = {
+        success: "bg-emerald-600 text-white border-emerald-700 shadow-emerald-500/20",
+        error: "bg-rose-600 text-white border-rose-700 shadow-rose-500/20",
+        info: "bg-blue-600 text-white border-blue-700 shadow-blue-500/20",
+        warning: "bg-amber-600 text-white border-amber-700 shadow-amber-500/20"
+    };
+    const icons = {
+        success: "✓",
+        error: "✕",
+        info: "ℹ",
+        warning: "⚠"
+    };
+
+    toast.className = `flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold border pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0 ${bgColors[type] || bgColors.info}`;
+    toast.innerHTML = `<span class="text-sm font-bold">${icons[type] || "ℹ"}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+        toast.classList.add("translate-y-0", "opacity-100");
+    });
+
+    setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-2", "opacity-0");
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+    }, 3500);
 }
 
 // RENDER TABELAS DA ABA 4 (PARÂMETROS E GEOMETRIA)
