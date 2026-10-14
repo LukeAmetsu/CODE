@@ -174,11 +174,16 @@
                     </div>
 
                     <!-- Safety Factors & Load Ratio -->
-                    <div class="mt-1 pt-2 border-t border-[var(--color-border-primary)]/50 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                    <div class="mt-1 pt-2 border-t border-[var(--color-border-primary)]/50 grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
                         <div class="flex flex-col gap-0.5">
                             <span class="text-gray-400">γ_v (Cisalhamento):</span>
-                            <input type="number" id="sec_gamma_v" value="1.40" step="0.05" min="1.0" max="2.5"
-                                class="bg-[var(--color-bg-secondary)] border border-purple-500/40 rounded px-2 py-1 font-mono font-bold text-purple-300 text-right">
+                            <input type="number" id="sec_gamma_v" value="1.40" step="0.05" min="0.80" max="3.50"
+                                class="bg-[var(--color-bg-secondary)] border border-purple-500/40 rounded px-2 py-1 font-mono font-bold text-purple-300 text-right" title="Coeficiente parcial do concreto (Norma: 1.40)">
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-gray-400" title="Fator Característico de Fragilidade (0.70 para f_ctk,inf na NBR 6118, ou 1.00 para modelos com C característico)">Fator k_k (Fragil.):</span>
+                            <input type="number" id="sec_k_k" value="1.00" step="0.05" min="0.50" max="1.50"
+                                class="bg-[var(--color-bg-secondary)] border border-cyan-500/40 rounded px-2 py-1 font-mono font-bold text-cyan-300 text-right">
                         </div>
                         <div class="flex flex-col gap-0.5">
                             <span class="text-gray-400">γ_g (Permanente):</span>
@@ -200,11 +205,35 @@
 
                 <!-- Card 2: Parâmetros da Fórmula Ativa (C, alpha, beta...) -->
                 <div class="glass-panel rounded-2xl p-4 shadow-md flex flex-col gap-3">
-                    <div class="flex items-center justify-between pb-2 border-b border-[var(--color-border-primary)]">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--color-border-primary)]">
                         <h2 class="font-bold text-sm text-gray-200 flex items-center gap-2">
                             <span>🧮</span> <span>Parâmetros da Nova Formulação</span>
                         </h2>
-                        <span id="badgeActiveDeff" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">d_eff Padrão</span>
+                        <div class="flex items-center gap-2">
+                            <label class="flex items-center gap-1.5 cursor-pointer select-none bg-[var(--color-bg-secondary)] px-2.5 py-1 rounded-lg border border-[var(--color-border-primary)] hover:border-cyan-500/50 transition-colors" title="Ativar Trava Cinemática: d_eff = min(d, sqrt(a_cs/4 * d)) com a_cs >= d">
+                                <input type="checkbox" id="rel_chk_use_deff" onchange="toggleRelDeffConstraint(this.checked)"
+                                    class="w-3.5 h-3.5 rounded text-cyan-500 bg-slate-900 border-gray-600 focus:ring-cyan-500/30 cursor-pointer">
+                                <span class="text-[11px] font-semibold text-gray-200">Trava Cinemática (EC2 & FIB)</span>
+                            </label>
+                            <span id="badgeActiveDeff" class="text-[10px] px-1.5 py-0.5 rounded font-mono bg-gray-800 text-gray-400 border border-gray-700">d_eff Padrão</span>
+                        </div>
+                    </div>
+
+                    <!-- Normative Model Quick Presets -->
+                    <div class="flex flex-wrap items-center gap-1.5 pt-0.5 pb-1">
+                        <span class="text-[10px] text-gray-400 font-semibold mr-1">Presets:</span>
+                        <button type="button" onclick="applyReliabilityPreset('PROPOSED')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 cursor-pointer transition-colors">
+                            Nova Proposta
+                        </button>
+                        <button type="button" onclick="applyReliabilityPreset('NBR6118')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 border border-blue-500/40 cursor-pointer transition-colors" title="NBR 6118:2023 (C = 0.120, β = 0.333, k_k = 0.70, γ_v = 1.40, correção de arco a/d < 2.0)">
+                            NBR 6118 (k_k=0.70)
+                        </button>
+                        <button type="button" onclick="applyReliabilityPreset('EC2_2023')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 cursor-pointer transition-colors" title="EC2:2023 / CSCT (d_eff ativo, α=β=γ=1/3, δ=0, k_k=1.00, γ_v=1.40)">
+                            EC2:2023 / CSCT
+                        </button>
+                        <button type="button" onclick="applyReliabilityPreset('ACI318')" class="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-950/60 hover:bg-amber-900/60 text-amber-300 border border-amber-500/40 cursor-pointer transition-colors" title="ACI 318-19 (C = 0.142, β = 0.333, γ = 0.500, k_k = 1.00, γ_v = 1.33)">
+                            ACI 318-19
+                        </button>
                     </div>
 
                     <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -260,19 +289,38 @@
                     </div>
 
                     <!-- Botão Especial para Extração Automática de theta_R da base -->
-                    <div class="p-2.5 rounded-xl bg-gradient-to-r from-purple-950/40 to-indigo-950/40 border border-purple-500/30 flex items-center justify-between gap-3">
-                        <div>
-                            <div class="font-bold text-xs text-purple-200 flex items-center gap-1.5">
-                                <span>📊</span> <span>Erro de Modelo Experimental (θ_R)</span>
+                    <div class="p-2.5 rounded-xl bg-gradient-to-r from-purple-950/40 to-indigo-950/40 border border-purple-500/30 flex flex-col gap-2">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="font-bold text-xs text-purple-200 flex items-center gap-1.5">
+                                    <span>📊</span> <span>Erro de Modelo Experimental (θ_R)</span>
+                                    <span id="thetaRStatusBadge" class="text-[9.5px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">1.649 ensaios (s/ PC)</span>
+                                </div>
+                                <p class="text-[10px] text-gray-300 mt-0.5">
+                                    Extrair média e COV da razão <span class="font-mono text-cyan-300">V_test / V_calc</span> do modelo ativo na base Reineck.
+                                </p>
                             </div>
-                            <p class="text-[10px] text-gray-300 mt-0.5">
-                                Extrair média e COV da razão <span class="font-mono text-cyan-300">V_test / V_calc</span> diretamente dos 1.804+ ensaios do banco de dados Reineck.
-                            </p>
+                            <button type="button" onclick="extractModelErrorFromDb()"
+                                class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-purple-600 hover:bg-purple-500 text-white shadow transition-all shrink-0 cursor-pointer flex items-center gap-1 self-start sm:self-auto">
+                                <span>⚡</span> <span>Extrair da Base</span>
+                            </button>
                         </div>
-                        <button type="button" onclick="extractModelErrorFromDb()"
-                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-purple-600 hover:bg-purple-500 text-white shadow transition-all shrink-0 cursor-pointer">
-                            ⚡ Extrair da Base
-                        </button>
+
+                        <!-- Opções Normativas de Extração (Item 17.4.1.2.1 NBR 6118 / EC2) -->
+                        <div class="flex flex-wrap items-center gap-3 pt-1 border-t border-purple-500/20 text-[10.5px]">
+                            <label class="flex items-center gap-1.5 text-gray-300 cursor-pointer select-none hover:text-cyan-300 transition-colors" title="Aplica amplificação teórica 2.0/(a/d) para vigas curtas (0.5 <= a/d <= 2.0), equivalente à redução da força cortante de projeto a/(2d) prescrita na NBR 6118 (17.4.1.2.1) e no EC2">
+                                <input type="checkbox" id="rel_chk_arch_correction" checked onchange="triggerReactiveThetaRSync()" class="w-3.5 h-3.5 rounded text-cyan-500 bg-gray-950 border-gray-600 focus:ring-cyan-500/30 cursor-pointer">
+                                <span>Efeito de Arco (a/d ≤ 2.0)</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-gray-300 cursor-pointer select-none hover:text-cyan-300 transition-colors" title="Filtra e considera apenas vigas esbeltas (a/d >= 2.5), excluindo o mecanismo direto de biela-tirante">
+                                <input type="checkbox" id="rel_chk_slender_only" onchange="triggerReactiveThetaRSync()" class="w-3.5 h-3.5 rounded text-cyan-500 bg-gray-950 border-gray-600 focus:ring-cyan-500/30 cursor-pointer">
+                                <span>Apenas Esbeltas (a/d ≥ 2.5)</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-gray-300 cursor-pointer select-none hover:text-amber-300 transition-colors" title="Excluir da calibração elementos de concreto protendido (PC) da base">
+                                <input type="checkbox" id="rel_chk_exclude_pc" checked onchange="toggleRelExcludePc(this.checked)" class="w-3.5 h-3.5 rounded text-amber-500 bg-gray-950 border-gray-600 focus:ring-amber-500/30 cursor-pointer">
+                                <span>Excluir PC</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Tabela de Incertezas -->
@@ -343,23 +391,30 @@
                     </button>
 
                     <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="executeOptimalConstantCalibration()"
+                            class="py-2 px-3 rounded-xl text-xs font-semibold bg-emerald-950/40 hover:bg-emerald-900/40 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Mantém γ_v = 1.40 fixo e calibra a constante característica C_k para atingir exatamente β = 3.80">
+                            <span>🎯</span>
+                            <span>Calibrar C (γ_v=1.40 fixo)</span>
+                        </button>
+                        <button type="button" onclick="executeOptimalFactorCalibration()"
+                            class="py-2 px-3 rounded-xl text-xs font-semibold bg-purple-950/40 hover:bg-purple-900/40 text-purple-300 border border-purple-500/40 hover:border-purple-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer" title="Otimiza γ_v na faixa 0.80 <= γ_v <= 3.50 para atingir β = 3.80">
+                            <span>⚙️</span>
+                            <span>Calibrar γ_v para β = 3.8</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
                         <button type="button" onclick="executeMonteCarloVerification()"
                             class="py-2 px-3 rounded-xl text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 hover:border-gray-500 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
                             <span>🎲</span>
                             <span>Monte Carlo (20.000)</span>
                         </button>
-                        <button type="button" onclick="executeOptimalFactorCalibration()"
-                            class="py-2 px-3 rounded-xl text-xs font-semibold bg-purple-950/40 hover:bg-purple-900/40 text-purple-300 border border-purple-500/40 hover:border-purple-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                            <span>🎯</span>
-                            <span>Calibrar γ_v para β = 3.8</span>
+                        <button type="button" onclick="executeMultiCodeComparison()"
+                            class="py-2 px-3 rounded-xl text-xs font-semibold bg-gray-850 hover:bg-gray-750 text-gray-300 border border-gray-700 hover:border-cyan-500/40 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                            <span>⚖️</span>
+                            <span>Comparar Multicódigos</span>
                         </button>
                     </div>
-
-                    <button type="button" onclick="executeMultiCodeComparison()"
-                        class="py-2 px-3 rounded-xl text-xs font-semibold bg-gray-850 hover:bg-gray-750 text-gray-300 border border-gray-700 hover:border-cyan-500/40 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                        <span>⚖️</span>
-                        <span>Comparar Curvas Multicódigos (NBR • EC2 • ACI)</span>
-                    </button>
                 </div>
 
             </div>

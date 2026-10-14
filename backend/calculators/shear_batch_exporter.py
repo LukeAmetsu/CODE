@@ -134,6 +134,10 @@ def compute_shear_model_prediction(row, params):
         if not (bd > 0 and bbw > 0 and rho > 0 and fck > 0 and ba_d > 0 and v_test_kn > 0):
             return None
 
+        # Slender beams filter (Item 17.4.1.2.1 NBR 6118 / EC2: a/d >= 2.45)
+        if params.get('slender_only', False) and ba_d < 2.45:
+            return None
+
         # Effective depth if CSCT / EC2-2023 constraint is active
         use_deff = bool(params.get('use_deff', False))
         if use_deff:
@@ -149,9 +153,19 @@ def compute_shear_model_prediction(row, params):
         C = float(params.get('C', 0.22))
         mu = float(params.get('mu', 0.15))
 
-        size_effect = (d_dg / eff_d) ** alpha if alpha != 0 else 1.0
+        is_nbr = bool(params.get('use_nbr_scale', False) or params.get('code_preset') == 'NBR6118' or params.get('is_nbr6118', False) or
+                      (abs(float(params.get('C', 0.0) or 0.0) - 0.120) < 0.005 and abs(float(params.get('gamma', 0.0) or 0.0) - 0.667) < 0.01))
+
+        # Support original NBR scale factor: k = max(1.6 - d_metros, 1.0) when use_deff is false
+        if (params.get('use_nbr_scale', False) or is_nbr) and not use_deff:
+            d_m = bd / 1000.0
+            size_effect = max(1.0, 1.6 - d_m)
+        else:
+            size_effect = (d_dg / eff_d) ** alpha if alpha != 0 else 1.0
+
+        fck_eff = min(fck, 50.0) if is_nbr else fck
         rho_term = (100.0 * rho) ** beta if beta != 0 else 1.0
-        fck_term = (fck) ** gamma if gamma != 0 else 1.0
+        fck_term = (fck_eff) ** gamma if gamma != 0 else 1.0
         ad_term = (ba_d) ** delta if delta != 0 else 1.0
 
         # Nominal area = bw * d
@@ -161,6 +175,15 @@ def compute_shear_model_prediction(row, params):
 
         v_calc_n = vc_tot * bbw * bd
         v_calc_kn = v_calc_n / 1000.0
+
+        # Normative arch action correction (Item 17.4.1.2.1 NBR 6118 & EC2) for a/d <= 2.0
+        if params.get('arch_correction') is not None:
+            apply_arch = bool(params['arch_correction'])
+        else:
+            apply_arch = bool(abs(delta) < 1e-4 or params.get('code_preset') in ['NBR6118', 'EC2_2023', 'ACI318'])
+        if apply_arch and ba_d > 0 and ba_d <= 2.0:
+            beta_arco = 2.0 / max(0.5, ba_d)
+            v_calc_kn = v_calc_kn * beta_arco
 
         if v_calc_kn <= 0 or not np.isfinite(v_calc_kn):
             return None

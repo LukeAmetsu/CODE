@@ -39,6 +39,11 @@ window.toggleDeffConstraint = toggleDeffConstraint;
 function syncDeffToggleUI() {
     const chk = document.getElementById('chkUseDeffConstraint');
     if (chk) chk.checked = !!useDeffConstraint;
+    if (typeof syncRelDeffToggleUI === 'function') {
+        activeUseDeff = !!useDeffConstraint;
+        syncRelDeffToggleUI();
+        if (typeof renderFormulaDisplay === 'function') renderFormulaDisplay();
+    }
 }
 window.syncDeffToggleUI = syncDeffToggleUI;
 
@@ -46,15 +51,23 @@ let excludePrestressed = false;
 
 function toggleExcludePrestressed(enabled) {
     excludePrestressed = !!enabled;
+    lastRenderedLatex = '';
     syncExcludePrestressedUI();
     updateFilteredRows();
     updateMath();
+    scheduleKatexRender(true);
+    if (typeof renderHorizontalCodeCardsEquations === 'function') {
+        renderHorizontalCodeCardsEquations();
+    }
+    if (typeof renderFormulaDisplay === 'function') {
+        renderFormulaDisplay();
+    }
     updateDatabaseChart();
     triggerAutoSave();
     const count = currentFilteredRows ? currentFilteredRows.length : 0;
     const msg = excludePrestressed 
-        ? tr('pc_excluded_toast', `Concreto Protendido (PC) excluído da base ativa (${count} ensaios restantes).`)
-        : tr('pc_included_toast', `Concreto Protendido (PC) incluído na base (${count} ensaios no total).`);
+        ? tr('pc_excluded_toast', `Concreto Protendido (PC) excluído: equações atualizadas para Concreto Armado puro (σ_cp = 0) com ${count} ensaios.`)
+        : tr('pc_included_toast', `Concreto Protendido (PC) incluído: equações atualizadas com termo de protensão (+μ·σ_cp) para ${count} ensaios.`);
     showToast(msg, 'info');
 }
 window.toggleExcludePrestressed = toggleExcludePrestressed;
@@ -63,8 +76,14 @@ function syncExcludePrestressedUI() {
     const chk1 = document.getElementById('chkExcludePrestressed');
     const chk2 = document.getElementById('chkDynExcludePrestressed');
     const lbl = document.getElementById('lblExcludePrestressed');
+    const relChk = document.getElementById('rel_chk_exclude_pc');
+    const thetaBadge = document.getElementById('thetaRStatusBadge');
     if (chk1) chk1.checked = !!excludePrestressed;
     if (chk2) chk2.checked = !!excludePrestressed;
+    if (relChk) relChk.checked = !!excludePrestressed;
+    if (thetaBadge) {
+        thetaBadge.innerText = excludePrestressed ? '1.649 ensaios (s/ PC)' : '1.804 ensaios (c/ PC)';
+    }
     if (lbl) {
         if (excludePrestressed) {
             lbl.classList.add('border-amber-500/60', 'bg-amber-500/15');
@@ -76,6 +95,79 @@ function syncExcludePrestressedUI() {
     }
 }
 window.syncExcludePrestressedUI = syncExcludePrestressedUI;
+
+function switchAppMainTab(tab) {
+    const btnExplorer = document.getElementById('tabBtn_explorer');
+    const btnReliability = document.getElementById('tabBtn_reliability');
+    const explorerContent = document.getElementById('mainContent');
+    const relContent = document.getElementById('reliabilityTabContent');
+
+    if (tab === 'reliability') {
+        if (explorerContent) explorerContent.classList.add('hidden');
+        if (relContent) relContent.classList.remove('hidden');
+
+        if (btnExplorer) {
+            btnExplorer.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700";
+        }
+        if (btnReliability) {
+            btnReliability.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer bg-cyan-600 text-white shadow-md";
+        }
+
+        // Live sync parameters and recalculate
+        syncLiveParamsToReliability();
+    } else {
+        if (relContent) relContent.classList.add('hidden');
+        if (explorerContent) explorerContent.classList.remove('hidden');
+
+        if (btnExplorer) {
+            btnExplorer.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer bg-purple-600 text-white shadow-md";
+        }
+        if (btnReliability) {
+            btnReliability.className = "px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700";
+        }
+
+        if (window.dbChart) window.dbChart.resize();
+    }
+}
+window.switchAppMainTab = switchAppMainTab;
+
+function syncLiveParamsToReliability() {
+    if (typeof params === 'object' && params) {
+        if (params.C && document.getElementById('rel_param_C')) {
+            document.getElementById('rel_param_C').value = params.C.val.toFixed(3);
+        }
+        if (params.alpha && document.getElementById('rel_param_alpha')) {
+            document.getElementById('rel_param_alpha').value = (params.alpha.disabled ? 0.0 : params.alpha.val).toFixed(3);
+        }
+        if (params.beta && document.getElementById('rel_param_beta')) {
+            document.getElementById('rel_param_beta').value = (params.beta.disabled ? 0.0 : params.beta.val).toFixed(3);
+        }
+        if (params.gamma && document.getElementById('rel_param_gamma')) {
+            document.getElementById('rel_param_gamma').value = (params.gamma.disabled ? 0.0 : params.gamma.val).toFixed(3);
+        }
+        if (params.delta && document.getElementById('rel_param_delta')) {
+            document.getElementById('rel_param_delta').value = (params.delta.disabled ? 0.0 : params.delta.val).toFixed(3);
+        }
+        if (params.mu && document.getElementById('rel_param_mu')) {
+            document.getElementById('rel_param_mu').value = (params.mu.disabled ? 0.0 : params.mu.val).toFixed(3);
+        }
+    }
+
+    if (typeof useDeffConstraint === 'boolean') {
+        activeUseDeff = useDeffConstraint;
+        if (typeof syncRelDeffToggleUI === 'function') syncRelDeffToggleUI();
+    }
+
+    if (typeof excludePrestressed === 'boolean') {
+        const pcChk = document.getElementById('rel_chk_exclude_pc');
+        if (pcChk) pcChk.checked = excludePrestressed;
+    }
+
+    if (typeof renderFormulaDisplay === 'function') renderFormulaDisplay();
+    if (typeof extractModelErrorFromDb === 'function') extractModelErrorFromDb();
+    if (typeof updateLatexCode === 'function') updateLatexCode();
+}
+window.syncLiveParamsToReliability = syncLiveParamsToReliability;
 
 function tr(key, fallback = null) {
     if (window.i18n && typeof window.i18n.get === 'function') {
@@ -471,6 +563,9 @@ function resetToDefaults() {
     window.shearAutoScaleY = true;
     if (typeof updateYScaleButtonUI === 'function') updateYScaleButtonUI();
     updateMath();
+    scheduleKatexRender(true);
+    renderHorizontalCodeCardsEquations();
+    if (typeof renderFormulaDisplay === 'function') renderFormulaDisplay();
     updateDatabaseChart();
     if (typeof setOptimizationCriterion === 'function') setOptimizationCriterion('cov');
     showToast(tr('defaults_restored_toast', 'Padrões de fábrica restaurados.'), 'info');
@@ -1752,7 +1847,15 @@ function scheduleUpdate() {
 function scheduleKatexRender(immediate = false) {
     if (!window.katex) return;
     const eqLatex = buildLiveEquationLatex();
-    if (eqLatex === lastRenderedLatex) return;
+    if (eqLatex === lastRenderedLatex) {
+        const box1 = document.getElementById('liveModelEqBox');
+        if (box1 && !box1.hasChildNodes()) renderLatexToElement(box1, eqLatex, true);
+        const box2 = document.getElementById('mathEquation');
+        if (box2 && !box2.hasChildNodes() && box2 !== box1) renderLatexToElement(box2, eqLatex, true);
+        const box3 = document.getElementById('renderedFormulaMath');
+        if (box3 && !box3.hasChildNodes() && box3 !== box1 && box3 !== box2) renderLatexToElement(box3, eqLatex, true);
+        return;
+    }
 
     if (immediate) {
         clearTimeout(katexDebounceTimer);
@@ -1761,6 +1864,8 @@ function scheduleKatexRender(immediate = false) {
         if (box1) renderLatexToElement(box1, eqLatex, true);
         const box2 = document.getElementById('mathEquation');
         if (box2 && box2 !== box1) renderLatexToElement(box2, eqLatex, true);
+        const box3 = document.getElementById('renderedFormulaMath');
+        if (box3 && box3 !== box1 && box3 !== box2) renderLatexToElement(box3, eqLatex, true);
         return;
     }
 
@@ -1771,6 +1876,8 @@ function scheduleKatexRender(immediate = false) {
         if (box1) renderLatexToElement(box1, eqLatex, true);
         const box2 = document.getElementById('mathEquation');
         if (box2 && box2 !== box1) renderLatexToElement(box2, eqLatex, true);
+        const box3 = document.getElementById('renderedFormulaMath');
+        if (box3 && box3 !== box1 && box3 !== box2) renderLatexToElement(box3, eqLatex, true);
     }, 60);
 }
 
@@ -1798,13 +1905,12 @@ function buildLiveEquationLatex() {
         parts.push(`\\left(\\frac{a}{d}\\right)^{${params.delta.val.toFixed(3)}}`);
     }
     
-    // Check if prestress term is present in active data or parameters
-    const hasPrestressInActiveData = currentFilteredRows && currentFilteredRows.some(r => r._sigma_cp > 0);
-    const muActive = params.mu && !params.mu.disabled && Math.abs(params.mu.val) > 1e-4;
+    // Check if prestress term is active
+    const isPrestressActive = !excludePrestressed && params.mu && !params.mu.disabled && Math.abs(params.mu.val) > 1e-4;
 
     let formulaBody = parts.join(' ');
     let latex;
-    if (hasPrestressInActiveData && muActive) {
+    if (isPrestressActive) {
         latex = `V_{calc} = \\left[ ${formulaBody} + {\\color{#f59e0b}${params.mu.val.toFixed(2)}\\cdot\\sigma_{cp}} \\right] b_w \\cdot d`;
     } else {
         latex = `V_{calc} = ${formulaBody} \\cdot b_w \\cdot d`;
@@ -1813,7 +1919,7 @@ function buildLiveEquationLatex() {
     if (useDeffConstraint) {
         latex += ` \\quad {\\color{#06b6d4}\\scriptsize{\\left[d_{eff} = \\min\\left(d, \\sqrt{\\frac{a_{cs}}{4}d}\\right),\\; a_{cs}=\\max(a,d) \\ge d\\right]}}`;
     }
-    if (hasPrestressInActiveData && muActive) {
+    if (isPrestressActive) {
         latex += ` \\quad {\\color{#f59e0b}\\scriptsize{\\left[\\sigma_{cp} \\le 0.2f_{ck}\\right]}}`;
     }
     return latex;
@@ -1915,6 +2021,11 @@ function performLiveUpdate(immediateKatex = false) {
 
     // Debounced or immediate KaTeX formula render
     scheduleKatexRender(immediateKatex);
+
+    // Keep reliability inputs and formula synced if mounted
+    if (document.getElementById('rel_param_C')) {
+        syncLiveParamsToReliability();
+    }
 
     // Debounced Eel similarity
     if (lowessLine.length > 0) {
@@ -2284,13 +2395,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Analítica',
         color: '#4f46e5',
         equationLatex: 'V_c = k_v \\sqrt{f_{ck}} \\cdot z \\cdot b_w',
+        equationPrestressedLatex: 'V_{c,pc} = \\left[k_v \\sqrt{f_{ck}} + {\\color{#f59e0b}k_p \\sigma_{cp}}\\right] z \\cdot b_w',
         secondaryLatex: 'k_v = \\frac{180}{1000 + 1.25 z}, \\quad z = 0.9 d',
+        secondaryPrestressedLatex: 'k_v = \\frac{180}{1000 + 1.25 z}, \\quad z = 0.9 d',
         factors: {
-            sizeEffect: 'k_v = \\frac{180}{1000 + 1.25 z} \\quad (z = 0.9d)',
-            reinforcement: 'Ausente (não considera \\rho_w)',
-            concrete: 'f_{ck}^{0.50} \\quad (\\sqrt{f_{ck}})',
-            shearSpan: 'Ausente (viga esbelta padrão)',
-            geometry: 'b_w \\cdot z = 0.9 b_w d'
+            sizeEffect: {
+                math: 'k_v = \\frac{180}{1000 + 1.25 z}',
+                note: '(com braço z = 0.9d)'
+            },
+            reinforcement: {
+                math: '',
+                note: 'Ausente (não considera \\rho_w)'
+            },
+            concrete: {
+                math: 'f_{ck}^{0.50} = \\sqrt{f_{ck}}',
+                note: '(Raiz quadrada padrão)'
+            },
+            shearSpan: {
+                math: '',
+                note: 'Ausente (regime esbelto padrão)'
+            },
+            prestress: {
+                math: '+ k_p \\sigma_{cp}',
+                note: '(Nível I simplificado)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro)'
+            }
         },
         differenceOrigin: 'Formulação preliminar simplificada de Nível I: não contempla a taxa de armadura longitudinal e adota braço de alavanca constante z = 0.9d, divergindo em vigas com pouco aço.'
     },
@@ -2300,13 +2432,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Analítica',
         color: '#4338ca',
         equationLatex: 'V_c = k_v \\sqrt{f_{ck}} \\cdot z \\cdot b_w',
+        equationPrestressedLatex: 'V_{c,pc} = k_v(\\varepsilon_x) \\sqrt{f_{ck}} \\cdot z \\cdot b_w \\quad (\\varepsilon_x \\text{ c/ } {\\color{#f59e0b}-N_p})',
         secondaryLatex: 'k_v = \\frac{0.4}{1 + 1500 \\varepsilon_x} \\cdot \\frac{1300}{1000 + k_{dg} z}, \\quad k_{dg} = \\frac{32}{16 + d_{dg}} \\ge 0.75',
+        secondaryPrestressedLatex: '\\varepsilon_x = \\frac{M_{Ed}/z + V_{Ed} - N_p}{2 E_s A_s + 2 E_p A_p}, \\quad k_{dg} = \\frac{32}{16 + d_{dg}}',
         factors: {
-            sizeEffect: '\\frac{1300}{1000 + k_{dg} z} \\quad \\text{ponderado por rugosidade } d_{dg}',
-            reinforcement: '\\varepsilon_x = \\frac{M_{Ed}/z + V_{Ed}}{2 E_s A_s} \\implies \\rho_w \\text{ no denominador}',
-            concrete: 'f_{ck}^{0.50} \\quad (\\sqrt{f_{ck}})',
-            shearSpan: 'Entra via momento atuante M_{Ed} = V \\cdot a',
-            geometry: 'b_w \\cdot z = 0.9 b_w d'
+            sizeEffect: {
+                math: '\\frac{1300}{1000 + k_{dg} z}',
+                note: '(Ponderado por rugosidade d_{dg} e z = 0.9d)'
+            },
+            reinforcement: {
+                math: '\\varepsilon_x = \\frac{M/z + V}{2 E_s A_s}',
+                note: '(\\rho_w no denominador da deformação)'
+            },
+            concrete: {
+                math: 'f_{ck}^{0.50} = \\sqrt{f_{ck}}',
+                note: '(Mecânica da fratura)'
+            },
+            shearSpan: {
+                math: 'M_{Ed} = V \\cdot a',
+                note: '(Entra via momento fletor atuante)'
+            },
+            prestress: {
+                math: '- N_p',
+                note: '(Pré-compressão reduz deformação crítica \\varepsilon_x)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro: N_p = 0)'
+            }
         },
         differenceOrigin: 'Baseado na Teoria dos Campos de Compressão Modificados (MCFT/CSCT). Incorpora deformação crítica longitudinal εx e tamanho máximo do agregado ddg.'
     },
@@ -2316,13 +2469,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Norma Europeia',
         color: '#0d9488',
         equationLatex: 'V_c = 0.18 \\cdot k \\cdot (100 \\rho_l f_{ck})^{1/3} b_w d \\ge v_{min} b_w d',
+        equationPrestressedLatex: 'V_{c,pc} = \\left[0.18 \\cdot k \\cdot (100 \\rho_l f_{ck})^{1/3} + {\\color{#f59e0b}0.15 \\sigma_{cp}}\\right] b_w d',
         secondaryLatex: 'k = 1 + \\sqrt{\\frac{200}{d}} \\le 2.0, \\quad \\rho_l = \\min(\\rho_w, 0.02)',
+        secondaryPrestressedLatex: 'k = 1 + \\sqrt{\\frac{200}{d}} \\le 2.0, \\quad \\sigma_{cp} \\le 0.2 f_{cd}',
         factors: {
-            sizeEffect: 'k = 1 + \\sqrt{200/d} \\le 2.0 \\quad (\\text{satura para } d \\le 200\\text{mm})',
-            reinforcement: '(100 \\rho_l)^{1/3} = 4.64 \\cdot \\rho_w^{0.333}',
-            concrete: 'f_{ck}^{1/3} = f_{ck}^{0.333}',
-            shearSpan: 'Ausente (regime de flexão-cisalhamento)',
-            geometry: 'b_w \\cdot d'
+            sizeEffect: {
+                math: 'k = 1 + \\sqrt{\\frac{200}{d}} \\le 2.0',
+                note: '(Satura para d ≤ 200 mm)'
+            },
+            reinforcement: {
+                math: '(100 \\rho_l)^{1/3} = 4.64 \\cdot \\rho_w^{0.333}',
+                note: '(Raiz cúbica empírica)'
+            },
+            concrete: {
+                math: 'f_{ck}^{1/3} = f_{ck}^{0.333}',
+                note: '(Expoente 1/3)'
+            },
+            shearSpan: {
+                math: '',
+                note: 'Ausente (regime geral flexão-cisalhamento)'
+            },
+            prestress: {
+                math: '+ 0.15 \\sigma_{cp}',
+                note: '(Linear, limitado a 0.2 f_{cd})'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro)'
+            }
         },
         differenceOrigin: 'Usa expoente 1/3 para concreto e armadura. O fator k satura em 2.0 para d ≤ 200 mm e omite a rugosidade do agregado ddg, gerando viés em vigas rasas ou agregados graúdos.'
     },
@@ -2332,13 +2506,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Nova Norma Europeia',
         color: '#059669',
         equationLatex: 'V_c = 0.66 \\left(100 \\rho_l f_{ck} \\frac{d_{dg}}{d_{eff}}\\right)^{1/3} b_w d',
-        secondaryLatex: 'd_{eff} = \\sqrt{\\frac{a_{cs}}{4} d} \\le d, \\quad a_{cs} = \\max(a_d \\cdot d, d)',
+        equationPrestressedLatex: 'V_{c,pc} = \\left[0.66 \\left(100 \\rho_l f_{ck} \\frac{d_{dg}}{d_{eff}}\\right)^{1/3} + {\\color{#f59e0b}k_p \\sigma_{cp}}\\right] b_w d',
+        secondaryLatex: 'd_{eff} = \\sqrt{\\frac{a_{cs}}{4} d} \\le d, \\quad a_{cs} = \\max(a, d)',
+        secondaryPrestressedLatex: 'd_{eff} = \\sqrt{\\frac{a_{cs}}{4} d} \\le d, \\quad k_p \\approx 0.15 \\sim 0.20',
         factors: {
-            sizeEffect: '\\left(\\frac{d_{dg}}{d_{eff}}\\right)^{1/3} \\implies \\text{expoente exato } 0.333 \\text{ com } d_{dg}',
-            reinforcement: '(100 \\rho_l)^{1/3} = 4.64 \\cdot \\rho_w^{0.333}',
-            concrete: 'f_{ck}^{1/3} = f_{ck}^{0.333}',
-            shearSpan: 'Entra via d_{eff} = \\sqrt{(a_{cs}/4) d} \\text{ (ação de arco para } a/d < 4)',
-            geometry: 'b_w \\cdot d'
+            sizeEffect: {
+                math: '\\left(\\frac{d_{dg}}{d_{eff}}\\right)^{1/3}',
+                note: '(Expoente 1/3 = 0.333 com rugosidade d_{dg})'
+            },
+            reinforcement: {
+                math: '(100 \\rho_l)^{1/3} = 4.64 \\cdot \\rho_w^{0.333}',
+                note: '(Raiz cúbica)'
+            },
+            concrete: {
+                math: 'f_{ck}^{1/3} = f_{ck}^{0.333}',
+                note: '(Raiz cúbica CSCT)'
+            },
+            shearSpan: {
+                math: 'd_{eff} = \\sqrt{\\frac{a_{cs}}{4} d}',
+                note: '(Ação de arco para a/d < 4)'
+            },
+            prestress: {
+                math: '+ k_p \\sigma_{cp}',
+                note: '(Zona comprimida adicional por protensão)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro)'
+            }
         },
         differenceOrigin: 'Segunda geração do Eurocode (CSCT). É o modelo normativo mais próximo do Modelo Interativo, combinando potência de escala cúbica (ddg/deff)^(1/3) e transição de vão deff.'
     },
@@ -2348,13 +2543,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Norma Americana (2014)',
         color: '#e11d48',
         equationLatex: 'V_c = 0.17 \\sqrt{f_{ck}} \\cdot b_w d',
-        secondaryLatex: '\\text{Sem fator de escala } (k = 1.0) \\text{ e sem armadura longitudinal } (\\rho_w)',
+        equationPrestressedLatex: 'V_{c,pc} = \\left(0.05 \\sqrt{f_{ck}} + 4.8 \\frac{V_u d_p}{M_u}\\right) b_w d + {\\color{#f59e0b}V_p}',
+        secondaryLatex: '\\text{Sem fator de escala } (k = 1.0) \\text{ e sem armadura } (\\rho_w)',
+        secondaryPrestressedLatex: '\\text{Método simplificado para vigas protendidas}',
         factors: {
-            sizeEffect: '1.0 \\quad (\\text{Inexistente!})',
-            reinforcement: 'Ausente (\\rho_w^0)',
-            concrete: 'f_{ck}^{0.50} \\quad (\\sqrt{f_{ck}})',
-            shearSpan: 'Ausente (fórmula simplificada)',
-            geometry: 'b_w \\cdot d'
+            sizeEffect: {
+                math: '1.0',
+                note: '(Inexistente! Inseguro para d > 400 mm)'
+            },
+            reinforcement: {
+                math: '\\rho_w^0 = 1.0',
+                note: '(Ausente na resistência ao cisalhamento)'
+            },
+            concrete: {
+                math: 'f_{ck}^{0.50} = \\sqrt{f_{ck}}',
+                note: '(Raiz quadrada empírica)'
+            },
+            shearSpan: {
+                math: '',
+                note: 'Ausente na formulação básica'
+            },
+            prestress: {
+                math: '+ V_p / \\sigma_{cp}',
+                note: '(Componente vertical e termo M_u)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro)'
+            }
         },
         differenceOrigin: 'Ignora completamente o efeito de escala e armadura longitudinal. Por isso, a reta de FS tem forte declive negativo com d, tornando-se perigosamente insegura em elementos espessos (d > 400mm).'
     },
@@ -2364,13 +2580,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Norma Americana (2019)',
         color: '#be123c',
         equationLatex: 'V_c = 0.66 \\rho_w^{1/3} \\sqrt{f_{ck}} \\cdot b_w d \\cdot \\lambda_s',
+        equationPrestressedLatex: 'V_{c,pc} = \\min(V_{ci}, V_{cw}) + {\\color{#f59e0b}V_p}',
         secondaryLatex: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.004 d}} \\le 1.0',
+        secondaryPrestressedLatex: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.004 d}} \\le 1.0',
         factors: {
-            sizeEffect: '\\lambda_s = \\sqrt{2 / (1 + 0.004 d)} \\le 1.0',
-            reinforcement: '\\rho_w^{1/3} = \\rho_w^{0.333}',
-            concrete: 'f_{ck}^{0.50} \\quad (\\sqrt{f_{ck}})',
-            shearSpan: 'Ausente',
-            geometry: 'b_w \\cdot d'
+            sizeEffect: {
+                math: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.004 d}} \\le 1.0',
+                note: '(Introduzido no ACI 2019)'
+            },
+            reinforcement: {
+                math: '\\rho_w^{1/3} = \\rho_w^{0.333}',
+                note: '(Raiz cúbica)'
+            },
+            concrete: {
+                math: 'f_{ck}^{0.50} = \\sqrt{f_{ck}}',
+                note: '(Mantido do ACI anterior)'
+            },
+            shearSpan: {
+                math: '',
+                note: 'Ausente'
+            },
+            prestress: {
+                math: 'V_{ci} / V_{cw} + V_p',
+                note: '(Critérios para seções protendidas)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro)'
+            }
         },
         differenceOrigin: 'Revisão de 2019 do ACI: introduziu λs e ρw^(1/3) para sanar a insegurança de 2014. Ainda diverge do modelo proposto por manter fck^0.5 e omitir a rugosidade do agregado ddg.'
     },
@@ -2380,13 +2617,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Norma Americana (2025)',
         color: '#be185d',
         equationLatex: 'V_c = 0.66 \\rho_w^{1/3} \\sqrt{f_{ck}} \\cdot b_w d \\cdot \\lambda_s \\ge 0.083 \\sqrt{f_{ck}} b_w d',
+        equationPrestressedLatex: 'V_{c,pc} = \\min(V_{ci}, V_{cw}) + {\\color{#f59e0b}V_p} \\quad (\\lambda_s \\text{ calibrado})',
         secondaryLatex: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.003 d}} \\le 1.0, \\quad \\sqrt{f_{ck}} \\le 10.3\\text{ MPa}',
+        secondaryPrestressedLatex: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.003 d}} \\le 1.0, \\quad \\sqrt{f_{ck}} \\le 10.3\\text{ MPa}',
         factors: {
-            sizeEffect: '\\lambda_s = \\sqrt{2 / (1 + 0.003 d)} \\le 1.0 \\quad (0.003d\\text{ vs }0.004d\\text{ em 2019})',
-            reinforcement: '\\rho_w^{1/3} = \\rho_w^{0.333}',
-            concrete: 'f_{ck}^{0.50} \\le 10.3\\text{ MPa} \\quad (150\\text{ psi cap})',
-            shearSpan: 'Ausente (regime geral)',
-            geometry: 'b_w \\cdot d'
+            sizeEffect: {
+                math: '\\lambda_s = \\sqrt{\\frac{2}{1 + 0.003 d}} \\le 1.0',
+                note: '(Denominador 0.003d vs 0.004d em 2019)'
+            },
+            reinforcement: {
+                math: '\\rho_w^{1/3} = \\rho_w^{0.333}',
+                note: '(Raiz cúbica)'
+            },
+            concrete: {
+                math: 'f_{ck}^{0.50} \\le 10.3\\text{ MPa}',
+                note: '(Teto de 150 psi para \\sqrt{f_{ck}})'
+            },
+            shearSpan: {
+                math: '',
+                note: 'Ausente (regime geral)'
+            },
+            prestress: {
+                math: 'V_{ci} / V_{cw} + V_p',
+                note: '(Critérios de ruptura por cisalhamento)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro)'
+            }
         },
         differenceOrigin: 'Atualização ACI 318-25 (Jan/2025): recalibra o denominador do size effect para 1 + 0.003d, limitando a penalização em seções altas, impõe teto de 10.3 MPa (150 psi) para √fck e patamar inferior de 0.083√fck·bw·d.'
     },
@@ -2396,13 +2654,34 @@ const CODE_EQUATION_METADATA = {
         category: 'Norma Brasileira',
         color: '#0284c7',
         equationLatex: 'V_c = \\tau_{Rd} \\cdot k \\cdot (1.2 + 40 \\rho_w) b_w d',
+        equationPrestressedLatex: 'V_{c,pc} = \\left[\\tau_{Rd} \\cdot k \\cdot (1.2 + 40 \\rho_w) + {\\color{#f59e0b}0.15 \\sigma_{cp}}\\right] b_w d',
         secondaryLatex: 'k = 1.6 - \\frac{d}{1000} \\ge 1.0, \\quad \\tau_{Rd} = 0.0525 f_{ck}^{2/3}',
+        secondaryPrestressedLatex: 'k = 1.6 - \\frac{d}{1000} \\ge 1.0, \\quad \\sigma_{cp} = \\frac{N_p}{A_c} \\le 0.2 f_{ck}',
         factors: {
-            sizeEffect: 'k = 1.6 - d/1000 \\ge 1.0 \\quad (\\text{linear, satura em } 1.0 \\text{ para } d \\ge 600\\text{mm})',
-            reinforcement: '(1.2 + 40 \\rho_w) \\quad (\\text{termo linear})',
-            concrete: 'f_{ck}^{2/3} = f_{ck}^{0.667} \\quad (\\text{maior expoente entre todas as normas})',
-            shearSpan: 'Ausente na formulação analítica',
-            geometry: 'b_w \\cdot d'
+            sizeEffect: {
+                math: 'k = 1.6 - \\frac{d}{1000} \\ge 1.0',
+                note: '(Linear, satura em 1.0 para d ≥ 600 mm)'
+            },
+            reinforcement: {
+                math: '(1.2 + 40 \\rho_w)',
+                note: '(Termo linear)'
+            },
+            concrete: {
+                math: 'f_{ck}^{2/3} = f_{ck}^{0.667}',
+                note: '(Maior expoente normativo f_{ctk})'
+            },
+            shearSpan: {
+                math: '',
+                note: 'Ausente na formulação analítica'
+            },
+            prestress: {
+                math: '+ 0.15 \\sigma_{cp}',
+                note: '(Acréscimo linear de pré-compressão)'
+            },
+            prestressExcluded: {
+                math: '\\sigma_{cp} = 0',
+                note: '(Concreto Armado puro: sem protensão)'
+            }
         },
         differenceOrigin: 'A NBR trunca o efeito de escala em d = 600mm (k = 1.0), subestimando a perda de resistência em elementos espessos; usa termo linear de armadura e tração fctk (fck^0.667).'
     }
@@ -2428,6 +2707,44 @@ function getCodeMeta(keyOrName) {
     }
     return null;
 }
+
+function renderFactorHTML(f) {
+    if (!f) return '';
+    if (typeof f === 'string') {
+        let trimmed = f.trim();
+        if (trimmed.includes('\\') || trimmed.includes('^') || trimmed.includes('_') || trimmed.includes('{')) {
+            if (window.katex) {
+                try {
+                    return katex.renderToString(trimmed, { throwOnError: false, displayMode: false });
+                } catch (e) {
+                    return `<span class="font-mono text-gray-200">${trimmed}</span>`;
+                }
+            }
+            return `<span class="font-mono text-gray-200">${trimmed}</span>`;
+        }
+        return `<span class="text-gray-300 font-sans italic">${trimmed}</span>`;
+    }
+    let mathHtml = '';
+    if (f.math && String(f.math).trim()) {
+        const mathStr = String(f.math).trim();
+        if (window.katex) {
+            try {
+                mathHtml = katex.renderToString(mathStr, { throwOnError: false, displayMode: false });
+            } catch (e) {
+                mathHtml = `<span class="font-mono text-gray-200">${mathStr}</span>`;
+            }
+        } else {
+            mathHtml = `<span class="font-mono text-gray-200">${mathStr}</span>`;
+        }
+    }
+    const noteStr = f.note ? String(f.note).trim() : '';
+    let noteHtml = noteStr ? `<span class="text-gray-400 text-[9.5px] font-sans italic leading-tight">${noteStr}</span>` : '';
+    if (!mathHtml && noteStr) {
+        return `<span class="text-gray-400 text-[9.5px] font-sans italic leading-tight">${noteStr}</span>`;
+    }
+    return `<div class="inline-flex items-center flex-wrap gap-1.5 leading-snug">${mathHtml}${noteHtml}</div>`;
+}
+window.renderFactorHTML = renderFactorHTML;
 
 function renderLatexToElement(el, latex, displayMode = false) {
     if (!el) return;
@@ -2623,6 +2940,11 @@ function updateLiveModelFlatnessUI(precomputedFlatness) {
     const flatness = precomputedFlatness !== undefined ? precomputedFlatness : computeLiveModelFlatness();
     const eqLatex = buildLiveEquationLatex();
 
+    const isPrestress = !excludePrestressed;
+    const prestressBadge = isPrestress
+        ? `<span class="text-[9px] px-1.5 py-0.5 rounded font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40" title="Protensão ativa no modelo (+μ·σ_cp)">Protensão (+μ·σ_cp)</span>`
+        : `<span class="text-[9px] px-1.5 py-0.5 rounded font-bold bg-gray-700/40 text-gray-400 border border-gray-600/40" title="Concreto Armado puro (sem protensão)">Sem PC (RC)</span>`;
+
     const disabledVars = Object.keys(params).filter(k => params[k].disabled);
     const disabledBadge = disabledVars.length > 0
         ? `<span class="text-[9px] px-1.5 py-0.5 rounded font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40" title="Variáveis desativadas: ${disabledVars.map(k => params[k].symbol).join(', ')}">✂️ ${disabledVars.length} off</span>`
@@ -2633,6 +2955,7 @@ function updateLiveModelFlatnessUI(precomputedFlatness) {
             <div class="flex items-center justify-between pb-1 border-b border-[var(--color-border-primary)]">
                 <div class="flex items-center gap-1.5">
                     <span class="font-bold text-xs" style="color:${pal.hex};">🎯 Modelo Proposto Interativo</span>
+                    <span id="flatnessPrestressBadge">${prestressBadge}</span>
                     <span id="flatnessDisabledBadge">${disabledBadge}</span>
                 </div>
             </div>
@@ -2686,6 +3009,10 @@ function updateLiveModelFlatnessUI(precomputedFlatness) {
         if (hint) {
             hint.innerHTML = `<span class="shrink-0 mt-0.5">${flatness.icon}</span><span>${flatness.suggestion}</span>`;
         }
+        const pcContainer = card.querySelector('#flatnessPrestressBadge');
+        if (pcContainer) {
+            pcContainer.innerHTML = prestressBadge;
+        }
         const disabledContainer = card.querySelector('#flatnessDisabledBadge');
         if (disabledContainer) {
             disabledContainer.innerHTML = disabledBadge;
@@ -2702,6 +3029,7 @@ function updateLiveModelFlatnessUI(precomputedFlatness) {
             <div class="flex items-center gap-1.5 min-w-0">
                 <span class="text-xs">🎯</span>
                 <span class="font-bold text-xs truncate" style="color:${pal.hex};">Modelo Proposto (Live)</span>
+                <span id="flatnessPrestressBadge">${prestressBadge}</span>
                 <span id="flatnessDisabledBadge">${disabledBadge}</span>
             </div>
             <span id="flatnessStatusBadge" class="text-[9.5px] px-1.5 py-0.5 rounded font-bold shrink-0 ${flatness.statusBadgeClass}">
@@ -2873,6 +3201,7 @@ function computeCorrelationStatistics() {
     const adArr = [];
     const rhoArr = [];
     const fckArr = [];
+    const sigmaCpArr = [];
     const bwArr = [];
     const bwdArr = [];
     const vuArr = [];
@@ -2900,6 +3229,7 @@ function computeCorrelationStatistics() {
         adArr.push(row._ad);
         rhoArr.push(row._rho * 100.0);
         fckArr.push(row._fck);
+        sigmaCpArr.push(row._sigma_cp || 0.0);
         bwArr.push(bwVal);
         bwdArr.push(row._bwd || (dVal > 0 ? bwVal / dVal : 0));
         vuArr.push(vuVal);
@@ -2922,11 +3252,14 @@ function computeCorrelationStatistics() {
     const n = dArr.length;
     if (n < 5) return null;
 
+    const hasPCData = sigmaCpArr.some(v => v > 0);
+
     const varDict = {
         d: { label: 'Altura Útil (d)', symbol: 'd', unit: 'mm', data: dArr, coef: 'α, ζ' },
         a_d: { label: 'Vão Cisalhante (a/d)', symbol: 'a/d', unit: '', data: adArr, coef: 'δ' },
         rho_w: { label: 'Taxa Armadura (ρw)', symbol: 'ρ_w', unit: '%', data: rhoArr, coef: 'β' },
         fck: { label: 'Resistência Concreto (fck)', symbol: 'f_{ck}', unit: 'MPa', data: fckArr, coef: 'γ' },
+        sigma_cp: { label: 'Protensão (σcp)', symbol: 'σ_{cp}', unit: 'MPa', data: sigmaCpArr, coef: 'μ' },
         bw: { label: 'Largura da Alma (bw)', symbol: 'b_w', unit: 'mm', data: bwArr, coef: 'ε' },
         bwd: { label: 'Razão Seção (bw/d)', symbol: 'b_w/d', unit: '', data: bwdArr, coef: 'bw/d' },
         V_test: { label: 'Força Experimental (Vu)', symbol: 'V_u', unit: 'kN', data: vuArr, coef: 'Carga' },
@@ -2934,7 +3267,7 @@ function computeCorrelationStatistics() {
         R_Live: { label: 'Modelo Proposto (R_Live)', symbol: 'R_{Live}', unit: '', data: rLiveArr, coef: 'Live' }
     };
 
-    const matrixKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live'];
+    const matrixKeys = ['d', 'a_d', 'rho_w', 'fck', 'sigma_cp', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live'];
 
     // Descriptive Statistics
     const descriptiveStats = {};
@@ -3005,7 +3338,7 @@ function computeCorrelationStatistics() {
     }
 
     // Predictor Multicollinearity (VIF)
-    const predKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw'];
+    const predKeys = hasPCData ? ['d', 'a_d', 'rho_w', 'fck', 'bw', 'sigma_cp'] : ['d', 'a_d', 'rho_w', 'fck', 'bw'];
     const predMatrix = predKeys.map(k1 => predKeys.map(k2 => pearsonMatrix[k1][k2]));
     const invPred = invertMatrix(predMatrix);
     const vifDict = {};
@@ -3014,9 +3347,12 @@ function computeCorrelationStatistics() {
             ? invPred[idx][idx]
             : 1.0;
     });
+    if (!hasPCData) {
+        vifDict['sigma_cp'] = 1.0;
+    }
 
     // Code residual correlations for benchmark comparison
-    const codeBenchKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd'];
+    const codeBenchKeys = ['d', 'a_d', 'rho_w', 'fck', 'sigma_cp', 'bw', 'bwd'];
     const codeCorrelations = {
         NBR6118: {},
         EC2: {},
@@ -3111,7 +3447,12 @@ function computeCorrelationStatistics() {
         let desc = 'Sem viés residual (|r| < 0.05)';
         let action = 'Parâmetro perfeitamente calibrado.';
 
-        if (absR >= 0.30) {
+        if (vk === 'sigma_cp' && !hasPCData) {
+            severity = 'inativo';
+            severityClass = 'bg-gray-500/15 text-gray-400 border border-gray-500/30';
+            desc = 'Sem protensão no recorte ativo';
+            action = 'Recorte composto exclusivamente por concreto armado (σcp = 0).';
+        } else if (absR >= 0.30) {
             severity = 'severo';
             severityClass = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
             desc = `Viés acentuado (${activeR > 0 ? '+' : ''}${activeR.toFixed(3)})`;
@@ -3119,17 +3460,22 @@ function computeCorrelationStatistics() {
             else if (vk === 'a_d') action = activeR > 0 ? 'Subestima peças curtas; ajuste δ.' : 'Superestima peças curtas; torne δ mais negativo.';
             else if (vk === 'rho_w') action = activeR > 0 ? 'Subestima armaduras densas; aumente β.' : 'Superestima armaduras densas; reduza β.';
             else if (vk === 'fck') action = activeR > 0 ? 'Subestima concretos fortes; aumente γ.' : 'Superestima concretos fortes; reduza γ.';
+            else if (vk === 'sigma_cp') action = activeR > 0 ? 'Subestima protensão; aumente μ no slider.' : 'Superestima protensão; reduza μ no slider.';
             else action = 'Ajuste os coeficientes correspondentes no painel.';
         } else if (absR >= 0.15) {
             severity = 'moderado';
             severityClass = 'bg-amber-500/20 text-amber-300 border border-amber-500/40';
             desc = `Viés moderado (${activeR > 0 ? '+' : ''}${activeR.toFixed(3)})`;
-            action = 'Recomenda-se leve ajuste no slider do parâmetro.';
+            if (vk === 'sigma_cp') action = activeR > 0 ? 'Subestima levemente a protensão; considere aumentar μ.' : 'Superestima levemente a protensão; considere reduzir μ.';
+            else action = 'Recomenda-se leve ajuste no slider do parâmetro.';
         } else if (absR >= 0.05) {
             severity = 'leve';
             severityClass = 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30';
             desc = `Viés leve (${activeR > 0 ? '+' : ''}${activeR.toFixed(3)})`;
-            action = 'Bom equilíbrio estocástico na faixa experimental.';
+            if (vk === 'sigma_cp') action = 'Boa calibração da contribuição de protensão (μ).';
+            else action = 'Bom equilíbrio estocástico na faixa experimental.';
+        } else {
+            if (vk === 'sigma_cp') action = 'Protensão perfeitamente calibrada (μ ótimo).';
         }
 
         biasEval[vk] = {
@@ -3151,7 +3497,7 @@ function computeCorrelationStatistics() {
     });
 
     // Residual Orthogonality Index (ROI) - Computed for all 4 formulations simultaneously
-    const primaryPreds = ['d', 'a_d', 'rho_w', 'fck', 'bw'];
+    const primaryPreds = hasPCData ? ['d', 'a_d', 'rho_w', 'fck', 'bw', 'sigma_cp'] : ['d', 'a_d', 'rho_w', 'fck', 'bw'];
     const sqSum = primaryPreds.reduce((acc, k) => {
         const rVal = currentCorrelationMethod === 'spearman' ? biasEval[k].spearman : biasEval[k].pearson;
         return acc + rVal * rVal;
@@ -3192,20 +3538,25 @@ function computeCorrelationStatistics() {
                 d: m.key === 'spearman' ? biasEval.d.spearman : (m.key === 'log' ? biasEval.d.logR : (m.key === 'delta' ? biasEval.d.deltaR : biasEval.d.pearson)),
                 a_d: m.key === 'spearman' ? biasEval.a_d.spearman : (m.key === 'log' ? biasEval.a_d.logR : (m.key === 'delta' ? biasEval.a_d.deltaR : biasEval.a_d.pearson)),
                 rho_w: m.key === 'spearman' ? biasEval.rho_w.spearman : (m.key === 'log' ? biasEval.rho_w.logR : (m.key === 'delta' ? biasEval.rho_w.deltaR : biasEval.rho_w.pearson)),
-                fck: m.key === 'spearman' ? biasEval.fck.spearman : (m.key === 'log' ? biasEval.fck.logR : (m.key === 'delta' ? biasEval.fck.deltaR : biasEval.fck.pearson))
+                fck: m.key === 'spearman' ? biasEval.fck.spearman : (m.key === 'log' ? biasEval.fck.logR : (m.key === 'delta' ? biasEval.fck.deltaR : biasEval.fck.pearson)),
+                sigma_cp: hasPCData ? (m.key === 'spearman' ? biasEval.sigma_cp.spearman : (m.key === 'log' ? biasEval.sigma_cp.logR : (m.key === 'delta' ? biasEval.sigma_cp.deltaR : biasEval.sigma_cp.pearson))) : null
             }
         };
     });
     const avgRoi = sumRoi / methodsList.length;
 
     // LaTeX Code Generator
-    const latexCols = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live'];
-    const latexHeaders = latexCols.map(k => `$${varDict[k].symbol}$`).join(' & ');
+    const latexCols = ['d', 'a_d', 'rho_w', 'fck', 'sigma_cp', 'bw', 'bwd', 'V_test', 'tau_u', 'R_Live'];
+    const latexHeaders = latexCols.map(k => {
+        if (k === 'sigma_cp') return '$\\sigma_{cp}$';
+        if (k === 'rho_w') return '$\\rho_w$';
+        return `$${varDict[k].symbol}$`;
+    }).join(' & ');
     const latexRows = latexCols.map(rk => {
-        const rLabel = `$${varDict[rk].symbol}$`;
+        const rLabel = rk === 'sigma_cp' ? '$\\sigma_{cp}$' : (rk === 'rho_w' ? '$\\rho_w$' : `$${varDict[rk].symbol}$`);
         const cells = latexCols.map(ck => {
             const v = currentCorrelationMethod === 'spearman' ? spearmanMatrix[rk][ck] : pearsonMatrix[rk][ck];
-            return v.toFixed(3);
+            return isFinite(v) ? v.toFixed(3) : '-';
         }).join(' & ');
         return `${rLabel} & ${cells} \\\\`;
     }).join('\n');
@@ -3235,6 +3586,7 @@ function computeCorrelationStatistics() {
         methodsData,
         avgRoi,
         varDict,
+        hasPCData,
         matrixKeys,
         descriptiveStats,
         pearsonMatrix,
@@ -3286,7 +3638,7 @@ function updateLiveCorrelationUI() {
     }
 
     function formatCellBias(rVal) {
-        if (rVal === null || rVal === undefined || isNaN(rVal)) return `<span class="text-gray-500">-.--</span>`;
+        if (rVal === null || rVal === undefined || isNaN(rVal)) return `<span class="text-gray-500 font-mono" title="Sem protensão no recorte">-</span>`;
         const abs = Math.abs(rVal);
         const col = abs < 0.08 ? 'text-emerald-400 font-bold' : (abs < 0.20 ? 'text-cyan-300' : (abs < 0.30 ? 'text-amber-400' : 'text-rose-400 font-bold'));
         return `<span class="${col}">${rVal >= 0 ? '+' : ''}${rVal.toFixed(2)}</span>`;
@@ -3312,7 +3664,8 @@ function updateLiveCorrelationUI() {
                 d: stats.biasEval.d ? stats.biasEval.d.pearson : 0,
                 a_d: stats.biasEval.a_d ? stats.biasEval.a_d.pearson : 0,
                 rho_w: stats.biasEval.rho_w ? stats.biasEval.rho_w.pearson : 0,
-                fck: stats.biasEval.fck ? stats.biasEval.fck.pearson : 0
+                fck: stats.biasEval.fck ? stats.biasEval.fck.pearson : 0,
+                sigma_cp: (stats.biasEval && stats.biasEval.sigma_cp && stats.hasPCData) ? stats.biasEval.sigma_cp.pearson : null
             }
         };
 
@@ -3321,7 +3674,7 @@ function updateLiveCorrelationUI() {
 
         rowsHtml += `
             <tr onclick="setOrthogonalityMethod('${m.key}')" class="transition-colors ${rowBg}" title="${m.title} (clique para focar na matriz)">
-                <td class="py-1 px-1.5 whitespace-nowrap">
+                <td class="py-1 px-1 whitespace-nowrap">
                     <div class="flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-indigo-400' : 'bg-transparent'}"></span>
                         <span class="font-bold text-[10px] text-gray-200">${m.label}</span>
@@ -3340,8 +3693,11 @@ function updateLiveCorrelationUI() {
                 <td class="py-1 px-1 text-right font-mono">
                     ${formatCellBias(mData.biases.rho_w)}
                 </td>
-                <td class="py-1 px-1.5 text-right font-mono">
+                <td class="py-1 px-1 text-right font-mono">
                     ${formatCellBias(mData.biases.fck)}
+                </td>
+                <td class="py-1 px-1 text-right font-mono">
+                    ${formatCellBias(mData.biases.sigma_cp)}
                 </td>
             </tr>
         `;
@@ -3374,12 +3730,13 @@ function updateLiveCorrelationUI() {
             <table class="w-full text-left text-[10px] border-collapse">
                 <thead>
                     <tr class="border-b border-[var(--color-border-primary)] text-gray-400 text-[9px] uppercase font-bold bg-[var(--color-bg-primary)]">
-                        <th class="py-1 px-1.5 text-left">Método</th>
+                        <th class="py-1 px-1 text-left">Método</th>
                         <th class="py-1 px-1 text-center" title="Residual Orthogonality Index">ROI</th>
                         <th class="py-1 px-1 text-right font-mono" title="Correlação com Altura Útil d">Escala (d)</th>
                         <th class="py-1 px-1 text-right font-mono" title="Correlação com Vão a/d">Vão (a/d)</th>
                         <th class="py-1 px-1 text-right font-mono" title="Correlação com Taxa de Armadura ρw">Taxa (ρw)</th>
-                        <th class="py-1 px-1.5 text-right font-mono" title="Correlação com Resistência fck">fck</th>
+                        <th class="py-1 px-1 text-right font-mono" title="Correlação com Resistência fck">fck</th>
+                        <th class="py-1 px-1 text-right font-mono" title="Correlação com Tensão de Protensão σ_cp">Prot. (σ_cp)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[var(--color-border-primary)]/40 text-[10px]">
@@ -3570,7 +3927,7 @@ function renderCorrelationBiasTab(stats) {
     if (!stats) return '';
     const roi = stats.roi;
     const method = currentCorrelationMethod;
-    const biasKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw', 'bwd'];
+    const biasKeys = ['d', 'a_d', 'rho_w', 'fck', 'sigma_cp', 'bw', 'bwd'];
 
     let roiStatus = 'Excepcional (Sem Viés Físico)';
     let roiColor = 'text-emerald-400';
@@ -3722,7 +4079,7 @@ function renderCorrelationBiasTab(stats) {
 
 function renderCorrelationStatsTab(stats) {
     if (!stats) return '';
-    const vifKeys = ['d', 'a_d', 'rho_w', 'fck', 'bw'];
+    const vifKeys = stats.hasPCData ? ['d', 'a_d', 'rho_w', 'fck', 'bw', 'sigma_cp'] : ['d', 'a_d', 'rho_w', 'fck', 'bw'];
     const descKeys = stats.matrixKeys;
 
     let html = `
@@ -3742,7 +4099,7 @@ function renderCorrelationStatsTab(stats) {
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5 pt-1">
+                <div class="grid grid-cols-2 sm:grid-cols-3 ${stats.hasPCData ? 'md:grid-cols-6' : 'md:grid-cols-5'} gap-2.5 pt-1">
     `;
 
     vifKeys.forEach(pk => {
@@ -4042,10 +4399,12 @@ function renderFactorsModalContent() {
     const liveFlat = computeLiveModelFlatness();
     const liveLatex = buildLiveEquationLatex();
 
-    const a_factor = params.alpha.disabled ? '1.0 \\text{ (off)}' : `(d_{dg}/d)^{${a_str}}`;
-    const b_factor = params.beta.disabled ? '1.0 \\text{ (off)}' : `(100\\rho_w)^{${b_str}}`;
-    const g_factor = params.gamma.disabled ? '1.0 \\text{ (off)}' : `f_{ck}^{${g_str}}`;
-    const d_factor = params.delta.disabled ? '1.0 \\text{ (off)}' : `(a/d)^{${d_str}}`;
+    const isPrestress = !excludePrestressed;
+    const a_factor = params.alpha.disabled ? '1.0' : `(d_{dg}/d)^{${a_str}}`;
+    const b_factor = params.beta.disabled ? '1.0' : `(100\\rho_w)^{${b_str}}`;
+    const g_factor = params.gamma.disabled ? '1.0' : `f_{ck}^{${g_str}}`;
+    const d_factor = params.delta.disabled ? '1.0' : `(a/d)^{${d_str}}`;
+    const p_factor = isPrestress ? `+ ${params.mu.val.toFixed(2)}\\sigma_{cp}` : `\\sigma_{cp} = 0`;
 
     let rowsHtml = `
         <!-- Live Proposed Model Row -->
@@ -4056,10 +4415,11 @@ function renderFactorsModalContent() {
                 </div>
             </td>
             <td class="p-3 font-mono text-[11px] text-cyan-300 whitespace-nowrap" id="modal_eq_live"></td>
-            <td class="p-3 font-mono text-[11px] ${params.alpha.disabled ? 'text-gray-500 line-through' : 'text-purple-300'} whitespace-nowrap">${a_factor}</td>
-            <td class="p-3 font-mono text-[11px] ${params.beta.disabled ? 'text-gray-500 line-through' : 'text-emerald-300'} whitespace-nowrap">${b_factor}</td>
-            <td class="p-3 font-mono text-[11px] ${params.gamma.disabled ? 'text-gray-500 line-through' : 'text-amber-300'} whitespace-nowrap">${g_factor}</td>
-            <td class="p-3 font-mono text-[11px] ${params.delta.disabled ? 'text-gray-500 line-through' : 'text-blue-300'} whitespace-nowrap">${d_factor}</td>
+            <td class="p-3 text-[11px] ${params.alpha.disabled ? 'text-gray-500 line-through' : 'text-purple-300'} whitespace-nowrap">${renderFactorHTML({ math: a_factor, note: params.alpha.disabled ? '(off)' : '' })}</td>
+            <td class="p-3 text-[11px] ${params.beta.disabled ? 'text-gray-500 line-through' : 'text-emerald-300'} whitespace-nowrap">${renderFactorHTML({ math: b_factor, note: params.beta.disabled ? '(off)' : '' })}</td>
+            <td class="p-3 text-[11px] ${params.gamma.disabled ? 'text-gray-500 line-through' : 'text-amber-300'} whitespace-nowrap">${renderFactorHTML({ math: g_factor, note: params.gamma.disabled ? '(off)' : '' })}</td>
+            <td class="p-3 text-[11px] ${params.delta.disabled ? 'text-gray-500 line-through' : 'text-blue-300'} whitespace-nowrap">${renderFactorHTML({ math: d_factor, note: params.delta.disabled ? '(off)' : '' })}</td>
+            <td class="p-3 text-[11px] text-amber-300 whitespace-nowrap">${renderFactorHTML({ math: p_factor, note: isPrestress ? '(Ativa)' : '(Desativada)' })}</td>
             <td class="p-3 font-bold font-mono text-[11px] text-emerald-400 whitespace-nowrap">
                 ${liveFlat ? liveFlat.flatnessScore.toFixed(1) + '% (' + (liveFlat.slopePerMeter >= 0 ? '+' : '') + liveFlat.slopePerMeter.toFixed(2) + '/m)' : '100%'}
             </td>
@@ -4083,6 +4443,9 @@ function renderFactorsModalContent() {
             : 'N/A';
         let flatClass = codeFlat && codeFlat.flatnessScore >= 90 ? 'text-emerald-400' : (codeFlat && codeFlat.flatnessScore >= 80 ? 'text-amber-400' : 'text-rose-400');
 
+        const eqLatex = (isPrestress && meta.equationPrestressedLatex) ? meta.equationPrestressedLatex : meta.equationLatex;
+        const pFactor = isPrestress ? meta.factors.prestress : meta.factors.prestressExcluded;
+
         rowsHtml += `
             <tr class="border-b border-[var(--color-border-primary)] hover:bg-[var(--color-bg-primary)]/60 transition-colors">
                 <td class="p-3 font-bold text-gray-200 whitespace-nowrap">
@@ -4092,16 +4455,17 @@ function renderFactorsModalContent() {
                     </div>
                 </td>
                 <td class="p-3 font-mono text-[11px] whitespace-nowrap" id="${eqId}"></td>
-                <td class="p-3 font-mono text-[10.5px] text-purple-300 whitespace-nowrap">${meta.factors.sizeEffect}</td>
-                <td class="p-3 font-mono text-[10.5px] text-emerald-300 whitespace-nowrap">${meta.factors.reinforcement}</td>
-                <td class="p-3 font-mono text-[10.5px] text-amber-300 whitespace-nowrap">${meta.factors.concrete}</td>
-                <td class="p-3 font-mono text-[10.5px] text-blue-300 whitespace-nowrap">${meta.factors.shearSpan}</td>
+                <td class="p-3 text-[10.5px] text-purple-300 whitespace-nowrap">${renderFactorHTML(meta.factors.sizeEffect)}</td>
+                <td class="p-3 text-[10.5px] text-emerald-300 whitespace-nowrap">${renderFactorHTML(meta.factors.reinforcement)}</td>
+                <td class="p-3 text-[10.5px] text-amber-300 whitespace-nowrap">${renderFactorHTML(meta.factors.concrete)}</td>
+                <td class="p-3 text-[10.5px] text-blue-300 whitespace-nowrap">${renderFactorHTML(meta.factors.shearSpan)}</td>
+                <td class="p-3 text-[10.5px] text-amber-300 whitespace-nowrap">${renderFactorHTML(pFactor)}</td>
                 <td class="p-3 font-bold font-mono text-[11px] ${flatClass} whitespace-nowrap">${flatStr}</td>
                 <td class="p-3 text-[11px] text-gray-400 min-w-[240px] leading-relaxed">${meta.differenceOrigin}</td>
             </tr>
         `;
 
-        latexModalQueue.push({ id: eqId, latex: meta.equationLatex });
+        latexModalQueue.push({ id: eqId, latex: eqLatex });
     });
 
     container.innerHTML = `
@@ -4115,6 +4479,7 @@ function renderFactorsModalContent() {
                         <th class="p-3 font-bold">Taxa Longitudinal (ρw)</th>
                         <th class="p-3 font-bold">Resistência Concreto (fck)</th>
                         <th class="p-3 font-bold">Vão Cisalhante (a/d)</th>
+                        <th class="p-3 font-bold">Protensão (σ_cp)</th>
                         <th class="p-3 font-bold">Retidão vs d</th>
                         <th class="p-3 font-bold">Origem Física da Diferença</th>
                     </tr>
@@ -4742,9 +5107,16 @@ function downloadChart() {
     // Line 1: Mathematical formulation
     ctx.fillStyle = '#0284c7';
     ctx.font = `bold ${11.5 * dpr}px Consolas, Monaco, monospace`;
-    const modelFormulation = useDeffConstraint
-        ? 'MODELO COM TRAVA CINEMÁTICA:  V_calc = C · (d_dg/d_eff)^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ · b_w · d  [d_eff = min(d, √(a_cs/4·d)), a_cs ≥ d]'
-        : 'MODELO EMPÍRICO CALIBRADO:  V_calc = C · (d_dg/d)^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ · b_w · d';
+    const isPrestressExport = !excludePrestressed && params.mu && !params.mu.disabled && Math.abs(params.mu.val) > 1e-4;
+    const pcTermStr = isPrestressExport ? ` + ${params.mu.val.toFixed(2)}·σ_cp` : '';
+    const pcLimitStr = isPrestressExport ? ' [σ_cp ≤ 0.2·f_ck]' : '';
+    const deffTermStr = useDeffConstraint ? ' [d_eff = min(d, √(a_cs/4·d)), a_cs ≥ d]' : '';
+    const dSym = useDeffConstraint ? 'd_eff' : 'd';
+    const modelFormulation = isPrestressExport
+        ? `MODELO PROPOSTO (COM PROTENSÃO):  V_calc = [C · (d_dg/${dSym})^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ${pcTermStr}] · b_w · d${pcLimitStr}${deffTermStr}`
+        : (useDeffConstraint
+            ? `MODELO COM TRAVA CINEMÁTICA:  V_calc = C · (d_dg/d_eff)^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ · b_w · d${deffTermStr}`
+            : `MODELO EMPÍRICO CALIBRADO (SEM PROTENSÃO):  V_calc = C · (d_dg/d)^α · (100·ρ_w)^β · f_ck^γ · (a/d)^δ · b_w · d`);
     ctx.fillText(modelFormulation, padding + 14 * dpr, eqBoxY + 20 * dpr);
 
     // Line 2: Calibrated parameters
@@ -4753,9 +5125,10 @@ function downloadChart() {
     const bVal = params.beta.disabled ? '0.000 (desat.)' : params.beta.val.toFixed(3);
     const gVal = params.gamma.disabled ? '0.000 (desat.)' : params.gamma.val.toFixed(3);
     const dVal = params.delta.disabled ? '0.000 (desat.)' : params.delta.val.toFixed(3);
+    const mValStr = isPrestressExport ? `  |  μ = ${params.mu.val.toFixed(3)}` : '  |  μ = 0.000 (s/ PC)';
     ctx.fillStyle = '#1e293b';
     ctx.font = `600 ${10.5 * dpr}px Consolas, Monaco, monospace`;
-    ctx.fillText(`Parâmetros:  C = ${C.toFixed(3)}  |  α = ${aVal}  |  β = ${bVal}  |  γ = ${gVal}  |  δ = ${dVal}`, padding + 14 * dpr, eqBoxY + 41 * dpr);
+    ctx.fillText(`Parâmetros:  C = ${C.toFixed(3)}  |  α = ${aVal}  |  β = ${bVal}  |  γ = ${gVal}  |  δ = ${dVal}${mValStr}`, padding + 14 * dpr, eqBoxY + 41 * dpr);
 
     // Line 3: Statistical metrics
     const meanNum = parseFloat(meanVal);
@@ -4889,35 +5262,49 @@ window.invertMatrix = invertMatrix;
 // -------------------------------------------------------------
 function renderHorizontalCodeCardsEquations() {
     const codeKeys = ['A_NBR6118', 'A_EC2_2023', 'A_EC2_2004', 'A_ACI_25', 'A_ACI_19', 'A_ACI_14', 'A_MC2010_L2', 'A_MC2010_L1'];
+    const isPrestress = !excludePrestressed;
+
     codeKeys.forEach(k => {
         const meta = CODE_EQUATION_METADATA[k];
         if (!meta) return;
+        const eqLatex = (isPrestress && meta.equationPrestressedLatex) ? meta.equationPrestressedLatex : meta.equationLatex;
+        const secLatex = (isPrestress && meta.secondaryPrestressedLatex) ? meta.secondaryPrestressedLatex : meta.secondaryLatex;
         const eqEl = document.getElementById(`code_card_eq_${k}`);
         if (eqEl) {
-            renderLatexToElement(eqEl, meta.equationLatex, true);
+            renderLatexToElement(eqEl, eqLatex, true);
         }
         const secEl = document.getElementById(`code_card_sec_${k}`);
-        if (secEl && meta.secondaryLatex) {
-            renderLatexToElement(secEl, meta.secondaryLatex, false);
+        if (secEl && secLatex) {
+            renderLatexToElement(secEl, secLatex, false);
         }
         const factorsEl = document.getElementById(`card_factors_${k}`);
         if (factorsEl && meta.factors) {
+            const pFactor = isPrestress ? meta.factors.prestress : meta.factors.prestressExcluded;
             factorsEl.innerHTML = `
                 <div class="flex flex-col gap-0.5">
                     <span class="text-purple-400 font-bold text-[9px] uppercase tracking-wider">Efeito de Escala (Size Effect):</span>
-                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.sizeEffect}</span>
+                    <div class="text-gray-200 text-[9.5px] pl-1">${renderFactorHTML(meta.factors.sizeEffect)}</div>
                 </div>
                 <div class="flex flex-col gap-0.5">
                     <span class="text-emerald-400 font-bold text-[9px] uppercase tracking-wider">Armadura Longitudinal (ρw):</span>
-                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.reinforcement}</span>
+                    <div class="text-gray-200 text-[9.5px] pl-1">${renderFactorHTML(meta.factors.reinforcement)}</div>
                 </div>
                 <div class="flex flex-col gap-0.5">
                     <span class="text-amber-400 font-bold text-[9px] uppercase tracking-wider">Resistência do Concreto (fck):</span>
-                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.concrete}</span>
+                    <div class="text-gray-200 text-[9.5px] pl-1">${renderFactorHTML(meta.factors.concrete)}</div>
                 </div>
                 <div class="flex flex-col gap-0.5">
                     <span class="text-blue-400 font-bold text-[9px] uppercase tracking-wider">Vão Cisalhante (a/d):</span>
-                    <span class="text-gray-200 font-mono text-[9.5px] pl-1">${meta.factors.shearSpan}</span>
+                    <div class="text-gray-200 text-[9.5px] pl-1">${renderFactorHTML(meta.factors.shearSpan)}</div>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                    <span class="text-amber-500 font-bold text-[9px] uppercase tracking-wider flex items-center gap-1">
+                        <span>Protensão (σ_cp):</span>
+                        <span class="text-[8px] px-1 py-0.2 rounded ${isPrestress ? 'bg-amber-500/20 text-amber-300' : 'bg-gray-800 text-gray-400'} font-normal font-sans">
+                            ${isPrestress ? 'Ativa' : 'Desativada'}
+                        </span>
+                    </span>
+                    <div class="text-gray-200 text-[9.5px] pl-1">${renderFactorHTML(pFactor)}</div>
                 </div>
                 <div class="mt-1 pt-1 border-t border-[var(--color-border-primary)] text-[9.5px] text-gray-300 italic leading-snug">
                     <strong class="text-cyan-400 font-normal">Origem da Diferença:</strong> ${meta.differenceOrigin}

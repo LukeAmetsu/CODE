@@ -1,16 +1,16 @@
 {
   "parameters": {
-    "C": 1.25,
-    "alpha": 0.333,
-    "beta": 0.333,
-    "gamma": 0.333,
+    "C": 1.2,
+    "alpha": 0.375,
+    "beta": 0.313,
+    "gamma": 0.313,
     "delta": -0.75,
-    "mu": 0.25,
+    "mu": 0.2,
     "epsilon": 1,
     "zeta": 1,
     "use_deff": true
   },
   "total_plots_generated": 114,
   "exclude_prestressed": false,
-  "timestamp": "2026-10-12T21:31:49.849507"
+  "timestamp": "2026-10-14T06:32:52.095710"
 }

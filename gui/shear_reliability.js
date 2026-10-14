@@ -9,21 +9,37 @@ let lastReliabilityResult = null;
 let lastMultiCodeResult = null;
 let lastLoadRatioResult = null;
 let activeUseDeff = false;
+let isComputing = false;
+let activeCodePreset = 'PROPOSED';
+
+function parseNum(val, defaultVal = 0.0) {
+    if (val === undefined || val === null) return defaultVal;
+    if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
+    const s = String(val).trim().replace(',', '.');
+    const n = parseFloat(s);
+    return isNaN(n) ? defaultVal : n;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Initialize KaTeX formula display
-    renderFormulaDisplay();
+    // 1. Check if launched inside unified window with active shear model
+    if (typeof window.useDeffConstraint === 'boolean') {
+        activeUseDeff = window.useDeffConstraint;
+    }
 
     // 2. Try restoring from shear model session or local session
     restoreSavedState();
 
-    // 3. Initialize Chart.js
+    // 3. Initialize KaTeX formula display & sync toggles
+    syncRelDeffToggleUI();
+    renderFormulaDisplay();
+
+    // 4. Initialize Chart.js
     initReliabilityChart();
 
-    // 4. Attach input change triggers
+    // 5. Attach input change triggers
     attachInputListeners();
 
-    // 5. Initial automatic calculation
+    // 6. Initial automatic calculation
     setTimeout(() => {
         executeReliabilityCalculation();
     }, 200);
@@ -36,23 +52,125 @@ function attachInputListeners() {
     ];
     paramInputs.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('input', () => renderFormulaDisplay());
+        if (el) {
+            el.addEventListener('input', () => {
+                if (id === 'rel_param_delta') {
+                    const dVal = parseFloat(el.value || 0);
+                    if (Math.abs(dVal) < 1e-4) {
+                        const archChk = document.getElementById('rel_chk_arch_correction');
+                        if (archChk) archChk.checked = true;
+                    }
+                }
+                renderFormulaDisplay();
+                clearTimeout(window._relCalcDebounce);
+                window._relCalcDebounce = setTimeout(() => {
+                    triggerReactiveThetaRSync();
+                }, 400);
+            });
+        }
+    });
+
+    const secInputs = [
+        'sec_fck', 'sec_bw', 'sec_d', 'sec_rho', 'sec_ad', 'sec_ddg',
+        'sec_gamma_v', 'sec_k_k', 'sec_gamma_g', 'sec_gamma_q', 'sec_chi'
+    ];
+    secInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                clearTimeout(window._relCalcDebounce);
+                window._relCalcDebounce = setTimeout(() => {
+                    executeReliabilityCalculation();
+                }, 300);
+            });
+        }
     });
 }
+
+function triggerReactiveThetaRSync() {
+    clearTimeout(window._relSyncDebounce);
+    window._relSyncDebounce = setTimeout(async () => {
+        await extractModelErrorFromDb(true); // silent = true
+    }, 250);
+}
+window.triggerReactiveThetaRSync = triggerReactiveThetaRSync;
+
+function syncRelDeffToggleUI() {
+    const badge = document.getElementById('badgeActiveDeff');
+    if (badge) {
+        badge.innerText = activeUseDeff ? 'd_eff ATIVO (CSCT / EC2 & FIB)' : 'd_eff Padrão (d)';
+        badge.className = activeUseDeff
+            ? 'text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-600 shadow-2xs'
+            : 'text-[10px] px-2 py-0.5 rounded font-mono bg-gray-800 text-gray-400 border border-gray-700';
+    }
+    const chk = document.getElementById('rel_chk_use_deff');
+    if (chk) chk.checked = !!activeUseDeff;
+
+    const tabBadge = document.getElementById('tabReliabilityDeffBadge');
+    if (tabBadge) {
+        tabBadge.innerText = activeUseDeff ? 'd_eff Ativo' : 'd_eff Off';
+        tabBadge.className = activeUseDeff
+            ? 'text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+            : 'text-[10px] px-1.5 py-0.2 rounded font-mono text-gray-400 bg-gray-800 border border-gray-700';
+    }
+}
+window.syncRelDeffToggleUI = syncRelDeffToggleUI;
+
+function toggleRelDeffConstraint(enabled) {
+    activeUseDeff = !!enabled;
+    if (typeof window.useDeffConstraint === 'boolean') {
+        window.useDeffConstraint = activeUseDeff;
+        if (typeof window.syncDeffToggleUI === 'function') window.syncDeffToggleUI();
+        if (typeof window.updateMath === 'function') window.updateMath();
+        if (typeof window.updateDatabaseChart === 'function') window.updateDatabaseChart();
+    }
+    syncRelDeffToggleUI();
+    renderFormulaDisplay();
+    triggerReactiveThetaRSync();
+}
+window.toggleRelDeffConstraint = toggleRelDeffConstraint;
 
 function renderFormulaDisplay() {
     const mathBox = document.getElementById('renderedFormulaMath');
     if (!mathBox) return;
 
-    const cVal = parseFloat(document.getElementById('rel_param_C')?.value || 1.25);
-    const aVal = parseFloat(document.getElementById('rel_param_alpha')?.value || 0.333);
-    const bVal = parseFloat(document.getElementById('rel_param_beta')?.value || 0.333);
-    const gVal = parseFloat(document.getElementById('rel_param_gamma')?.value || 0.333);
-    const dVal = parseFloat(document.getElementById('rel_param_delta')?.value || -0.75);
-    const mVal = parseFloat(document.getElementById('rel_param_mu')?.value || 0.15);
+    if (typeof window.useDeffConstraint === 'boolean') {
+        activeUseDeff = window.useDeffConstraint;
+    }
 
-    const deffStr = activeUseDeff ? 'd_{\\text{eff}}' : 'd';
-    const latexStr = `V_R = \\left[ ${cVal.toFixed(2)} \\cdot \\left(\\frac{d_{dg}}{${deffStr}}\\right)^{${aVal.toFixed(2)}} \\cdot (100\\rho_w)^{${bVal.toFixed(2)}} \\cdot f_c^{${gVal.toFixed(2)}} \\cdot \\left(\\frac{a}{d}\\right)^{${dVal.toFixed(2)}} + ${mVal.toFixed(2)}\\sigma_{cp} \\right] b_w d`;
+    const cVal = parseNum(document.getElementById('rel_param_C')?.value, 1.25);
+    const aVal = parseNum(document.getElementById('rel_param_alpha')?.value, 0.333);
+    const bVal = parseNum(document.getElementById('rel_param_beta')?.value, 0.333);
+    const gVal = parseNum(document.getElementById('rel_param_gamma')?.value, 0.333);
+    const dVal = parseNum(document.getElementById('rel_param_delta')?.value, -0.75);
+    const mVal = parseNum(document.getElementById('rel_param_mu')?.value, 0.15);
+    const excludePc = document.getElementById('rel_chk_exclude_pc')?.checked ?? false;
+
+    const deffStr = activeUseDeff ? '{\\color{#06b6d4}\\mathbf{d_{eff}}}' : 'd';
+    
+    let parts = [];
+    parts.push(cVal.toFixed(3));
+    if (Math.abs(aVal) > 1e-4) parts.push(`\\left(\\frac{d_{dg}}{${deffStr}}\\right)^{${aVal.toFixed(3)}}`);
+    if (Math.abs(bVal) > 1e-4) parts.push(`(100\\rho_w)^{${bVal.toFixed(3)}}`);
+    if (Math.abs(gVal) > 1e-4) parts.push(`f_c^{${gVal.toFixed(3)}}`);
+    if (Math.abs(dVal) > 1e-4) parts.push(`\\left(\\frac{a}{d}\\right)^{${dVal.toFixed(3)}}`);
+    
+    let core = parts.join(' \\cdot ');
+    let latexStr;
+    if (!excludePc && Math.abs(mVal) > 1e-4) {
+        latexStr = `V_R = \\left[ ${core} + {\\color{#f59e0b}${mVal.toFixed(2)}\\cdot\\sigma_{cp}} \\right] b_w \\cdot d`;
+    } else {
+        latexStr = `V_R = ${core} \\cdot b_w \\cdot d`;
+    }
+    
+    if (activeUseDeff) {
+        latexStr += ` \\quad {\\color{#06b6d4}\\scriptsize{\\left[d_{eff} = \\min\\left(d, \\sqrt{\\frac{a_{cs}}{4}d}\\right),\\; a_{cs}=\\max(a,d) \\ge d\\right]}}`;
+    }
+    if (!excludePc && Math.abs(mVal) > 1e-4) {
+        latexStr += ` \\quad {\\color{#f59e0b}\\scriptsize{\\left[\\sigma_{cp} \\le 0.2 f_{ck}\\right]}}`;
+    }
+
+    syncRelDeffToggleUI();
 
     if (window.katex) {
         try {
@@ -64,63 +182,79 @@ function renderFormulaDisplay() {
         mathBox.innerText = latexStr;
     }
 }
+window.renderFormulaDisplay = renderFormulaDisplay;
+
+function toggleRelExcludePc(enabled) {
+    if (typeof window.toggleExcludePrestressed === 'function') {
+        window.toggleExcludePrestressed(enabled);
+    }
+    renderFormulaDisplay();
+    extractModelErrorFromDb();
+}
+window.toggleRelExcludePc = toggleRelExcludePc;
 
 function getSectionNominalInputs() {
     return {
-        fck: parseFloat(document.getElementById('sec_fck')?.value || 30.0),
-        bw: parseFloat(document.getElementById('sec_bw')?.value || 250.0),
-        d: parseFloat(document.getElementById('sec_d')?.value || 400.0),
-        rho: parseFloat(document.getElementById('sec_rho')?.value || 1.20) / 100.0,
-        ad: parseFloat(document.getElementById('sec_ad')?.value || 3.0),
-        ddg: parseFloat(document.getElementById('sec_ddg')?.value || 32.0),
-        gamma_v: parseFloat(document.getElementById('sec_gamma_v')?.value || 1.40),
-        gamma_g: parseFloat(document.getElementById('sec_gamma_g')?.value || 1.40),
-        gamma_q: parseFloat(document.getElementById('sec_gamma_q')?.value || 1.40),
-        chi: parseFloat(document.getElementById('sec_chi')?.value || 0.30),
+        fck: parseNum(document.getElementById('sec_fck')?.value, 30.0),
+        bw: parseNum(document.getElementById('sec_bw')?.value, 250.0),
+        d: parseNum(document.getElementById('sec_d')?.value, 400.0),
+        rho: parseNum(document.getElementById('sec_rho')?.value, 1.20) / 100.0,
+        ad: parseNum(document.getElementById('sec_ad')?.value, 3.0),
+        ddg: parseNum(document.getElementById('sec_ddg')?.value, 32.0),
+        gamma_v: parseNum(document.getElementById('sec_gamma_v')?.value, 1.40),
+        k_k: parseNum(document.getElementById('sec_k_k')?.value, 1.00),
+        gamma_g: parseNum(document.getElementById('sec_gamma_g')?.value, 1.40),
+        gamma_q: parseNum(document.getElementById('sec_gamma_q')?.value, 1.40),
+        chi: parseNum(document.getElementById('sec_chi')?.value, 0.30),
     };
 }
 
 function getModelParameters() {
+    const archCorr = document.getElementById('rel_chk_arch_correction') ? document.getElementById('rel_chk_arch_correction').checked : true;
+    const slenderOnly = document.getElementById('rel_chk_slender_only') ? document.getElementById('rel_chk_slender_only').checked : false;
     return {
-        C: parseFloat(document.getElementById('rel_param_C')?.value || 1.25),
-        alpha: parseFloat(document.getElementById('rel_param_alpha')?.value || 0.333),
-        beta: parseFloat(document.getElementById('rel_param_beta')?.value || 0.333),
-        gamma: parseFloat(document.getElementById('rel_param_gamma')?.value || 0.333),
-        delta: parseFloat(document.getElementById('rel_param_delta')?.value || -0.75),
-        mu: parseFloat(document.getElementById('rel_param_mu')?.value || 0.15),
+        C: parseNum(document.getElementById('rel_param_C')?.value, 1.25),
+        alpha: parseNum(document.getElementById('rel_param_alpha')?.value, 0.333),
+        beta: parseNum(document.getElementById('rel_param_beta')?.value, 0.333),
+        gamma: parseNum(document.getElementById('rel_param_gamma')?.value, 0.333),
+        delta: parseNum(document.getElementById('rel_param_delta')?.value, -0.75),
+        mu: parseNum(document.getElementById('rel_param_mu')?.value, 0.15),
         use_deff: activeUseDeff,
+        arch_correction: archCorr,
+        slender_only: slenderOnly,
+        code_preset: activeCodePreset,
     };
 }
 
 function getProbabilisticVariablesConfig() {
     return {
         fc: {
-            bias: parseFloat(document.getElementById('cov_bias_fc')?.value || 1.15),
-            cov: parseFloat(document.getElementById('cov_val_fc')?.value || 0.17),
+            bias: parseNum(document.getElementById('cov_bias_fc')?.value, 1.15),
+            cov: parseNum(document.getElementById('cov_val_fc')?.value, 0.17),
         },
         bw: {
-            bias: parseFloat(document.getElementById('cov_bias_bw')?.value || 1.00),
-            cov: parseFloat(document.getElementById('cov_val_bw')?.value || 0.03),
+            bias: parseNum(document.getElementById('cov_bias_bw')?.value, 1.00),
+            cov: parseNum(document.getElementById('cov_val_bw')?.value, 0.03),
         },
         d: {
-            bias: parseFloat(document.getElementById('cov_bias_d')?.value || 0.99),
-            cov: parseFloat(document.getElementById('cov_val_d')?.value || 0.04),
+            bias: parseNum(document.getElementById('cov_bias_d')?.value, 0.99),
+            cov: parseNum(document.getElementById('cov_val_d')?.value, 0.04),
         },
         rho: {
-            bias: parseFloat(document.getElementById('cov_bias_rho')?.value || 1.00),
-            cov: parseFloat(document.getElementById('cov_val_rho')?.value || 0.04),
+            bias: parseNum(document.getElementById('cov_bias_rho')?.value, 1.00),
+            cov: parseNum(document.getElementById('cov_val_rho')?.value, 0.04),
         },
         theta_R: {
-            bias: parseFloat(document.getElementById('cov_bias_theta_R')?.value || 1.00),
-            cov: parseFloat(document.getElementById('cov_val_theta_R')?.value || 0.15),
+            bias: parseNum(document.getElementById('cov_bias_theta_R')?.value, 1.00),
+            cov: parseNum(document.getElementById('cov_val_theta_R')?.value, 0.15),
         },
         G: {
-            bias: parseFloat(document.getElementById('cov_bias_G')?.value || 1.05),
-            cov: parseFloat(document.getElementById('cov_val_G')?.value || 0.09),
+            bias: parseNum(document.getElementById('cov_bias_G')?.value, 1.05),
+            cov: parseNum(document.getElementById('cov_val_G')?.value, 0.09),
         },
         Q: {
-            bias: parseFloat(document.getElementById('cov_bias_Q')?.value || 0.70),
-            cov: parseFloat(document.getElementById('cov_val_Q')?.value || 0.25),
+            bias: parseNum(document.getElementById('cov_bias_Q')?.value, 0.70),
+            cov: parseNum(document.getElementById('cov_val_Q')?.value, 0.25),
         },
     };
 }
@@ -148,6 +282,15 @@ function importParamsFromShearModel() {
                 if (badge) {
                     badge.innerText = activeUseDeff ? 'd_eff ATIVO (CSCT/EC2)' : 'd_eff Padrão';
                     badge.className = activeUseDeff ? 'text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700' : 'text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700';
+                }
+            }
+
+            if (typeof state.excludePrestressed === 'boolean') {
+                const pcChk = document.getElementById('rel_chk_exclude_pc');
+                if (pcChk) pcChk.checked = state.excludePrestressed;
+                const thetaBadge = document.getElementById('thetaRStatusBadge');
+                if (thetaBadge) {
+                    thetaBadge.innerText = state.excludePrestressed ? '1.649 ensaios (s/ PC)' : '1.804 ensaios (c/ PC)';
                 }
             }
 
@@ -220,45 +363,71 @@ function loadDefaultJCSSVars() {
     executeReliabilityCalculation();
 }
 
-async function extractModelErrorFromDb() {
+async function extractModelErrorFromDb(silent = false) {
+    const dVal = parseFloat(document.getElementById('rel_param_delta')?.value || 0);
+    const archChkEl = document.getElementById('rel_chk_arch_correction');
+    if (Math.abs(dVal) < 1e-4 && archChkEl && !archChkEl.checked) {
+        archChkEl.checked = true;
+    }
     const params = getModelParameters();
+    const excludePc = document.getElementById('rel_chk_exclude_pc') ? document.getElementById('rel_chk_exclude_pc').checked : true;
+    const archCorr = archChkEl ? archChkEl.checked : (Math.abs(dVal) < 1e-4 || true);
+    const slenderOnly = document.getElementById('rel_chk_slender_only') ? document.getElementById('rel_chk_slender_only').checked : false;
+
     try {
         if (!window.eel || !eel.get_shear_model_error_stats) {
-            showToast("Backend Python não conectado.", "error");
+            if (!silent) showToast("Backend Python não conectado.", "error");
             return;
         }
-        showToast("Calculando estatística θ_R sobre 1804+ ensaios...", "info");
+        if (!silent) showToast("Calculando estatística θ_R da base experimental...", "info");
         const res = await eel.get_shear_model_error_stats({
             model_params: params,
             subset_key: "ALL DATA",
-            exclude_pc: false
+            exclude_pc: excludePc,
+            arch_correction: archCorr,
+            slender_only: slenderOnly,
         })();
 
         if (res && res.success) {
-            document.getElementById('cov_bias_theta_R').value = res.mean.toFixed(2);
-            document.getElementById('cov_val_theta_R').value = res.cov.toFixed(2);
-            showToast(`θ_R extraído de ${res.samples} ensaios: Média = ${res.mean.toFixed(3)} | COV = ${(res.cov * 100).toFixed(1)}%`, "success");
+            const meanEl = document.getElementById('cov_bias_theta_R');
+            const covEl = document.getElementById('cov_val_theta_R');
+            if (meanEl) meanEl.value = res.mean.toFixed(3);
+            if (covEl) covEl.value = res.cov.toFixed(3);
+
+            const badge = document.getElementById('thetaRStatusBadge');
+            if (badge) {
+                const archTag = res.arch_correction ? ', c/ Arco' : '';
+                const slenderTag = res.slender_only ? ', Esbeltas' : '';
+                badge.innerText = `${res.samples} ensaios (${excludePc ? 's/ PC' : 'c/ PC'}${archTag}${slenderTag})`;
+            }
+
+            if (!silent) {
+                showToast(`θ_R extraído de ${res.samples} ensaios: Média = ${res.mean.toFixed(3)} | COV = ${(res.cov * 100).toFixed(1)}%`, "success");
+            }
             executeReliabilityCalculation();
         } else {
-            showToast("Erro ao extrair dados de erro de modelo.", "error");
+            if (!silent) showToast("Erro ao extrair dados de erro de modelo.", "error");
         }
     } catch (e) {
         console.error(e);
-        showToast("Falha na chamada de erro de modelo: " + e, "error");
+        if (!silent) showToast("Falha na chamada de erro de modelo: " + e, "error");
     }
 }
 
 async function executeReliabilityCalculation() {
+    if (isComputing) return;
     const section = getSectionNominalInputs();
     const params = getModelParameters();
     const rvConfig = getProbabilisticVariablesConfig();
 
     saveState();
+    isComputing = true;
     setLoadingState(true);
 
     try {
         if (!window.eel || !eel.run_shear_reliability_analysis) {
             showToast("Backend Python não disponível.", "error");
+            isComputing = false;
             setLoadingState(false);
             return;
         }
@@ -273,25 +442,29 @@ async function executeReliabilityCalculation() {
         };
 
         const res = await eel.run_shear_reliability_analysis(payload)();
+        isComputing = false;
         setLoadingState(false);
 
         if (res && res.success && res.form) {
             lastReliabilityResult = res.form;
             updateDashboardKPIs(res.form);
             updateDesignPointMPP(res.form);
-            updateLatexCode(section, params, rvConfig);
+            updateLatexCode(section, params, rvConfig, res.form);
 
             if (currentGraphTab === 'sensitivity') {
                 renderSensitivityChart(res.form.sensitivity_pct);
             } else if (currentGraphTab === 'load_ratio') {
-                loadLoadRatioCurve();
+                if (lastLoadRatioResult) renderLoadRatioChart(lastLoadRatioResult);
+                else loadLoadRatioCurve();
             } else if (currentGraphTab === 'multicodes') {
-                executeMultiCodeComparison();
+                if (lastMultiCodeResult) renderMultiCodeChart(lastMultiCodeResult);
+                else executeMultiCodeComparison();
             }
         } else {
             showToast("Erro no cálculo FORM: " + (res?.error || "Desconhecido"), "error");
         }
     } catch (e) {
+        isComputing = false;
         setLoadingState(false);
         console.error(e);
         showToast("Falha na análise FORM: " + e, "error");
@@ -405,18 +578,28 @@ async function executeOptimalFactorCalibration() {
         setLoadingState(false);
 
         if (res && res.success) {
+            const valStr = res.optimal_gamma_v.toFixed(3);
             const gammaEl = document.getElementById('kpiCalibratedGamma');
-            if (gammaEl) gammaEl.innerText = res.recommended_standard_gamma.toFixed(2);
+            if (gammaEl) gammaEl.innerText = valStr;
 
-            const msg = `Calibração Concluída! γ_v ótimo = ${res.optimal_gamma_v.toFixed(3)} (Recomendado na norma: ${res.recommended_standard_gamma.toFixed(2)}) com β médio = ${res.avg_beta.toFixed(3)}.`;
-            showToast(msg, "success");
-
-            // Update gamma input with calibrated value
+            // Update gamma input with exact calibrated value
             const secGammaInput = document.getElementById('sec_gamma_v');
-            if (secGammaInput) secGammaInput.value = res.recommended_standard_gamma.toFixed(2);
+            if (secGammaInput) secGammaInput.value = valStr;
 
-            // Re-run FORM to reflect calibrated factor
-            executeReliabilityCalculation();
+            if (res.hit_upper_bound || res.avg_beta < 3.70) {
+                const covVal = rvConfig.theta_R ? (rvConfig.theta_R.cov * 100).toFixed(1) : "35.0";
+                const warnMsg = `⚠️ Limite superior atingido (γ_v = ${valStr}) com β = ${res.avg_beta.toFixed(3)} (< 3.80). A dispersão experimental elevada (COV = ${covVal}%) impede atingir o alvo de segurança. Reajuste os expoentes da equação base ou use o botão 'Calibrar C (γ_v = 1.40 fixo)'.`;
+                showToast(warnMsg, "warning");
+                alert(warnMsg);
+            } else {
+                const msg = `✓ Calibração Concluída! γ_v calibrado = ${valStr} cravando β = ${res.avg_beta.toFixed(3)} (≥ 3.800).`;
+                showToast(msg, "success");
+            }
+
+            // Re-run FORM to reflect exact calibrated factor on card ÍNDICE B
+            await executeReliabilityCalculation();
+        } else {
+            showToast("Erro na calibração: " + (res?.error || "Desconhecido"), "error");
         }
     } catch (e) {
         setLoadingState(false);
@@ -424,11 +607,137 @@ async function executeOptimalFactorCalibration() {
     }
 }
 
-async function loadLoadRatioCurve() {
+async function executeOptimalConstantCalibration() {
     const section = getSectionNominalInputs();
     const params = getModelParameters();
     const rvConfig = getProbabilisticVariablesConfig();
 
+    setLoadingState(true);
+    showToast("Calibrando Constante C para γ_v = 1.40 fixo e β = 3.80...", "info");
+
+    try {
+        const payload = {
+            section: section,
+            model_params: params,
+            rv_config: rvConfig,
+            target_beta: 3.80,
+            gamma_v: 1.40,
+        };
+        const fn = (window.eel && eel.calibrate_shear_reliability_constant_c) ? eel.calibrate_shear_reliability_constant_c : eel.calibrate_shear_constant_c;
+        const res = await fn(payload)();
+        setLoadingState(false);
+
+        if (res && res.success) {
+            // Update input C
+            const cInput = document.getElementById('rel_param_C');
+            if (cInput) cInput.value = res.optimal_C.toFixed(4);
+
+            // Update gamma_v to 1.40
+            const gammaInput = document.getElementById('sec_gamma_v');
+            if (gammaInput) gammaInput.value = '1.40';
+
+            // Update theta_R mean
+            const thetaMeanInput = document.getElementById('cov_bias_theta_R');
+            if (thetaMeanInput) thetaMeanInput.value = res.resulting_mean_theta_R.toFixed(3);
+
+            renderFormulaDisplay();
+
+            if (res.reached_target) {
+                const msg = `✓ Constante C Calibrada! C_k = ${res.optimal_C.toFixed(4)} (p/ γ_v = 1.40 fixo), gerando μ_θR = ${res.resulting_mean_theta_R.toFixed(3)} e β = ${res.avg_beta.toFixed(3)}.`;
+                showToast(msg, "success");
+            } else {
+                const warnMsg = `⚠️ Constante C calculada em ${res.optimal_C.toFixed(4)} com β = ${res.avg_beta.toFixed(3)}.`;
+                showToast(warnMsg, "warning");
+            }
+
+            executeReliabilityCalculation();
+        } else {
+            showToast("Erro na calibração de C: " + (res?.error || "Falha no otimizador"), "error");
+        }
+    } catch (e) {
+        setLoadingState(false);
+        showToast("Erro na calibração de C: " + e, "error");
+    }
+}
+window.executeOptimalConstantCalibration = executeOptimalConstantCalibration;
+
+function applyReliabilityPreset(presetKey) {
+    activeCodePreset = presetKey;
+    const archChk = document.getElementById('rel_chk_arch_correction');
+    const pcChk = document.getElementById('rel_chk_exclude_pc');
+
+    if (presetKey === 'PROPOSED') {
+        const cInp = document.getElementById('rel_param_C'); if (cInp) cInp.value = '1.250';
+        const aInp = document.getElementById('rel_param_alpha'); if (aInp) aInp.value = '0.333';
+        const bInp = document.getElementById('rel_param_beta'); if (bInp) bInp.value = '0.333';
+        const gInp = document.getElementById('rel_param_gamma'); if (gInp) gInp.value = '0.333';
+        const dInp = document.getElementById('rel_param_delta'); if (dInp) dInp.value = '-0.750';
+        const mInp = document.getElementById('rel_param_mu'); if (mInp) mInp.value = '0.150';
+        const kkInp = document.getElementById('sec_k_k'); if (kkInp) kkInp.value = '1.00';
+        const gvInp = document.getElementById('sec_gamma_v'); if (gvInp) gvInp.value = '1.40';
+        const chkDeff = document.getElementById('rel_chk_use_deff'); if (chkDeff) chkDeff.checked = false;
+        activeUseDeff = false;
+        syncRelDeffToggleUI();
+        showToast("Preset carregado: Nova Proposta (Tese) - Modelo contínuo (a/d)^δ", "info");
+    } else if (presetKey === 'NBR6118') {
+        const cInp = document.getElementById('rel_param_C'); if (cInp) cInp.value = '0.120';
+        const aInp = document.getElementById('rel_param_alpha'); if (aInp) aInp.value = '0.000';
+        const bInp = document.getElementById('rel_param_beta'); if (bInp) bInp.value = '0.333';
+        const gInp = document.getElementById('rel_param_gamma'); if (gInp) gInp.value = '0.667';
+        const dInp = document.getElementById('rel_param_delta'); if (dInp) dInp.value = '0.000';
+        const mInp = document.getElementById('rel_param_mu'); if (mInp) mInp.value = '0.150';
+        const kkInp = document.getElementById('sec_k_k'); if (kkInp) kkInp.value = '0.70';
+        const gvInp = document.getElementById('sec_gamma_v'); if (gvInp) gvInp.value = '1.40';
+        const chkDeff = document.getElementById('rel_chk_use_deff'); if (chkDeff) chkDeff.checked = false;
+        activeUseDeff = false;
+        syncRelDeffToggleUI();
+        if (archChk) archChk.checked = true;
+        if (pcChk) pcChk.checked = true;
+        showToast("Preset carregado: NBR 6118:2023 (C = 0.120, β = 0.333, k_k = 0.70, γ_v = 1.40, correção de arco ativa)", "info");
+    } else if (presetKey === 'EC2_2023') {
+        const cInp = document.getElementById('rel_param_C'); if (cInp) cInp.value = '0.600';
+        const aInp = document.getElementById('rel_param_alpha'); if (aInp) aInp.value = '0.333';
+        const bInp = document.getElementById('rel_param_beta'); if (bInp) bInp.value = '0.333';
+        const gInp = document.getElementById('rel_param_gamma'); if (gInp) gInp.value = '0.333';
+        const dInp = document.getElementById('rel_param_delta'); if (dInp) dInp.value = '0.000';
+        const mInp = document.getElementById('rel_param_mu'); if (mInp) mInp.value = '0.150';
+        const kkInp = document.getElementById('sec_k_k'); if (kkInp) kkInp.value = '1.00';
+        const gvInp = document.getElementById('sec_gamma_v'); if (gvInp) gvInp.value = '1.40';
+        const chkDeff = document.getElementById('rel_chk_use_deff'); if (chkDeff) chkDeff.checked = true;
+        activeUseDeff = true;
+        syncRelDeffToggleUI();
+        if (archChk) archChk.checked = true;
+        if (pcChk) pcChk.checked = true;
+        showToast("Preset carregado: Eurocode 2 (2023) / CSCT (d_eff ativo, k_k = 1.00, γ_v = 1.40, correção de arco ativa)", "info");
+    } else if (presetKey === 'ACI318') {
+        const cInp = document.getElementById('rel_param_C'); if (cInp) cInp.value = '0.142';
+        const aInp = document.getElementById('rel_param_alpha'); if (aInp) aInp.value = '0.000';
+        const bInp = document.getElementById('rel_param_beta'); if (bInp) bInp.value = '0.333';
+        const gInp = document.getElementById('rel_param_gamma'); if (gInp) gInp.value = '0.500';
+        const dInp = document.getElementById('rel_param_delta'); if (dInp) dInp.value = '0.000';
+        const mInp = document.getElementById('rel_param_mu'); if (mInp) mInp.value = '0.150';
+        const kkInp = document.getElementById('sec_k_k'); if (kkInp) kkInp.value = '1.00';
+        const gvInp = document.getElementById('sec_gamma_v'); if (gvInp) gvInp.value = '1.333';
+        const chkDeff = document.getElementById('rel_chk_use_deff'); if (chkDeff) chkDeff.checked = false;
+        activeUseDeff = false;
+        syncRelDeffToggleUI();
+        if (archChk) archChk.checked = true;
+        if (pcChk) pcChk.checked = true;
+        showToast("Preset carregado: ACI 318-19 (C = 0.142, β = 0.333, γ = 0.500, μ = 0.150, k_k = 1.00, γ_v = 1.333, Excluir PC)", "info");
+    }
+    renderFormulaDisplay();
+    triggerReactiveThetaRSync();
+}
+window.applyReliabilityPreset = applyReliabilityPreset;
+
+async function loadLoadRatioCurve() {
+    if (isComputing) return;
+    updateTabButtonsUI('load_ratio');
+    const section = getSectionNominalInputs();
+    const params = getModelParameters();
+    const rvConfig = getProbabilisticVariablesConfig();
+
+    isComputing = true;
     setLoadingState(true);
     try {
         const res = await eel.compare_shear_reliability_codes({
@@ -437,6 +746,7 @@ async function loadLoadRatioCurve() {
             rv_config: rvConfig,
             chi_values: [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70]
         })();
+        isComputing = false;
         setLoadingState(false);
 
         if (res && res.success && res.codes) {
@@ -444,16 +754,20 @@ async function loadLoadRatioCurve() {
             renderLoadRatioChart(res);
         }
     } catch (e) {
+        isComputing = false;
         setLoadingState(false);
+        console.error(e);
     }
 }
 
 async function executeMultiCodeComparison() {
-    switchGraphTab('multicodes');
+    if (isComputing) return;
+    updateTabButtonsUI('multicodes');
     const section = getSectionNominalInputs();
     const params = getModelParameters();
     const rvConfig = getProbabilisticVariablesConfig();
 
+    isComputing = true;
     setLoadingState(true);
     showToast("Calculando curvas de confiabilidade para todos os códigos normativos...", "info");
 
@@ -464,6 +778,7 @@ async function executeMultiCodeComparison() {
             rv_config: rvConfig,
             chi_values: [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70]
         })();
+        isComputing = false;
         setLoadingState(false);
 
         if (res && res.success && res.codes) {
@@ -472,32 +787,56 @@ async function executeMultiCodeComparison() {
             showToast("Comparativo normativo concluído!", "success");
         }
     } catch (e) {
+        isComputing = false;
         setLoadingState(false);
+        console.error(e);
         showToast("Erro na comparação: " + e, "error");
     }
 }
 
-async function updateLatexCode(section, params, rvConfig) {
+async function updateLatexCode(section, params, rvConfig, formResult = null) {
     try {
+        const sec = section || getSectionNominalInputs();
+        const par = params || getModelParameters();
+        const rvc = rvConfig || getProbabilisticVariablesConfig();
+        const fRes = formResult || lastReliabilityResult;
+
+        if (!window.eel || typeof eel.generate_shear_reliability_latex !== 'function') {
+            return;
+        }
+
         const res = await eel.generate_shear_reliability_latex({
-            section: section,
-            model_params: params,
-            rv_config: rvConfig,
+            section: sec,
+            model_params: par,
+            rv_config: rvc,
+            form_result: fRes
         })();
-        if (res && res.latex) {
+
+        if (res && res.success && res.latex) {
             const txt = document.getElementById('latexOutputTextarea');
             if (txt) txt.value = res.latex;
+            const block = document.getElementById('latexOutputBlock');
+            if (block) block.textContent = res.latex;
+        } else if (res && res.error) {
+            console.error("[LaTeX Export Error]:", res.error);
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error("[updateLatexCode]:", e);
+    }
 }
+window.updateLatexCode = updateLatexCode;
 
 function copyLatexCodeToClipboard() {
     const txt = document.getElementById('latexOutputTextarea');
-    if (!txt || !txt.value) {
-        showToast("Nenhum código para copiar.", "info");
+    const block = document.getElementById('latexOutputBlock');
+    const code = (txt && txt.value) ? txt.value : (block ? block.textContent : '');
+
+    if (!code || code.trim().startsWith('% O código LaTeX será gerado')) {
+        showToast("Nenhum código para copiar. Execute a análise primeiro.", "info");
         return;
     }
-    navigator.clipboard.writeText(txt.value).then(() => {
+
+    navigator.clipboard.writeText(code).then(() => {
         const lbl = document.getElementById('lblCopyLatex');
         const ico = document.getElementById('icoCopyLatex');
         if (lbl) lbl.innerText = "Copiado com Sucesso!";
@@ -511,6 +850,7 @@ function copyLatexCodeToClipboard() {
         showToast("Selecione o texto manualmente para copiar.", "info");
     });
 }
+window.copyLatexCodeToClipboard = copyLatexCodeToClipboard;
 
 function setLoadingState(isLoading) {
     const overlay = document.getElementById('chartLoadingOverlay');
@@ -553,7 +893,7 @@ function initReliabilityChart() {
     });
 }
 
-function switchGraphTab(tabKey) {
+function updateTabButtonsUI(tabKey) {
     currentGraphTab = tabKey;
     const btnSens = document.getElementById('tabBtnSensitivity');
     const btnRatio = document.getElementById('tabBtnLoadRatio');
@@ -569,15 +909,34 @@ function switchGraphTab(tabKey) {
 
     if (tabKey === 'sensitivity') {
         if (subtitle) subtitle.innerText = "Importância percentual das variáveis na probabilidade de falha (α_i²)";
-        if (lastReliabilityResult) renderSensitivityChart(lastReliabilityResult.sensitivity_pct);
-        else executeReliabilityCalculation();
     } else if (tabKey === 'load_ratio') {
         if (subtitle) subtitle.innerText = "Variação do Índice β em função da razão de carga acidental χ = Q / (G + Q)";
-        loadLoadRatioCurve();
     } else if (tabKey === 'multicodes') {
         if (subtitle) subtitle.innerText = "Comparativo do Índice de Confiabilidade β entre Códigos Normativos";
-        if (lastMultiCodeResult) renderMultiCodeChart(lastMultiCodeResult);
-        else executeMultiCodeComparison();
+    }
+}
+
+function switchGraphTab(tabKey) {
+    updateTabButtonsUI(tabKey);
+
+    if (tabKey === 'sensitivity') {
+        if (lastReliabilityResult) {
+            renderSensitivityChart(lastReliabilityResult.sensitivity_pct);
+        } else {
+            executeReliabilityCalculation();
+        }
+    } else if (tabKey === 'load_ratio') {
+        if (lastLoadRatioResult) {
+            renderLoadRatioChart(lastLoadRatioResult);
+        } else {
+            loadLoadRatioCurve();
+        }
+    } else if (tabKey === 'multicodes') {
+        if (lastMultiCodeResult) {
+            renderMultiCodeChart(lastMultiCodeResult);
+        } else {
+            executeMultiCodeComparison();
+        }
     }
 }
 
@@ -771,6 +1130,9 @@ function showToast(message, type = 'info') {
         container.id = 'toastContainer';
         container.className = 'fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none';
         document.body.appendChild(container);
+    }
+    while (container.children.length >= 3) {
+        container.removeChild(container.firstChild);
     }
     const toast = document.createElement('div');
     const bgClass = type === 'success' ? 'bg-emerald-600 text-white shadow-emerald-900/40' : (type === 'error' ? 'bg-red-600 text-white shadow-red-900/40' : 'bg-gray-800 text-gray-100 border border-gray-700 shadow-gray-900/40');

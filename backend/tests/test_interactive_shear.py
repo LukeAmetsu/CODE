@@ -184,21 +184,21 @@ class TestInteractiveShearOptimization(unittest.TestCase):
         self.assertTrue(calib['_use_deff'])
 
     def test_exclude_prestressed_from_database(self):
-        """Test that exclude_pc removes all 141 valid prestressed concrete members, leaving exactly 1663 beams."""
+        """Test that exclude_pc removes all prestressed concrete members, leaving exactly 1649 beams."""
         all_data = load_and_clean_data(subset_key='ALL DATA', exclude_pc=False)
         no_pc_data = load_and_clean_data(subset_key='ALL DATA', exclude_pc=True)
         self.assertEqual(all_data['count'], 1804)
-        self.assertEqual(no_pc_data['count'], 1663)
-        self.assertEqual(all_data['count'] - no_pc_data['count'], 141)
+        self.assertEqual(no_pc_data['count'], 1649)
+        self.assertEqual(all_data['count'] - no_pc_data['count'], 155)
 
         # Test with calibration
         calib = calibrate_constant_c(target_safety=1.0, subset_key='ALL DATA', exclude_pc=True)
-        self.assertEqual(calib['count'], 1663)
+        self.assertEqual(calib['count'], 1649)
 
         # Test with dynamic filter dict containing exclude_pc
         dyn_filter = {'exclude_pc': True}
         dyn_data = load_and_clean_data(subset_key=dyn_filter)
-        self.assertEqual(dyn_data['count'], 1663)
+        self.assertEqual(dyn_data['count'], 1649)
 
     def test_prestressed_concrete_model_and_codes(self):
         """Test prestressed concrete subset (mat_pc), mu contribution, and official code calculations."""

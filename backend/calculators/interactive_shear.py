@@ -40,9 +40,16 @@ def is_row_in_subset(row, subset_key, exclude_pc=False):
         return False
 
     # Prestressed element evaluation
+    raw_sig = row.get('Sigma_CP') if row.get('Sigma_CP') is not None else row.get('Sigma_CP.1')
+    try:
+        bsigma_cp = float(raw_sig or 0.0)
+    except (ValueError, TypeError):
+        bsigma_cp = 0.0
+
     is_pc = (str(row.get('Member class (inferred)') or '') == 'PC' or 
              'PC' in str(row.get('Source sheet') or '') or 
-             row.get('Prestressed') == 1 or row.get('Prestressed') is True)
+             row.get('Prestressed') == 1 or row.get('Prestressed') is True or
+             bsigma_cp > 0.0)
 
     effective_exclude_pc = bool(exclude_pc)
     if isinstance(subset_key, dict) and subset_key.get('exclude_pc'):

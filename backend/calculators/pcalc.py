@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from backend.calculators.pcalc_geometry import (
     compute_polygon_properties,
     mesh_arbitrary_section,
@@ -218,9 +219,48 @@ class ConcreteSection:
         self.geo = geometry
         self.mat = materials
         self.bars = bars # list of {'x': val, 'y': val, 'diametro': val(mm)}
+        self._init_vector_cache()
+
+    def _init_vector_cache(self):
+        fibers = self.geo.fibers
+        if fibers:
+            self._fib_x = np.array([f['x'] for f in fibers], dtype=np.float64)
+            self._fib_y = np.array([f['y'] for f in fibers], dtype=np.float64)
+            self._fib_dA = np.array([f['dA'] for f in fibers], dtype=np.float64)
+            self._fib_xm = self._fib_x / 100.0
+            self._fib_ym = self._fib_y / 100.0
+            self._has_fibers = True
+            self._cached_fib_len = len(fibers)
+        else:
+            self._fib_x = np.empty(0, dtype=np.float64)
+            self._fib_y = np.empty(0, dtype=np.float64)
+            self._fib_dA = np.empty(0, dtype=np.float64)
+            self._fib_xm = np.empty(0, dtype=np.float64)
+            self._fib_ym = np.empty(0, dtype=np.float64)
+            self._has_fibers = False
+            self._cached_fib_len = 0
+
+        if self.bars:
+            self._bar_x = np.array([b['x'] for b in self.bars], dtype=np.float64)
+            self._bar_y = np.array([b['y'] for b in self.bars], dtype=np.float64)
+            self._bar_area = np.array([math.pi * ((b['diametro']/10.0)/2.0)**2 for b in self.bars], dtype=np.float64)
+            self._bar_xm = self._bar_x / 100.0
+            self._bar_ym = self._bar_y / 100.0
+            self._has_bars = True
+        else:
+            self._bar_x = np.empty(0, dtype=np.float64)
+            self._bar_y = np.empty(0, dtype=np.float64)
+            self._bar_area = np.empty(0, dtype=np.float64)
+            self._bar_xm = np.empty(0, dtype=np.float64)
+            self._bar_ym = np.empty(0, dtype=np.float64)
+            self._has_bars = False
+
+    def _ensure_vector_cache(self):
+        if not hasattr(self, '_has_fibers') or self._cached_fib_len != len(self.geo.fibers):
+            self._init_vector_cache()
 
     def get_concrete_stress(self, epsilon):
-        # Parabola-Rectangle NBR 6118
+        # Parabola-Rectangle NBR 6118 scalar
         if epsilon >= 0: return 0.0 # Tension ignored
         
         ec = abs(epsilon)
@@ -229,8 +269,6 @@ class ConcreteSection:
         fcd = self.mat.fcd
         n = self.mat.n
         
-        # BetaC = 0.85 for fck <= 50. Depends on fck for High strength.
-        # Java uses 0.85 constant or passed in. NBR: 0.85 * (1 - (fck-50)/200) for > 50
         beta_c = 0.85
         if self.mat.fck > 50:
             beta_c = 0.85 * (1.0 - (self.mat.fck - 50.0)/200.0)
@@ -242,6 +280,30 @@ class ConcreteSection:
             return -beta_c * fcd
         return 0.0
 
+    def get_concrete_stress_vec(self, epsilon_arr):
+        ec = np.abs(epsilon_arr)
+        ec2 = self.mat.ec2
+        ecu = self.mat.ecu
+        fcd = self.mat.fcd
+        n = self.mat.n
+
+        beta_c = 0.85
+        if self.mat.fck > 50:
+            beta_c = max(0.5, 0.85 * (1.0 - (self.mat.fck - 50.0)/200.0))
+
+        sigma = np.zeros_like(epsilon_arr, dtype=np.float64)
+        comp_mask = epsilon_arr < 0
+
+        mask_parab = comp_mask & (ec <= ec2)
+        if np.any(mask_parab):
+            sigma[mask_parab] = -beta_c * fcd * (1.0 - (1.0 - ec[mask_parab] / ec2) ** n)
+
+        mask_const = comp_mask & (ec > ec2) & (ec <= ecu)
+        if np.any(mask_const):
+            sigma[mask_const] = -beta_c * fcd
+
+        return sigma
+
     def get_steel_stress(self, epsilon):
         Es = self.mat.E_steel_kncm2
         fyd = self.mat.fyd
@@ -250,48 +312,38 @@ class ConcreteSection:
         if sigma < -fyd: return -fyd
         return sigma
 
+    def get_steel_stress_vec(self, epsilon_arr):
+        Es = self.mat.E_steel_kncm2
+        fyd = self.mat.fyd
+        sigma = epsilon_arr * Es
+        return np.clip(sigma, -fyd, fyd)
+
     def calculate_resistance(self, epsilon0, kx, ky):
+        self._ensure_vector_cache()
+
         N_int = 0.0
         Mx_int = 0.0
         My_int = 0.0
 
-        # Concrete Integration
-        for fib in self.geo.fibers:
-            strain = epsilon0 + kx * fib['y'] + ky * fib['x']
-            sigma = self.get_concrete_stress(strain)
-            if sigma != 0:
-                dF = sigma * fib['dA']
-                N_int += dF
-                Mx_int += dF * (fib['y'] / 100.0) # Moment arm in m
-                My_int += dF * (fib['x'] / 100.0)
+        # Vectorized Concrete Integration
+        if self._has_fibers:
+            strains_c = epsilon0 + kx * self._fib_y + ky * self._fib_x
+            sigmas_c = self.get_concrete_stress_vec(strains_c)
+            dF_c = sigmas_c * self._fib_dA
+            N_int += float(np.sum(dF_c))
+            Mx_int += float(np.sum(dF_c * self._fib_ym))
+            My_int += float(np.sum(dF_c * self._fib_xm))
 
-        # Steel Integration
-        for bar in self.bars:
-            strain = epsilon0 + kx * bar['y'] + ky * bar['x']
-            sigma = self.get_steel_stress(strain)
-            
-            # Correction: Subtract stress of displaced concrete
-            # logic: N_steel includes the area of steel. But we already integrated concrete over that area.
-            # So we add (Stress_Steel - Stress_Concrete_at_Bar_Loc) * Area
-            # Java: fs = ... - fc(es)
-            
-            sigma_c_at_bar = self.get_concrete_stress(strain)
-            # Since both are usually compression (negative), we have:
-            # F = (sigma_s * As) + (sigma_c_total_area * Ac_gross) ??? No.
-            # We already summed concrete over gross area.
-            # So actual Force at bar location: F_bar = sigma_s * As
-            # But we added sigma_c * As in the coarse integration.
-            # So we need to subtract sigma_c * As.
-            # Effective stress to add: sigma_s - sigma_c
-            
-            effective_sigma = sigma - sigma_c_at_bar
-            
-            # Area in cm2. diam is mm.
-            area = math.pi * ((bar['diametro']/10.0)/2.0)**2
-            F = effective_sigma * area
-            N_int += F
-            Mx_int += F * (bar['y'] / 100.0)
-            My_int += F * (bar['x'] / 100.0)
+        # Vectorized Steel Integration
+        if self._has_bars:
+            strains_s = epsilon0 + kx * self._bar_y + ky * self._bar_x
+            sigmas_s = self.get_steel_stress_vec(strains_s)
+            sigmas_c_at_bar = self.get_concrete_stress_vec(strains_s)
+            eff_sigmas = sigmas_s - sigmas_c_at_bar
+            F_s = eff_sigmas * self._bar_area
+            N_int += float(np.sum(F_s))
+            Mx_int += float(np.sum(F_s * self._bar_ym))
+            My_int += float(np.sum(F_s * self._bar_xm))
 
         return N_int, Mx_int, My_int
 
@@ -310,6 +362,10 @@ def generate_interaction_surface(section, num_angles=36):
         {'x': -section.geo.hx/2, 'y':  section.geo.hy/2},
     ]
 
+    states_e0 = []
+    states_kx = []
+    states_ky = []
+
     for i in range(num_angles):
         theta = (i / num_angles) * 2 * math.pi
         cosT = math.cos(theta)
@@ -320,37 +376,86 @@ def generate_interaction_surface(section, num_angles=36):
         
         u_min = min(u_vals)
         u_max = max(u_vals)
-        
-        deformation_states = []
+        du = (u_max - u_min) if u_max != u_min else 1.0
         
         # Domain 2
         steps = 10
         for k in range(steps + 1):
-             eps_t = es_yield
-             eps_c = es_yield + (k/steps) * (ecu - es_yield)
-             K = (eps_c - eps_t) / (u_max - u_min) if u_max != u_min else 0
-             e0 = eps_t - K * u_min
-             deformation_states.append((e0, K))
+            eps_t = es_yield
+            eps_c = es_yield + (k/steps) * (ecu - es_yield)
+            K = (eps_c - eps_t) / du
+            e0 = eps_t - K * u_min
+            states_e0.append(e0)
+            states_kx.append(K * sinT)
+            states_ky.append(K * cosT)
 
         # Domain 3/4/5
         for k in range(1, steps + 1):
             eps_c = ecu
             eps_t = es_yield + (k/steps) * (ecu - es_yield) 
-            K = (eps_c - eps_t) / (u_max - u_min) if u_max != u_min else 0
+            K = (eps_c - eps_t) / du
             e0 = eps_t - K * u_min
-            deformation_states.append((e0, K))
+            states_e0.append(e0)
+            states_kx.append(K * sinT)
+            states_ky.append(K * cosT)
             
         # Pure Compression
-        deformation_states.append((-0.002, 0))
-        
-        for e0, K in deformation_states:
-            kx = K * sinT
-            ky = K * cosT
-            N, Mx, My = section.calculate_resistance(e0, kx, ky)
+        states_e0.append(-0.002)
+        states_kx.append(0.0)
+        states_ky.append(0.0)
+
+    section._ensure_vector_cache()
+
+    if section._has_fibers:
+        e0_arr = np.array(states_e0, dtype=np.float64)[:, None]
+        kx_arr = np.array(states_kx, dtype=np.float64)[:, None]
+        ky_arr = np.array(states_ky, dtype=np.float64)[:, None]
+
+        fib_x = section._fib_x[None, :]
+        fib_y = section._fib_y[None, :]
+        fib_dA = section._fib_dA[None, :]
+        fib_xm = section._fib_xm[None, :]
+        fib_ym = section._fib_ym[None, :]
+
+        strains_c = e0_arr + kx_arr * fib_y + ky_arr * fib_x
+        sigmas_c = section.get_concrete_stress_vec(strains_c)
+        dF_c = sigmas_c * fib_dA
+        N_c = np.sum(dF_c, axis=1)
+        Mx_c = np.sum(dF_c * fib_ym, axis=1)
+        My_c = np.sum(dF_c * fib_xm, axis=1)
+
+        if section._has_bars:
+            bar_x = section._bar_x[None, :]
+            bar_y = section._bar_y[None, :]
+            bar_area = section._bar_area[None, :]
+            bar_xm = section._bar_xm[None, :]
+            bar_ym = section._bar_ym[None, :]
+
+            strains_s = e0_arr + kx_arr * bar_y + ky_arr * bar_x
+            sigmas_s = section.get_steel_stress_vec(strains_s)
+            sigmas_c_b = section.get_concrete_stress_vec(strains_s)
+            dF_s = (sigmas_s - sigmas_c_b) * bar_area
+            N_s = np.sum(dF_s, axis=1)
+            Mx_s = np.sum(dF_s * bar_ym, axis=1)
+            My_s = np.sum(dF_s * bar_xm, axis=1)
+            N_tot = N_c + N_s
+            Mx_tot = Mx_c + Mx_s
+            My_tot = My_c + My_s
+        else:
+            N_tot = N_c
+            Mx_tot = Mx_c
+            My_tot = My_c
+
+        points['x'] = Mx_tot.tolist()
+        points['y'] = My_tot.tolist()
+        points['z'] = N_tot.tolist()
+    else:
+        for idx in range(len(states_e0)):
+            N, Mx, My = section.calculate_resistance(states_e0[idx], states_kx[idx], states_ky[idx])
             points['x'].append(Mx)
             points['y'].append(My)
             points['z'].append(N)
-            
+
     return points
 
 # --- CRACKING ENVELOPE (ELS-W / ELS-F NBR 6118) ---

@@ -1169,6 +1169,30 @@ def calibrate_shear_partial_factor(options):
         return {"success": False, "error": str(e), "trace": traceback.format_exc()}
 
 @eel.expose
+def calibrate_shear_reliability_constant_c(options):
+    """Calibrates characteristic constant C (C_k) to achieve target beta with fixed gamma_v = 1.40."""
+    try:
+        from backend.calculators.reliability_shear import calibrate_optimal_constant_C
+        opts = options or {}
+        section = opts.get('section', {})
+        params = opts.get('model_params', {})
+        rv_config = opts.get('rv_config', None)
+        target_beta = float(opts.get('target_beta', 3.80))
+        gamma_v = float(opts.get('gamma_v', section.get('gamma_v', 1.40)))
+
+        res = calibrate_optimal_constant_C(
+            section_nom=section,
+            model_params=params,
+            target_beta=target_beta,
+            gamma_v=gamma_v,
+            rv_config=rv_config,
+        )
+        return {"success": True, **res}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+
+@eel.expose
 def compare_shear_reliability_codes(options):
     """Compares beta vs chi across multiple design codes (Proposed, NBR6118, EC2, ACI)."""
     try:
@@ -1199,11 +1223,15 @@ def get_shear_model_error_stats(options):
         params = opts.get('model_params', {})
         subset_key = opts.get('subset_key', 'ALL DATA')
         exclude_pc = bool(opts.get('exclude_pc', False))
+        arch_correction = opts.get('arch_correction', None)
+        slender_only = opts.get('slender_only', None)
 
         res = extract_theta_r_from_database(
             model_params=params,
             subset_key=subset_key,
             exclude_pc=exclude_pc,
+            arch_correction=arch_correction,
+            slender_only=slender_only,
         )
         return {"success": True, **res}
     except Exception as e:
@@ -1222,9 +1250,12 @@ def generate_shear_reliability_latex(options):
         section = opts.get('section', {})
         params = opts.get('model_params', {})
         rv_config = opts.get('rv_config', None)
+        form_res = opts.get('form_result', None)
 
-        sra = StructuralReliabilityAnalysis(section_nom=section, model_params=params, rv_config=rv_config)
-        form_res = sra.run_form()
+        if not form_res or not isinstance(form_res, dict) or not form_res.get("design_point_X"):
+            sra = StructuralReliabilityAnalysis(section_nom=section, model_params=params, rv_config=rv_config)
+            form_res = sra.run_form()
+
         latex = generate_latex_reliability_table(form_res, section, params)
         return {"success": True, "latex": latex}
     except Exception as e:
